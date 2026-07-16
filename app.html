@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TPMS 结构参数探索器</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root{
+    --bg:#eef1f6; --bg2:#e3e8f0;
+    --panel:#ffffff; --panel-2:#f7f9fc; --panel-border:#e6e9ef;
+    --ink:#1f2430; --ink-2:#5b6472; --ink-3:#8b93a3;
+    --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
+    --gyroid:#6366f1; --diamond:#f59e0b; --schwarz:#10b981;
+    --radius:14px; --radius-s:10px;
+    --shadow:0 1px 2px rgba(20,28,46,.06), 0 10px 30px rgba(20,28,46,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 85% -10%, #dfe7f2 0%, rgba(223,231,242,0) 60%),linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1480px;margin:0 auto;padding:18px 20px 26px}
+  .topbar{display:flex;align-items:center;gap:16px;padding:6px 2px 16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:13px}
+  .brand .mark{
+    width:42px;height:42px;border-radius:12px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(150deg,#0d9488 0%,#0891b2 55%,#2563eb 100%);
+    box-shadow:0 6px 16px rgba(13,148,136,.35), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .brand .mark::after{content:"";position:absolute;inset:8px;border-radius:7px;border:1.5px solid rgba(255,255,255,.85);
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.5) 0 18%, transparent 19%),radial-gradient(circle at 70% 65%, rgba(255,255,255,.35) 0 16%, transparent 17%);
+  }
+  .brand h1{font-size:1.32rem;font-weight:700;letter-spacing:.5px;line-height:1.15}
+  .brand .sub{font-size:.82rem;color:var(--ink-2);margin-top:2px}
+  .topbar .spacer{flex:1}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:600;
+    background:#fff;border:1px solid var(--panel-border);color:var(--ink-2)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--panel-border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .controls{padding:18px}
+  .sect{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--panel-border)}
+  .sect:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .sect h3{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+  .opt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .opt-row.two{grid-template-columns:repeat(2,1fr)}
+  .opt{
+    appearance:none;border:1.5px solid var(--panel-border);background:#fff;color:var(--ink-2);
+    padding:9px 6px;border-radius:var(--radius-s);font-size:.84rem;font-weight:600;cursor:pointer;
+    transition:all .16s ease;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1;
+  }
+  .opt .o-sub{font-size:.66rem;font-weight:500;color:var(--ink-3);letter-spacing:.3px}
+  .opt:hover{border-color:#cdd3df;transform:translateY(-1px)}
+  .opt[data-color="gyroid"].active{background:var(--gyroid);border-color:var(--gyroid);color:#fff}
+  .opt[data-color="diamond"].active{background:var(--diamond);border-color:var(--diamond);color:#fff}
+  .opt[data-color="schwarz"].active{background:var(--schwarz);border-color:var(--schwarz);color:#fff}
+  .opt.active .o-sub{color:rgba(255,255,255,.82)}
+  .opt[data-model].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-model].active .o-sub{color:rgba(255,255,255,.7)}
+  .opt[data-gradient].active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .opt[data-gradient].active .o-sub{color:rgba(255,255,255,.8)}
+  .field{margin-bottom:15px}
+  .field:last-child{margin-bottom:0}
+  .field .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .field .lbl span:first-child{font-size:.88rem;font-weight:600}
+  .field .val{font-size:.78rem;font-weight:700;color:var(--accent-d);background:var(--accent-soft);
+    padding:2px 9px;border-radius:999px;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;
+    background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--p,40%), #e3e7ee var(--p,40%), #e3e7ee 100%);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#fff;border:2px solid var(--accent);box-shadow:0 2px 6px rgba(13,148,136,.4);cursor:pointer;transition:transform .12s}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:pointer}
+  .scenes{display:flex;flex-direction:column;gap:8px}
+  .scene{
+    display:flex;align-items:center;gap:11px;text-align:left;width:100%;cursor:pointer;
+    border:1.5px solid var(--panel-border);background:#fff;border-radius:var(--radius-s);padding:10px 11px;transition:all .16s;
+  }
+  .scene:hover{border-color:var(--accent);background:#fbfdfc;transform:translateY(-1px)}
+  .scene .ic{width:32px;height:32px;flex:none;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:1.05rem}
+  .scene[data-scene=bone] .ic{background:linear-gradient(140deg,#6366f1,#8b5cf6)}
+  .scene[data-scene=lightweight] .ic{background:linear-gradient(140deg,#f59e0b,#f97316)}
+  .scene[data-scene=heat] .ic{background:linear-gradient(140deg,#10b981,#14b8a6)}
+  .scene .nm{font-size:.86rem;font-weight:700;color:var(--ink)}
+  .scene .ds{font-size:.72rem;color:var(--ink-3);margin-top:1px}
+  .model-desc{margin-top:11px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--panel-border);
+    border-radius:var(--radius-s);font-size:.78rem;color:var(--ink-2);line-height:1.55}
+  .field-note{margin-top:9px;font-size:.72rem;color:var(--ink-3);line-height:1.45}
+  .formula{background:var(--panel-2);border:1px solid var(--panel-border);border-radius:var(--radius-s);padding:11px 12px}
+  .formula .cap{font-size:.7rem;color:var(--ink-3);margin-bottom:6px;letter-spacing:.4px}
+  .formula .eq{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:.82rem;color:var(--ink);line-height:1.65;word-break:break-word}
+  .formula .eq .c{color:var(--accent-d);font-weight:700}
+  .formula .eq .term{display:inline;padding:1px 2px;border-radius:3px;transition:background .15s}
+  .formula .eq .term-hl{background:rgba(13,148,136,.18)}
+  .formula .eq .wcoef{color:var(--accent-d);font-weight:700}
+  .fw{margin-top:10px;display:none}
+  .fw.show{display:block}
+  .fw-hint{font-size:.72rem;color:var(--ink-3);margin-bottom:9px;line-height:1.4}
+  .fw-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .fw-row:last-child{margin-bottom:0}
+  .fw-tag{font-family:"SFMono-Regular",Consolas,monospace;font-size:.7rem;color:var(--ink-2);min-width:92px;flex:none;cursor:pointer;transition:color .15s}
+  .fw-tag.on{color:var(--accent-d);font-weight:700}
+  .fw-row input[type=range]{flex:1;height:5px}
+  .fw-val{font-size:.72rem;font-weight:700;color:var(--accent-d);font-variant-numeric:tabular-nums;width:26px;text-align:right;flex:none}
+  .viewer{display:flex;flex-direction:column;overflow:hidden}
+  .v-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--panel-border);flex-wrap:wrap}
+  .v-title{font-size:.92rem;font-weight:700;display:flex;align-items:center;gap:8px}
+  .v-title .live{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(13,148,136,.5);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(13,148,136,.45)}70%{box-shadow:0 0 0 7px rgba(13,148,136,0)}100%{box-shadow:0 0 0 0 rgba(13,148,136,0)}}
+  .v-badges{display:flex;gap:6px}
+  .v-badges .b{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:999px}
+  .v-badges .b.t{background:#eef0ff;color:var(--gyroid)}
+  .v-badges .b.t[data-t=diamond]{background:#fff5e6;color:#b45309}
+  .v-badges .b.t[data-t=schwarz]{background:#e7f8f1;color:#047857}
+  .v-badges .b.m{background:#eef1f6;color:var(--ink-2)}
+  .v-tools{margin-left:auto;display:flex;gap:6px}
+  .tbtn{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--panel-border);background:#fff;color:var(--ink-2);
+    display:grid;place-items:center;cursor:pointer;transition:all .15s;
+  }
+  .tbtn:hover{border-color:var(--accent);color:var(--accent-d);background:#fbfdfc}
+  .tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tbtn svg{width:17px;height:17px}
+  .stage{position:relative;flex:1;min-height:0}
+  #canvas-container{width:100%;height:620px;position:relative;background:radial-gradient(circle at 50% 42%, #161b24 0%, #0c0f15 70%, #07090d 100%);overflow:hidden}
+  #canvas-container canvas{display:block}
+  .stage .empty{position:absolute;inset:0;display:none;place-items:center;color:#9aa3b2;font-size:.88rem;text-align:center;padding:20px}
+  .stage .empty.show{display:grid}
+  .loading{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(13,16,21,.72);color:#cfd6e2;
+    padding:6px 14px;border-radius:999px;font-size:.76rem;display:none;align-items:center;gap:8px;backdrop-filter:blur(6px)}
+  .loading.show{display:flex}
+  .loading .sp{width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .axes-hint{position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;gap:5px;font-size:.7rem;color:#9aa3b2;pointer-events:none}
+  .axes-hint kbd{font-family:inherit;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:1px 6px;margin:0 1px}
+  .stat-overlay{position:absolute;right:14px;top:14px;background:rgba(13,16,21,.6);border:1px solid rgba(255,255,255,.08);
+    border-radius:9px;padding:8px 11px;color:#aeb6c4;font-size:.7rem;line-height:1.6;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+  .stat-overlay b{color:#e9edf3;font-weight:700}
+  .v-foot{display:flex;gap:14px;flex-wrap:wrap;padding:11px 14px;border-top:1px solid var(--panel-border);background:var(--panel-2)}
+  .tip{display:flex;align-items:flex-start;gap:8px;font-size:.77rem;color:var(--ink-2);line-height:1.45;flex:1;min-width:200px}
+  .tip .ti{flex:none;width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;color:#fff;margin-top:1px}
+  .tip.a .ti{background:var(--accent)}
+  .tip.b .ti{background:var(--gyroid)}
+  .tip.c .ti{background:var(--diamond)}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}#canvas-container{height:440px}}
+  @media(max-width:560px){.app{padding:12px}.controls{padding:14px}#canvas-container{height:380px}.topbar .pills{display:none}.stat-overlay{display:none}}
+  /* 新手引导 */
+  .onboard-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:#fff;color:var(--accent-d);transition:all .15s}
+  .onboard-btn:hover{background:var(--accent-soft)}
+  .onboard-btn svg{width:16px;height:16px}
+  .ob-spot{position:fixed;left:0;top:0;width:0;height:0;border-radius:12px;z-index:10000;pointer-events:none;box-shadow:0 0 0 100vmax rgba(10,13,20,.6);border:2.5px solid var(--accent);opacity:0;transition:left .32s cubic-bezier(.2,.8,.2,1),top .32s cubic-bezier(.2,.8,.2,1),width .32s cubic-bezier(.2,.8,.2,1),height .32s cubic-bezier(.2,.8,.2,1),opacity .2s}
+  .ob-spot.show{opacity:1}
+  .ob-spot::after{content:"";position:absolute;inset:-3px;border-radius:13px;animation:obPulse 1.9s ease-out infinite;pointer-events:none}
+  @keyframes obPulse{0%{box-shadow:0 0 0 0 rgba(13,148,136,.5)}70%{box-shadow:0 0 0 12px rgba(13,148,136,0)}100%{box-shadow:0 0 0 0 rgba(13,148,136,0)}}
+  .ob-card{position:fixed;left:50%;bottom:28px;top:auto;transform:translateX(-50%) translateY(12px);width:min(440px,calc(100vw - 32px));background:#fff;border:1px solid var(--panel-border);border-radius:16px;box-shadow:0 20px 50px rgba(10,13,20,.3);padding:18px 20px 15px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s,bottom .2s,top .2s}
+  .ob-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .ob-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase}
+  .ob-dots{display:flex;gap:5px;margin-left:auto}
+  .ob-dots i{width:6px;height:6px;border-radius:50%;background:#d6dbe5;transition:all .2s}
+  .ob-dots i.on{background:var(--accent);width:18px;border-radius:999px}
+  .ob-card h4{font-size:1.04rem;font-weight:700;margin-bottom:8px}
+  .ob-card p{font-size:.86rem;color:var(--ink-2);line-height:1.62;margin-bottom:13px}
+  .ob-card p b{color:var(--ink);font-weight:600}
+  .ob-demo{display:inline-flex;align-items:center;gap:7px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent-d);font-size:.8rem;font-weight:600;border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s;margin-bottom:13px}
+  .ob-demo:hover{background:#ddf0ec}
+  .ob-foot{display:flex;align-items:center;gap:9px}
+  .ob-btn{appearance:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;border-radius:9px;padding:9px 16px;transition:all .15s}
+  .ob-btn.ghost{background:#f0f2f7;color:var(--ink-2)}
+  .ob-btn.ghost:hover{background:#e6e9f0}
+  .ob-btn.primary{background:var(--accent);color:#fff}
+  .ob-btn.primary:hover{background:var(--accent-d)}
+  @media(max-width:560px){.ob-card{bottom:14px;padding:16px}.topbar .onboard-btn{display:none}}
+  /* 术语解释层（方向 C） */
+  .gloss-term{border-bottom:1.5px dotted var(--ink-3);cursor:help;transition:color .15s,border-color .15s}
+  .gloss-term:hover{color:var(--accent-d);border-color:var(--accent)}
+  .gloss{position:fixed;z-index:10002;max-width:300px;background:#fff;border:1px solid var(--panel-border);border-radius:12px;box-shadow:0 12px 34px rgba(10,13,20,.18);padding:13px 15px 12px;opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+  .gloss.show{opacity:1;transform:translateY(0)}
+  .gloss h5{font-size:.82rem;font-weight:700;margin-bottom:6px;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .gloss h5 .gi{width:18px;height:18px;border-radius:6px;background:var(--accent);display:grid;place-items:center;flex:none}
+  .gloss h5 .gi svg{width:11px;height:11px;stroke:#fff}
+  .gloss p{font-size:.78rem;color:var(--ink-2);line-height:1.6}
+  @media(max-width:560px){.gloss{max-width:calc(100vw - 24px)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <h1>TPMS 结构参数探索器</h1>
+        <div class="sub">交互式探索三重周期性极小曲面 · 实时等值面重建</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+      <button class="onboard-btn" id="btn-onboard" title="重新打开新手引导">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        新手引导
+      </button>
+    <div class="pills">
+      <span class="pill"><span class="dot"></span>实时 TPMS 可视化</span>
+      <span class="pill">Gyroid · Diamond · Schwarz&nbsp;P</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel controls">
+      <div class="sect">
+        <h3>TPMS 曲面类型</h3>
+        <div class="opt-row">
+          <button class="opt active" data-type="gyroid" data-color="gyroid">Gyroid<span class="o-sub">螺旋</span></button>
+          <button class="opt" data-type="diamond" data-color="diamond">Diamond<span class="o-sub">金刚石</span></button>
+          <button class="opt" data-type="schwarz" data-color="schwarz">Schwarz P<span class="o-sub">原始 P</span></button>
+        </div>
+      </div>
+      <div class="sect">
+        <h3>表现形式</h3>
+        <div class="opt-row">
+          <button class="opt active" data-model="surface">壳模型<span class="o-sub">Surface</span></button>
+          <button class="opt" data-model="strut">杆模型<span class="o-sub">Lattice</span></button>
+          <button class="opt" data-model="solid">实体模型<span class="o-sub">Solid</span></button>
+        </div>
+        <div class="model-desc" id="model-desc"></div>
+      </div>
+      <div class="sect">
+        <h3>结构参数</h3>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="porosity">孔隙率</span><span class="val" id="porosity-value">75%</span></div>
+          <input type="range" id="porosity" min="60" max="90" value="75" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="cell-density">单元密度</span><span class="val" id="cell-size-value">中等</span></div>
+          <input type="range" id="cell-size" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
+          <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
+        </div>
+      </div>
+      <div class="sect">
+        <h3>工程观察</h3>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="slice">截面扫描</span><span class="val" id="slice-value">完整</span></div>
+          <input type="range" id="slice" min="-100" max="100" value="100" step="1">
+          <div class="field-note">沿 Z 轴逐层剖切，可观察内部连通孔道。</div>
+        </div>
+        <div class="opt-row two">
+          <button class="opt active" data-gradient="off">均质结构<span class="o-sub">Uniform</span></button>
+          <button class="opt" data-gradient="on"><span class="gloss-term" data-term="gradient">梯度结构</span><span class="o-sub">Gradient</span></button>
+        </div>
+        <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
+      </div>
+      <div class="sect">
+        <h3>应用场景预设</h3>
+        <div class="scenes">
+          <button class="scene" data-scene="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
+          <button class="scene" data-scene="lightweight"><span class="ic">⚙</span><span><span class="nm">轻量化零件</span><br><span class="ds">Diamond · 平衡强度与重量</span></span></button>
+          <button class="scene" data-scene="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
+        </div>
+      </div>
+      <div class="sect">
+        <h3>当前曲面隐函数</h3>
+        <div class="formula">
+          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定）</div>
+          <div class="eq" id="formula-display"></div>
+        </div>
+        <div class="fw" id="formula-weights">
+          <div class="fw-hint"><span class="gloss-term" data-term="weight">抽动权重</span>，观察公式项如何驱动曲面变形</div>
+          <div id="weight-rows"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel viewer">
+      <div class="v-head">
+        <span class="v-title"><span class="live"></span>3D 实时预览</span>
+        <span class="v-badges">
+          <span class="b t" id="badge-type" data-t="gyroid">Gyroid</span>
+          <span class="b m" id="badge-model">壳模型</span>
+          <span class="b m" id="badge-gradient">均质</span>
+        </span>
+        <div class="v-tools">
+          <button class="tbtn on" id="btn-rotate" title="自动旋转"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+          <button class="tbtn" id="btn-reset" title="复位视角"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M12 3v18"/><circle cx="12" cy="12" r="9"/></svg></button>
+          <button class="tbtn" id="btn-share" title="复制当前参数链接"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg></button>
+          <button class="tbtn" id="btn-snap" title="保存截图 PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+          <button class="tbtn" id="btn-stl" title="导出 STL（可 3D 打印）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+          <button class="tbtn" id="btn-full" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+        </div>
+      </div>
+      <div class="stage">
+        <div id="canvas-container"></div>
+        <div class="loading" id="loading"><span class="sp"></span>重建曲面中…</div>
+        <div class="stat-overlay" id="stats">顶点 <b>—</b>　三角面 <b>—</b><br>分辨率 <b>—</b>³　重建 <b>—</b> ms</div>
+        <div class="axes-hint"><span><kbd>拖拽</kbd> 旋转　<kbd>滚轮</kbd> 缩放　<kbd>右键</kbd> 平移</span></div>
+        <div class="empty" id="empty">当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。</div>
+      </div>
+      <div class="v-foot" id="tips">
+        <div class="tip a"><span class="ti">📊</span><span id="tip1"></span></div>
+        <div class="tip b"><span class="ti">🧬</span><span id="tip2"></span></div>
+        <div class="tip c"><span class="ti">💡</span><span id="tip3"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ob-spot" id="ob-spot"></div>
+<div class="ob-card" id="ob-card"></div>
+<div class="gloss" id="gloss" role="tooltip" aria-hidden="true"><h5><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span><span id="gloss-title"></span></h5><p id="gloss-body"></p></div>
+
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+function buildSurface(type, iso, periods, R, options={}){
+  const N = R + 1, half = Math.PI, span = 2*half, k = periods;
+  const idxF = (ix,iy,iz) => ix + iy*N + iz*N*N;
+  const w = options.weights || [1,1,1];
+  const gradientStrength = options.gradient ? 0.55 : 0;
+  const zOffset = (iz)=> gradientStrength * (iz/R - 0.5);
+  // 预计算各轴 sin/cos(k·坐标)，内层采样循环不再调用三角函数，大幅加速
+  const sn = new Float32Array(N), cs = new Float32Array(N);
+  for(let i=0;i<N;i++){ const a=(-half + (i/R)*span)*k; sn[i]=Math.sin(a); cs[i]=Math.cos(a); }
+  const field = new Float32Array(N*N*N);
+  let minV = Infinity, maxV = -Infinity;
+  for(let iz=0; iz<N; iz++){ const Sz=sn[iz],Cz=cs[iz];
+    for(let iy=0; iy<N; iy++){ const Sy=sn[iy],Cy=cs[iy];
+      for(let ix=0; ix<N; ix++){ const Sx=sn[ix],Cx=cs[ix]; let v;
+        if(type==='gyroid') v = w[0]*Sx*Cy + w[1]*Sy*Cz + w[2]*Sz*Cx;
+        else if(type==='diamond') v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz;
+        else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
+        field[idxF(ix,iy,iz)] = v;
+        if(v<minV) minV=v; if(v>maxV) maxV=v;
+      } } }
+  let isoBase = iso;
+  if(typeof options.targetPorosity === 'number'){
+    const targetSolid = THREE.MathUtils.clamp(1 - options.targetPorosity/100, 0.02, 0.98);
+    let lo = minV - Math.abs(gradientStrength) - 0.05, hi = maxV + Math.abs(gradientStrength) + 0.05;
+    const total = N*N*N;
+    for(let iter=0; iter<14; iter++){
+      const mid = (lo+hi)/2;
+      let solidCount = 0;
+      for(let iz=0; iz<N; iz++){
+        const level = mid + zOffset(iz);
+        const zBase = iz*N*N;
+        for(let iy=0; iy<N; iy++){
+          const yBase = zBase + iy*N;
+          for(let ix=0; ix<N; ix++) if(field[yBase+ix] > level) solidCount++;
+        }
+      }
+      if(solidCount/total > targetSolid) lo = mid; else hi = mid;
+    }
+    isoBase = (lo+hi)/2;
+  }
+  for(let iz=0; iz<N; iz++){
+    const level = isoBase + zOffset(iz);
+    const zBase = iz*N*N;
+    for(let iy=0; iy<N; iy++){
+      const yBase = zBase + iy*N;
+      for(let ix=0; ix<N; ix++) field[yBase+ix] -= level;
+    }
+  }
+  const wc = (i)=> -half + (i/R)*span;
+  const cellVert = new Int32Array(R*R*R).fill(-1);
+  const positions = [];
+  const ED = [[[0,0,0],[1,0,0]],[[0,1,0],[1,1,0]],[[0,0,1],[1,0,1]],[[0,1,1],[1,1,1]],[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]],[[0,0,1],[0,1,1]],[[1,0,1],[1,1,1]],[[0,0,0],[0,0,1]],[[1,0,0],[1,0,1]],[[0,1,0],[0,1,1]],[[1,1,0],[1,1,1]]];
+  let vi = 0, materialAccum = 0;
+  for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
+    const corners=[field[idxF(cx,cy,cz)],field[idxF(cx+1,cy,cz)],field[idxF(cx,cy+1,cz)],field[idxF(cx+1,cy+1,cz)],field[idxF(cx,cy,cz+1)],field[idxF(cx+1,cy,cz+1)],field[idxF(cx,cy+1,cz+1)],field[idxF(cx+1,cy+1,cz+1)]];
+    let solid=0; for(let i=0;i<8;i++) if(corners[i]>0) solid++;
+    materialAccum += solid / 8;
+    if(solid===0 || solid===8) continue;
+    let sx=0,sy=0,sz=0,sc=0;
+    for(const [a,b] of ED){
+      const va=field[idxF(cx+a[0],cy+a[1],cz+a[2])], vb=field[idxF(cx+b[0],cy+b[1],cz+b[2])];
+      if((va>0)!==(vb>0)){
+        let t=(0-va)/(vb-va); if(!isFinite(t)) t=0.5; t=t<0?0:t>1?1:t;
+        const ax=wc(cx+a[0]),ay=wc(cy+a[1]),az=wc(cz+a[2]),bx=wc(cx+b[0]),by=wc(cy+b[1]),bz=wc(cz+b[2]);
+        sx+=ax+(bx-ax)*t; sy+=ay+(by-ay)*t; sz+=az+(bz-az)*t; sc++;
+      }
+    }
+    let vx,vy,vz;
+    if(sc>0){ vx=sx/sc; vy=sy/sc; vz=sz/sc; } else { vx=wc(cx+0.5); vy=wc(cy+0.5); vz=wc(cz+0.5); }
+    positions.push(vx,vy,vz);
+    cellVert[cx + cy*R + cz*R*R] = vi++;
+  }
+  const vAt=(x,y,z)=> (x<0||y<0||z<0||x>=R||y>=R||z>=R)?-1:cellVert[x+y*R+z*R*R];
+  const indices=[]; const pushQuad=(a,b,c,d)=>{ indices.push(a,b,c, a,c,d); };
+  for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
+    const v0=vAt(cx,cy,cz); if(v0<0) continue; let v1,v2,v3;
+    v1=vAt(cx+1,cy,cz); v2=vAt(cx,cy+1,cz); v3=vAt(cx+1,cy+1,cz); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
+    v1=vAt(cx+1,cy,cz); v2=vAt(cx,cy,cz+1); v3=vAt(cx+1,cy,cz+1); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
+    v1=vAt(cx,cy+1,cz); v2=vAt(cx,cy,cz+1); v3=vAt(cx,cy+1,cz+1); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  const solidEstimate = materialAccum / (R*R*R);
+  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-solidEstimate, isoUsed: isoBase };
+}
+
+const COLORS = { gyroid:0x6366f1, diamond:0xf59e0b, schwarz:0x10b981 };
+const LABEL  = { gyroid:'Gyroid', diamond:'Diamond', schwarz:'Schwarz P' };
+const MODEL_LABEL = { surface:'壳模型', strut:'杆模型', solid:'实体模型' };
+const MATERIAL_LABEL = { auto:'结构配色', tc4:'TC4 钛合金', polymer:'PLLA/PLA 高分子', thermal:'高导热复合材' };
+const FORMULA = { gyroid:'sin x · cos y + sin y · cos z + sin z · cos x', diamond:'sin x sin y sin z + sin x cos y cos z + cos x sin y cos z + cos x cos y sin z', schwarz:'cos x + cos y + cos z' };
+const WEIGHT_TERMS = {
+  gyroid:  [['sin x · cos y','a'], ['sin y · cos z','b'], ['sin z · cos x','c']],
+  diamond: [['sin x · sin y · sin z','a'], ['sin x · cos y · cos z','b'], ['cos x · sin y · cos z','c'], ['cos x · cos y · sin z','d']],
+  schwarz: [['cos x','a'], ['cos y','b'], ['cos z','c']]
+};
+const MODEL_DESC = {
+  surface:'壳模型（Surface）：提取 TPMS 等值面薄壳，展示曲面几何与拓扑。最接近 3D 打印中的薄壁表示，可观察真实曲面形貌。',
+  strut:'杆模型（Lattice）：以等值面网格的线框骨架呈现，形似桁架结构。适合理解节点连接方式与载荷传递路径，常用于轻量化设计。',
+  solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。壁厚系数会直接改变实体材料占比，用于评估填充率与力学性能。',
+};
+const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, gradient:false, material:'auto', weights:[1,1,1,1] };
+const CLIP_LIMIT = 1.32;
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), CLIP_LIMIT);
+
+function isoFromPorosity(type, p){ const t=(p-60)/30;
+  if(type==='schwarz') return -0.4 + t*2.4;
+  if(type==='diamond') return -0.25 + t*0.65;
+  return -0.3 + t*0.7;
+}
+function resolutionFromCell(c, preview=false){ const full = Math.min(56, 10 + c*9); return preview ? Math.min(24, full) : full; }
+function baseIso(){ let iso = isoFromPorosity(state.type, state.porosity); if(state.model==='solid') iso -= (state.thickness-1)*0.12; return iso; }
+
+let scene, camera, renderer, controls, group, pmrem, axesHelper, baseGeo=null, meshFill=null, meshWire=null, rebuildTimer=null, lastPorosityEstimate=null;
+
+function initThree(){
+  const container = document.getElementById('canvas-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+  camera.position.set(2.4, 1.5, 4.6);
+  renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+  renderer.localClippingEnabled = true;
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  container.appendChild(renderer.domElement);
+  pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.add(new THREE.HemisphereLight(0xbcd6ff, 0x1a1f2b, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(5,7,6); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x88aaff, 0.5); fill.position.set(-6,-2,-4); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffd9a8, 0.45); rim.position.set(2,-5,-6); scene.add(rim);
+  group = new THREE.Group(); group.scale.setScalar(0.33); scene.add(group);
+  axesHelper = new THREE.AxesHelper(1.05);
+  axesHelper.position.set(-1.28, -1.22, -1.18);
+  axesHelper.renderOrder = 20;
+  axesHelper.material.depthTest = false;
+  axesHelper.material.transparent = true;
+  axesHelper.material.opacity = 0.95;
+  scene.add(axesHelper);
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.autoRotate = true; controls.autoRotateSpeed = 1.1;
+  controls.minDistance = 2.2; controls.maxDistance = 11; controls.target.set(0,0,0); controls.saveState();
+  window.addEventListener('resize', onResize);
+  animate();
+}
+function onResize(){ const c=document.getElementById('canvas-container'); camera.aspect=c.clientWidth/c.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(c.clientWidth,c.clientHeight); }
+function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+
+function materialColor(){
+  if(state.material==='tc4') return 0xb8c2cc;
+  if(state.material==='polymer') return 0xf2b95f;
+  if(state.material==='thermal') return 0x18b99f;
+  return COLORS[state.type];
+}
+function clipMaterial(extra={}){ return { clippingPlanes:[clipPlane], clipShadows:true, ...extra }; }
+function makeFillMaterial(){
+  const color = materialColor();
+  if(state.model==='strut'){
+    return new THREE.MeshStandardMaterial(clipMaterial({ color, metalness:0.12, roughness:0.68, side:THREE.DoubleSide, transparent:true, opacity:0.1, depthWrite:false }));
+  }
+  if(state.material==='tc4'){
+    return new THREE.MeshPhysicalMaterial(clipMaterial({ color, metalness:0.9, roughness:0.35, side:THREE.DoubleSide, clearcoat:0.18, clearcoatRoughness:0.5, envMapIntensity:1.25 }));
+  }
+  if(state.material==='polymer'){
+    return new THREE.MeshPhysicalMaterial(clipMaterial({ color, metalness:0.0, roughness:0.38, side:THREE.DoubleSide, transparent:true, opacity:0.78, transmission:0.28, thickness:0.8, ior:1.46, clearcoat:0.45, clearcoatRoughness:0.18, envMapIntensity:1.1 }));
+  }
+  if(state.material==='thermal'){
+    return new THREE.MeshPhysicalMaterial(clipMaterial({ color, metalness:0.38, roughness:0.3, side:THREE.DoubleSide, clearcoat:0.55, clearcoatRoughness:0.22, envMapIntensity:1.35 }));
+  }
+  if(state.model==='surface'){
+    const op = THREE.MathUtils.clamp(0.5 + state.thickness*0.235, 0.5, 1.0);
+    return new THREE.MeshPhysicalMaterial(clipMaterial({ color, metalness:0.0, roughness:0.26, side:THREE.DoubleSide, transparent: op<0.999, opacity:op, clearcoat:0.7, clearcoatRoughness:0.22, envMapIntensity:1.0 }));
+  }
+  return new THREE.MeshStandardMaterial(clipMaterial({ color, metalness:0.3, roughness:0.4, side:THREE.DoubleSide, envMapIntensity:1.15 }));
+}
+function makeWireMaterial(){ return new THREE.MeshBasicMaterial({ color:materialColor(), wireframe:true, transparent:true, opacity:0.9, clippingPlanes:[clipPlane] }); }
+
+function rebuild(preview=false){
+  const t0 = performance.now();
+  const iso = baseIso();
+  const R = resolutionFromCell(state.cellSize, preview);
+  const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
+  const { geo, vertCount, triCount, porosityEstimate, isoUsed } = buildSurface(state.type, iso, state.cellSize, R, { gradient:state.gradient, targetPorosity, weights:state.weights });
+  if(meshFill){ group.remove(meshFill); meshFill.material.dispose(); meshFill=null; }
+  if(meshWire){ group.remove(meshWire); meshWire.material.dispose(); meshWire=null; }
+  if(baseGeo){ baseGeo.dispose(); }
+  baseGeo = geo;
+  lastPorosityEstimate = porosityEstimate;
+  const empty = vertCount===0;
+  document.getElementById('empty').classList.toggle('show', empty);
+  if(!empty){
+    meshFill = new THREE.Mesh(geo, makeFillMaterial()); group.add(meshFill);
+    if(state.model==='strut'){ meshWire = new THREE.Mesh(geo, makeWireMaterial()); group.add(meshWire); }
+  }
+  const ms = (performance.now()-t0).toFixed(1);
+  const quality = preview ? '预览' : '高清';
+  document.getElementById('stats').innerHTML = `顶点 <b>${vertCount.toLocaleString()}</b>　三角面 <b>${triCount.toLocaleString()}</b><br>分辨率 <b>${R}</b>³（${quality}）　重建 <b>${ms}</b> ms<br>估算孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b>　材料占比 <b>${((1-porosityEstimate)*100).toFixed(1)}%</b>`;
+  updateFormula(isoUsed);
+  updateTips();
+}
+function scheduleRebuild(preview=false){ const loading=document.getElementById('loading'); loading.classList.add('show'); clearTimeout(rebuildTimer); rebuildTimer=setTimeout(()=>{ rebuild(preview); loading.classList.remove('show'); }, preview?16:45); }
+
+let activeWeightKey = null;
+function updateFormula(iso){
+  const suffix = state.gradient ? `C(z)，C₀=<span class="c">${iso.toFixed(3)}</span>，Z 向梯度 ΔC=0.55` : `<span class="c">${iso.toFixed(3)}</span>`;
+  const fd = document.getElementById('formula-display');
+  const w = state.weights;
+  const terms = WEIGHT_TERMS[state.type];
+  const term = (expr, key, val) => {
+    const coef = Math.abs(val - 1) < 0.05 ? '' : `<span class="wcoef">${val.toFixed(1)}·</span>`;
+    return `<span class="term${activeWeightKey === key ? ' term-hl' : ''}" data-w="${key}">${coef}${expr}</span>`;
+  };
+    fd.innerHTML = terms.map(([expr, key], i) => term(expr, key, w[i])).join(' + ') + ` = ${suffix}`;
+}
+function updateTips(){
+  const p=state.porosity, th=state.thickness;
+  const est = lastPorosityEstimate==null ? `目标孔隙率 ${p}%` : `目标 ${p}% / 估算 ${(lastPorosityEstimate*100).toFixed(1)}%`;
+  document.getElementById('tip1').textContent = p>80 ? `${est}：高孔隙，利于细胞/组织长入，但力学强度下降` : p<70 ? `${est}：偏致密，力学支撑更好，内部可用空间有限` : `${est}：平衡区间，兼顾力学性能与功能性`;
+  document.getElementById('tip2').textContent = { gyroid:'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选', diamond:'Diamond 高对称、节点连接强，承载与轻量化表现优异', schwarz:'Schwarz P 表面积最大、连通性极佳，适合换热与催化' }[state.type];
+  const gradientText = state.gradient ? '，Z 向功能梯度已启用' : '';
+  document.getElementById('tip3').textContent = th>1.5 ? `壁厚 ${th}：偏厚，坚固但增重${gradientText}` : th<0.8 ? `壁厚 ${th}：偏薄，轻量化好，注意制造极限${gradientText}` : `壁厚 ${th}：适中，强度与重量平衡${gradientText}`;
+}
+function updateBadges(){
+  const bt=document.getElementById('badge-type'); bt.textContent=LABEL[state.type]; bt.dataset.t=state.type;
+  document.getElementById('badge-model').textContent=MODEL_LABEL[state.model];
+  document.getElementById('badge-gradient').textContent=state.gradient?'梯度':'均质';
+  document.getElementById('model-desc').textContent=MODEL_DESC[state.model];
+  document.getElementById('engineering-desc').textContent = state.gradient ? `梯度模式：等值常数沿 Z 轴连续变化，形成一端更疏、一端更密的功能梯度 TPMS。当前材料：${MATERIAL_LABEL[state.material]}。` : `均质模式：整个结构使用同一等值面参数。当前材料：${MATERIAL_LABEL[state.material]}。`;
+}
+function setActive(sel, attr, val){ document.querySelectorAll(sel).forEach(b=> b.classList.toggle('active', b.dataset[attr]===val)); }
+function setRangeFill(el){ const min=+el.min, max=+el.max, v=+el.value; el.style.setProperty('--p', ((v-min)/(max-min)*100)+'%'); }
+function updateSlicePlane(){
+  const visible = state.slice>=99;
+  clipPlane.constant = visible ? CLIP_LIMIT : THREE.MathUtils.lerp(-CLIP_LIMIT, CLIP_LIMIT, (state.slice+100)/200);
+  document.getElementById('slice-value').textContent = visible ? '完整' : `${Math.round((state.slice+100)/2)}%`;
+  setRangeFill(document.getElementById('slice'));
+}
+function syncSliders(){
+  const p=document.getElementById('porosity'), c=document.getElementById('cell-size'), t=document.getElementById('thickness'), s=document.getElementById('slice');
+  p.value=state.porosity; c.value=state.cellSize; t.value=state.thickness; s.value=state.slice;
+  document.getElementById('porosity-value').textContent=state.porosity+'%';
+  document.getElementById('cell-size-value').textContent=['极低','低','中等','高','极高'][state.cellSize-1];
+  document.getElementById('thickness-value').textContent=state.thickness.toFixed(1);
+  setRangeFill(p); setRangeFill(c); setRangeFill(t); updateSlicePlane();
+}
+
+function refreshWeightUI(){
+  document.getElementById('formula-weights').classList.add('show');
+  const terms = WEIGHT_TERMS[state.type];
+  const container = document.getElementById('weight-rows');
+  container.innerHTML = terms.map(([label, key], i) =>
+      `<div class="fw-row"><span class="fw-tag" data-w="${key}">${label}</span>` +
+    `<input type="range" id="w-${key}" min="0" max="2" value="${state.weights[i]}" step="0.1">` +
+    `<span class="fw-val" id="w-${key}-val">${state.weights[i].toFixed(1)}</span></div>`
+  ).join('');
+  terms.forEach(([label, key], i)=>{
+    const el=document.getElementById('w-'+key), valEl=document.getElementById('w-'+key+'-val');
+    setRangeFill(el);
+    el.addEventListener('input', e=>{
+      state.weights[i]=+e.target.value; valEl.textContent=state.weights[i].toFixed(1); setRangeFill(el);
+      highlightWeightTerm(key); scheduleRebuild(true);
+    });
+    el.addEventListener('change', ()=>{ clearWeightHighlight(); scheduleRebuild(false); });
+  });
+}
+function highlightWeightTerm(key){
+  activeWeightKey = key;
+  document.querySelectorAll('#formula-display .term').forEach(t=> t.classList.toggle('term-hl', t.dataset.w===key));
+  document.querySelectorAll('.fw-tag').forEach(t=> t.classList.toggle('on', t.dataset.w===key));
+}
+function clearWeightHighlight(){
+  activeWeightKey = null;
+  document.querySelectorAll('#formula-display .term').forEach(t=> t.classList.remove('term-hl'));
+  document.querySelectorAll('.fw-tag').forEach(t=> t.classList.remove('on'));
+}
+
+
+document.querySelectorAll('[data-type]').forEach(b=> b.addEventListener('click', ()=>{ state.type=b.dataset.type; if(state.material!=='auto') state.material='auto'; state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); updateBadges(); updateTips(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-model]').forEach(b=> b.addEventListener('click', ()=>{ state.model=b.dataset.model; setActive('[data-model]','model',state.model); updateBadges(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-gradient]').forEach(b=> b.addEventListener('click', ()=>{ state.gradient=b.dataset.gradient==='on'; setActive('[data-gradient]','gradient',state.gradient?'on':'off'); updateBadges(); scheduleRebuild(false); }));
+const porEl=document.getElementById('porosity');
+porEl.addEventListener('input', e=>{ state.porosity=+e.target.value; document.getElementById('porosity-value').textContent=state.porosity+'%'; setRangeFill(porEl); updateTips(); scheduleRebuild(true); });
+porEl.addEventListener('change', ()=> scheduleRebuild(false));
+const cellEl=document.getElementById('cell-size');
+cellEl.addEventListener('input', e=>{ state.cellSize=+e.target.value; document.getElementById('cell-size-value').textContent=['极低','低','中等','高','极高'][state.cellSize-1]; setRangeFill(cellEl); updateTips(); scheduleRebuild(true); });
+cellEl.addEventListener('change', ()=> scheduleRebuild(false));
+const thEl=document.getElementById('thickness');
+thEl.addEventListener('input', e=>{ state.thickness=+e.target.value; document.getElementById('thickness-value').textContent=state.thickness.toFixed(1); setRangeFill(thEl); updateTips(); scheduleRebuild(true); });
+thEl.addEventListener('change', ()=> scheduleRebuild(false));
+const sliceEl=document.getElementById('slice');
+sliceEl.addEventListener('input', e=>{ state.slice=+e.target.value; updateSlicePlane(); });
+
+const PRESETS={ bone:{porosity:84, cellSize:2, thickness:0.8, type:'gyroid', model:'surface', gradient:true, material:'tc4', slice:34}, lightweight:{porosity:68, cellSize:4, thickness:1.3, type:'diamond', model:'strut', gradient:false, material:'polymer', slice:100}, heat:{porosity:74, cellSize:3, thickness:0.6, type:'schwarz', model:'solid', gradient:true, material:'thermal', slice:16} };
+document.querySelectorAll('[data-scene]').forEach(b=> b.addEventListener('click', ()=>{ Object.assign(state, PRESETS[b.dataset.scene]); state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model); setActive('[data-gradient]','gradient',state.gradient?'on':'off'); syncSliders(); updateBadges(); updateTips(); scheduleRebuild(false); }));
+
+document.getElementById('btn-rotate').addEventListener('click', e=>{ controls.autoRotate=!controls.autoRotate; e.currentTarget.classList.toggle('on', controls.autoRotate); });
+document.getElementById('btn-reset').addEventListener('click', ()=> controls.reset());
+document.getElementById('btn-full').addEventListener('click', ()=>{ const el=document.querySelector('.viewer'); if(!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.(); });
+document.getElementById('btn-snap').addEventListener('click', ()=>{ renderer.render(scene,camera); const a=document.createElement('a'); a.href=renderer.domElement.toDataURL('image/png'); a.download=`tpms-${state.type}-${Date.now()}.png`; a.click(); });
+document.getElementById('btn-stl').addEventListener('click', ()=>{ if(!baseGeo) return; const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); const stl=new STLExporter().parse(tmp, { binary:false }); const blob=new Blob([stl], { type:'model/stl' }); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`tpms-${state.type}.stl`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); });
+document.getElementById('btn-share').addEventListener('click', async e=>{
+  const url = new URL(location.href);
+  url.search = new URLSearchParams({
+    type: state.type,
+    model: state.model,
+    porosity: String(state.porosity),
+    cellSize: String(state.cellSize),
+    thickness: state.thickness.toFixed(1),
+    slice: String(state.slice),
+    gradient: state.gradient ? '1' : '0',
+    material: state.material,
+    autoRotate: controls.autoRotate ? '1' : '0',
+      wa: String(state.weights[0]), wb: String(state.weights[1]),
+      wc: String(state.weights[2]), wd: String(state.weights[3])
+  }).toString();
+  const text = url.toString();
+  try{
+    if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    else {
+      const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    }
+    e.currentTarget.classList.add('on'); e.currentTarget.title='已复制当前参数链接';
+    setTimeout(()=>{ e.currentTarget.classList.remove('on'); e.currentTarget.title='复制当前参数链接'; }, 1200);
+  }catch{
+    prompt('复制当前参数链接', text);
+  }
+});
+
+initThree();
+syncSliders();
+updateBadges();
+updateTips();
+refreshWeightUI();
+rebuild();
+
+// 从 URL 参数恢复配置（便于分享特定结构 & 自动截图脚本按场景截图）
+  (function(){
+  const q = new URLSearchParams(location.search);
+  const valid = {
+    type:['gyroid','diamond','schwarz'], model:['surface','strut','solid'],
+    porosity:[60,90], cellSize:[1,5], thickness:[0.5,2.0], slice:[-100,100],
+    material:['auto','tc4','polymer','thermal']
+  };
+  const clamp=(v,a,b,x)=> (v==null||isNaN(+v))?x:Math.min(b,Math.max(a,+v));
+  const changed = {};
+  if(q.has('type')&&valid.type.includes(q.get('type'))){ state.type=q.get('type'); changed.type=1; }
+  if(q.has('model')&&valid.model.includes(q.get('model'))){ state.model=q.get('model'); changed.model=1; }
+  if(q.has('porosity')){ state.porosity=clamp(q.get('porosity'),60,90,75); changed.porosity=1; }
+  if(q.has('cellSize')){ state.cellSize=clamp(q.get('cellSize'),1,5,3); changed.cellSize=1; }
+  if(q.has('thickness')){ state.thickness=clamp(q.get('thickness'),0.5,2.0,1.0); changed.thickness=1; }
+  if(q.has('slice')){ state.slice=clamp(q.get('slice'),-100,100,100); changed.slice=1; }
+  if(q.has('gradient')){ state.gradient=q.get('gradient')==='1'; changed.gradient=1; }
+  if(q.has('material')&&valid.material.includes(q.get('material'))){ state.material=q.get('material'); changed.material=1; }
+  if(q.has('wa')){ state.weights[0]=clamp(q.get('wa'),0,2,1); changed.weights=1; }
+  if(q.has('wb')){ state.weights[1]=clamp(q.get('wb'),0,2,1); changed.weights=1; }
+  if(q.has('wc')){ state.weights[2]=clamp(q.get('wc'),0,2,1); changed.weights=1; }
+    if(q.has('wd')){ state.weights[3]=clamp(q.get('wd'),0,2,1); changed.weights=1; }
+  if(Object.keys(changed).length){
+    setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model);
+    setActive('[data-gradient]','gradient',state.gradient?'on':'off');
+    syncSliders(); refreshWeightUI(); updateBadges(); updateTips(); scheduleRebuild(false);
+  }
+  // 自动旋转开关（截图时传 autoRotate=0 可静止）
+  if(q.has('autoRotate')){ controls.autoRotate = q.get('autoRotate')!=='0';
+    document.getElementById('btn-rotate').classList.toggle('on', controls.autoRotate); }
+})();
+
+// 新手引导：首次进入自动触发；带 URL 参数（分享/截图脚本）或已看过则不打扰，顶栏可手动重开
+(function(){
+  const KEY='tpms-onboarded';
+  const spot=document.getElementById('ob-spot');
+  const card=document.getElementById('ob-card');
+  let idx=0, opened=false;
+  function demoPorosity(){
+    const el=document.getElementById('porosity');
+    el.value=88; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  function demoType(){ const b=document.querySelector('[data-type="schwarz"]'); if(b) b.click(); }
+  function demoSlice(){
+    const el=document.getElementById('slice');
+    el.value=20; el.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  const steps=[
+    {title:'欢迎来到 TPMS 探索器', body:'你眼前这个就是 <b>Gyroid 螺旋曲面</b>——三重周期性极小曲面家族里最经典的一员，蝴蝶翅膀、细胞膜里都能找到它的影子。先<b>拖动画面</b>转一圈，感受它的立体形态。', demo:null, target:function(){return document.querySelector('.viewer')}},
+    {title:'孔隙率：把“空”调出来', body:'<b>孔隙率</b>就是结构里有多少比例是“空的”。拖动这个滑块，看 Gyroid 怎么从致密变得通透——这正是骨支架、滤膜设计的核心旋钮。', demo:{label:'演示 · 调到高孔隙', run:demoPorosity}, target:function(){return document.getElementById('porosity').closest('.field')}},
+    {title:'一个家族，三种形态', body:'TPMS 不止一种。点这里切到 <b>Diamond</b> 或 <b>Schwarz P</b>，对比螺旋、笼状、片状三种截然不同的几何。', demo:{label:'演示 · 切到 Schwarz P', run:demoType}, target:function(){return document.querySelectorAll('.controls .sect')[0]}},
+    {title:'截面扫描：切开看内部', body:'想知道内部孔道长什么样？拖动<b>截面滑块</b>，像切蛋糕一样沿 Z 轴逐层剖开曲面，看清内部连通的通道网络。', demo:{label:'演示 · 剖到中部', run:demoSlice}, target:function(){return document.getElementById('slice').closest('.field')}},
+    {title:'一键进入真实应用', body:'最后试试这些<b>应用场景预设</b>：仿生骨支架、轻量化零件、散热结构——它们把“看懂结构”和“真实用途”直接连起来。开始自由探索吧！', demo:null, target:function(){return document.querySelector('.scenes')}}
+  ];
+  function positionSpot(el){
+    if(!el){ spot.classList.remove('show'); return; }
+    const r=el.getBoundingClientRect();
+    const pad=7;
+    spot.style.left=(r.left-pad)+'px';
+    spot.style.top=(r.top-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+    spot.classList.add('show');
+    const below=r.bottom < window.innerHeight*0.6;
+    card.style.bottom=below?'28px':'auto';
+    card.style.top=below?'auto':'24px';
+  }
+  function render(){
+    const s=steps[idx];
+    const isLast=idx===steps.length-1;
+    const dots=steps.map(function(_,i){return '<i class="'+(i===idx?'on':'')+'"></i>';}).join('');
+    const demoHtml=s.demo?'<button class="ob-demo" id="ob-demo">'+s.demo.label+'</button>':'';
+    card.innerHTML='<div class="ob-head"><span class="ob-step">第 '+(idx+1)+' 步 / 共 '+steps.length+' 步</span><span class="ob-dots">'+dots+'</span></div><h4>'+s.title+'</h4><p>'+s.body+'</p>'+demoHtml+'<div class="ob-foot"><button class="ob-btn ghost" id="ob-skip">跳过引导</button>'+(idx>0?'<button class="ob-btn ghost" id="ob-prev">上一步</button>':'')+'<button class="ob-btn primary" id="ob-next">'+(isLast?'开始探索':'下一步')+'</button></div>';
+    positionSpot(s.target && s.target());
+    const demoBtn=document.getElementById('ob-demo');
+    if(demoBtn && s.demo) demoBtn.addEventListener('click', s.demo.run);
+    document.getElementById('ob-skip').addEventListener('click', closeOnboard);
+    document.getElementById('ob-next').addEventListener('click', function(){ isLast?closeOnboard():go(idx+1); });
+    const prevBtn=document.getElementById('ob-prev');
+    if(prevBtn) prevBtn.addEventListener('click', function(){ go(idx-1); });
+  }
+  function go(i){ idx=Math.max(0,Math.min(steps.length-1,i)); render(); }
+  function openOnboard(){ idx=0; opened=true; card.classList.add('show'); render(); }
+  function closeOnboard(){ opened=false; card.classList.remove('show'); spot.classList.remove('show'); try{localStorage.setItem(KEY,'1');}catch(e){} }
+  window.addEventListener('resize', function(){ if(opened) positionSpot(steps[idx].target && steps[idx].target()); });
+  document.addEventListener('keydown', function(e){
+    if(!opened) return;
+    if(e.key==='Escape') closeOnboard();
+    else if(e.key==='ArrowRight') go(idx+1);
+    else if(e.key==='ArrowLeft') go(idx-1);
+  });
+  document.getElementById('btn-onboard').addEventListener('click', openOnboard);
+  const hasParams = location.search && location.search.length>1;
+  if(localStorage.getItem(KEY)!=='1' && !hasParams){ setTimeout(openOnboard, 750); }
+})();
+
+// 术语解释层（方向 C）：悬停/点击 .term 显示词条卡
+(function(){
+  const GLOSSARY = {
+    porosity: {title:'孔隙率 · Porosity', body:'结构里“空”的体积占比。75% 表示约四分之三是贯通孔洞。孔隙越高越轻、越通透，但承载能力下降；仿生骨支架常用 70–85%。'},
+    'cell-density': {title:'单元密度 · Cell Size', body:'TPMS 在空间中重复的周期数。密度越高，曲面“褶皱”越密、结构越精细，同时算力开销越大。'},
+    thickness: {title:'壁厚系数 · Thickness', body:'曲面薄壳的厚度倍率，仅在实体/壳模型里改变真实材料占比。越厚越坚固，越薄越轻量。'},
+    slice: {title:'截面扫描 · Cross-section', body:'用虚拟平面沿 Z 轴逐层切开曲面，露出内部连通的孔道。拖到中部即可观察 TPMS 的三维通道网络。'},
+    gradient: {title:'梯度结构 · Gradient', body:'让等值常数沿 Z 轴连续变化，使结构一端致密、一端疏松。骨支架常用：致密端承力，疏松端促骨长入。'},
+    'iso-c': {title:'等值常数 C · Isovalue', body:'公式 f(x,y,z)=C 里的 C。场函数值恰好等于 C 的所有点连成一张面，就是等值面。调高 C 材料变多、孔隙变小——这正是孔隙率滑块背后的数学。'},
+    weight: {title:'权重系数 · Weight', body:'公式每一项前的乘数。把某项权重调大，曲面就朝那个方向“倾斜”变形。拖动它，直接看到数学项如何塑造几何。'}
+  };
+  const gloss=document.getElementById('gloss');
+  const gt=document.getElementById('gloss-title');
+  const gb=document.getElementById('gloss-body');
+  let cur=null;
+  function place(anchor){
+    const r=anchor.getBoundingClientRect();
+    const gW=Math.min(300, window.innerWidth-24);
+    gloss.style.maxWidth=gW+'px';
+    const gH=gloss.offsetHeight||150;
+    let left=r.left; if(left+gW>window.innerWidth-12) left=window.innerWidth-gW-12; if(left<12) left=12;
+    let top=r.bottom+8; if(top+gH>window.innerHeight-12) top=r.top-gH-8; if(top<12) top=12;
+    gloss.style.left=left+'px'; gloss.style.top=top+'px';
+  }
+  function show(term, anchor){
+    const d=GLOSSARY[term]; if(!d) return;
+    cur=term; gt.textContent=d.title; gb.textContent=d.body;
+    gloss.classList.add('show'); gloss.setAttribute('aria-hidden','false'); place(anchor);
+  }
+  function hide(){ cur=null; gloss.classList.remove('show'); gloss.setAttribute('aria-hidden','true'); }
+  document.addEventListener('mouseover', function(e){
+    const t=e.target.closest('.gloss-term'); if(!t) return;
+    if(cur!==t.dataset.term) show(t.dataset.term, t); else place(t);
+  });
+  document.addEventListener('mouseout', function(e){
+    const t=e.target.closest('.gloss-term'); if(!t) return;
+    hide();
+  });
+  document.addEventListener('click', function(e){
+    const t=e.target.closest('.gloss-term');
+    if(t){ show(t.dataset.term, t); return; }
+    hide();
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
+  window.addEventListener('resize', function(){ if(cur){ const t=document.querySelector('.gloss-term[data-term="'+CSS.escape(cur)+'"]'); if(t) place(t); } });
+})();
+
+</script>
+</body>
+</html>
