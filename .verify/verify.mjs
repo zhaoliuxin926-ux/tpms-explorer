@@ -14,7 +14,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500); // 750ms 延迟 + buffer
@@ -33,7 +33,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
@@ -63,7 +63,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
@@ -99,7 +99,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
@@ -121,7 +121,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html?type=diamond&porosity=70', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html?type=diamond&porosity=70', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
@@ -135,7 +135,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
@@ -153,7 +153,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   // 不清 localStorage——带参数自然不弹
   await page.waitForTimeout(2000);
   const statsText = await page.locator('#stats').textContent();

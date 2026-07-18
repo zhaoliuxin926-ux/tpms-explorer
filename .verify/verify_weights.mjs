@@ -30,7 +30,7 @@ async function releaseSlider(page, selector){
   const errors = [];
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
   page.on('pageerror', err => errors.push(err.message));
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   log('页面无 JS 错误', errors.length === 0, errors.slice(0,2).join(' | '));
   await ctx.close();
@@ -40,7 +40,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // T2: gyroid 默认权重区可见
@@ -76,7 +76,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   const statsBefore = await page.locator('#stats').textContent();
@@ -114,7 +114,7 @@ async function releaseSlider(page, selector){
   const page = await ctx.newPage();
 
   // 默认权重截图
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   await page.locator('#btn-rotate').click();
   await page.waitForTimeout(300);
@@ -138,7 +138,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html?wa=0.5&wb=1.5&wc=1', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html?wa=0.5&wb=1.5&wc=1', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   const wa = await page.locator('#w-a').inputValue();
   const wb = await page.locator('#w-b').inputValue();

@@ -8,7 +8,7 @@ page.on('console', msg => console.log(`[${msg.type()}] ${msg.text()}`));
 page.on('pageerror', err => console.log(`[pageerror] ${err.message}`));
 page.on('requestfailed', req => console.log(`[failed] ${req.url()} - ${req.failure()?.errorText}`));
 
-await page.goto('http://127.0.0.1:8123/index.html', { waitUntil: 'domcontentloaded' });
+await page.goto('http://127.0.0.1:8123/app.html', { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(3000);
 
 // Check formula with weight coef

@@ -10,7 +10,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   await page.locator('#w-a').evaluate((el, v) => {
@@ -34,7 +34,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   await page.locator('#btn-share').click();
@@ -50,7 +50,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html?type=diamond&wd=1.8', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html?type=diamond&wd=1.8', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
 
   const wdExists = await page.locator('#w-d-val').count();
@@ -62,7 +62,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   }
 
   // 也测 Gyroid URL 恢复
-  await page.goto(BASE + '/index.html?type=gyroid&wa=0.5&wb=1.5', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html?type=gyroid&wa=0.5&wb=1.5', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   const waVal = await page.locator('#w-a-val').textContent();
   const wbVal = await page.locator('#w-b-val').textContent();

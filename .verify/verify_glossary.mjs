@@ -28,7 +28,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const errors = [];
   page.on('console', msg => { const t = msg.text(); if (msg.type() === 'error' && !/favicon|Failed to load resource|net::ERR|404/i.test(t)) errors.push(t); });
   page.on('pageerror', err => errors.push(err.message));
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   log('页面无 JS 错误', errors.length === 0, errors.slice(0,2).join(' | '));
   await ctx.close();
@@ -38,7 +38,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // 关闭可能弹出的新手引导，避免遮挡

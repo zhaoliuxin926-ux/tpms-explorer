@@ -27,7 +27,7 @@ async function releaseSlider(page, selector){
   const errors = [];
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
   page.on('pageerror', err => errors.push(err.message));
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   log('页面无 JS 错误', errors.length === 0, errors.slice(0,2).join(' | '));
   await ctx.close();
@@ -37,7 +37,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // T2: Gyroid 权重区可见
@@ -75,7 +75,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // 切 Diamond
@@ -105,7 +105,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   await page.locator('[data-type="schwarz"]').click();
@@ -131,7 +131,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // Gyroid: 拖 w-a 到 1.5，公式应显示 "1.5·"
@@ -148,7 +148,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // 修改 Gyroid 权重
@@ -173,7 +173,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);
 
   // 读取 clipboard 权限
@@ -195,7 +195,7 @@ async function releaseSlider(page, selector){
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/index.html?type=diamond&wd=1.8', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app.html?type=diamond&wd=1.8', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
 
   const wdVal = await page.locator('#w-d-val').textContent();

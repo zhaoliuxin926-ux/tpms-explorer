@@ -87,7 +87,7 @@ img{max-width:100%;display:block}
 .section-head p{font-size:.98rem;color:var(--ink-2);max-width:560px;margin:0 auto}
 
 /* ===== 能力卡片 ===== */
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:var(--radius);
   box-shadow:var(--shadow);padding:24px 22px;transition:transform .2s, box-shadow .2s}
 .card:hover{transform:translateY(-3px);box-shadow:0 4px 8px rgba(20,28,46,.06), 0 18px 40px rgba(20,28,46,.1)}
@@ -159,7 +159,7 @@ img{max-width:100%;display:block}
       <span class="mark"></span>
       <span>
         <h1>TPMS 结构参数探索器</h1>
-        <span class="sub">Triple-Periodic Minimal Surface Explorer</span>
+        <span class="sub">Triply-Periodic Minimal Surface Explorer</span>
       </span>
     </a>
     <span class="spacer"></span>
@@ -174,7 +174,7 @@ img{max-width:100%;display:block}
 <section class="hero wrap">
   <span class="eyebrow"><span class="dot"></span>浏览器原生 · 零安装 · 实时交互</span>
   <h2>在浏览器里实时探索<br><span class="grad">三重周期性极小曲面</span></h2>
-  <p class="lead">把复杂的 TPMS 建模过程压缩成一个零门槛网页体验。拖动滑块，就能观察 Gyroid、Diamond、Schwarz P 曲面如何从稀疏到致密、从骨架到实体。</p>
+  <p class="lead">把复杂的 TPMS 建模简化成一个零门槛网页体验。拖动滑块，在 Gyroid、Diamond、Schwarz P、Neovius、I-WP、F-RD 六类经典曲面之间切换，选择实体网络、等厚双壳或梯度双壳三种结构拓扑，并装填进立方体或圆柱体容器，观察它如何从稀疏到致密、从骨架到实体。</p>
   <div class="hero-btns">
     <a class="btn-primary" href="app.html">开始探索 →</a>
     <a class="btn-ghost" href="#capabilities">了解能做什么</a>
@@ -199,8 +199,18 @@ img{max-width:100%;display:block}
     </div>
     <div class="card">
       <div class="ico">🧬</div>
-      <h4>三类经典曲面</h4>
-      <p>Gyroid、Diamond、Schwarz P，每类配独立颜色、公式与权重交互，理解为什么长这样。</p>
+      <h4>六类经典曲面</h4>
+      <p>Gyroid、Diamond、Schwarz P、Neovius、I-WP、F-RD，每类配独立颜色与公式，覆盖骨支架到催化的主流 TPMS 族。</p>
+    </div>
+    <div class="card">
+      <div class="ico">🧱</div>
+      <h4>三种结构拓扑</h4>
+      <p>实体网络生成完整骨架，等厚双壳抽出均匀壁厚的封闭薄壳，梯度双壳则让壳厚沿轴向渐变，匹配不同承载与流体需求。</p>
+    </div>
+    <div class="card">
+      <div class="ico">📐</div>
+      <h4>双容器：立方体 / 圆柱体</h4>
+      <p>一键在立方体与圆柱体两种容器之间切换。立方体适合规则堆叠与打印摆放，圆柱体贴合管道、植入物等轴对称零件的外形约束。</p>
     </div>
     <div class="card">
       <div class="ico">🔬</div>
@@ -270,7 +280,7 @@ img{max-width:100%;display:block}
     <div class="tech-item">
       <div class="label">算法</div>
       <h5>Surface Nets 等值面重建</h5>
-      <p>自研实现，对穿过等值面的体素生成顶点并连接成连续网格，相比 Marching Cubes 无需维护庞大的查找表。</p>
+      <p>从零实现的 Surface Nets 算法，对穿过等值面的体素生成顶点并连接成连续网格，相比 Marching Cubes 无需维护庞大的查找表。</p>
     </div>
     <div class="tech-item">
       <div class="label">性能</div>

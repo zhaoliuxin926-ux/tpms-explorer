@@ -8,7 +8,7 @@ const msgs = [];
 page.on('console', m => msgs.push(`[console.${m.type()}] ${m.text()}`));
 page.on('pageerror', e => msgs.push(`[PAGEERROR] ${e.message}`));
 
-await page.goto('http://127.0.0.1:8123/index.html', { waitUntil: 'networkidle' });
+await page.goto('http://127.0.0.1:8123/app.html', { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);

@@ -1,6 +1,7 @@
 # 本地开发辅助文件（不上线）
 agent_memory/
 .zcode/
+.diag/
 .verify/node_modules/
 .verify/shots/
 *.zip

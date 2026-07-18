@@ -19,6 +19,7 @@
     --ink:#1f2430; --ink-2:#5b6472; --ink-3:#8b93a3;
     --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
     --gyroid:#6366f1; --diamond:#f59e0b; --schwarz:#10b981;
+    --neovius:#ec4899; --iwp:#0ea5e9; --frd:#a855f7;
     --radius:14px; --radius-s:10px;
     --shadow:0 1px 2px rgba(20,28,46,.06), 0 10px 30px rgba(20,28,46,.08);
   }
@@ -29,8 +30,8 @@
     background:radial-gradient(1200px 600px at 85% -10%, #dfe7f2 0%, rgba(223,231,242,0) 60%),linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
     color:var(--ink); -webkit-font-smoothing:antialiased;
   }
-  .app{max-width:1480px;margin:0 auto;padding:18px 20px 26px}
-  .topbar{display:flex;align-items:center;gap:16px;padding:6px 2px 16px;flex-wrap:wrap}
+  .app{height:100vh;display:flex;flex-direction:column;max-width:none;margin:0;padding:0;gap:0;overflow:hidden}
+  .topbar{flex:none;display:flex;align-items:center;gap:16px;padding:12px 20px;flex-wrap:wrap;background:var(--panel);border-bottom:1px solid var(--panel-border)}
   .brand{display:flex;align-items:center;gap:13px}
   .brand .mark{
     width:42px;height:42px;border-radius:12px;flex:none;position:relative;overflow:hidden;
@@ -47,12 +48,18 @@
   .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:600;
     background:#fff;border:1px solid var(--panel-border);color:var(--ink-2)}
   .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  .grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 320px;gap:18px;padding:18px 20px;align-items:stretch}
   .panel{background:var(--panel);border:1px solid var(--panel-border);border-radius:var(--radius);box-shadow:var(--shadow)}
-  .controls{padding:18px}
+  .controls{padding:18px;overflow-y:auto;min-height:0}
   .sect{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--panel-border)}
   .sect:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
   .sect h3{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+  /* 折叠 section：用原生 details/summary，零 JS */
+  .sect > summary.sect-h{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;user-select:none}
+  .sect > summary.sect-h::-webkit-details-marker{display:none}
+  .sect > summary.sect-h::after{content:"▾";transition:transform .25s;color:var(--ink-3);font-size:.9rem}
+  .sect:not([open]) > summary.sect-h{margin-bottom:0}
+  .sect:not([open]) > summary.sect-h::after{transform:rotate(-90deg)}
   .opt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .opt-row.two{grid-template-columns:repeat(2,1fr)}
   .opt{
@@ -65,11 +72,16 @@
   .opt[data-color="gyroid"].active{background:var(--gyroid);border-color:var(--gyroid);color:#fff}
   .opt[data-color="diamond"].active{background:var(--diamond);border-color:var(--diamond);color:#fff}
   .opt[data-color="schwarz"].active{background:var(--schwarz);border-color:var(--schwarz);color:#fff}
+  .opt[data-color="neovius"].active{background:var(--neovius);border-color:var(--neovius);color:#fff}
+  .opt[data-color="iwp"].active{background:var(--iwp);border-color:var(--iwp);color:#fff}
+  .opt[data-color="frd"].active{background:var(--frd);border-color:var(--frd);color:#fff}
   .opt.active .o-sub{color:rgba(255,255,255,.82)}
   .opt[data-model].active{background:var(--ink);border-color:var(--ink);color:#fff}
   .opt[data-model].active .o-sub{color:rgba(255,255,255,.7)}
-  .opt[data-gradient].active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .opt[data-gradient].active .o-sub{color:rgba(255,255,255,.8)}
+  .opt[data-material].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-material].active .o-sub{color:rgba(255,255,255,.7)}
+  .opt[data-structure].active,.opt[data-container].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-structure].active .o-sub,.opt[data-container].active .o-sub{color:rgba(255,255,255,.7)}
   .field{margin-bottom:15px}
   .field:last-child{margin-bottom:0}
   .field .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
@@ -113,18 +125,11 @@
   .fw-tag.on{color:var(--accent-d);font-weight:700}
   .fw-row input[type=range]{flex:1;height:5px}
   .fw-val{font-size:.72rem;font-weight:700;color:var(--accent-d);font-variant-numeric:tabular-nums;width:26px;text-align:right;flex:none}
-  .viewer{display:flex;flex-direction:column;overflow:hidden}
-  .v-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--panel-border);flex-wrap:wrap}
-  .v-title{font-size:.92rem;font-weight:700;display:flex;align-items:center;gap:8px}
-  .v-title .live{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(13,148,136,.5);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(13,148,136,.45)}70%{box-shadow:0 0 0 7px rgba(13,148,136,0)}100%{box-shadow:0 0 0 0 rgba(13,148,136,0)}}
-  .v-badges{display:flex;gap:6px}
-  .v-badges .b{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:999px}
-  .v-badges .b.t{background:#eef0ff;color:var(--gyroid)}
-  .v-badges .b.t[data-t=diamond]{background:#fff5e6;color:#b45309}
-  .v-badges .b.t[data-t=schwarz]{background:#e7f8f1;color:#047857}
-  .v-badges .b.m{background:#eef1f6;color:var(--ink-2)}
-  .v-tools{margin-left:auto;display:flex;gap:6px}
+  .viewer{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+  .v-tools{position:absolute;top:14px;right:14px;z-index:10;display:flex;gap:6px;background:rgba(13,16,21,.55);padding:6px;border-radius:11px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .v-tools .tbtn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:#dfe5ee}
+  .v-tools .tbtn:hover{background:rgba(255,255,255,.16);color:#fff}
+  .v-tools .tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .tbtn{
     width:34px;height:34px;border-radius:9px;border:1px solid var(--panel-border);background:#fff;color:var(--ink-2);
     display:grid;place-items:center;cursor:pointer;transition:all .15s;
@@ -133,28 +138,49 @@
   .tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .tbtn svg{width:17px;height:17px}
   .stage{position:relative;flex:1;min-height:0}
-  #canvas-container{width:100%;height:620px;position:relative;background:radial-gradient(circle at 50% 42%, #161b24 0%, #0c0f15 70%, #07090d 100%);overflow:hidden}
+  #canvas-container{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 42%, #161b24 0%, #0c0f15 70%, #07090d 100%);overflow:hidden}
   #canvas-container canvas{display:block}
-  .stage .empty{position:absolute;inset:0;display:none;place-items:center;color:#9aa3b2;font-size:.88rem;text-align:center;padding:20px}
+  .stage .empty{position:absolute;inset:0;display:none;place-items:center;color:#9aa3b2;font-size:.88rem;text-align:center;padding:20px;z-index:2}
   .stage .empty.show{display:grid}
-  .loading{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(13,16,21,.72);color:#cfd6e2;
+  .loading{position:absolute;left:50%;top:60px;transform:translateX(-50%);background:rgba(13,16,21,.72);color:#cfd6e2;z-index:8;
     padding:6px 14px;border-radius:999px;font-size:.76rem;display:none;align-items:center;gap:8px;backdrop-filter:blur(6px)}
   .loading.show{display:flex}
   .loading .sp{width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .axes-hint{position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;gap:5px;font-size:.7rem;color:#9aa3b2;pointer-events:none}
+  .axes-hint{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:5px;font-size:.7rem;color:#9aa3b2;pointer-events:none;z-index:5;text-align:right}
   .axes-hint kbd{font-family:inherit;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:1px 6px;margin:0 1px}
-  .stat-overlay{position:absolute;right:14px;top:14px;background:rgba(13,16,21,.6);border:1px solid rgba(255,255,255,.08);
-    border-radius:9px;padding:8px 11px;color:#aeb6c4;font-size:.7rem;line-height:1.6;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+  .stat-overlay{position:absolute;left:14px;top:14px;background:rgba(13,16,21,.6);border:1px solid rgba(255,255,255,.08);
+    border-radius:9px;padding:8px 11px;color:#aeb6c4;font-size:.7rem;line-height:1.6;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums;z-index:6}
   .stat-overlay b{color:#e9edf3;font-weight:700}
-  .v-foot{display:flex;gap:14px;flex-wrap:wrap;padding:11px 14px;border-top:1px solid var(--panel-border);background:var(--panel-2)}
-  .tip{display:flex;align-items:flex-start;gap:8px;font-size:.77rem;color:var(--ink-2);line-height:1.45;flex:1;min-width:200px}
+  .v-foot{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;z-index:5}
+  .v-foot .tip{background:rgba(13,16,21,.55);border:1px solid rgba(255,255,255,.08);color:#dfe5ee;padding:7px 11px;border-radius:9px;font-size:.74rem;line-height:1.5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);max-width:calc(50% - 6px)}
+  .tip{display:flex;align-items:flex-start;gap:8px;font-size:.77rem;color:var(--ink-2);line-height:1.45;flex:1 1 auto;min-width:0}
   .tip .ti{flex:none;width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;color:#fff;margin-top:1px}
   .tip.a .ti{background:var(--accent)}
   .tip.b .ti{background:var(--gyroid)}
   .tip.c .ti{background:var(--diamond)}
-  @media(max-width:980px){.grid{grid-template-columns:1fr}#canvas-container{height:440px}}
-  @media(max-width:560px){.app{padding:12px}.controls{padding:14px}#canvas-container{height:380px}.topbar .pills{display:none}.stat-overlay{display:none}}
+  /* 桌面端隐藏移动 sheet 手柄 */
+  @media(min-width:981px){.sheet-handle{display:none}}
+  /* 平板/移动：画布占满视口，控件变成底部可上拉 sheet */
+  .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--ink-3);opacity:.4;margin:2px auto 10px;cursor:pointer;transition:opacity .2s}
+  .sheet-handle:hover{opacity:.7}
+  @media(max-width:980px){
+    .grid{grid-template-columns:1fr;padding:0;gap:0}
+    .viewer{height:calc(100vh - 56px);min-height:0}
+    .controls{position:fixed;bottom:0;left:0;right:0;max-height:78vh;transform:translateY(calc(100% - 54px));transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:50;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(10,13,20,.18);padding:0 16px 16px}
+    .controls.sheet-open{transform:translateY(0)}
+    .controls .sect:first-of-type{margin-top:4px}
+    .v-foot{display:none}
+  }
+  @media(max-width:560px){
+    .topbar{padding:10px 14px;flex-wrap:nowrap;overflow:hidden}
+    .topbar .pills{display:none}
+    .topbar .brand .sub{display:none}
+    .stat-overlay{font-size:.7rem;padding:7px 10px}
+    .axes-hint{display:none}
+    .v-tools{top:10px;right:10px;padding:4px}
+    .v-tools .tbtn{width:30px;height:30px}
+  }
   /* 新手引导 */
   .onboard-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:#fff;color:var(--accent-d);transition:all .15s}
   .onboard-btn:hover{background:var(--accent-soft)}
@@ -216,26 +242,44 @@
   </div>
 
   <div class="grid">
+    <div class="panel viewer">
+      <div class="stage">
+        <div id="canvas-container"></div>
+        <div class="loading" id="loading"><span class="sp"></span>重建曲面中…</div>
+        <div class="stat-overlay" id="stats">顶点 <b>—</b>　三角面 <b>—</b><br>分辨率 <b>—</b>³　重建 <b>—</b> ms</div>
+        <div class="v-tools">
+          <button class="tbtn on" id="btn-rotate" title="自动旋转"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+          <button class="tbtn" id="btn-reset" title="复位视角"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M12 3v18"/><circle cx="12" cy="12" r="9"/></svg></button>
+          <button class="tbtn" id="btn-share" title="复制当前参数链接"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg></button>
+          <button class="tbtn" id="btn-snap" title="保存截图 PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+          <button class="tbtn" id="btn-stl" title="导出 STL（完整等值面网格，可 3D 打印）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+          <button class="tbtn" id="btn-full" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+        </div>
+        <div class="axes-hint"><span><kbd>拖拽</kbd> 旋转　<kbd>滚轮</kbd> 缩放　<kbd>右键</kbd> 平移</span></div>
+        <div class="empty" id="empty">当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。</div>
+        <div class="v-foot" id="tips">
+          <div class="tip a"><span class="ti">📊</span><span id="tip1"></span></div>
+          <div class="tip b"><span class="ti">🧬</span><span id="tip2"></span></div>
+          <div class="tip c"><span class="ti">💡</span><span id="tip3"></span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel controls">
-      <div class="sect">
-        <h3>TPMS 曲面类型</h3>
+      <div class="sheet-handle" id="sheet-handle"></div>
+      <details class="sect" open>
+        <summary class="sect-h">TPMS 曲面类型</summary>
         <div class="opt-row">
           <button class="opt active" data-type="gyroid" data-color="gyroid">Gyroid<span class="o-sub">螺旋</span></button>
           <button class="opt" data-type="diamond" data-color="diamond">Diamond<span class="o-sub">金刚石</span></button>
           <button class="opt" data-type="schwarz" data-color="schwarz">Schwarz P<span class="o-sub">原始 P</span></button>
+          <button class="opt" data-type="neovius" data-color="neovius">Neovius<span class="o-sub">伴随面</span></button>
+          <button class="opt" data-type="iwp" data-color="iwp">I-WP<span class="o-sub">平衡面</span></button>
+          <button class="opt" data-type="frd" data-color="frd">F-RD<span class="o-sub">复合面</span></button>
         </div>
-      </div>
-      <div class="sect">
-        <h3>表现形式</h3>
-        <div class="opt-row">
-          <button class="opt active" data-model="surface">壳模型<span class="o-sub">Surface</span></button>
-          <button class="opt" data-model="strut">杆模型<span class="o-sub">Lattice</span></button>
-          <button class="opt" data-model="solid">实体模型<span class="o-sub">Solid</span></button>
-        </div>
-        <div class="model-desc" id="model-desc"></div>
-      </div>
-      <div class="sect">
-        <h3>结构参数</h3>
+      </details>
+      <details class="sect" open>
+        <summary class="sect-h">结构参数</summary>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="porosity">孔隙率</span><span class="val" id="porosity-value">75%</span></div>
           <input type="range" id="porosity" min="60" max="90" value="75" step="1">
@@ -248,30 +292,54 @@
           <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
           <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
         </div>
-      </div>
-      <div class="sect">
-        <h3>工程观察</h3>
+      </details>
+      <details class="sect" open>
+        <summary class="sect-h">应用场景预设</summary>
+        <div class="scenes">
+          <button class="scene" data-scene="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
+          <button class="scene" data-scene="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Diamond · 平衡强度与重量</span></span></button>
+          <button class="scene" data-scene="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">结构拓扑</summary>
+        <div class="opt-row">
+          <button class="opt active" data-structure="solid_network">实体网络<span class="o-sub">Solid</span></button>
+          <button class="opt" data-structure="shell">等厚双壳<span class="o-sub">Shell</span></button>
+          <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
+        </div>
+        <div class="model-desc" id="structure-desc">实体网络：bias−V 生成的杆状实体网络，是 TPMS 最常见的表示形式。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">表现形式</summary>
+        <div class="opt-row">
+          <button class="opt active" data-model="surface">壳模型<span class="o-sub">Surface</span></button>
+          <button class="opt" data-model="strut">杆模型<span class="o-sub">Lattice</span></button>
+          <button class="opt" data-model="solid">实体模型<span class="o-sub">Solid</span></button>
+        </div>
+        <div class="opt-row two" style="margin-top:10px">
+          <button class="opt active" data-material="auto">结构配色<span class="o-sub">Auto</span></button>
+          <button class="opt" data-material="tc4">钛合金<span class="o-sub">TC4</span></button>
+          <button class="opt" data-material="polymer">高分子<span class="o-sub">PLLA</span></button>
+          <button class="opt" data-material="thermal">导热材<span class="o-sub">Thermal</span></button>
+        </div>
+        <div class="model-desc" id="model-desc"></div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">工程观察</summary>
+        <div class="opt-row two">
+          <button class="opt active" data-container="cube">立方体容器<span class="o-sub">Cube</span></button>
+          <button class="opt" data-container="cylinder">圆柱体容器<span class="o-sub">Cylinder</span></button>
+        </div>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="slice">截面扫描</span><span class="val" id="slice-value">完整</span></div>
           <input type="range" id="slice" min="-100" max="100" value="100" step="1">
           <div class="field-note">沿 Z 轴逐层剖切，可观察内部连通孔道。</div>
         </div>
-        <div class="opt-row two">
-          <button class="opt active" data-gradient="off">均质结构<span class="o-sub">Uniform</span></button>
-          <button class="opt" data-gradient="on"><span class="gloss-term" data-term="gradient">梯度结构</span><span class="o-sub">Gradient</span></button>
-        </div>
         <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
-      </div>
-      <div class="sect">
-        <h3>应用场景预设</h3>
-        <div class="scenes">
-          <button class="scene" data-scene="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
-          <button class="scene" data-scene="lightweight"><span class="ic">⚙</span><span><span class="nm">轻量化零件</span><br><span class="ds">Diamond · 平衡强度与重量</span></span></button>
-          <button class="scene" data-scene="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
-        </div>
-      </div>
-      <div class="sect">
-        <h3>当前曲面隐函数</h3>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">当前曲面隐函数</summary>
         <div class="formula">
           <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定）</div>
           <div class="eq" id="formula-display"></div>
@@ -280,38 +348,7 @@
           <div class="fw-hint"><span class="gloss-term" data-term="weight">抽动权重</span>，观察公式项如何驱动曲面变形</div>
           <div id="weight-rows"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="panel viewer">
-      <div class="v-head">
-        <span class="v-title"><span class="live"></span>3D 实时预览</span>
-        <span class="v-badges">
-          <span class="b t" id="badge-type" data-t="gyroid">Gyroid</span>
-          <span class="b m" id="badge-model">壳模型</span>
-          <span class="b m" id="badge-gradient">均质</span>
-        </span>
-        <div class="v-tools">
-          <button class="tbtn on" id="btn-rotate" title="自动旋转"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
-          <button class="tbtn" id="btn-reset" title="复位视角"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M12 3v18"/><circle cx="12" cy="12" r="9"/></svg></button>
-          <button class="tbtn" id="btn-share" title="复制当前参数链接"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg></button>
-          <button class="tbtn" id="btn-snap" title="保存截图 PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-          <button class="tbtn" id="btn-stl" title="导出 STL（可 3D 打印）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
-          <button class="tbtn" id="btn-full" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
-        </div>
-      </div>
-      <div class="stage">
-        <div id="canvas-container"></div>
-        <div class="loading" id="loading"><span class="sp"></span>重建曲面中…</div>
-        <div class="stat-overlay" id="stats">顶点 <b>—</b>　三角面 <b>—</b><br>分辨率 <b>—</b>³　重建 <b>—</b> ms</div>
-        <div class="axes-hint"><span><kbd>拖拽</kbd> 旋转　<kbd>滚轮</kbd> 缩放　<kbd>右键</kbd> 平移</span></div>
-        <div class="empty" id="empty">当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。</div>
-      </div>
-      <div class="v-foot" id="tips">
-        <div class="tip a"><span class="ti">📊</span><span id="tip1"></span></div>
-        <div class="tip b"><span class="ti">🧬</span><span id="tip2"></span></div>
-        <div class="tip c"><span class="ti">💡</span><span id="tip3"></span></div>
-      </div>
+      </details>
     </div>
   </div>
 </div>
@@ -331,59 +368,136 @@ function buildSurface(type, iso, periods, R, options={}){
   const N = R + 1, half = Math.PI, span = 2*half, k = periods;
   const idxF = (ix,iy,iz) => ix + iy*N + iz*N*N;
   const w = options.weights || [1,1,1];
-  const gradientStrength = options.gradient ? 0.55 : 0;
-  const zOffset = (iz)=> gradientStrength * (iz/R - 0.5);
+  const mode = options.structureMode || 'solid_network';   // solid_network | shell | gradient_shell
+  const container = options.containerShape || 'cube';       // cube | cylinder
+  const thickness = options.thickness || 1.0;               // 壳/梯度模式的物理壁厚 t
   // 预计算各轴 sin/cos(k·坐标)，内层采样循环不再调用三角函数，大幅加速
-  const sn = new Float32Array(N), cs = new Float32Array(N);
-  for(let i=0;i<N;i++){ const a=(-half + (i/R)*span)*k; sn[i]=Math.sin(a); cs[i]=Math.cos(a); }
-  const field = new Float32Array(N*N*N);
+  // cs2 为 cos(2k·坐标) 倍频项，供 I-WP / F-RD 使用
+  const sn = new Float32Array(N), cs = new Float32Array(N), cs2 = new Float32Array(N);
+  for(let i=0;i<N;i++){ const a=(-half + (i/R)*span)*k; sn[i]=Math.sin(a); cs[i]=Math.cos(a); cs2[i]=Math.cos(2*a); }
+  // 基础 TPMS 场 V（弧度域），不经过模式/容器变换，供二分搜索和模式公式复用
+  const V = new Float32Array(N*N*N);
   let minV = Infinity, maxV = -Infinity;
-  for(let iz=0; iz<N; iz++){ const Sz=sn[iz],Cz=cs[iz];
-    for(let iy=0; iy<N; iy++){ const Sy=sn[iy],Cy=cs[iy];
-      for(let ix=0; ix<N; ix++){ const Sx=sn[ix],Cx=cs[ix]; let v;
+  for(let iz=0; iz<N; iz++){ const Sz=sn[iz],Cz=cs[iz],C2z=cs2[iz];
+    for(let iy=0; iy<N; iy++){ const Sy=sn[iy],Cy=cs[iy],C2y=cs2[iy];
+      for(let ix=0; ix<N; ix++){ const Sx=sn[ix],Cx=cs[ix],C2x=cs2[ix]; let v;
         if(type==='gyroid') v = w[0]*Sx*Cy + w[1]*Sy*Cz + w[2]*Sz*Cx;
+        else if(type==='neovius') v = 3*(Cx+Cy+Cz) + 4*Cx*Cy*Cz;
+        else if(type==='iwp') v = 2*(Cx*Cy+Cy*Cz+Cz*Cx) - (C2x+C2y+C2z);
+        else if(type==='frd') v = 8*Cx*Cy*Cz - (C2x*C2y+C2y*C2z+C2z*C2x);
         else if(type==='diamond') v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz;
         else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
-        field[idxF(ix,iy,iz)] = v;
+        V[idxF(ix,iy,iz)] = v;
         if(v<minV) minV=v; if(v>maxV) maxV=v;
       } } }
-  let isoBase = iso;
+  // 物理坐标（归一化到 [-1,1]），供容器边界函数使用。ix/R ∈ [0,1] → px ∈ [-1,1]
+  const phys = (i)=> (i/R)*2 - 1;
+  // 容器边界函数 F_bound：返回>0 表示在容器外（将被裁掉）
+  // 物理坐标 px/py/pz ∈ [-1,1]，容器半宽 1。注意下表面对称用 |pz|-1，不能用 -pz
+  // （-pz 在 pz<0 时恒为正，会把整个 -Z 半空间误判为容器外）
+  const boundAt = (px,py,pz)=>{
+    if(container==='cylinder') return Math.max(Math.sqrt(px*px+py*py)-1, Math.abs(pz)-1);
+    return Math.max(Math.abs(px)-1, Math.max(Math.abs(py)-1, Math.abs(pz)-1));
+  };
+  // 模式公式：杆 bias−V；壳 (V−bias)²−(t/2)²；梯度壳壁厚随 Z 渐变。
+  // 壳/梯度的壁厚阈值需匹配 V 域尺度（典型 [-1.5,1.5]）。
+  // 杆模式搜 bias（单调：bias 大→实体多）；壳/梯度搜 tEff（单调：tEff 大→壳薄→实体多）。
+  // 关键：壳模式不能搜 bias，因为 countSolid(bias) 是 U 形非单调，二分不收敛。
+  //       改为 bias 固定取 0（等值面对称），搜 tEff 让实体比例命中目标。
+  const biasForShell = 0;                                  // 壳模式 bias 固定，等值面对称
+  let tEffBase = Math.max(0.05, thickness * 1.5);          // 壳/梯度的有效壁厚，初值由 UI thickness
+  let biasBase = iso;                                      // 杆模式 bias 初值
+  const tpmsAt = (v, bias, iz, tEff)=>{
+    if(mode==='solid_network') return bias - v;
+    const dv = v - bias;
+    if(mode==='gradient_shell'){
+      const zPhys = iz/R;                          // 0~1
+      // 底部保留 30% 最小壁厚，避免 tGrad=0 导致底层全实心；顶部到 100%，形成渐变
+      const tGrad = tEff * (0.3 + 0.7*zPhys);
+      return dv*dv - (tGrad/2)*(tGrad/2);
+    }
+    return dv*dv - (tEff/2)*(tEff/2);              // shell
+  };
   if(typeof options.targetPorosity === 'number'){
     const targetSolid = THREE.MathUtils.clamp(1 - options.targetPorosity/100, 0.02, 0.98);
-    let lo = minV - Math.abs(gradientStrength) - 0.05, hi = maxV + Math.abs(gradientStrength) + 0.05;
     const total = N*N*N;
-    for(let iter=0; iter<14; iter++){
-      const mid = (lo+hi)/2;
-      let solidCount = 0;
-      for(let iz=0; iz<N; iz++){
-        const level = mid + zOffset(iz);
-        const zBase = iz*N*N;
-        for(let iy=0; iy<N; iy++){
-          const yBase = zBase + iy*N;
-          for(let ix=0; ix<N; ix++) if(field[yBase+ix] > level) solidCount++;
+    // 统计给定参数下的实体体素数（只算容器内点，分母也只用容器内点数）。
+    // 关键：容器外的点会被 boundAt 标为实体，若计入会污染比例，导致圆柱模式下
+    // 二分搜索找到错误的 bias（让容器内几乎全空）。必须排除容器外。
+    let containerInside = 0;
+    for(let iz=0; iz<N; iz++) for(let iy=0; iy<N; iy++) for(let ix=0; ix<N; ix++){
+      if(boundAt(phys(ix), phys(iy), phys(iz)) < 0) containerInside++;
+    }
+    const countSolid = (bias, tEff)=>{
+      let c = 0;
+      for(let iz=0; iz<N; iz++){ const zB=iz*N*N;
+        for(let iy=0; iy<N; iy++){ const yB=zB+iy*N;
+          for(let ix=0; ix<N; ix++){
+            if(boundAt(phys(ix), phys(iy), phys(iz)) >= 0) continue;  // 跳过容器外
+            const f = tpmsAt(V[yB+ix], bias, iz, tEff);
+            if(f > 0) c++;   // 容器内只看 F_tpms（F_bound 在内为负，不影响）
+          }
         }
       }
-      if(solidCount/total > targetSolid) lo = mid; else hi = mid;
+      return c;
+    };
+    if(mode==='solid_network'){
+      // 杆模式：搜 bias（单调递增）。bias 小→实体少，bias 大→实体多
+      let lo = minV - 0.5, hi = maxV + 0.5;
+      for(let iter=0; iter<16; iter++){
+        const mid = (lo+hi)/2;
+        if(countSolid(mid, tEffBase)/containerInside > targetSolid) hi = mid; else lo = mid;
+      }
+      biasBase = (lo+hi)/2;
+    } else {
+      // 壳/梯度壳：bias 固定 0，搜 tEff（单调递减）。tEff 小→壳厚→实体多，tEff 大→壳薄→实体少
+      // 所以实体太多(>目标) → tEff 偏小 → 抬升下界 lo=mid
+      let lo = 0.02, hi = (maxV-minV) * 1.2;   // tEff 上界放宽到 V 域宽度
+      for(let iter=0; iter<18; iter++){
+        const mid = (lo+hi)/2;
+        if(countSolid(biasForShell, mid)/containerInside > targetSolid) lo = mid; else hi = mid;
+      }
+      tEffBase = (lo+hi)/2;
+      biasBase = biasForShell;
     }
-    isoBase = (lo+hi)/2;
   }
-  for(let iz=0; iz<N; iz++){
-    const level = isoBase + zOffset(iz);
-    const zBase = iz*N*N;
-    for(let iy=0; iy<N; iy++){
-      const yBase = zBase + iy*N;
-      for(let ix=0; ix<N; ix++) field[yBase+ix] -= level;
+  // 生成最终场 field：F_final = max(F_tpms, F_bound)，等值面取 0
+  const field = new Float32Array(N*N*N);
+  for(let iz=0; iz<N; iz++){ const zB=iz*N*N;
+    for(let iy=0; iy<N; iy++){ const yB=zB+iy*N;
+      for(let ix=0; ix<N; ix++){
+        const f = tpmsAt(V[yB+ix], biasBase, iz, tEffBase);
+        const b = boundAt(phys(ix), phys(iy), phys(iz));
+        field[yB+ix] = Math.max(f, b);
+      }
     }
   }
+  // 孔隙率估算（顶点级口径，与二分搜索的 countSolid 完全一致）：
+  // 只统计容器内顶点（boundAt<0），field>0 视为实体。
+  // 用顶点级而非体素中心级，可消除圆柱曲壁 straddle 体素的角顶点被 F_bound
+  // 强制设实体造成的 ~2.5pp 系统偏差，让 cube 和 cylinder 显示完全一致。
+  let materialAccum = 0, validCells = 0;
+  for(let iz=0; iz<N; iz++){ const zB=iz*N*N;
+    for(let iy=0; iy<N; iy++){ const yB=zB+iy*N;
+      for(let ix=0; ix<N; ix++){
+        if(boundAt(phys(ix), phys(iy), phys(iz)) >= 0) continue;  // 跳过容器外
+        validCells++;
+        if(field[yB+ix] > 0) materialAccum++;
+      }
+    }
+  }
+  // isoUsed 返回名义等值常数：杆模式返回 bias，壳模式返回 tEff/2（壁面位置），
+  // 用于公式右值显示，让用户看到与孔隙率对应的参数（避免显示恒为 0）
+  const isoBase = 0;
+  const isoUsedReport = mode==='solid_network' ? biasBase : tEffBase/2;
   const wc = (i)=> -half + (i/R)*span;
   const cellVert = new Int32Array(R*R*R).fill(-1);
   const positions = [];
   const ED = [[[0,0,0],[1,0,0]],[[0,1,0],[1,1,0]],[[0,0,1],[1,0,1]],[[0,1,1],[1,1,1]],[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]],[[0,0,1],[0,1,1]],[[1,0,1],[1,1,1]],[[0,0,0],[0,0,1]],[[1,0,0],[1,0,1]],[[0,1,0],[0,1,1]],[[1,1,0],[1,1,1]]];
-  let vi = 0, materialAccum = 0;
+  let vi = 0;
   for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
     const corners=[field[idxF(cx,cy,cz)],field[idxF(cx+1,cy,cz)],field[idxF(cx,cy+1,cz)],field[idxF(cx+1,cy+1,cz)],field[idxF(cx,cy,cz+1)],field[idxF(cx+1,cy,cz+1)],field[idxF(cx,cy+1,cz+1)],field[idxF(cx+1,cy+1,cz+1)]];
     let solid=0; for(let i=0;i<8;i++) if(corners[i]>0) solid++;
-    materialAccum += solid / 8;
     if(solid===0 || solid===8) continue;
     let sx=0,sy=0,sz=0,sc=0;
     for(const [a,b] of ED){
@@ -400,47 +514,157 @@ function buildSurface(type, iso, periods, R, options={}){
     cellVert[cx + cy*R + cz*R*R] = vi++;
   }
   const vAt=(x,y,z)=> (x<0||y<0||z<0||x>=R||y>=R||z>=R)?-1:cellVert[x+y*R+z*R*R];
-  const indices=[]; const pushQuad=(a,b,c,d)=>{ indices.push(a,b,c, a,c,d); };
+  const indices=[];
+  const pushTri=(a,b,c)=>{ indices.push(a,b,c); };
+  const pushQuad=(a,b,c,d)=>{ indices.push(a,b,c, a,c,d); };
+  // 尝试用四角顶点围一个面；四角不全时降级补三角，封住 Surface Nets 边界处的菱形裂缝
+  const tryFace=(a,b,c,d)=>{
+    const A=vAt(a[0],a[1],a[2]),B=vAt(b[0],b[1],b[2]),C=vAt(c[0],c[1],c[2]),D=vAt(d[0],d[1],d[2]);
+    if(A>=0&&B>=0&&C>=0&&D>=0){ pushQuad(A,B,C,D); return; }
+    // 缺一个角：用三个存在的顶点补三角，填上原本会丢失的洞
+    const e=[[A,a],[B,b],[C,c],[D,d]].filter(p=>p[0]>=0);
+    if(e.length===3) pushTri(e[0][0],e[1][0],e[2][0]);
+  };
   for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
-    const v0=vAt(cx,cy,cz); if(v0<0) continue; let v1,v2,v3;
-    v1=vAt(cx+1,cy,cz); v2=vAt(cx,cy+1,cz); v3=vAt(cx+1,cy+1,cz); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
-    v1=vAt(cx+1,cy,cz); v2=vAt(cx,cy,cz+1); v3=vAt(cx+1,cy,cz+1); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
-    v1=vAt(cx,cy+1,cz); v2=vAt(cx,cy,cz+1); v3=vAt(cx,cy+1,cz+1); if(v1>=0&&v2>=0&&v3>=0) pushQuad(v0,v1,v3,v2);
+    if(vAt(cx,cy,cz)<0) continue;
+    tryFace([cx,cy,cz],[cx+1,cy,cz],[cx+1,cy+1,cz],[cx,cy+1,cz]);
+    tryFace([cx,cy,cz],[cx+1,cy,cz],[cx+1,cy,cz+1],[cx,cy,cz+1]);
+    tryFace([cx,cy,cz],[cx,cy+1,cz],[cx,cy+1,cz+1],[cx,cy,cz+1]);
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
   geo.setIndex(indices);
-  geo.computeVertexNormals();
+  // 拉普拉斯平滑：体素顶点向其 6 向网格邻居的均值靠拢，消除锯齿与块状感。
+  // 用 cellVert 的 R³ 结构直接定位邻居，无需重建邻接表。positions 是普通数组，
+  // 用 Float32Array 作工作缓冲做双重缓冲平滑，最后一次性交给 BufferGeometry。
+  if(positions.length>0){
+    const n=positions.length;
+    const cur=new Float32Array(n); for(let i=0;i<n;i++) cur[i]=positions[i];
+    const neighbor=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    const lambda=0.5, iters=2;
+    for(let it=0; it<iters; it++){
+      const next=new Float32Array(cur);
+      for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
+        const vi2=cx+cy*R+cz*R*R;
+        const self=cellVert[vi2];
+        if(self<0) continue;
+        let nx=0,ny=0,nz=0,nc=0;
+        for(const [dx,dy,dz] of neighbor){
+          const nb=vAt(cx+dx,cy+dy,cz+dz);
+          if(nb>=0){ nx+=cur[nb*3]; ny+=cur[nb*3+1]; nz+=cur[nb*3+2]; nc++; }
+        }
+        if(nc>0){
+          const i3=self*3;
+          next[i3]   = cur[i3]   + lambda*(nx/nc - cur[i3]);
+          next[i3+1] = cur[i3+1] + lambda*(ny/nc - cur[i3+1]);
+          next[i3+2] = cur[i3+2] + lambda*(nz/nc - cur[i3+2]);
+        }
+      }
+      cur.set(next);
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(cur,3));
+  }
+  // 解析法线：用隐函数梯度 ∇f 精确计算每个顶点的法线，替代离散的 computeVertexNormals()。
+  // 关键：必须用顶点的【浮点位置】(vx,vy,vz) 实时调用 Math.sin/Math.cos 计算梯度，
+  // 绝不能用整数网格索引查表——查找表按整数索引预计算，相邻顶点跨整数边界时法线会
+  // 阶跃突变，在高反光下表现为锯齿状破碎斑马纹。顶点位置 vx 已是数学坐标 wc 的线性
+  // 组合（wc=-π+(i/R)*2π，不含 k），代入三角函数时需乘以频率 k。
+  // 边界顶点（容器壁）不是真实等值面，用几何法线保证平整/圆柱面光照正确：
+  // 物理坐标 px=vx/π（因 wc=-π+(i/R)*2π，phys=(i/R)*2-1=wc/π）。
+  if(positions.length>0){
+    const normals = new Float32Array(positions.length);
+    const BTOL = 0.04;   // 归一化空间边界判定容差
+    for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
+      const self = cellVert[cx+cy*R+cz*R*R];
+      if(self<0) continue;
+      const i3=self*3;
+      const vx=positions[i3], vy=positions[i3+1], vz=positions[i3+2];
+      const px=vx/Math.PI, py=vy/Math.PI, pz=vz/Math.PI;   // 归一化物理坐标 [-1,1]
+      let gx,gy,gz;
+      // Z 轴上下底面（两种容器通用）
+      if(pz > 1-BTOL){ gx=0; gy=0; gz=1; }
+      else if(pz < -1+BTOL){ gx=0; gy=0; gz=-1; }
+      // 立方体侧面：X/Y 边界
+      else if(container==='cube' && px > 1-BTOL){ gx=1; gy=0; gz=0; }
+      else if(container==='cube' && px < -1+BTOL){ gx=-1; gy=0; gz=0; }
+      else if(container==='cube' && py > 1-BTOL){ gx=0; gy=1; gz=0; }
+      else if(container==='cube' && py < -1+BTOL){ gx=0; gy=-1; gz=0; }
+      // 圆柱侧面：径向外侧法线
+      else if(container==='cylinder'){
+        const r=Math.sqrt(px*px+py*py);
+        if(r > 1-BTOL){ const len=r||1; gx=px/len; gy=py/len; gz=0; }
+        else { gx=NaN; }   // 标记走内部梯度（下方处理）
+      }
+      else { gx=NaN; }   // 内部顶点标记
+      // 内部顶点：用顶点浮点坐标实时算三角函数，再代入对应曲面的解析梯度
+      if(isNaN(gx)){
+        const mx=vx*k, my=vy*k, mz=vz*k;
+        const Sx=Math.sin(mx),Cx=Math.cos(mx),Sy=Math.sin(my),Cy=Math.cos(my),Sz=Math.sin(mz),Cz=Math.cos(mz);
+        if(type==='gyroid'){
+          gx=Cx*Cy - Sz*Sx; gy=Cy*Cz - Sx*Sy; gz=Cz*Cx - Sy*Sz;
+        } else if(type==='schwarz'){
+          gx=-Sx; gy=-Sy; gz=-Sz;
+        } else if(type==='neovius'){
+          gx=-3*Sx - 4*Sx*Cy*Cz; gy=-3*Sy - 4*Cx*Sy*Cz; gz=-3*Sz - 4*Cx*Cy*Sz;
+        } else if(type==='iwp'){
+          // I-WP: V=2(CxCy+CyCz+CzCx)-(C2x+C2y+C2z)，∂V/∂x = -2·sin x·(cos y + cos z) + 2·sin 2x
+          const S2x=Math.sin(2*mx),S2y=Math.sin(2*my),S2z=Math.sin(2*mz);
+          gx=-2*Sx*(Cy+Cz) + 2*S2x; gy=-2*Sy*(Cz+Cx) + 2*S2y; gz=-2*Sz*(Cx+Cy) + 2*S2z;
+        } else if(type==='frd'){
+          const S2x=Math.sin(2*mx),S2y=Math.sin(2*my),S2z=Math.sin(2*mz);
+          const C2x=Math.cos(2*mx),C2y=Math.cos(2*my),C2z=Math.cos(2*mz);
+          gx=-8*Sx*Cy*Cz + 2*S2x*(C2y+C2z);
+          gy=-8*Cx*Sy*Cz + 2*S2y*(C2z+C2x);
+          gz=-8*Cx*Cy*Sz + 2*S2z*(C2x+C2y);
+        } else { // diamond
+          gx=Cx*Sy*Sz + Cx*Cy*Cz - Sx*Sy*Cz - Sx*Cy*Sz;
+          gy=Sx*Cy*Sz - Sx*Sy*Cz + Cx*Cy*Cz - Cx*Sy*Sz;
+          gz=Sx*Sy*Cz - Sx*Cy*Sz - Cx*Sy*Sz + Cx*Cy*Cz;
+        }
+        const len = Math.sqrt(gx*gx+gy*gy+gz*gz) || 1;
+        gx/=len; gy/=len; gz/=len;
+      }
+      normals[i3]=gx; normals[i3+1]=gy; normals[i3+2]=gz;
+    }
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals,3));
+  } else {
+    geo.computeVertexNormals();
+  }
   geo.computeBoundingSphere();
-  const solidEstimate = materialAccum / (R*R*R);
-  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-solidEstimate, isoUsed: isoBase };
+  // 孔隙率估算：分母用容器内有效体素数（validCells），排除容器外角落。
+  // 圆柱容器下避免把圆外立方体角落误算成 TPMS 材料，让孔隙率显示与立方体一致。
+  const solidEstimate = validCells > 0 ? materialAccum / validCells : 0;
+  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-solidEstimate, isoUsed: isoUsedReport };
 }
 
-const COLORS = { gyroid:0x6366f1, diamond:0xf59e0b, schwarz:0x10b981 };
-const LABEL  = { gyroid:'Gyroid', diamond:'Diamond', schwarz:'Schwarz P' };
+const COLORS = { gyroid:0x6366f1, diamond:0xf59e0b, schwarz:0x10b981, neovius:0xec4899, iwp:0x0ea5e9, frd:0xa855f7 };
+const LABEL  = { gyroid:'Gyroid', diamond:'Diamond', schwarz:'Schwarz P', neovius:'Neovius', iwp:'I-WP', frd:'F-RD' };
 const MODEL_LABEL = { surface:'壳模型', strut:'杆模型', solid:'实体模型' };
 const MATERIAL_LABEL = { auto:'结构配色', tc4:'TC4 钛合金', polymer:'PLLA/PLA 高分子', thermal:'高导热复合材' };
-const FORMULA = { gyroid:'sin x · cos y + sin y · cos z + sin z · cos x', diamond:'sin x sin y sin z + sin x cos y cos z + cos x sin y cos z + cos x cos y sin z', schwarz:'cos x + cos y + cos z' };
+const FORMULA = { gyroid:'sin x · cos y + sin y · cos z + sin z · cos x', diamond:'sin x sin y sin z + sin x cos y cos z + cos x sin y cos z + cos x cos y sin z', schwarz:'cos x + cos y + cos z', neovius:'3(cos x + cos y + cos z) + 4 cos x cos y cos z', iwp:'2(cos x cos y + cos y cos z + cos z cos x) − (cos 2x + cos 2y + cos 2z)', frd:'8 cos x cos y cos z − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x)' };
 const WEIGHT_TERMS = {
   gyroid:  [['sin x · cos y','a'], ['sin y · cos z','b'], ['sin z · cos x','c']],
   diamond: [['sin x · sin y · sin z','a'], ['sin x · cos y · cos z','b'], ['cos x · sin y · cos z','c'], ['cos x · cos y · sin z','d']],
-  schwarz: [['cos x','a'], ['cos y','b'], ['cos z','c']]
+  schwarz: [['cos x','a'], ['cos y','b'], ['cos z','c']],
+  neovius: [], iwp: [], frd: []
 };
 const MODEL_DESC = {
   surface:'壳模型（Surface）：提取 TPMS 等值面薄壳，展示曲面几何与拓扑。最接近 3D 打印中的薄壁表示，可观察真实曲面形貌。',
   strut:'杆模型（Lattice）：以等值面网格的线框骨架呈现，形似桁架结构。适合理解节点连接方式与载荷传递路径，常用于轻量化设计。',
   solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。壁厚系数会直接改变实体材料占比，用于评估填充率与力学性能。',
 };
-const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, gradient:false, material:'auto', weights:[1,1,1,1] };
+const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube' };
 const CLIP_LIMIT = 1.32;
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), CLIP_LIMIT);
 
 function isoFromPorosity(type, p){ const t=(p-60)/30;
   if(type==='schwarz') return -0.4 + t*2.4;
   if(type==='diamond') return -0.25 + t*0.65;
+  if(type==='neovius') return -0.8 + t*3.2;
+  if(type==='iwp') return -0.5 + t*2.0;
+  if(type==='frd') return -0.6 + t*2.4;
   return -0.3 + t*0.7;
 }
-function resolutionFromCell(c, preview=false){ const full = Math.min(56, 10 + c*9); return preview ? Math.min(24, full) : full; }
+function resolutionFromCell(c, preview=false){ const full = Math.min(88, 19 + c*14); return preview ? Math.min(32, full) : full; }
 function baseIso(){ let iso = isoFromPorosity(state.type, state.porosity); if(state.model==='solid') iso -= (state.thickness-1)*0.12; return iso; }
 
 let scene, camera, renderer, controls, group, pmrem, axesHelper, baseGeo=null, meshFill=null, meshWire=null, rebuildTimer=null, lastPorosityEstimate=null;
@@ -450,7 +674,7 @@ function initThree(){
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
   camera.position.set(2.4, 1.5, 4.6);
-  renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+  renderer = new THREE.WebGLRenderer({ antialias:true });
   renderer.localClippingEnabled = true;
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -480,6 +704,35 @@ function initThree(){
   animate();
 }
 function onResize(){ const c=document.getElementById('canvas-container'); camera.aspect=c.clientWidth/c.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(c.clientWidth,c.clientHeight); }
+// 监听画布容器自身尺寸变化（section 折叠、Inspector 滚动、移动端 sheet 滑出都会触发），
+// 避免 window resize 监听不到这些场景导致画布白边/裁切。
+let _resizeTimer=null;
+function onContainerResize(){
+  // 防抖：折叠动画期间会连续触发，合并到一次 onResize
+  if(_resizeTimer) clearTimeout(_resizeTimer);
+  _resizeTimer=setTimeout(onResize, 60);
+}
+// 移动端底部 sheet 切换：点击手柄上拉/收起，切换后手动触发画布 resize
+document.addEventListener('DOMContentLoaded', ()=>{
+  const sheetHandle=document.getElementById('sheet-handle');
+  const controls=document.querySelector('.controls');
+  if(sheetHandle && controls){
+    sheetHandle.addEventListener('click', ()=>{
+      controls.classList.toggle('sheet-open');
+      setTimeout(onResize, 340);  // 等 sheet 滑动动画结束
+    });
+  }
+  // ResizeObserver 在 initThree 之后才有 canvas-container，这里用轮询确保挂上
+  const tryObs=()=>{
+    const c=document.getElementById('canvas-container');
+    if(c && typeof ResizeObserver!=='undefined'){
+      new ResizeObserver(onContainerResize).observe(c);
+      return true;
+    }
+    return false;
+  };
+  if(!tryObs()) setTimeout(tryObs, 200);
+});
 function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 
 function materialColor(){
@@ -492,7 +745,13 @@ function clipMaterial(extra={}){ return { clippingPlanes:[clipPlane], clipShadow
 function makeFillMaterial(){
   const color = materialColor();
   if(state.model==='strut'){
-    return new THREE.MeshStandardMaterial(clipMaterial({ color, metalness:0.12, roughness:0.68, side:THREE.DoubleSide, transparent:true, opacity:0.1, depthWrite:false }));
+    // 杆模型：线框骨架呈现（wireframe 在 rebuild 里置 true）。
+    // 颜色严格跟随 state.material（经 materialColor() 解析）：
+    //   tc4 → 钛灰(0xb8c2cc)、polymer → PLLA/PLA 橙(0xf2b95f)、thermal → 复合材青(0x18b99f)、auto → 结构默认色
+    // 因此 lightweight 预设（material=polymer）会显示橙色骨架，而非 diamond 默认金色。
+    // 同时按材质微调透明度，使 polymer（半透明塑料）与 tc4/thermal（近不透明金属）在线框下仍可视觉区分。
+    const op = state.material==='polymer' ? 0.7 : (state.material==='auto' ? 0.9 : 0.95);
+    return new THREE.MeshBasicMaterial(clipMaterial({ color, side:THREE.DoubleSide, transparent:true, opacity:op }));
   }
   if(state.material==='tc4'){
     return new THREE.MeshPhysicalMaterial(clipMaterial({ color, metalness:0.9, roughness:0.35, side:THREE.DoubleSide, clearcoat:0.18, clearcoatRoughness:0.5, envMapIntensity:1.25 }));
@@ -510,13 +769,14 @@ function makeFillMaterial(){
   return new THREE.MeshStandardMaterial(clipMaterial({ color, metalness:0.3, roughness:0.4, side:THREE.DoubleSide, envMapIntensity:1.15 }));
 }
 function makeWireMaterial(){ return new THREE.MeshBasicMaterial({ color:materialColor(), wireframe:true, transparent:true, opacity:0.9, clippingPlanes:[clipPlane] }); }
+// 注：makeWireMaterial 保留为工具函数备用，strut 模式现在通过 material.wireframe=true 渲染
 
 function rebuild(preview=false){
   const t0 = performance.now();
   const iso = baseIso();
   const R = resolutionFromCell(state.cellSize, preview);
   const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
-  const { geo, vertCount, triCount, porosityEstimate, isoUsed } = buildSurface(state.type, iso, state.cellSize, R, { gradient:state.gradient, targetPorosity, weights:state.weights });
+  const { geo, vertCount, triCount, porosityEstimate, isoUsed } = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness });
   if(meshFill){ group.remove(meshFill); meshFill.material.dispose(); meshFill=null; }
   if(meshWire){ group.remove(meshWire); meshWire.material.dispose(); meshWire=null; }
   if(baseGeo){ baseGeo.dispose(); }
@@ -525,8 +785,10 @@ function rebuild(preview=false){
   const empty = vertCount===0;
   document.getElementById('empty').classList.toggle('show', empty);
   if(!empty){
-    meshFill = new THREE.Mesh(geo, makeFillMaterial()); group.add(meshFill);
-    if(state.model==='strut'){ meshWire = new THREE.Mesh(geo, makeWireMaterial()); group.add(meshWire); }
+    // 杆模型改为材质 wireframe 渲染，不再叠加独立线框 mesh（数学网格不变，仅渲染方式不同）
+    const mat = makeFillMaterial();
+    if(state.model==='strut') mat.wireframe = true;
+    meshFill = new THREE.Mesh(geo, mat); group.add(meshFill);
   }
   const ms = (performance.now()-t0).toFixed(1);
   const quality = preview ? '预览' : '高清';
@@ -538,10 +800,12 @@ function scheduleRebuild(preview=false){ const loading=document.getElementById('
 
 let activeWeightKey = null;
 function updateFormula(iso){
-  const suffix = state.gradient ? `C(z)，C₀=<span class="c">${iso.toFixed(3)}</span>，Z 向梯度 ΔC=0.55` : `<span class="c">${iso.toFixed(3)}</span>`;
+  const suffix = `<span class="c">${iso.toFixed(3)}</span>`;
   const fd = document.getElementById('formula-display');
   const w = state.weights;
   const terms = WEIGHT_TERMS[state.type];
+  // 无权重项的曲面（Neovius / I-WP / F-RD）直接显示固定公式，不按权重项拼接
+  if(!terms || terms.length===0){ fd.innerHTML = `${FORMULA[state.type]} = ${suffix}`; return; }
   const term = (expr, key, val) => {
     const coef = Math.abs(val - 1) < 0.05 ? '' : `<span class="wcoef">${val.toFixed(1)}·</span>`;
     return `<span class="term${activeWeightKey === key ? ' term-hl' : ''}" data-w="${key}">${coef}${expr}</span>`;
@@ -552,16 +816,24 @@ function updateTips(){
   const p=state.porosity, th=state.thickness;
   const est = lastPorosityEstimate==null ? `目标孔隙率 ${p}%` : `目标 ${p}% / 估算 ${(lastPorosityEstimate*100).toFixed(1)}%`;
   document.getElementById('tip1').textContent = p>80 ? `${est}：高孔隙，利于细胞/组织长入，但力学强度下降` : p<70 ? `${est}：偏致密，力学支撑更好，内部可用空间有限` : `${est}：平衡区间，兼顾力学性能与功能性`;
-  document.getElementById('tip2').textContent = { gyroid:'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选', diamond:'Diamond 高对称、节点连接强，承载与轻量化表现优异', schwarz:'Schwarz P 表面积最大、连通性极佳，适合换热与催化' }[state.type];
-  const gradientText = state.gradient ? '，Z 向功能梯度已启用' : '';
-  document.getElementById('tip3').textContent = th>1.5 ? `壁厚 ${th}：偏厚，坚固但增重${gradientText}` : th<0.8 ? `壁厚 ${th}：偏薄，轻量化好，注意制造极限${gradientText}` : `壁厚 ${th}：适中，强度与重量平衡${gradientText}`;
+  document.getElementById('tip2').textContent = { gyroid:'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选', diamond:'Diamond 高对称、节点连接强，承载与轻量化表现优异', schwarz:'Schwarz P 表面积最大、连通性极佳，适合换热与催化', neovius:'Neovius 是 Schwarz P 的伴随曲面，通道更宽、节点更显著，力学刚度更高', iwp:'I-WP 平衡曲面，孔隙分布均匀，兼顾强度与渗透性，常用于催化剂载体', frd:'F-RD 形态复杂、比表面积大，通道曲折，适合需要长停留时间的反应与传质场景' }[state.type];
+  document.getElementById('tip3').textContent = th>1.5 ? `壁厚 ${th}：偏厚，坚固但增重` : th<0.8 ? `壁厚 ${th}：偏薄，轻量化好，注意制造极限` : `壁厚 ${th}：适中，强度与重量平衡`;
 }
 function updateBadges(){
-  const bt=document.getElementById('badge-type'); bt.textContent=LABEL[state.type]; bt.dataset.t=state.type;
-  document.getElementById('badge-model').textContent=MODEL_LABEL[state.model];
-  document.getElementById('badge-gradient').textContent=state.gradient?'梯度':'均质';
+  // v-head 徽章在布局重构中移除，状态信息改为同步到页面 title，便于用户辨识当前配置
+  const structLabel = {solid_network:'实体网络', shell:'等厚双壳', gradient_shell:'梯度双壳'}[state.structureMode];
+  document.title = `${LABEL[state.type]} · ${structLabel} · TPMS 探索器`;
   document.getElementById('model-desc').textContent=MODEL_DESC[state.model];
-  document.getElementById('engineering-desc').textContent = state.gradient ? `梯度模式：等值常数沿 Z 轴连续变化，形成一端更疏、一端更密的功能梯度 TPMS。当前材料：${MATERIAL_LABEL[state.material]}。` : `均质模式：整个结构使用同一等值面参数。当前材料：${MATERIAL_LABEL[state.material]}。`;
+  document.getElementById('engineering-desc').textContent = state.structureMode==='gradient_shell' ? `梯度双壳：壁厚沿 Z 轴渐变，形成功能梯度多孔结构。当前材料：${MATERIAL_LABEL[state.material]}。` : `当前结构：${structLabel}，材料：${MATERIAL_LABEL[state.material]}。`;
+}
+function updateStructureDesc(){
+  const m=state.structureMode;
+  const descs={
+    solid_network:'实体网络：bias−V 生成的杆状实体网络，是 TPMS 最经典的表示形式，材料集中在等值面一侧。',
+    shell:'等厚双壳：(V−bias)²−(t/2)² 生成有真实壁厚的双层薄壳，更接近 3D 打印的实际制造形态。',
+    gradient_shell:'梯度双壳：壁厚随 Z 轴高度线性渐变（底部薄、顶部厚），用于功能梯度多孔结构设计。'
+  };
+  document.getElementById('structure-desc').textContent=descs[m];
 }
 function setActive(sel, attr, val){ document.querySelectorAll(sel).forEach(b=> b.classList.toggle('active', b.dataset[attr]===val)); }
 function setRangeFill(el){ const min=+el.min, max=+el.max, v=+el.value; el.style.setProperty('--p', ((v-min)/(max-min)*100)+'%'); }
@@ -581,9 +853,12 @@ function syncSliders(){
 }
 
 function refreshWeightUI(){
-  document.getElementById('formula-weights').classList.add('show');
   const terms = WEIGHT_TERMS[state.type];
+  const panel = document.getElementById('formula-weights');
   const container = document.getElementById('weight-rows');
+  // 无权重项的曲面（Neovius / I-WP / F-RD）隐藏权重面板，避免空白区
+  if(!terms || terms.length===0){ panel.classList.remove('show'); container.innerHTML=''; return; }
+  panel.classList.add('show');
   container.innerHTML = terms.map(([label, key], i) =>
       `<div class="fw-row"><span class="fw-tag" data-w="${key}">${label}</span>` +
     `<input type="range" id="w-${key}" min="0" max="2" value="${state.weights[i]}" step="0.1">` +
@@ -611,9 +886,11 @@ function clearWeightHighlight(){
 }
 
 
-document.querySelectorAll('[data-type]').forEach(b=> b.addEventListener('click', ()=>{ state.type=b.dataset.type; if(state.material!=='auto') state.material='auto'; state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); updateBadges(); updateTips(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-type]').forEach(b=> b.addEventListener('click', ()=>{ state.type=b.dataset.type; state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); updateBadges(); updateTips(); scheduleRebuild(false); }));
 document.querySelectorAll('[data-model]').forEach(b=> b.addEventListener('click', ()=>{ state.model=b.dataset.model; setActive('[data-model]','model',state.model); updateBadges(); scheduleRebuild(false); }));
-document.querySelectorAll('[data-gradient]').forEach(b=> b.addEventListener('click', ()=>{ state.gradient=b.dataset.gradient==='on'; setActive('[data-gradient]','gradient',state.gradient?'on':'off'); updateBadges(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-material]').forEach(b=> b.addEventListener('click', ()=>{ state.material=b.dataset.material; setActive('[data-material]','material',state.material); updateBadges(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-structure]').forEach(b=> b.addEventListener('click', ()=>{ state.structureMode=b.dataset.structure; setActive('[data-structure]','structure',state.structureMode); updateStructureDesc(); updateBadges(); scheduleRebuild(false); }));
+document.querySelectorAll('[data-container]').forEach(b=> b.addEventListener('click', ()=>{ state.containerShape=b.dataset.container; setActive('[data-container]','container',state.containerShape); updateBadges(); scheduleRebuild(false); }));
 const porEl=document.getElementById('porosity');
 porEl.addEventListener('input', e=>{ state.porosity=+e.target.value; document.getElementById('porosity-value').textContent=state.porosity+'%'; setRangeFill(porEl); updateTips(); scheduleRebuild(true); });
 porEl.addEventListener('change', ()=> scheduleRebuild(false));
@@ -626,24 +903,35 @@ thEl.addEventListener('change', ()=> scheduleRebuild(false));
 const sliceEl=document.getElementById('slice');
 sliceEl.addEventListener('input', e=>{ state.slice=+e.target.value; updateSlicePlane(); });
 
-const PRESETS={ bone:{porosity:84, cellSize:2, thickness:0.8, type:'gyroid', model:'surface', gradient:true, material:'tc4', slice:34}, lightweight:{porosity:68, cellSize:4, thickness:1.3, type:'diamond', model:'strut', gradient:false, material:'polymer', slice:100}, heat:{porosity:74, cellSize:3, thickness:0.6, type:'schwarz', model:'solid', gradient:true, material:'thermal', slice:16} };
-document.querySelectorAll('[data-scene]').forEach(b=> b.addEventListener('click', ()=>{ Object.assign(state, PRESETS[b.dataset.scene]); state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model); setActive('[data-gradient]','gradient',state.gradient?'on':'off'); syncSliders(); updateBadges(); updateTips(); scheduleRebuild(false); }));
+const PRESETS={ bone:{porosity:84, cellSize:2, thickness:0.8, type:'gyroid', model:'surface', structureMode:'shell', containerShape:'cylinder', material:'tc4', slice:34}, lightweight:{porosity:68, cellSize:4, thickness:1.3, type:'diamond', model:'strut', structureMode:'solid_network', containerShape:'cube', material:'polymer', slice:100}, heat:{porosity:74, cellSize:3, thickness:0.6, type:'schwarz', model:'solid', structureMode:'gradient_shell', containerShape:'cube', material:'thermal', slice:16} };
+document.querySelectorAll('[data-scene]').forEach(b=> b.addEventListener('click', ()=>{ Object.assign(state, PRESETS[b.dataset.scene]); state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model); setActive('[data-material]','material',state.material); setActive('[data-structure]','structure',state.structureMode); setActive('[data-container]','container',state.containerShape); updateStructureDesc(); syncSliders(); updateBadges(); updateTips(); scheduleRebuild(false); }));
 
 document.getElementById('btn-rotate').addEventListener('click', e=>{ controls.autoRotate=!controls.autoRotate; e.currentTarget.classList.toggle('on', controls.autoRotate); });
 document.getElementById('btn-reset').addEventListener('click', ()=> controls.reset());
 document.getElementById('btn-full').addEventListener('click', ()=>{ const el=document.querySelector('.viewer'); if(!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.(); });
 document.getElementById('btn-snap').addEventListener('click', ()=>{ renderer.render(scene,camera); const a=document.createElement('a'); a.href=renderer.domElement.toDataURL('image/png'); a.download=`tpms-${state.type}-${Date.now()}.png`; a.click(); });
-document.getElementById('btn-stl').addEventListener('click', ()=>{ if(!baseGeo) return; const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); const stl=new STLExporter().parse(tmp, { binary:false }); const blob=new Blob([stl], { type:'model/stl' }); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`tpms-${state.type}.stl`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); });
+document.getElementById('btn-stl').addEventListener('click', ()=>{
+  if(!baseGeo) return;
+  // STL 始终导出 baseGeo（完整等值面网格），与渲染模式无关。
+  // 杆模型(strut)在线框视图下看到的"杆"只是渲染方式，导出的是同样几何的完整封闭网格。
+  // 在 strut 模式下给出明确提示，避免用户误以为导出的是细杆桁架。
+  if(state.model==='strut'){
+    const ok = confirm('当前为杆模型（线框视图）。\n\nSTL 将导出完整的等值面网格（与壳模型相同的封闭曲面），而非视图中的细杆桁架。\n\n继续导出？');
+    if(!ok) return;
+  }
+  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); const stl=new STLExporter().parse(tmp, { binary:false }); const blob=new Blob([stl], { type:'model/stl' }); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`tpms-${state.type}.stl`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+});
 document.getElementById('btn-share').addEventListener('click', async e=>{
   const url = new URL(location.href);
   url.search = new URLSearchParams({
     type: state.type,
     model: state.model,
+    structure: state.structureMode,
+    container: state.containerShape,
     porosity: String(state.porosity),
     cellSize: String(state.cellSize),
     thickness: state.thickness.toFixed(1),
     slice: String(state.slice),
-    gradient: state.gradient ? '1' : '0',
     material: state.material,
     autoRotate: controls.autoRotate ? '1' : '0',
       wa: String(state.weights[0]), wb: String(state.weights[1]),
@@ -673,7 +961,8 @@ rebuild();
   (function(){
   const q = new URLSearchParams(location.search);
   const valid = {
-    type:['gyroid','diamond','schwarz'], model:['surface','strut','solid'],
+    type:['gyroid','diamond','schwarz','neovius','iwp','frd'], model:['surface','strut','solid'],
+    structure:['solid_network','shell','gradient_shell'], container:['cube','cylinder'],
     porosity:[60,90], cellSize:[1,5], thickness:[0.5,2.0], slice:[-100,100],
     material:['auto','tc4','polymer','thermal']
   };
@@ -681,11 +970,12 @@ rebuild();
   const changed = {};
   if(q.has('type')&&valid.type.includes(q.get('type'))){ state.type=q.get('type'); changed.type=1; }
   if(q.has('model')&&valid.model.includes(q.get('model'))){ state.model=q.get('model'); changed.model=1; }
+  if(q.has('structure')&&valid.structure.includes(q.get('structure'))){ state.structureMode=q.get('structure'); changed.structure=1; }
+  if(q.has('container')&&valid.container.includes(q.get('container'))){ state.containerShape=q.get('container'); changed.container=1; }
   if(q.has('porosity')){ state.porosity=clamp(q.get('porosity'),60,90,75); changed.porosity=1; }
   if(q.has('cellSize')){ state.cellSize=clamp(q.get('cellSize'),1,5,3); changed.cellSize=1; }
   if(q.has('thickness')){ state.thickness=clamp(q.get('thickness'),0.5,2.0,1.0); changed.thickness=1; }
   if(q.has('slice')){ state.slice=clamp(q.get('slice'),-100,100,100); changed.slice=1; }
-  if(q.has('gradient')){ state.gradient=q.get('gradient')==='1'; changed.gradient=1; }
   if(q.has('material')&&valid.material.includes(q.get('material'))){ state.material=q.get('material'); changed.material=1; }
   if(q.has('wa')){ state.weights[0]=clamp(q.get('wa'),0,2,1); changed.weights=1; }
   if(q.has('wb')){ state.weights[1]=clamp(q.get('wb'),0,2,1); changed.weights=1; }
@@ -693,7 +983,9 @@ rebuild();
     if(q.has('wd')){ state.weights[3]=clamp(q.get('wd'),0,2,1); changed.weights=1; }
   if(Object.keys(changed).length){
     setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model);
-    setActive('[data-gradient]','gradient',state.gradient?'on':'off');
+    if(changed.material){ setActive('[data-material]','material',state.material); }
+    if(changed.structure){ setActive('[data-structure]','structure',state.structureMode); updateStructureDesc(); }
+    if(changed.container){ setActive('[data-container]','container',state.containerShape); }
     syncSliders(); refreshWeightUI(); updateBadges(); updateTips(); scheduleRebuild(false);
   }
   // 自动旋转开关（截图时传 autoRotate=0 可静止）
@@ -772,7 +1064,7 @@ rebuild();
     'cell-density': {title:'单元密度 · Cell Size', body:'TPMS 在空间中重复的周期数。密度越高，曲面“褶皱”越密、结构越精细，同时算力开销越大。'},
     thickness: {title:'壁厚系数 · Thickness', body:'曲面薄壳的厚度倍率，仅在实体/壳模型里改变真实材料占比。越厚越坚固，越薄越轻量。'},
     slice: {title:'截面扫描 · Cross-section', body:'用虚拟平面沿 Z 轴逐层切开曲面，露出内部连通的孔道。拖到中部即可观察 TPMS 的三维通道网络。'},
-    gradient: {title:'梯度结构 · Gradient', body:'让等值常数沿 Z 轴连续变化，使结构一端致密、一端疏松。骨支架常用：致密端承力，疏松端促骨长入。'},
+    gradient: {title:'梯度双壳 · Gradient Shell', body:'梯度双壳模式下，壁厚沿 Z 轴高度线性渐变（底部薄、顶部厚），形成功能梯度多孔结构。骨支架常用：致密端承力，疏松端促骨长入。'},
     'iso-c': {title:'等值常数 C · Isovalue', body:'公式 f(x,y,z)=C 里的 C。场函数值恰好等于 C 的所有点连成一张面，就是等值面。调高 C 材料变多、孔隙变小——这正是孔隙率滑块背后的数学。'},
     weight: {title:'权重系数 · Weight', body:'公式每一项前的乘数。把某项权重调大，曲面就朝那个方向“倾斜”变形。拖动它，直接看到数学项如何塑造几何。'}
   };
