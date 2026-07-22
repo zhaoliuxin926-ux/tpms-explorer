@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TPMS 结构参数探索器 · 在浏览器里探索三重周期性极小曲面</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230d9488'/%3E%3Cstop offset='.55' stop-color='%230891b2'/%3E%3Cstop offset='1' stop-color='%232563eb'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='24' cy='22' r='10' fill='rgba(255,255,255,.85)'/%3E%3Ccircle cx='42' cy='42' r='7' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E">
 <meta name="description" content="一个在浏览器里实时生成与探索三重周期性极小曲面（TPMS）的可视化工具：调节参数、截面扫描、导出 STL，让复杂的 TPMS 结构看得见、摸得着。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TPMS 结构参数探索器 · 在浏览器里探索三重周期性极小曲面">
+<meta property="og:description" content="一个在浏览器里实时生成与探索三重周期性极小曲面（TPMS）的可视化工具：调节参数、截面扫描、导出 STL，让复杂的 TPMS 结构看得见、摸得着。">
+<meta property="og:image" content="shots/01-gyroid-surface.png">
 <style>
 :root{
   --bg:#eef1f6; --bg2:#e3e8f0;
@@ -12,6 +17,7 @@
   --ink:#1f2430; --ink-2:#5b6472; --ink-3:#8b93a3;
   --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
   --gyroid:#6366f1; --diamond:#f59e0b; --schwarz:#10b981;
+  --neovius:#ec4899; --iwp:#0ea5e9; --frd:#a855f7;
   --radius:14px; --radius-s:10px;
   --shadow:0 1px 2px rgba(20,28,46,.06), 0 10px 30px rgba(20,28,46,.08);
 }
@@ -28,15 +34,16 @@ a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
 
 /* ===== 导航条 ===== */
-.nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(10px);
+.nav{position:sticky;top:0;z-index:50;-webkit-backdrop-filter:saturate(180%) blur(10px);
+  backdrop-filter:saturate(180%) blur(10px);
   background:rgba(238,241,246,.78);border-bottom:1px solid rgba(230,233,239,.7)}
 .nav-inner{max-width:1180px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
 .brand{display:flex;align-items:center;gap:13px}
 .brand .mark{width:38px;height:38px;border-radius:11px;flex:none;position:relative;overflow:hidden;
   background:linear-gradient(150deg,#0d9488 0%,#0891b2 55%,#2563eb 100%);
   box-shadow:0 6px 16px rgba(13,148,136,.35), inset 0 1px 0 rgba(255,255,255,.4)}
-.brand .mark::after{content:"";position:absolute;left:8px;top:5px;width:14px;height:14px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.85), rgba(255,255,255,0) 65%)}
+.brand .mark::after{content:"";position:absolute;inset:7px;border-radius:6px;border:1.5px solid rgba(255,255,255,.85);
+  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.5) 0 18%, transparent 19%),radial-gradient(circle at 70% 65%, rgba(255,255,255,.35) 0 16%, transparent 17%)}
 .brand h1{font-size:1.08rem;font-weight:700;letter-spacing:.3px;line-height:1.15}
 .brand .sub{font-size:.76rem;color:var(--ink-2);margin-top:1px}
 .nav .spacer{flex:1}
@@ -180,7 +187,7 @@ img{max-width:100%;display:block}
     <a class="btn-ghost" href="#capabilities">了解能做什么</a>
   </div>
   <div class="hero-shot">
-    <img src="shots/01-gyroid-surface.png" alt="Gyroid 曲面实时预览">
+    <img src="shots/01-gyroid-surface.png" alt="Gyroid 曲面实时预览" fetchpriority="high">
   </div>
 </section>
 
@@ -236,7 +243,7 @@ img{max-width:100%;display:block}
     <div class="scene">
       <div class="scene-shot">
         <span class="scene-tag" style="background:rgba(99,102,241,.82)">Gyroid</span>
-        <img src="shots/02-gyroid-bone.png" alt="仿生骨支架">
+        <img src="shots/02-gyroid-bone.png" alt="仿生骨支架" loading="lazy">
       </div>
       <div class="scene-body">
         <h4><span class="swatch" style="background:var(--gyroid)"></span>仿生骨支架</h4>
@@ -247,7 +254,7 @@ img{max-width:100%;display:block}
     <div class="scene">
       <div class="scene-shot">
         <span class="scene-tag" style="background:rgba(245,158,11,.82)">Diamond</span>
-        <img src="shots/05-diamond-surface.png" alt="轻量化结构">
+        <img src="shots/05-diamond-surface.png" alt="轻量化结构" loading="lazy">
       </div>
       <div class="scene-body">
         <h4><span class="swatch" style="background:var(--diamond)"></span>轻量化结构</h4>
@@ -258,7 +265,7 @@ img{max-width:100%;display:block}
     <div class="scene">
       <div class="scene-shot">
         <span class="scene-tag" style="background:rgba(16,185,129,.82)">Schwarz P</span>
-        <img src="shots/04-schwarz-heat.png" alt="散热结构">
+        <img src="shots/04-schwarz-heat.png" alt="散热结构" loading="lazy">
       </div>
       <div class="scene-body">
         <h4><span class="swatch" style="background:var(--schwarz)"></span>散热结构</h4>

@@ -71,7 +71,7 @@ const CONTAINERS = [
 
 let browser;
 try {
-  browser = await chromium.launch({ channel: 'chrome', headless: true });
+  browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 } catch (e) {
   console.log('[FATAL] 无法启动 Chrome：', e.message);
   console.log('提示：headless 环境若 CDN 不可达，Three.js 加载会失败，此脚本无法运行。');

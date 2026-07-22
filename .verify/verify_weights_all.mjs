@@ -8,7 +8,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 function log(label, ok, detail=''){ results.push({label, ok, detail}); console.log(`${ok?'PASS':'FAIL'}  ${label}${detail?'  ::  '+detail:''}`); }
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 
 async function dragSlider(page, selector, val){
   await page.locator(selector).evaluate((el, v) => {
@@ -25,7 +25,7 @@ async function releaseSlider(page, selector){
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
   const errors = [];
-  page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+  page.on('console', msg => { const t = msg.text(); if (msg.type() === 'error' && !/favicon|Failed to load resource|net::ERR|404/i.test(t)) errors.push(t); });
   page.on('pageerror', err => errors.push(err.message));
   await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);

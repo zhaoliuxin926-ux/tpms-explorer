@@ -8,18 +8,17 @@ fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 function log(label, ok, detail=''){ results.push({label, ok, detail}); console.log(`${ok?'PASS':'FAIL'}  ${label}${detail?'  ::  '+detail:''}`); }
 
-// 7 个术语及其标题预期关键词
+// 6 个术语及其标题预期关键词（深度重构后"梯度结构"功能已移除，术语随之删除）
 const TERMS = [
   ['porosity', '孔隙率'],
   ['cell-density', '单元密度'],
   ['thickness', '壁厚'],
   ['slice', '截面'],
-  ['gradient', '梯度'],
   ['iso-c', '等值常数'],
   ['weight', '权重'],
 ];
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 
 // ---- T1: 页面加载无 JS 错误（gloss IIFE 不破坏模块） ----
 {
@@ -52,9 +51,13 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   log('#gloss 容器存在', glossExists === 1);
   log('#gloss 初始隐藏', glossHiddenInitially);
 
-  // T3: .gloss-term 元素数量 = 7
+  // T3: .gloss-term 元素数量 = 6
   const termCount = await page.locator('.gloss-term').count();
-  log('.gloss-term 共 7 个', termCount === 7, `实际=${termCount}`);
+  log('.gloss-term 共 6 个', termCount === 6, `实际=${termCount}`);
+
+  // slice/iso-c/weight 术语位于默认折叠的 <details> 分区，先展开再交互
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+  await page.waitForTimeout(300);
 
   // T4: 真实 hover porosity → 显示 + 内容正确
   await page.locator('.gloss-term[data-term="porosity"]').hover();

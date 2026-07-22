@@ -8,7 +8,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 function log(label, ok, detail=''){ results.push({label, ok, detail}); console.log(`${ok?'PASS':'FAIL'}  ${label}${detail?'  ::  '+detail:''}`); }
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 
 // ---- Test 1: 首次进入自动弹出引导（清除 localStorage）----
 {

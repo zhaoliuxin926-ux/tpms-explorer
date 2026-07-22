@@ -4,7 +4,7 @@ const BASE = 'http://127.0.0.1:8123';
 const results = [];
 function log(label, ok, detail=''){ results.push({label, ok, detail}); console.log(`${ok?'PASS':'FAIL'}  ${label}${detail?'  ::  '+detail:''}`); }
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 
 // ---- T14: 类型切换后权重重置 ----
 {

@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl'] });
 const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
 const page = await ctx.newPage();
 
