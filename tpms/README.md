@@ -20,26 +20,25 @@
 ## 目录结构
 
 ```
-tpms/
-├── README.md                  ← 你正在看的项目中枢
-│
-├── web/                       ← 主交付：单文件版（双击即开，无构建）
+（仓库根）
+├── docs/                      ← 主交付：单文件版（GitHub Pages 源目录，双击即开，无构建）
 │   ├── index.html             ← 落地页（项目介绍 + 展示图）
 │   ├── app.html               ← 主应用（Three.js 0.160 CDN，Surface Nets 重建）
 │   ├── README-体验说明.md     ← 单文件版使用说明
 │   └── shots/                 ← 展示截图
 │       ├── 01~05 官方展示图   ← 被落地页引用，勿移
-│       ├── showcase/            ← 交互场景实拍（新手引导 / 公式演示 / 主视图 / 骨支架 / 公式系数）
+│       ├── showcase/          ← 交互场景实拍（新手引导 / 公式演示 / 主视图 / 骨支架 / 公式系数）
 │       └── verify/            ← 自动化验证截图（过程产物）
 │
-├── tpms-platform/             ← 工程化进阶版（Vite 8 + TS 6 严格模式 + Three 0.185）
-│   └── 30 个源文件 · Web Worker 重建 · 7 种导出格式
-│
-├── prototypes/                ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
-├── agent_memory/              ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
-├── .verify/                   ← Playwright 验证脚本（gitignored）
-├── .diag/                     ← 诊断探针脚本（gitignored）
-└── .zcode/                    ← 计划文件（gitignored）
+└── tpms/                      ← 工程化与开发辅助（不参与 Pages）
+    ├── README.md              ← 你正在看的项目中枢
+    ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185）
+    │   └── 30 个源文件 · Web Worker 重建 · 7 种导出格式
+    ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
+    ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
+    ├── .verify/               ← Playwright 验证脚本（gitignored）
+    ├── .diag/                 ← 诊断探针脚本（gitignored）
+    └── .zcode/                ← 计划文件（gitignored）
 ```
 
 ---
@@ -61,39 +60,40 @@ tpms/
 ## 界面预览
 
 新手引导首屏（教学引导 + 3D 实时预览）：
-![新手引导首屏](web/shots/showcase/01-onboard.png)
+![新手引导首屏](../docs/shots/showcase/01-onboard.png)
 
 公式权重演示（拖动滑块，公式同步变化）：
-![公式权重演示](web/shots/showcase/02-demo.png)
+![公式权重演示](../docs/shots/showcase/02-demo.png)
 
 主界面 3D 视图（完整控制面板 + 实时重建）：
-![主界面 3D 视图](web/shots/showcase/03-main.png)
+![主界面 3D 视图](../docs/shots/showcase/03-main.png)
 
 仿生骨支架预设（场景卡弹出"为什么这样配"）：
-![仿生骨支架预设](web/shots/showcase/04-bone.png)
+![仿生骨支架预设](../docs/shots/showcase/04-bone.png)
 
 公式权重（带系数显示，抽象数学可见）：
-![公式权重（带系数）](web/shots/showcase/05-formula.png)
+![公式权重（带系数）](../docs/shots/showcase/05-formula.png)
 
 新曲面族 Lidinoid（左）与 Split-P（右）：
-![Lidinoid](web/shots/showcase/11-lidinoid-p75.png)
-![Split-P](web/shots/showcase/11-splitp-p75.png)
+![Lidinoid](../docs/shots/showcase/11-lidinoid-p75.png)
+![Split-P](../docs/shots/showcase/11-splitp-p75.png)
 
 浅 / 深 / 自动主题切换（浅色主题）：
-![浅色主题](web/shots/showcase/09-theme-light.png)
+![浅色主题](../docs/shots/showcase/09-theme-light.png)
 
 ---
 
 ## 快速开始
 
 ### 单文件版（推荐先看这个）
-1. 用 Chrome / Edge 打开 `web/index.html`（落地页）→ 点"开始探索"进入 `web/app.html`。
-2. 首次进入会弹出 6 步新手引导；右侧控制面板各分区可折叠，左上角状态栏默认收起（点击展开）。
-3. 详见 `web/README-体验说明.md`。
+- **在线访问**：GitHub Pages 自动部署 → 直接打开站点（`docs/` 为 Pages 源目录）。
+- **本地打开**：用 Chrome / Edge 打开 `docs/index.html`（落地页）→ 点"开始探索"进入 `docs/app.html`。
+- 首次进入会弹出 6 步新手引导；右侧控制面板各分区可折叠，左上角状态栏默认收起（点击展开）。
+- 详见 `docs/README-体验说明.md`。
 
 ### 工程版
 ```bash
-cd tpms-platform
+cd tpms/tpms-platform
 npm install
 npm run dev      # 访问 http://localhost:5173
 # 或 npm run build && npm run preview

@@ -9,14 +9,16 @@
 > 完整项目已归入独立子目录 `tpms/`，请直接看 **[`tpms/README.md`](tpms/README.md)**（项目中枢）。
 
 ```
-tpms/
-├── web/           单文件版主交付（index.html / app.html，双击即开）
-├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
-├── prototypes/    MATLAB 早期原型（已归档）
-└── agent_memory/  项目记忆（gitignored）
+（仓库根）
+├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开）
+└── tpms/
+    ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
+    ├── prototypes/    MATLAB 早期原型（已归档）
+    └── agent_memory/  项目记忆（gitignored）
 ```
 
-- 单文件版：`tpms/web/index.html` 落地页 → `tpms/web/app.html` 主应用（Three.js CDN，无构建）。
+- 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
+- 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错。
 
