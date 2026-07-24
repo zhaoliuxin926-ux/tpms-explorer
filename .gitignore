@@ -1,9 +1,22 @@
 # 本地开发辅助文件（不上线）
-agent_memory/
-.zcode/
-.diag/
+tpms/agent_memory/
+tpms/.zcode/
+tpms/.diag/
 .workbuddy/
-.verify/node_modules/
-.verify/shots/
-.verify/.verify/
+
+# 依赖（所有项目的 node_modules）
+**/node_modules/
+
+# 构建产物
+tpms/tpms-platform/dist/
+
+# 自动化验证过程产物（脚本本身入库，产物不入库）
+tpms/.verify/shots/
+tpms/web/shots/verify/
+
+# 副项目运行时产物
+claude-code-workflow/.trash/
+claude-code-workflow/crdt-data/
+
+# 其他
 *.zip
