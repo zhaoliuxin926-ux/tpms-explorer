@@ -2,7 +2,8 @@
 
 ## 打开方式
 
-解压后使用最新版 Chrome 或 Edge 打开 `index.html`（落地页），点击"开始探索"即可进入 `app.html` 主应用。
+- **在线访问（推荐）**：通过 GitHub Pages 直接打开站点首页，点击"开始探索"即可进入主应用，无需安装任何环境。
+- **本地打开**：下载仓库后，使用最新版 Chrome 或 Edge 打开 `docs/index.html`（落地页），点击"开始探索"即可进入 `docs/app.html` 主应用。
 
 ## 注意事项
 
@@ -24,11 +25,11 @@
 7. 悬停带虚线下划线的术语（孔隙率、等值常数 C、权重等），查看对应的解释卡。
 8. 复制当前参数链接分享给他人，或使用 PNG / STL 导出当前结果。
 
-## 工程化进阶版（../tpms-platform/）
+## 工程化进阶版（../tpms/tpms-platform/）
 
-项目同时包含一个基于 Vite + TypeScript 的工程化进阶版本，目录为 `../tpms-platform/`。该版本支持 Web Worker 并行重建、多级 LOD、7 种导出格式（STL / VTK / VTI / Python / MATLAB / BibTeX / JSON）以及更严格的类型检查。
+项目同时包含一个基于 Vite + TypeScript 的工程化进阶版本，目录为 `../tpms/tpms-platform/`。该版本支持 Web Worker 并行重建、多级 LOD、7 种导出格式（STL / VTK / VTI / Python / MATLAB / BibTeX / JSON）以及更严格的类型检查。
 
-**打开方式**：不能直接双击 `../tpms-platform/index.html`，因为浏览器会按 `file://` 协议加载，导致 ES Modules 与 Web Worker 被 CORS 安全策略阻止，3D 画面无法显示。请在 `../tpms-platform` 目录执行：
+**打开方式**：不能直接双击 `../tpms/tpms-platform/index.html`，因为浏览器会按 `file://` 协议加载，导致 ES Modules 与 Web Worker 被 CORS 安全策略阻止，3D 画面无法显示。请在 `../tpms/tpms-platform` 目录执行：
 
 ```bash
 npm install
