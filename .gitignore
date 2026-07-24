@@ -13,6 +13,11 @@ tpms/tpms-platform/dist/
 # 自动化验证过程产物（脚本本身入库，产物不入库）
 tpms/.verify/shots/
 docs/shots/verify/
+# 一次性临时验证脚本（本轮终审目视验证用，非正式回归套件）
+tpms/.verify/verify_visual.mjs
+tpms/.verify/verify_visual2.mjs
+tpms/.verify/verify_platform_frd.mjs
+tpms/.verify/verify_platform_all.mjs
 
 # 副项目运行时产物
 claude-code-workflow/.trash/
