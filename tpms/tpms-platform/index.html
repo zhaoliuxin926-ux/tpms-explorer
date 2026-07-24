@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TPMS 结构参数探索器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%230891b2'/%3E%3Cpath%20d='M7%2022%20C%2012%208%2020%208%2025%2022%20M7%2010%20C%2012%2024%2020%2024%2025%2010'%20stroke='%23fff'%20stroke-width='2.4'%20fill='none'%20stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     Design Tokens — 阶跃式系统设计令牌
+     ═══════════════════════════════════════════════════════════════ */
+  :root{
+    /* ── 色彩：基础色阶（基于 Slate 调） ── */
+    --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0;
+    --slate-300:#cbd5e1; --slate-400:#94a3b8; --slate-500:#64748b;
+    --slate-600:#475569; --slate-700:#334155; --slate-800:#1e293b; --slate-900:#0f172a; --slate-950:#080a0f;
+    /* ── 色彩：语义令牌 ── */
+    --bg:var(--slate-50); --bg-2:#dde3ec;
+    --panel:rgba(255,255,255,0.78); --panel-solid:#ffffff; --panel-2:#f3f6fb;
+    --panel-border:rgba(15,23,42,0.06);
+    --ink:var(--slate-900); --ink-2:var(--slate-600); --ink-3:var(--slate-400);
+    /* ── 品牌：青绿 + 6 曲面渐变 ── */
+    --accent:#0891b2; --accent-d:#0e7490; --accent-soft:#e0f7fa;
+    --accent-2:#06b6d4; --accent-3:#22d3ee;
+    --gyroid:#6366f1; --gyroid-2:#818cf8;
+    --diamond:#f59e0b; --diamond-2:#fbbf24;
+    --schwarz:#10b981; --schwarz-2:#34d399;
+    --neovius:#ec4899; --neovius-2:#f472b6;
+    --iwp:#0ea5e9; --iwp-2:#38bdf8;
+    --frd:#a855f7; --frd-2:#c084fc;
+    /* ── 圆角阶跃 ── */
+    --radius-xs:6px; --radius-s:10px; --radius:16px; --radius-lg:22px; --radius-xl:28px;
+    /* ── 阴影阶跃 ── */
+    --shadow-xs:0 1px 2px rgba(15,23,42,.04);
+    --shadow-sm:0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.04);
+    --shadow:0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.06), 0 24px 60px -20px rgba(15,23,42,.12);
+    --shadow-lg:0 8px 32px rgba(15,23,42,.10), 0 28px 80px -16px rgba(15,23,42,.18);
+    --shadow-glow:0 0 0 1px rgba(8,145,178,.16), 0 8px 28px -8px rgba(8,145,178,.30);
+    /* ── 动画曲线 ── */
+    --ease:cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out:cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* ── 时长 ── */
+    --dur-fast:0.15s; --dur:0.25s; --dur-slow:0.4s;
+    /* ── 字号阶跃（基于 0.875rem 基准的 1.125 倍数） ── */
+    --fs-xs:0.6875rem; --fs-s:0.75rem; --fs-base:0.875rem;
+    --fs-md:1rem; --fs-lg:1.125rem; --fs-xl:1.25rem; --fs-2xl:1.5rem; --fs-3xl:1.875rem;
+    /* ── 间距阶跃（4 倍数） ── */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;     --sp-8:32px; --sp-10:40px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     明 / 暗 / 系统 主题令牌（主题切换：工程版补完）
+     ═════════════════════════════════════════════════════════════ */
+  :root{ color-scheme: light; }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#0b0f17; --bg-2:#0a0e15;
+    --panel:rgba(20,26,38,0.72); --panel-solid:#141a26; --panel-2:#1a2230;
+    --panel-border:rgba(255,255,255,0.08);
+    --ink:#e6edf6; --ink-2:#9aa7b8; --ink-3:#6b7787;
+    --accent-soft:#0c2a33;
+  }
+  /* 主题切换控件 */
+  .theme-switch{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(15,23,42,0.05);border:1px solid var(--panel-border)}
+  :root[data-theme="dark"] .theme-switch{background:rgba(255,255,255,0.05)}
+  .theme-opt{appearance:none;border:none;background:transparent;color:var(--ink-3);width:30px;height:28px;border-radius:999px;display:grid;place-items:center;cursor:pointer;transition:all .18s var(--ease-out)}
+  .theme-opt:hover{color:var(--ink)}
+  .theme-opt.active{background:var(--accent-soft);color:var(--accent-3);box-shadow:inset 0 0 0 1px rgba(8,145,178,.4)}
+  /* 暗色模式组件覆盖（不改动浅色设计语言） */
+  :root[data-theme="dark"] body{ background: radial-gradient(1200px 700px at 88% -8%, rgba(8,145,178,0.16), transparent 55%), radial-gradient(900px 600px at -5% 110%, rgba(99,102,241,0.12), transparent 50%), linear-gradient(180deg,#0b0f17,#0a0e15) !important; color:var(--ink) !important; }
+  :root[data-theme="dark"] .topbar{ background:rgba(14,19,30,0.82) !important; border-color:var(--panel-border) !important; }
+  :root[data-theme="dark"] .panel, :root[data-theme="dark"] .controls{ background:rgba(20,26,38,0.72) !important; border-color:var(--panel-border) !important; }
+  :root[data-theme="dark"] .opt{ background:rgba(255,255,255,0.04) !important; border-color:var(--panel-border) !important; color:var(--ink-2) !important; }
+  :root[data-theme="dark"] .opt::before{ background:linear-gradient(180deg,rgba(255,255,255,0.07),transparent) !important; }
+  :root[data-theme="dark"] .opt .o-sub{ color:var(--ink-3) !important; }
+  :root[data-theme="dark"] .pill{ background:var(--panel-2) !important; border-color:var(--panel-border) !important; color:var(--ink-2) !important; }
+  :root[data-theme="dark"] .scene{ background:rgba(255,255,255,0.03) !important; border-color:var(--panel-border) !important; }
+  :root[data-theme="dark"] .scene:hover{ background:rgba(255,255,255,0.07) !important; border-color:var(--accent) !important; }
+  :root[data-theme="dark"] .scene .nm{ color:var(--ink) !important; }
+  :root[data-theme="dark"] .scene .ds{ color:var(--ink-3) !important; }
+  :root[data-theme="dark"] .preset-card, :root[data-theme="dark"] .gloss, :root[data-theme="dark"] #onboard-overlay, :root[data-theme="dark"] .onboard-overlay{ background:var(--panel-solid) !important; border-color:var(--panel-border) !important; color:var(--ink) !important; }
+  :root[data-theme="dark"] .preset-card p, :root[data-theme="dark"] .gloss-body{ color:var(--ink-2) !important; }
+  :root[data-theme="dark"] .tbtn{ background:rgba(255,255,255,0.05) !important; border-color:var(--panel-border) !important; color:var(--ink-2) !important; }
+  :root[data-theme="dark"] .tbtn.on{ background:var(--accent-soft) !important; color:var(--accent-3) !important; border-color:var(--accent) !important; }
+  :root[data-theme="dark"] .export-menu, :root[data-theme="dark"] .xm-item{ background:var(--panel-solid) !important; border-color:var(--panel-border) !important; color:var(--ink) !important; }
+  :root[data-theme="dark"] .xm-name{ color:var(--ink) !important; }
+  :root[data-theme="dark"] .xm-desc{ color:var(--ink-3) !important; }
+  :root[data-theme="dark"] .compare-panel{ background:var(--panel-solid) !important; border-color:var(--panel-border) !important; color:var(--ink) !important; }
+  :root[data-theme="dark"] .stat-overlay{ background:var(--panel) !important; border-color:var(--panel-border) !important; color:var(--ink) !important; }
+  :root[data-theme="dark"] .stat-full{ color:var(--ink) !important; }
+  :root[data-theme="dark"] .brand .sub{ color:var(--ink-2) !important; }
+  :root[data-theme="dark"] .axes-hint, :root[data-theme="dark"] .empty, :root[data-theme="dark"] .sect h3, :root[data-theme="dark"] .sect > summary.sect-h{ color:var(--ink-3) !important; }
+  :root[data-theme="dark"] .sect{ border-color:var(--panel-border) !important; }
+  :root[data-theme="dark"] .onboard-btn{ background:rgba(255,255,255,0.05) !important; border-color:var(--panel-border) !important; color:var(--ink-2) !important; }
+  :root[data-theme="dark"] input[type=range]{ background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--p,40%), rgba(255,255,255,0.14) var(--p,40%), rgba(255,255,255,0.14) 100%) !important; }
+  :root[data-theme="dark"] input[type=range]::-webkit-slider-thumb{ background:var(--panel-solid) !important; }
+  :root[data-theme="dark"] input[type=range]::-moz-range-thumb{ background:var(--panel-solid) !important; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-feature-settings:"cv11","ss01","ss03";
+    font-size:var(--fs-base);
+    line-height:1.5;
+    background:
+      radial-gradient(1200px 700px at 88% -8%, rgba(8,145,178,0.10) 0%, rgba(8,145,178,0) 55%),
+      radial-gradient(900px 600px at -5% 110%, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0) 50%),
+      linear-gradient(180deg, #f0f4f9 0%, #e0e6ef 100%);
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+    letter-spacing:-0.005em;
+  }
+  .app{height:100vh;display:flex;flex-direction:column;max-width:none;margin:0;padding:0;gap:0;overflow:hidden}
+  .topbar{
+    flex:none;display:flex;align-items:center;gap:16px;padding:14px 22px;flex-wrap:wrap;
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
+    border-bottom:1px solid rgba(15,23,42,0.06);
+    box-shadow:0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 8px rgba(15,23,42,0.03);
+    z-index:10;
+  }
+  .brand{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none;position:relative}
+  .brand .mark{
+    width:44px;height:44px;border-radius:13px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(140deg,#0e7490 0%,#0891b2 40%,#6366f1 100%);
+    box-shadow:0 8px 22px rgba(8,145,178,.32), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .brand .mark::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 25%, rgba(255,255,255,.45) 0%, transparent 45%);}
+  .brand .mark::after{content:"";position:absolute;inset:9px;border-radius:8px;border:1.5px solid rgba(255,255,255,.85);
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.5) 0 18%, transparent 19%),radial-gradient(circle at 70% 65%, rgba(255,255,255,.35) 0 16%, transparent 17%);
+  }
+  .brand h1{font-size:1.32rem;font-weight:700;letter-spacing:-0.01em;line-height:1.15}
+  .brand .sub{font-size:.78rem;color:var(--ink-2);margin-top:3px;letter-spacing:0.01em}
+  .brand .sub{font-size:.82rem;color:var(--ink-2);margin-top:2px}
+  .topbar .spacer{flex:1}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:600;
+    background:#fff;border:1px solid var(--panel-border);color:var(--ink-2)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 320px;gap:18px;padding:18px 20px;align-items:stretch}
+  .panel{
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
+    border:1px solid rgba(15,23,42,0.06);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    transition:box-shadow .3s var(--ease-out);
+  }
+  .panel:hover{box-shadow:var(--shadow-lg)}
+  .controls{padding:18px;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(15,23,42,0.15) transparent}
+  .controls::-webkit-scrollbar{width:6px}
+  .controls::-webkit-scrollbar-track{background:transparent}
+  .controls::-webkit-scrollbar-thumb{background:rgba(15,23,42,0.12);border-radius:3px}
+  .controls::-webkit-scrollbar-thumb:hover{background:rgba(15,23,42,0.25)}
+  .sect{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--panel-border)}
+  .sect:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .sect h3{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+  .sect > summary.sect-h{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;user-select:none}
+  .sect > summary.sect-h::-webkit-details-marker{display:none}
+  .sect > summary.sect-h::after{content:"▾";transition:transform .25s;color:var(--ink-3);font-size:.9rem}
+  .sect:not([open]) > summary.sect-h{margin-bottom:0}
+  .sect:not([open]) > summary.sect-h::after{transform:rotate(-90deg)}
+  .opt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .opt-row.two{grid-template-columns:repeat(2,1fr)}
+  .opt{
+    appearance:none;border:1.5px solid var(--panel-border);
+    background:rgba(255,255,255,0.6);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    color:var(--ink-2);
+    padding:9px 6px;border-radius:var(--radius-s);font-size:.84rem;font-weight:600;cursor:pointer;
+    transition:all .2s var(--ease-out);display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1;
+    position:relative;overflow:hidden;
+  }
+  .opt::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%, transparent 50%);opacity:0;transition:opacity .2s;pointer-events:none}
+  .opt:hover::before{opacity:1}
+  .opt .o-sub{font-size:.66rem;font-weight:500;color:var(--ink-3);letter-spacing:.3px}
+  .opt:hover{border-color:#cdd3df;transform:translateY(-1px)}
+  .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .opt[data-color="gyroid"].active{background:linear-gradient(140deg,#6366f1 0%,#818cf8 100%);border-color:#6366f1;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.32)}
+  .opt[data-color="diamond"].active{background:linear-gradient(140deg,#f59e0b 0%,#fbbf24 100%);border-color:#f59e0b;color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.32)}
+  .opt[data-color="schwarz"].active{background:linear-gradient(140deg,#10b981 0%,#34d399 100%);border-color:#10b981;color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.32)}
+  .opt[data-color="neovius"].active{background:linear-gradient(140deg,#ec4899 0%,#f472b6 100%);border-color:#ec4899;color:#fff;box-shadow:0 4px 14px rgba(236,72,153,.32)}
+  .opt[data-color="iwp"].active{background:linear-gradient(140deg,#0ea5e9 0%,#38bdf8 100%);border-color:#0ea5e9;color:#fff;box-shadow:0 4px 14px rgba(14,165,233,.32)}
+  .opt[data-color="frd"].active{background:linear-gradient(140deg,#a855f7 0%,#c084fc 100%);border-color:#a855f7;color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.32)}
+  .opt[data-color="lidinoid"].active{background:linear-gradient(140deg,#84cc16 0%,#a3e635 100%);border-color:#84cc16;color:#fff;box-shadow:0 4px 14px rgba(132,204,22,.32)}
+  .opt[data-color="splitp"].active{background:linear-gradient(140deg,#f43f5e 0%,#fb7185 100%);border-color:#f43f5e;color:#fff;box-shadow:0 4px 14px rgba(244,63,94,.32)}
+  .opt.active .o-sub{color:rgba(255,255,255,.82)}
+  .opt[data-model].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-model].active .o-sub{color:rgba(255,255,255,.7)}
+  .opt[data-material].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-material].active .o-sub{color:rgba(255,255,255,.7)}
+  .opt[data-structure].active,.opt[data-container].active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .opt[data-structure].active .o-sub,.opt[data-container].active .o-sub{color:rgba(255,255,255,.7)}
+  .field{margin-bottom:15px}
+  .field:last-child{margin-bottom:0}
+  .field .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .field .lbl span:first-child{font-size:.88rem;font-weight:600}
+  .field .val{font-size:.78rem;font-weight:700;color:var(--accent-d);background:var(--accent-soft);
+    padding:2px 9px;border-radius:999px;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:999px;
+    background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--p,40%), rgba(15,23,42,0.08) var(--p,40%), rgba(15,23,42,0.08) 100%);outline:none;cursor:pointer;transition:height .15s}
+  input[type=range]:hover{height:7px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#fff;border:2.5px solid var(--accent);box-shadow:0 2px 8px rgba(8,145,178,.32),0 0 0 4px rgba(8,145,178,0);cursor:pointer;transition:all .15s var(--ease-out)}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.18);box-shadow:0 2px 8px rgba(8,145,178,.32),0 0 0 6px rgba(8,145,178,0.12)}
+  input[type=range]:focus-visible{outline:none}
+  input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 5px var(--accent-soft),0 2px 6px rgba(13,148,136,.4)}
+  input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 5px var(--accent-soft)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:pointer}
+  .scenes{display:flex;flex-direction:column;gap:8px}
+  .scene{
+    display:flex;align-items:center;gap:11px;text-align:left;width:100%;cursor:pointer;
+    border:1.5px solid var(--panel-border);background:#fff;border-radius:var(--radius-s);padding:10px 11px;transition:all .16s;
+  }
+  .scene:hover{border-color:var(--accent);background:#fbfdfc;transform:translateY(-1px)}
+  .scene .ic{width:32px;height:32px;flex:none;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:1.05rem}
+  .scene[data-preset=bone] .ic{background:linear-gradient(140deg,#6366f1,#8b5cf6)}
+  .scene[data-preset=lightweight] .ic{background:linear-gradient(140deg,#f59e0b,#f97316)}
+  .scene[data-preset=heat] .ic{background:linear-gradient(140deg,#10b981,#14b8a6)}
+  .scene[data-preset=catalyst] .ic{background:linear-gradient(140deg,#0ea5e9,#22d3ee)}
+  .scene[data-preset=acoustic] .ic{background:linear-gradient(140deg,#8b5cf6,#a855f7)}
+  .scene[data-preset=electrode] .ic{background:linear-gradient(140deg,#ef4444,#f87171)}
+  .scene .nm{font-size:.86rem;font-weight:700;color:var(--ink)}
+  .scene .ds{font-size:.72rem;color:var(--ink-3);margin-top:1px}
+  .model-desc{margin-top:11px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--panel-border);
+    border-radius:var(--radius-s);font-size:.78rem;color:var(--ink-2);line-height:1.55}
+  .field-note{margin-top:9px;font-size:.72rem;color:var(--ink-3);line-height:1.45}
+  .formula{background:var(--panel-2);border:1px solid var(--panel-border);border-radius:var(--radius-s);padding:11px 12px}
+  .formula .cap{font-size:.7rem;color:var(--ink-3);margin-bottom:6px;letter-spacing:.4px}
+  .formula .eq{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:.82rem;color:var(--ink);line-height:1.65;word-break:break-word}
+  .formula .eq .c{color:var(--accent-d);font-weight:700}
+  .formula .eq .term{display:inline;padding:1px 2px;border-radius:3px;transition:background .15s}
+  .formula .eq .term-hl{background:rgba(13,148,136,.18)}
+  .formula .eq .wcoef{color:var(--accent-d);font-weight:700}
+  .formula .eq .eq-line{display:block}
+  .formula .eq .eq-plus{color:var(--ink-3);font-weight:700}
+  .formula .eq .eq-result{margin-top:2px}
+  .fw{margin-top:10px;display:none}
+  .fw.show{display:block}
+  .fw-hint{font-size:.72rem;color:var(--ink-3);margin-bottom:9px;line-height:1.4}
+  .fw-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .fw-row:last-child{margin-bottom:0}
+  .fw-tag{font-family:"SFMono-Regular",Consolas,monospace;font-size:.7rem;color:var(--ink-2);min-width:92px;flex:none;cursor:pointer;transition:color .15s}
+  .fw-tag.on{color:var(--accent-d);font-weight:700}
+  .fw-row input[type=range]{flex:1;height:5px}
+  .fw-val{font-size:.72rem;font-weight:700;color:var(--accent-d);font-variant-numeric:tabular-nums;width:26px;text-align:right;flex:none}
+  .viewer{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+  .v-tools{position:absolute;top:14px;right:14px;z-index:10;display:flex;gap:6px;background:rgba(13,16,21,0.65);padding:7px;border-radius:12px;backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+  .v-tools .tbtn{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.10);color:#dfe5ee;transition:all .15s var(--ease-out)}
+  .v-tools .tbtn:hover{background:rgba(255,255,255,.16);color:#fff;transform:translateY(-1px)}
+  .v-tools .tbtn.on{background:linear-gradient(140deg,#0891b2 0%,#06b6d4 100%);border-color:#0891b2;color:#fff;box-shadow:0 4px 14px rgba(8,145,178,0.4)}
+  .tbtn{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--panel-border);background:#fff;color:var(--ink-2);
+    display:grid;place-items:center;cursor:pointer;transition:all .15s;
+  }
+  .tbtn:hover{border-color:var(--accent);color:var(--accent-d);background:#fbfdfc}
+  .tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* 导出中心弹出菜单 */
+  .export-menu{position:absolute;right:14px;bottom:58px;z-index:45;display:none;flex-direction:column;gap:1px;padding:6px;min-width:220px;
+    background:var(--panel-solid);border:1px solid var(--panel-border);border-radius:12px;box-shadow:0 14px 36px rgba(15,23,42,.20)}
+  .export-menu.show{display:flex;animation:xmIn .16s var(--ease-out,ease)}
+  @keyframes xmIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .export-menu .xm-title{font-size:.68rem;font-weight:700;color:var(--ink-3,#94a3b8);padding:5px 8px 5px;letter-spacing:.03em;text-transform:uppercase}
+  .xm-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-radius:8px;
+    padding:8px 10px;cursor:pointer;color:var(--ink-2,#334155);font-size:.8rem;font-family:inherit;transition:background .13s,color .13s}
+  .xm-item:hover{background:var(--accent-soft);color:var(--accent-d)}
+  .xm-item .xm-name{font-weight:600}
+  .xm-item .xm-desc{color:var(--ink-3,#94a3b8);font-size:.68rem;font-weight:400}
+  .xm-item:hover .xm-desc{color:var(--accent-d)}
+  .xm-item .xm-ext{margin-left:auto;font-size:.64rem;font-weight:700;color:var(--ink-3,#94a3b8);font-variant-numeric:tabular-nums}
+  .xm-item:hover .xm-ext{color:var(--accent-d)}
+  .xm-col{display:flex;flex-direction:column;line-height:1.25}
+  .tbtn svg{width:17px;height:17px}
+  .stage{position:relative;flex:1;min-height:0}
+  #canvas-container{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 38%, #2a3142 0%, #141822 55%, #08090d 100%);overflow:hidden}
+  #canvas-container::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 80% 60% at 50% 50%, transparent 50%, rgba(0,0,0,0.4) 100%);
+    z-index:1}
+  #canvas-container canvas{display:block}
+  .stage .empty{position:absolute;inset:0;display:none;place-items:center;color:#9aa3b2;font-size:.88rem;text-align:center;padding:20px;z-index:2}
+  .stage .empty.show{display:grid}
+  .loading{position:absolute;left:50%;top:60px;transform:translateX(-50%);background:rgba(13,16,21,0.78);color:#cfd6e2;z-index:8;
+    padding:7px 16px;border-radius:999px;font-size:.76rem;display:none;align-items:center;gap:9px;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 24px rgba(0,0,0,0.3)}
+  .loading.show{display:flex}
+  .loading .sp{width:14px;height:14px;border:2px solid rgba(8,145,178,0.25);border-top-color:#06b6d4;border-right-color:#06b6d4;border-radius:50%;animation:spin .8s cubic-bezier(0.4,0,0.2,1) infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .axes-hint{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:5px;font-size:.7rem;color:#9aa3b2;pointer-events:none;z-index:5;text-align:right}
+  .axes-hint kbd{font-family:inherit;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:1px 6px;margin:0 1px}
+  .stat-overlay{position:absolute;left:14px;top:14px;background:rgba(13,16,21,0.7);border:1px solid rgba(255,255,255,0.1);
+    border-radius:11px;padding:9px 12px;color:#aeb6c4;font-size:.7rem;line-height:1.6;backdrop-filter:blur(12px);font-variant-numeric:tabular-nums;z-index:6;box-shadow:0 8px 24px rgba(0,0,0,0.25)}
+  .stat-overlay b{color:#e9edf3;font-weight:700}
+  .stat-summary{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:8px;
+    color:#cfd6e2;font-size:.7rem;line-height:1.5;
+    cursor:pointer;padding:3px 9px;
+    font-family:inherit;font-variant-numeric:tabular-nums;
+    transition:background .15s,border-color .15s;
+  }
+  .stat-summary:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#e9edf3}
+  .stat-summary b{color:#e9edf3;font-weight:700}
+  .stat-caret{transition:transform .2s;display:inline-block;font-size:.62rem}
+  .stat-overlay.open .stat-caret{transform:rotate(90deg)}
+  .stat-full{display:none;margin-top:5px}
+  .stat-overlay.open .stat-full{display:block}
+  .v-foot{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;z-index:5}
+  .v-foot .tipbar{background:rgba(13,16,21,.55);border:1px solid rgba(255,255,255,.08);color:#dfe5ee;padding:7px 12px;border-radius:9px;font-size:.74rem;line-height:1.5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}
+  .tipbar .ti{flex:none;width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;color:#fff}
+  .tipbar .ti.a{background:var(--accent)}
+  .tipbar .ti.b{background:var(--gyroid)}
+  .tipbar .ti.c{background:var(--diamond)}
+  .tip-sep{flex:none;width:1px;height:14px;background:rgba(255,255,255,.14)}
+  @media(min-width:981px){.sheet-handle{display:none}}
+  .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--ink-3);opacity:.4;margin:2px auto 10px;cursor:pointer;transition:opacity .2s}
+  .sheet-handle:hover{opacity:.7}
+  @media(max-width:980px){
+    .grid{grid-template-columns:1fr;padding:0;gap:0}
+    .viewer{height:calc(100vh - 56px);min-height:0}
+    .controls{position:fixed;bottom:0;left:0;right:0;max-height:78vh;transform:translateY(calc(100% - 54px));transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:50;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(10,13,20,.18);padding:0 16px 16px}
+    .controls.sheet-open{transform:translateY(0)}
+    .controls .sect:first-of-type{margin-top:4px}
+    .v-foot{display:none}
+  }
+  @media(max-width:560px){
+    .topbar{padding:10px 14px;flex-wrap:nowrap;overflow:hidden}
+    .topbar .pills{display:none}
+    .topbar .brand .sub{display:none}
+    .stat-overlay{font-size:.7rem;padding:7px 10px}
+    .axes-hint{display:none}
+    .v-tools{top:10px;right:10px;padding:4px}
+    .v-tools .tbtn{width:30px;height:30px}
+  }
+  .onboard-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:#fff;color:var(--accent-d);transition:all .15s}
+.boot-error{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center;background:radial-gradient(circle at 50% 38%,#2a3142 0%,#141822 55%,#08090d 100%);color:#dfe5ee;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif}
+.boot-error h2{margin:0;font-size:1.35rem;color:#fff}
+.boot-error p{margin:0;font-size:.92rem;line-height:1.6;max-width:520px;color:#aab3c2}
+.boot-error code{background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;font-family:SFMono-Regular,Consolas,monospace;font-size:.85rem}
+.boot-error .btn{margin-top:8px;padding:10px 18px;border-radius:999px;border:none;background:var(--accent,#0891b2);color:#fff;font-weight:600;cursor:pointer;text-decoration:none}
+  .onboard-btn:hover{background:var(--accent-soft)}
+  .onboard-btn svg{width:16px;height:16px}
+  .ob-spot{position:fixed;left:0;top:0;width:0;height:0;border-radius:12px;z-index:10000;pointer-events:none;box-shadow:0 0 0 100vmax rgba(10,13,20,.6);border:2.5px solid var(--accent);opacity:0;transition:left .32s cubic-bezier(.2,.8,.2,1),top .32s cubic-bezier(.2,.8,.2,1),width .32s cubic-bezier(.2,.8,.2,1),height .32s cubic-bezier(.2,.8,.2,1),opacity .2s}
+  .ob-spot.show{opacity:1}
+  .ob-spot::after{content:"";position:absolute;inset:-3px;border-radius:13px;animation:obPulse 1.9s ease-out infinite;pointer-events:none}
+  @keyframes obPulse{0%{box-shadow:0 0 0 0 rgba(13,148,136,.5)}70%{box-shadow:0 0 0 12px rgba(13,148,136,0)}100%{box-shadow:0 0 0 0 rgba(13,148,136,0)}}
+  .ob-card{position:fixed;left:50%;bottom:28px;top:auto;transform:translateX(-50%) translateY(12px);width:min(440px,calc(100vw - 32px));background:#fff;border:1px solid var(--panel-border);border-radius:16px;box-shadow:0 20px 50px rgba(10,13,20,.3);padding:18px 20px 15px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s,bottom .2s,top .2s}
+  .ob-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .ob-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase}
+  .ob-dots{display:flex;gap:5px;margin-left:auto}
+  .ob-dots i{width:6px;height:6px;border-radius:50%;background:#d6dbe5;transition:all .2s}
+  .ob-dots i.on{background:var(--accent);width:18px;border-radius:999px}
+  .ob-card h4{font-size:1.04rem;font-weight:700;margin-bottom:8px}
+  .ob-card p{font-size:.86rem;color:var(--ink-2);line-height:1.62;margin-bottom:13px}
+  .ob-card p b{color:var(--ink);font-weight:600}
+  .ob-demo{display:inline-flex;align-items:center;gap:7px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent-d);font-size:.8rem;font-weight:600;border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s;margin-bottom:13px}
+  .ob-demo:hover{background:#ddf0ec}
+  .ob-foot{display:flex;align-items:center;gap:9px}
+  .ob-btn{appearance:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;border-radius:9px;padding:9px 16px;transition:all .15s}
+  .ob-btn.ghost{background:#f0f2f7;color:var(--ink-2)}
+  .ob-btn.ghost:hover{background:#e6e9f0}
+  .ob-btn.primary{background:var(--accent);color:#fff}
+  .ob-btn.primary:hover{background:var(--accent-d)}
+  @media(max-width:560px){
+    .ob-card{bottom:14px;padding:16px}
+    .topbar .onboard-btn{padding:7px 9px}
+    .topbar .onboard-btn span:not(.ob-ico){display:none}
+    .topbar .onboard-btn .ob-ico{width:18px;height:18px}
+  }
+  body.figure-mode .v-tools,
+  body.figure-mode .v-foot,
+  body.figure-mode .stat-overlay,
+  body.figure-mode .controls,
+  body.figure-mode .onboard-btn,
+  body.figure-mode .topbar .pills{opacity:0;pointer-events:none;transition:opacity .25s}
+  body.figure-mode .topbar{background:rgba(10,13,20,.25);transition:background .25s}
+  body.figure-mode .topbar .brand-text{opacity:0;transition:opacity .25s}
+  #figure-watermark{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);
+    background:rgba(10,13,20,.7);color:#e9edf3;padding:8px 18px;border-radius:8px;
+    font-size:.78rem;letter-spacing:.4px;font-variant-numeric:tabular-nums;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    opacity:0;transition:opacity .25s;z-index:8;pointer-events:none;
+    border:1px solid rgba(255,255,255,.12);font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  #figure-watermark b{color:var(--accent);font-weight:700}
+  #figure-watermark.show{opacity:1}
+  .v-tools .tbtn#btn-figure:hover{background:rgba(13,148,136,.7);color:#fff;border-color:var(--accent)}
+  .gloss-term{border-bottom:1.5px dotted var(--ink-3);cursor:help;transition:color .15s,border-color .15s}
+  .gloss-term:hover{color:var(--accent-d);border-color:var(--accent)}
+  .gloss{position:fixed;z-index:10002;max-width:300px;background:#fff;border:1px solid var(--panel-border);border-radius:12px;box-shadow:0 12px 34px rgba(10,13,20,.18);padding:13px 15px 12px;opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+  .gloss.show{opacity:1;transform:translateY(0)}
+  .gloss h5{font-size:.82rem;font-weight:700;margin-bottom:6px;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .gloss h5 .gi{width:18px;height:18px;border-radius:6px;background:var(--accent);display:grid;place-items:center;flex:none}
+  .gloss h5 .gi svg{width:11px;height:11px;stroke:#fff}
+  .gloss p{font-size:.78rem;color:var(--ink-2);line-height:1.6}
+  @media(max-width:560px){.gloss{max-width:calc(100vw - 24px)}}
+  .preset-card{position:absolute;left:50%;bottom:52px;transform:translateX(-50%) translateY(10px);width:min(430px,calc(100% - 32px));background:#fff;border:1px solid var(--panel-border);border-radius:14px;box-shadow:0 16px 40px rgba(10,13,20,.28);padding:14px 16px 13px;z-index:9;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+  .preset-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .pc-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .pc-ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:.95rem;color:#fff;flex:none}
+  .pc-head h4{font-size:.92rem;font-weight:700}
+  .pc-close{margin-left:auto;border:none;background:#f0f2f7;color:var(--ink-2);width:22px;height:22px;border-radius:7px;cursor:pointer;font-size:.85rem;line-height:1;display:grid;place-items:center;font-family:inherit}
+  .pc-close:hover{background:#e6e9f0}
+  .preset-card p{font-size:.8rem;color:var(--ink-2);line-height:1.55;margin-bottom:8px}
+  .pc-chain{display:flex;flex-direction:column;gap:4px}
+  .pc-chain .pc-item{display:flex;gap:7px;font-size:.76rem;color:var(--ink-2);line-height:1.45}
+  .pc-chain .pc-item b{color:var(--ink);font-weight:600;flex:none}
+  .pc-chain .pc-item::before{content:"→";color:var(--accent);font-weight:700;flex:none}
+  /* ── 浮动提示 Toast ── */
+  .toast{
+    position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);
+    background:rgba(13,16,21,0.88);color:#fff;font-size:.78rem;padding:9px 18px;
+    border-radius:999px;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 12px 36px rgba(0,0,0,0.3);opacity:0;pointer-events:none;
+    transition:all .25s var(--ease-out);z-index:10001;font-weight:500;letter-spacing:0.01em;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* ── 快捷键提示徽章 ── */
+  kbd.shortcut{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:18px;height:18px;padding:0 4px;border-radius:4px;
+    background:rgba(15,23,42,0.06);color:var(--ink-2);
+    font-family:"SF Mono",Consolas,monospace;font-size:.65rem;font-weight:600;
+    border:1px solid rgba(15,23,42,0.08);margin-left:6px;
+  }
+  .toggle{position:relative;display:inline-flex;align-items:center;width:44px;height:24px;border-radius:999px;background:#e3e7ee;cursor:pointer;transition:background .2s}
+  .toggle input{display:none}
+  .toggle-track{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:transform .2s}
+  .toggle input:checked + .toggle-track{transform:translateX(20px)}
+  .toggle input:checked + .toggle-track + .toggle::before{background:var(--accent)}
+  .toggle input:checked ~ .toggle-track{background:var(--accent)}
+  textarea{width:100%;padding:10px 12px;border:1.5px solid var(--panel-border);border-radius:var(--radius-s);font-family:"SFMono-Regular",Consolas,monospace;font-size:.8rem;line-height:1.5;resize:vertical;color:var(--ink);background:#fff;transition:border-color .15s}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .sweep-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center}
+  .sweep-card{background:rgba(20,20,30,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;min-width:320px;text-align:center}
+  .sweep-title{font-size:16px;font-weight:600;color:#e0e0e0;margin-bottom:16px}
+  .sweep-progress{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;margin-bottom:12px}
+  .sweep-bar{height:100%;background:linear-gradient(90deg,#4fc3f7,#81c784);border-radius:2px;transition:width 0.3s;width:0%}
+  .sweep-status{font-size:13px;color:#aaa;margin-bottom:16px}
+  .sweep-preview{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;max-height:120px;overflow:hidden}
+  .sweep-preview img{width:56px;height:56px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.1)}
+  .sweep-cancel-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#ccc;padding:6px 20px;border-radius:6px;cursor:pointer;font-size:13px}
+  .sweep-cancel-btn:hover{background:rgba(255,255,255,0.15)}
+  /* ── 对比视图 ── */
+  .compare-panel { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); width: min(680px, 90vw); background: rgba(16,16,24,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; z-index: 9998; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .compare-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .compare-title { font-size: 14px; font-weight: 600; color: #e0e0e0; }
+  .compare-close-btn { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 0 4px; }
+  .compare-close-btn:hover { color: #fff; }
+  .compare-body { display: flex; }
+  .compare-side { flex: 1; padding: 8px; text-align: center; }
+  .compare-label { font-size: 12px; font-weight: 700; color: #4fc3f7; margin-bottom: 4px; }
+  .compare-side canvas { width: 100%; height: 180px; border-radius: 6px; background: #111; }
+  .compare-divider { width: 1px; background: rgba(255,255,255,0.1); }
+  .compare-footer { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .compare-action-btn { flex: 1; background: rgba(79,195,247,0.1); border: 1px solid rgba(79,195,247,0.3); color: #4fc3f7; padding: 6px 0; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .compare-action-btn:hover { background: rgba(79,195,247,0.2); }
+
+  /* ═══════════════════════════════════════════════════════════════
+     P4-1 Control Panel — 科研仪器感视觉重设计
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* 1. Sidebar background — dark instrument panel */
+  .panel.controls{
+    background:linear-gradient(180deg, #0a0e17 0%, #0d1220 100%);
+    border-right:1px solid rgba(79,195,247,0.08);
+    border:1px solid rgba(79,195,247,0.08);
+    box-shadow:inset -1px 0 0 rgba(79,195,247,0.05), 2px 0 20px rgba(0,0,0,0.3);
+    color:#a0b4c8;
+    position:relative;
+  }
+  .panel.controls:hover{box-shadow:inset -1px 0 0 rgba(79,195,247,0.05), 2px 0 20px rgba(0,0,0,0.3)}
+
+  /* 7. Scan line overlay */
+  .panel.controls::after{
+    content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+    pointer-events:none;z-index:1;border-radius:var(--radius);
+  }
+
+  /* 2. Section headers — instrument-style dividers */
+  .panel.controls .sect h3,
+  .panel.controls .sect > summary.sect-h{
+    font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+    color:rgba(79,195,247,0.7);padding:8px 0 4px;
+    border-bottom:1px solid rgba(79,195,247,0.1);margin-bottom:8px;
+  }
+  .panel.controls .sect{border-bottom-color:rgba(79,195,247,0.08)}
+
+  /* 3. Slider tracks — instrument-style */
+  .panel.controls input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(79,195,247,0.15),rgba(129,199,132,0.15));
+    outline:none;cursor:pointer;transition:height .15s;
+  }
+  .panel.controls input[type=range]:hover{height:5px}
+  .panel.controls input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#0d1220;border:2px solid rgba(79,195,247,0.6);
+    margin-top:-6px;cursor:pointer;
+    box-shadow:0 0 6px rgba(79,195,247,0.3);
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .panel.controls input[type=range]::-webkit-slider-thumb:hover{
+    border-color:#4fc3f7;box-shadow:0 0 10px rgba(79,195,247,0.5);
+  }
+  .panel.controls input[type=range]::-moz-range-track{
+    height:3px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(79,195,247,0.15),rgba(129,199,132,0.15));
+  }
+  .panel.controls input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:#0d1220;
+    border:2px solid rgba(79,195,247,0.6);cursor:pointer;
+    box-shadow:0 0 6px rgba(79,195,247,0.3);
+  }
+  .panel.controls input[type=range]:focus-visible{outline:none}
+  .panel.controls input[type=range]:focus-visible::-webkit-slider-thumb{
+    box-shadow:0 0 0 4px rgba(79,195,247,0.15),0 0 10px rgba(79,195,247,0.5);
+  }
+
+  /* 4. Select dropdowns — dark instrument style */
+  .panel.controls select{
+    background:rgba(13,18,32,0.9);color:#c8d6e5;
+    border:1px solid rgba(79,195,247,0.15);border-radius:4px;
+    padding:4px 8px;font-size:12px;outline:none;cursor:pointer;
+  }
+  .panel.controls select:focus{border-color:rgba(79,195,247,0.4)}
+  .panel.controls select option{background:#0d1220;color:#c8d6e5}
+
+  /* 5. Buttons — instrument-style with subtle glow */
+  .panel.controls .opt{
+    background:rgba(13,18,32,0.8);border:1px solid rgba(79,195,247,0.12);
+    color:#a0b4c8;backdrop-filter:none;-webkit-backdrop-filter:none;
+    transition:all .2s;
+  }
+  .panel.controls .opt::before{display:none}
+  .panel.controls .opt:hover{
+    background:rgba(79,195,247,0.08);border-color:rgba(79,195,247,0.3);
+    color:#4fc3f7;box-shadow:0 0 8px rgba(79,195,247,0.15);transform:translateY(-1px);
+  }
+  .panel.controls .opt:active{transform:scale(0.97)}
+  .panel.controls .opt .o-sub{color:rgba(79,195,247,0.4)}
+  .panel.controls .scene{
+    background:rgba(13,18,32,0.8);border:1px solid rgba(79,195,247,0.12);
+    color:#a0b4c8;transition:all .2s;
+  }
+  .panel.controls .scene:hover{
+    background:rgba(79,195,247,0.08);border-color:rgba(79,195,247,0.3);
+    color:#4fc3f7;box-shadow:0 0 8px rgba(79,195,247,0.15);
+  }
+  .panel.controls .scene:active{transform:scale(0.97)}
+  .panel.controls .scene .nm{color:#c8d6e5}
+  .panel.controls .scene .ds{color:rgba(79,195,247,0.35)}
+
+  /* 6. Value displays — digital readout style */
+  .panel.controls .val{
+    font-family:'JetBrains Mono','SF Mono','Consolas',monospace;
+    font-size:12px;color:#4fc3f7;
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 8px rgba(79,195,247,0.3);
+    background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.12);
+    padding:2px 8px;border-radius:4px;font-weight:700;
+  }
+  .panel.controls .field .lbl span:first-child{color:#c8d6e5}
+  .panel.controls .gloss-term{color:#c8d6e5;border-color:rgba(79,195,247,0.2)}
+  .panel.controls .gloss-term:hover{color:#4fc3f7;border-color:#4fc3f7}
+  .panel.controls .model-desc{
+    background:rgba(13,18,32,0.6);border-color:rgba(79,195,247,0.1);
+    color:rgba(160,180,200,0.8);
+  }
+  .panel.controls .field-note{color:rgba(79,195,247,0.35)}
+  .panel.controls .formula{
+    background:rgba(13,18,32,0.6);border-color:rgba(79,195,247,0.1);
+  }
+  .panel.controls .formula .cap{color:rgba(79,195,247,0.4)}
+  .panel.controls .formula .eq{color:#c8d6e5}
+  .panel.controls .formula .eq .c{color:#4fc3f7}
+  .panel.controls .formula .eq .term-hl{background:rgba(79,195,247,0.12)}
+  .panel.controls .formula .eq .wcoef{color:#4fc3f7}
+  .panel.controls .fw-hint{color:rgba(79,195,247,0.35)}
+  .panel.controls .fw-tag{color:rgba(160,180,200,0.7)}
+  .panel.controls .fw-tag.on{color:#4fc3f7}
+  .panel.controls .fw-val{color:#4fc3f7}
+  .panel.controls .toggle{background:rgba(79,195,247,0.12)}
+  .panel.controls .toggle-track{background:rgba(160,180,200,0.3)}
+  .panel.controls .toggle input:checked ~ .toggle-track{background:#4fc3f7}
+  .panel.controls textarea{
+    background:rgba(13,18,32,0.8);border-color:rgba(79,195,247,0.15);
+    color:#c8d6e5;
+  }
+  .panel.controls textarea:focus{border-color:rgba(79,195,247,0.4);outline:none}
+  .panel.controls .sheet-handle{background:rgba(79,195,247,0.3)}
+  .panel.controls .sect > summary.sect-h::after{color:rgba(79,195,247,0.5)}
+
+  /* Scrollbar for dark panel */
+  .panel.controls::-webkit-scrollbar-thumb{background:rgba(79,195,247,0.12)}
+  .panel.controls::-webkit-scrollbar-thumb:hover{background:rgba(79,195,247,0.25)}
+
+  /* ═══════════════════════════════════════════════════════════════
+     P4-3 Loading Animation — TPMS Growth Transition
+     ═══════════════════════════════════════════════════════════════ */
+  .loader-overlay{
+    position:fixed;inset:0;background:#070b14;z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    transition:opacity 0.6s ease;
+  }
+  .loader-overlay.fade-out{opacity:0;pointer-events:none}
+  .loader-content{text-align:center}
+  .loader-text{
+    font-family:'SF Pro Display',-apple-system,sans-serif;
+    font-size:18px;font-weight:300;letter-spacing:0.2em;
+    color:rgba(79,195,247,0.8);margin-top:20px;
+  }
+  .loader-sub{
+    font-size:11px;color:rgba(255,255,255,0.3);margin-top:8px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  #loader-canvas{border-radius:8px}
+</style>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('tpms-theme-platform') || 'system';
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var resolved = t === 'system' ? (dark ? 'dark' : 'light') : t;
+    document.documentElement.setAttribute('data-theme', resolved);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+<script>
+(function(){
+  const isFile = location.protocol === 'file:';
+  const hasWebgl = (() => { try { return !!document.createElement('canvas').getContext('webgl2'); } catch (e) { return false; } })();
+  const msg = isFile
+    ? { h: '请通过本地服务器打开', p: '本应用使用 ES Modules 与 Web Worker，不能直接从本地文件系统（file://）打开。请在 <code>tpms-platform</code> 目录运行：<br><code>npm install</code><br><code>npm run dev</code><br>然后访问 <code>http://localhost:5173</code>。' }
+    : !hasWebgl
+    ? { h: 'WebGL 不可用', p: '你的浏览器或显卡驱动禁用了 WebGL，无法渲染 3D 曲面。请尝试更新显卡驱动，或在 Chrome/Edge 设置中启用“使用硬件加速模式”。' }
+    : null;
+  if (!msg) return;
+  function show() {
+    const box = document.getElementById('canvas-container');
+    if (!box) return;
+    box.innerHTML = '<div class="boot-error"><h2>' + msg.h + '</h2><p>' + msg.p + '</p></div>';
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+  else show();
+})();
+window.addEventListener('error', function(e) {
+  if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+    const box = document.getElementById('canvas-container');
+    if (box && !box.querySelector('.boot-error')) {
+      box.innerHTML = '<div class="boot-error"><h2>资源加载失败</h2><p>脚本加载被浏览器安全策略阻止。如果你是通过 <code>file://</code> 打开，请改用本地服务器运行：<br><code>npm install</code><br><code>npm run dev</code></p></div>';
+    }
+  }
+}, true);
+</script>
+</head>
+<body>
+<div id="loader" class="loader-overlay">
+  <div class="loader-content">
+    <canvas id="loader-canvas" width="120" height="120"></canvas>
+    <div class="loader-text">TPMS Studio</div>
+    <div class="loader-sub" id="loader-sub">初始化中...</div>
+  </div>
+</div>
+<div class="app">
+  <div class="topbar">
+    <a class="brand" href="index.html" title="返回首页">
+      <div class="mark"></div>
+      <div>
+        <h1>TPMS 结构参数探索器</h1>
+        <div class="sub">交互式探索三重周期性极小曲面 · 实时等值面重建</div>
+      </div>
+    </a>
+    <div class="spacer"></div>
+      <button class="onboard-btn" id="btn-onboard" title="重新打开新手引导">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        新手引导
+      </button>
+    <div class="pills">
+      <span class="pill"><span class="dot"></span>实时 TPMS 可视化</span>
+      <span class="pill">8 类曲面 · 3 种结构拓扑</span>
+    </div>
+    <div class="theme-switch" id="theme-switch" role="group" aria-label="主题切换">
+      <button class="theme-opt" data-theme-set="light" title="浅色" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
+      <button class="theme-opt" data-theme-set="dark" title="深色" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+      <button class="theme-opt" data-theme-set="system" title="跟随系统" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel viewer">
+      <div class="stage">
+        <div id="canvas-container"></div>
+        <div class="loading" id="loading"><span class="sp"></span>重建曲面中…</div>
+        <div class="stat-overlay" id="statbox">
+          <button class="stat-summary" id="stat-toggle" title="展开 / 收起工程指标"><span id="stat-mini">孔隙率 <b id="stat-porosity">—</b> · 材料 <b id="stat-material">—</b></span><span class="stat-caret">▸</span></button>
+          <div class="stat-full" id="stats">顶点 <b id="stat-verts">—</b>　三角面 <b id="stat-tris">—</b><br>比表面积 <b id="stat-sv">—</b>　等效模量 <b id="stat-young">—</b><br>屈服强度 <b id="stat-sigma">—</b>　C1 <b id="stat-c1">—</b><br>渗透率 <b id="stat-perm">—</b>　平均孔径 <b id="stat-pore">—</b><br>迂曲度 <b id="stat-tort">—</b></div>
+        </div>
+        <div class="v-tools">
+          <button class="tbtn on" id="btn-rotate" aria-label="自动旋转" title="自动旋转 (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+          <button class="tbtn" id="btn-reset" aria-label="复位视角" title="复位视角 (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M12 3v18"/><circle cx="12" cy="12" r="9"/></svg></button>
+          <button class="tbtn" id="btn-share" title="复制当前参数链接"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg></button>
+          <button class="tbtn" id="btn-snap" title="保存截图 PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+          <button class="tbtn" id="btn-sweep" title="参数扫描（孔隙率 50-90%）"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-8"/></svg></button>
+          <button class="tbtn" id="btn-figure" title="论文配图一键模式：隐藏 UI、俯视构图、2x DPI 导出 PNG + 参数水印"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg></button>
+          <button class="tbtn" id="btn-bbox" title="切换尺寸标注"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></button>
+          <button class="tbtn" id="btn-caliper" title="游标卡尺：点击曲面上两点测量距离"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M6 16V4h3v12"/><path d="M15 16V8h3v8"/></svg></button>
+          <button class="tbtn" id="btn-slice-svg" title="导出当前截面为 SVG 矢量图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/></svg></button>
+          <button class="tbtn" id="btn-stl" title="导出 STL（完整等值面网格，可 3D 打印）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+          <button class="tbtn" id="btn-export" title="导出中心：VTK / VTI / Python / MATLAB / BibTeX / JSON"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M17 14v6"/><path d="M14 17h6"/></svg></button>
+          <button class="tbtn" id="btn-fullscreen" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+          <button class="tbtn" id="btn-compare" title="对比视图">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+          </button>
+        </div>
+        <div class="export-menu" id="export-menu" aria-hidden="true">
+          <div class="xm-title">导出中心 · 科研 / 打印 / 复现</div>
+          <button class="xm-item" data-export="stl"><span class="xm-col"><span class="xm-name">STL 网格</span><span class="xm-desc">三角面片，可 3D 打印 / 切片</span></span><span class="xm-ext">.stl</span></button>
+          <button class="xm-item" data-export="vtk"><span class="xm-col"><span class="xm-name">VTK PolyData</span><span class="xm-desc">ParaView 直接可读的三角网格</span></span><span class="xm-ext">.vtk</span></button>
+          <button class="xm-item" data-export="vti"><span class="xm-col"><span class="xm-name">VTI 体素场</span><span class="xm-desc">隐函数标量场，可自由 re-contour</span></span><span class="xm-ext">.vti</span></button>
+          <button class="xm-item" data-export="py"><span class="xm-col"><span class="xm-name">Python 脚本</span><span class="xm-desc">PyVista / NumPy 一键复现</span></span><span class="xm-ext">.py</span></button>
+          <button class="xm-item" data-export="m"><span class="xm-col"><span class="xm-name">MATLAB 脚本</span><span class="xm-desc">isosurface 重建</span></span><span class="xm-ext">.m</span></button>
+          <button class="xm-item" data-export="bibtex"><span class="xm-col"><span class="xm-name">BibTeX 引用</span><span class="xm-desc">论文 supplementary 引用条目</span></span><span class="xm-ext">.bib</span></button>
+          <button class="xm-item" data-export="json"><span class="xm-col"><span class="xm-name">JSON 元数据</span><span class="xm-desc">参数 + 力学指标 + mesh 校验</span></span><span class="xm-ext">.json</span></button>
+        </div>
+        <div class="axes-hint"><span><kbd>拖拽</kbd> 旋转　<kbd>滚轮</kbd> 缩放　<kbd>右键</kbd> 平移</span></div>
+        <div class="empty" id="empty">当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。</div>
+        <div class="v-foot" id="tips">
+          <div class="tipbar"><span class="ti a">📊</span><span id="tip1"></span><span class="tip-sep"></span><span class="ti b">🧬</span><span id="tip2"></span><span class="tip-sep"></span><span class="ti c">💡</span><span id="tip3"></span></div>
+        </div>
+        <div class="preset-card" id="preset-card" aria-hidden="true">
+          <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭">×</button></div>
+          <p id="pc-body"></p>
+          <div class="pc-chain" id="pc-chain"></div>
+        </div>
+        <div id="figure-watermark"></div>
+        <div id="compare-panel" class="compare-panel" style="display:none">
+          <div class="compare-header">
+            <span class="compare-title">结构对比</span>
+            <button id="compare-close" class="compare-close-btn">&times;</button>
+          </div>
+          <div class="compare-body">
+            <div class="compare-side" id="compare-left">
+              <div class="compare-label">A</div>
+              <canvas id="compare-canvas-a"></canvas>
+            </div>
+            <div class="compare-divider"></div>
+            <div class="compare-side" id="compare-right">
+              <div class="compare-label">B</div>
+              <canvas id="compare-canvas-b"></canvas>
+            </div>
+          </div>
+          <div class="compare-footer">
+            <button id="compare-snap-a" class="compare-action-btn">捕获 A</button>
+            <button id="compare-snap-b" class="compare-action-btn">捕获 B</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel controls">
+      <div class="sheet-handle" id="sheet-handle"></div>
+      <details class="sect" open>
+        <summary class="sect-h">TPMS 曲面类型</summary>
+        <div class="opt-row">
+          <button class="opt active" data-type="gyroid" data-color="gyroid">Gyroid<span class="o-sub">螺旋</span></button>
+          <button class="opt" data-type="diamond" data-color="diamond">Diamond<span class="o-sub">金刚石</span></button>
+          <button class="opt" data-type="schwarz" data-color="schwarz">Schwarz P<span class="o-sub">原始 P</span></button>
+          <button class="opt" data-type="neovius" data-color="neovius">Neovius<span class="o-sub">伴随面</span></button>
+          <button class="opt" data-type="iwp" data-color="iwp">I-WP<span class="o-sub">平衡面</span></button>
+          <button class="opt" data-type="frd" data-color="frd">F-RD<span class="o-sub">复合面</span></button>
+          <button class="opt" data-type="lidinoid" data-color="lidinoid">Lidinoid<span class="o-sub">利迪诺</span></button>
+          <button class="opt" data-type="splitp" data-color="splitp">Split-P<span class="o-sub">分裂 P</span></button>
+        </div>
+      </details>
+      <details class="sect" open>
+        <summary class="sect-h">结构参数</summary>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="porosity">孔隙率</span><span class="val" id="porosity-value">75%</span></div>
+          <input type="range" id="porosity" min="60" max="90" value="75" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="cell-density">单元密度</span><span class="val" id="cell-size-value">中等</span></div>
+          <input type="range" id="cell-size" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
+          <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
+        </div>
+      </details>
+      <details class="sect" open>
+        <summary class="sect-h">应用场景预设</summary>
+        <div class="scenes">
+          <button class="scene" data-preset="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
+          <button class="scene" data-preset="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Gyroid · 桁架轻量化</span></span></button>
+          <button class="scene" data-preset="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
+          <button class="scene" data-preset="catalyst"><span class="ic">⚗️</span><span><span class="nm">催化载体</span><br><span class="ds">I-WP · 最大化接触面积</span></span></button>
+          <button class="scene" data-preset="acoustic"><span class="ic">🔊</span><span><span class="nm">声学超材料</span><br><span class="ds">Gyroid · 声子带隙</span></span></button>
+          <button class="scene" data-preset="electrode"><span class="ic">🔋</span><span><span class="nm">电池电极</span><br><span class="ds">Neovius · 宽通道强节点</span></span></button>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">结构拓扑</summary>
+        <div class="opt-row">
+          <button class="opt active" data-structure="solid_network">实体网络<span class="o-sub">Solid</span></button>
+          <button class="opt" data-structure="shell">等厚双壳<span class="o-sub">Shell</span></button>
+          <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
+        </div>
+        <div class="model-desc" id="structure-desc">实体网络：bias−V 生成的杆状实体网络，是 TPMS 最常见的表示形式。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">表现形式</summary>
+        <div class="opt-row">
+          <button class="opt active" data-model="surface">壳模型<span class="o-sub">Surface</span></button>
+          <button class="opt" data-model="strut">杆模型<span class="o-sub">Lattice</span></button>
+          <button class="opt" data-model="solid">实体模型<span class="o-sub">Solid</span></button>
+        </div>
+        <div class="opt-row two" style="margin-top:10px">
+          <button class="opt active" data-material="auto">结构配色<span class="o-sub">Auto</span></button>
+          <button class="opt" data-material="tc4">钛合金<span class="o-sub">TC4</span></button>
+          <button class="opt" data-material="polymer">高分子<span class="o-sub">PLLA</span></button>
+          <button class="opt" data-material="thermal">导热材<span class="o-sub">Thermal</span></button>
+        </div>
+        <div class="model-desc" id="model-desc"></div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">工程观察</summary>
+        <div class="opt-row two">
+          <button class="opt active" data-container="cube">立方体容器<span class="o-sub">Cube</span></button>
+          <button class="opt" data-container="cylinder">圆柱体容器<span class="o-sub">Cylinder</span></button>
+        </div>
+        <div class="field">
+          <div class="lbl"><span class="gloss-term" data-term="slice">截面扫描</span><span class="val" id="slice-value">完整</span></div>
+          <input type="range" id="slice" min="-100" max="100" value="100" step="1">
+          <div class="field-note">沿 Z 轴逐层剖切，可观察内部连通孔道。</div>
+        </div>
+        <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">空间梯度</summary>
+        <div class="opt-row">
+          <button class="opt active" data-gradient="z">Z 轴渐变<span class="o-sub">Z Gradient</span></button>
+          <button class="opt" data-gradient="radial">径向渐变<span class="o-sub">Radial</span></button>
+          <button class="opt" data-gradient="spherical">球形渐变<span class="o-sub">Spherical</span></button>
+        </div>
+        <div class="model-desc" id="gradient-desc">Z 轴梯度：沿 Z 轴方向厚度连续变化，底部致密顶部疏松，适合骨支架承重设计。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">异构混合</summary>
+        <div class="field">
+          <div class="lbl"><span>启用混合</span><label class="toggle"><input type="checkbox" id="hybrid-enabled"><span class="toggle-track"></span></label></div>
+        </div>
+        <div class="field" id="hybrid-options" style="display:none">
+          <div class="lbl"><span>混合类型 B</span></div>
+          <div class="opt-row">
+            <button class="opt" data-hybrid-type="gyroid">Gyroid</button>
+            <button class="opt" data-hybrid-type="diamond">Diamond</button>
+            <button class="opt" data-hybrid-type="schwarz">Schwarz</button>
+            <button class="opt" data-hybrid-type="neovius">Neovius</button>
+            <button class="opt" data-hybrid-type="iwp">I-WP</button>
+            <button class="opt" data-hybrid-type="frd">F-RD</button>
+          </div>
+        </div>
+        <div class="field" id="hybrid-blend" style="display:none">
+          <div class="lbl"><span>混合函数</span></div>
+          <div class="opt-row two">
+            <button class="opt active" data-blend="sigmoid">Sigmoid 平滑过渡</button>
+            <button class="opt" data-blend="linear">线性过渡</button>
+          </div>
+        </div>
+        <div class="model-desc" id="hybrid-desc">异构 TPMS：通过权重函数 w(x,y,z) 在两种曲面之间平滑过渡，减少应力集中。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">自定义隐函数</summary>
+        <div class="field">
+          <div class="lbl"><span>启用自定义公式</span><label class="toggle"><input type="checkbox" id="custom-enabled"><span class="toggle-track"></span></label></div>
+        </div>
+        <div class="field" id="custom-formula-field" style="display:none">
+          <textarea id="custom-formula" placeholder="输入三维隐函数 f(x,y,z)，支持 sin, cos, tan, sqrt, pow, abs, pi 等。例如：sin(x)*cos(y) + sin(y)*cos(z)" rows="3"></textarea>
+          <div class="field-note">可用变量：x, y, z（弧度域）；可用函数：sin, cos, tan, sqrt, pow, abs, log, exp, pi, e</div>
+        </div>
+      </details>
+      <details class="sect" open>
+        <summary class="sect-h">当前曲面隐函数</summary>
+        <div class="formula">
+          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定）</div>
+          <div class="eq" id="formula-display"></div>
+        </div>
+        <div class="fw" id="formula-weights">
+          <div id="weight-rows"></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="ob-spot" id="ob-spot"></div>
+<div class="ob-card" id="ob-card"></div>
+<div id="sweep-overlay" class="sweep-overlay" style="display:none">
+  <div class="sweep-card">
+    <div class="sweep-title">参数扫描</div>
+    <div class="sweep-progress">
+      <div class="sweep-bar" id="sweep-bar"></div>
+    </div>
+    <div class="sweep-status" id="sweep-status">准备中...</div>
+    <div class="sweep-preview" id="sweep-preview"></div>
+    <button id="sweep-cancel" class="sweep-cancel-btn">取消</button>
+  </div>
+</div>
+<div class="gloss" id="gloss" role="tooltip" aria-hidden="true"><h5><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span><span id="gloss-title"></span></h5><p id="gloss-body"></p></div>
+
+<script>
+// TPMS 加载动画：Gyroid 曲面逐渐生长
+(function() {
+  const c = document.getElementById('loader-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = 120, H = 120;
+  let frame = 0;
+  const maxFrames = 120;
+
+  function drawGyroid(t) {
+    ctx.fillStyle = 'rgba(7,11,20,0.15)';
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2;
+    const phase = t * Math.PI * 2;
+    const scale = Math.min(t * 1.5, 1);
+
+    for (let x = 0; x < W; x += 2) {
+      for (let y = 0; y < H; y += 2) {
+        const px = (x - cx) / 20 * scale;
+        const py = (y - cy) / 20 * scale;
+        const pz = phase;
+        const v = Math.sin(px) * Math.cos(py) + Math.sin(py) * Math.cos(pz) + Math.sin(pz) * Math.cos(px);
+        if (Math.abs(v) < 0.3 * scale) {
+          const alpha = Math.max(0, 0.6 - Math.abs(v) * 2) * scale;
+          ctx.fillStyle = 'rgba(79,195,247,' + alpha + ')';
+          ctx.fillRect(x, y, 2, 2);
+        }
+      }
+    }
+  }
+
+  function animate() {
+    if (frame > maxFrames * 3) return;
+    const t = (frame % maxFrames) / maxFrames;
+    drawGyroid(t);
+    frame++;
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // 隐藏加载画面
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      var loader = document.getElementById('loader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        setTimeout(function() { loader.remove(); }, 600);
+      }
+    }, 800);
+  });
+})();
+</script>
+<script type="module" src="./src/main.ts"></script>
+</body>
+</html>
