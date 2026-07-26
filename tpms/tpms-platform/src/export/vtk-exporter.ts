@@ -11,27 +11,32 @@ export function exportVTK(
   const vertCount = positions.length / 3;
   const triCount = indices.length / 3;
 
-  let header = '# vtk DataFile Version 3.0\n';
-  header += 'TPMS Structure\n';
-  header += 'ASCII\n';
-  header += 'DATASET POLYDATA\n';
-  header += `POINTS ${vertCount} float\n`;
+  const parts: string[] = [
+    '# vtk DataFile Version 3.0\n',
+    'TPMS Structure\n',
+    'ASCII\n',
+    'DATASET POLYDATA\n',
+    `POINTS ${vertCount} float\n`,
+  ];
 
-  let pointsStr = '';
-  for (let i = 0; i < positions.length; i += 3) {
-    pointsStr += `${positions[i].toFixed(6)} ${positions[i + 1].toFixed(6)} ${positions[i + 2].toFixed(6)}\n`;
+  // 顶点坐标：预估容量减少扩容，避免百万次字符串重建
+  const pointsBuf: string[] = new Array(vertCount);
+  for (let v = 0; v < vertCount; v++) {
+    const i = v * 3;
+    pointsBuf[v] = `${positions[i]!.toFixed(6)} ${positions[i + 1]!.toFixed(6)} ${positions[i + 2]!.toFixed(6)}\n`;
   }
+  parts.push(pointsBuf.join(''));
 
-  header += pointsStr;
-  header += `POLYGONS ${triCount} ${triCount * 4}\n`;
+  parts.push(`POLYGONS ${triCount} ${triCount * 4}\n`);
 
-  let cellsStr = '';
+  const cellsBuf: string[] = new Array(triCount);
   for (let t = 0; t < triCount; t++) {
-    cellsStr += `3 ${indices[t * 3]} ${indices[t * 3 + 1]} ${indices[t * 3 + 2]}\n`;
+    const i = t * 3;
+    cellsBuf[t] = `3 ${indices[i]} ${indices[i + 1]} ${indices[i + 2]}\n`;
   }
-  header += cellsStr;
+  parts.push(cellsBuf.join(''));
 
-  downloadBlob(new Blob([header], { type: 'application/vnd.vtk' }), filename);
+  downloadBlob(new Blob([parts.join('')], { type: 'application/vnd.vtk' }), filename);
 }
 
 /**
@@ -45,24 +50,28 @@ export function exportVTI(
   const [nx, ny, nz] = dimensions;
   const numPoints = nx * ny * nz;
 
-  let xml = '<?xml version="1.0"?>\n';
-  xml += '<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian">\n';
-  xml += `  <ImageData WholeExtent="0 ${nx - 1} 0 ${ny - 1} 0 ${nz - 1}" Origin="-1 -1 -1" Spacing="${2 / (nx - 1)} ${2 / (ny - 1)} ${2 / (nz - 1)}">\n`;
-  xml += `    <Piece Extent="0 ${nx - 1} 0 ${ny - 1} 0 ${nz - 1}">\n`;
-  xml += '      <PointData Scalars="tpms">\n';
-  xml += '        <DataArray type="Float32" Name="tpms" format="ascii">\n';
+  const parts: string[] = [
+    '<?xml version="1.0"?>\n',
+    '<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian">\n',
+    `  <ImageData WholeExtent="0 ${nx - 1} 0 ${ny - 1} 0 ${nz - 1}" Origin="-1 -1 -1" Spacing="${2 / (nx - 1)} ${2 / (ny - 1)} ${2 / (nz - 1)}">\n`,
+    `    <Piece Extent="0 ${nx - 1} 0 ${ny - 1} 0 ${nz - 1}">\n`,
+    '      <PointData Scalars="tpms">\n',
+    '        <DataArray type="Float32" Name="tpms" format="ascii">\n',
+  ];
 
-  let dataStr = '';
+  // 体素场：每 6 个一行，用数组 push 避免大体积字符串重建
+  const dataBuf: string[] = new Array(numPoints);
   for (let i = 0; i < numPoints; i++) {
-    dataStr += field[i].toFixed(4) + ' ';
-    if ((i + 1) % 6 === 0) dataStr += '\n';
+    dataBuf[i] = (i > 0 && i % 6 === 0) ? `\n${field[i]!.toFixed(4)} ` : `${field[i]!.toFixed(4)} `;
   }
-  xml += dataStr + '\n';
-  xml += '        </DataArray>\n';
-  xml += '      </PointData>\n';
-  xml += '    </Piece>\n';
-  xml += '  </ImageData>\n';
-  xml += '</VTKFile>';
+  parts.push(dataBuf.join(''));
+  parts.push('\n');
 
-  downloadBlob(new Blob([xml], { type: 'application/xml' }), filename);
+  parts.push('        </DataArray>\n');
+  parts.push('      </PointData>\n');
+  parts.push('    </Piece>\n');
+  parts.push('  </ImageData>\n');
+  parts.push('</VTKFile>');
+
+  downloadBlob(new Blob([parts.join('')], { type: 'application/xml' }), filename);
 }
