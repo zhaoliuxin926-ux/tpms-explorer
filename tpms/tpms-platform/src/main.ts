@@ -1323,9 +1323,12 @@ function handleExport(fmt: string | null): void {
       case 'm':
         exportMatlabScript(s, `${base}.m`);
         break;
-      case 'bibtex':
-        downloadText(generateBibTeX(s, lastPhysicsMetrics), `${base}.bib`, 'text/plain');
+      case 'bibtex': {
+        const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
+        const meshHash = pos ? hashArray(pos) : 'nogeo';
+        downloadText(generateBibTeX(s, lastPhysicsMetrics, meshHash), `${base}.bib`, 'text/plain');
         break;
+      }
       case 'json': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';

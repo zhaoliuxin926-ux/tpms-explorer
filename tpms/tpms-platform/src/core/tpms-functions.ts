@@ -1,6 +1,6 @@
 /**
  * TPMS 隐函数核心库
- * 包含 6 种经典 TPMS 曲面 + 自定义公式解析器。
+ * 包含 8 种经典 TPMS 曲面 + 自定义公式解析器（零依赖递归下降，无 eval）。
  * 所有函数接受弧度域坐标 (mx, my, mz) 和权重数组 w，返回标量场值 V。
  */
 
@@ -105,7 +105,7 @@ export function getDefaultWeights(type: TpmType): Weights {
   return [n > 0 ? 1 : 0, n > 1 ? 1 : 0, n > 2 ? 1 : 0, n > 3 ? 1 : 0] as Weights;
 }
 
-// ── 自定义公式解析器 ─────────────────────────────────────────────
+// ── 自定义公式解析器（零依赖递归下降，无 eval / new Function） ─────
 
 interface CompiledFormula {
   fn: TpmsFunction;
@@ -114,49 +114,245 @@ interface CompiledFormula {
 
 const compiledCache = new Map<string, CompiledFormula>();
 
+/** 白名单函数：名称 → 实现（一元或二元）。min/max/pow 接收两个参数）。 */
+const SAFE_FUNCS: Record<string, (a: number, b?: number) => number> = {
+  sin: Math.sin, cos: Math.cos, tan: Math.tan,
+  asin: Math.asin, acos: Math.acos, atan: Math.atan,
+  sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+  exp: Math.exp, log: Math.log, log2: Math.log2, log10: Math.log10,
+  sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs, sign: Math.sign,
+  floor: Math.floor, ceil: Math.ceil, round: Math.round, trunc: Math.trunc,
+  pow: (a, b) => Math.pow(a, b as number),
+  min: (a, b) => Math.min(a, b as number),
+  max: (a, b) => Math.max(a, b as number),
+  atan2: (a, b) => Math.atan2(a, b as number),
+};
+
+/** 白名单常量 */
+const SAFE_CONSTS: Record<string, number> = { PI: Math.PI, E: Math.E };
+
+type Token =
+  | { t: 'num'; v: number }
+  | { t: 'var'; v: 'x' | 'y' | 'z' }
+  | { t: 'const'; v: string }
+  | { t: 'func'; v: string }
+  | { t: 'op'; v: '+' | '-' | '*' | '/' | '^' }
+  | { t: 'lparen' }
+  | { t: 'rparen' }
+  | { t: 'comma' };
+
+/** tokenizer：把表达式切成 token 流，遇到非法字符立即抛错 */
+function tokenize(expr: string): Token[] {
+  const tokens: Token[] = [];
+  let i = 0;
+  const n = expr.length;
+  while (i < n) {
+    const c = expr[i];
+    // 跳过空白
+    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { i++; continue; }
+    // 数字（含小数）
+    if ((c >= '0' && c <= '9') || c === '.') {
+      let j = i + 1, dot = c === '.';
+      while (j < n) {
+        const cj = expr[j];
+        if (cj >= '0' && cj <= '9') { j++; continue; }
+        if (cj === '.') { if (dot) throw new Error('数字含有多个小数点'); dot = true; j++; continue; }
+        break;
+      }
+      const num = parseFloat(expr.slice(i, j));
+      if (!Number.isFinite(num)) throw new Error(`无效数字: ${expr.slice(i, j)}`);
+      tokens.push({ t: 'num', v: num });
+      i = j;
+      continue;
+    }
+    // 标识符（变量 / 常量 / 函数名）
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_') {
+      let j = i + 1;
+      while (j < n) {
+        const cj = expr[j];
+        if ((cj >= 'a' && cj <= 'z') || (cj >= 'A' && cj <= 'Z') || (cj >= '0' && cj <= '9') || cj === '_') { j++; continue; }
+        break;
+      }
+      const name = expr.slice(i, j);
+      i = j;
+      // 后续紧接 ( 视为函数调用
+      let k = i;
+      while (k < n && (expr[k] === ' ' || expr[k] === '\t')) k++;
+      if (k < n && expr[k] === '(') {
+        if (!Object.prototype.hasOwnProperty.call(SAFE_FUNCS, name)) throw new Error(`未知或不允许的函数: ${name}`);
+        tokens.push({ t: 'func', v: name });
+      } else if (name === 'x' || name === 'y' || name === 'z') {
+        tokens.push({ t: 'var', v: name });
+      } else if (Object.prototype.hasOwnProperty.call(SAFE_CONSTS, name)) {
+        tokens.push({ t: 'const', v: name });
+      } else {
+        throw new Error(`未知标识符: ${name}（仅允许 x/y/z、PI、E 或白名单函数）`);
+      }
+      continue;
+    }
+    // 运算符
+    if (c === '+' || c === '-' || c === '*' || c === '/' || c === '^') {
+      tokens.push({ t: 'op', v: c });
+      i++; continue;
+    }
+    if (c === '(') { tokens.push({ t: 'lparen' }); i++; continue; }
+    if (c === ')') { tokens.push({ t: 'rparen' }); i++; continue; }
+    if (c === ',') { tokens.push({ t: 'comma' }); i++; continue; }
+    throw new Error(`非法字符: '${c}'（位置 ${i}）`);
+  }
+  return tokens;
+}
+
+/** AST 节点：编译为 (x,y,z) => number 的闭包 */
+type Node = (x: number, y: number, z: number) => number;
+
+class Parser {
+  private pos = 0;
+  private readonly tokens: Token[];
+  constructor(tokens: Token[]) { this.tokens = tokens; }
+
+  private peek(): Token | undefined { return this.tokens[this.pos]; }
+  private next(): Token | undefined { return this.tokens[this.pos++]; }
+
+  parse(): Node {
+    const node = this.parseExpr();
+    if (this.pos < this.tokens.length) {
+      const t = this.tokens[this.pos];
+      throw new Error(`多余的 token: '${(t as Token & { v?: string }).v ?? (t as Token).t}'`);
+    }
+    return node;
+  }
+
+  // 表达式：加减（左结合，最低优先级）
+  private parseExpr(): Node {
+    let left = this.parseTerm();
+    for (;;) {
+      const tk = this.peek();
+      if (tk && tk.t === 'op' && (tk.v === '+' || tk.v === '-')) {
+        this.next();
+        const right = this.parseTerm();
+        const op = tk.v;
+        const l = left;
+        left = (x, y, z) => op === '+' ? l(x, y, z) + right(x, y, z) : l(x, y, z) - right(x, y, z);
+      } else break;
+    }
+    return left;
+  }
+
+  // 项：乘除（左结合）
+  private parseTerm(): Node {
+    let left = this.parseUnary();
+    for (;;) {
+      const tk = this.peek();
+      if (tk && tk.t === 'op' && (tk.v === '*' || tk.v === '/')) {
+        this.next();
+        const right = this.parseUnary();
+        const op = tk.v;
+        const l = left;
+        left = (x, y, z) => op === '*' ? l(x, y, z) * right(x, y, z) : l(x, y, z) / right(x, y, z);
+      } else break;
+    }
+    return left;
+  }
+
+  // 一元：正负号
+  private parseUnary(): Node {
+    const tk = this.peek();
+    if (tk && tk.t === 'op' && (tk.v === '-' || tk.v === '+')) {
+      this.next();
+      const operand = this.parseUnary();
+      if (tk.v === '-') return (x, y, z) => -operand(x, y, z);
+      return operand;
+    }
+    return this.parsePower();
+  }
+
+  // 幂（右结合，最高优先级）
+  private parsePower(): Node {
+    const base = this.parseAtom();
+    const tk = this.peek();
+    if (tk && tk.t === 'op' && tk.v === '^') {
+      this.next();
+      const exp = this.parseUnary(); // 右结合：允许 2^-3
+      return (x, y, z) => Math.pow(base(x, y, z), exp(x, y, z));
+    }
+    return base;
+  }
+
+  // 原子：数字 / 变量 / 常量 / 函数调用 / 括号
+  private parseAtom(): Node {
+    const tk = this.next();
+    if (!tk) throw new Error('表达式不完整（缺少操作数）');
+    if (tk.t === 'num') {
+      const v = tk.v;
+      return () => v;
+    }
+    if (tk.t === 'var') {
+      const v = tk.v;
+      return (x, y, z) => (v === 'x' ? x : v === 'y' ? y : z);
+    }
+    if (tk.t === 'const') {
+      const v = SAFE_CONSTS[tk.v];
+      return () => v;
+    }
+    if (tk.t === 'func') {
+      const lp = this.next();
+      if (!lp || lp.t !== 'lparen') throw new Error(`函数 ${tk.v} 后必须紧跟 '('`);
+      const args: Node[] = [];
+      const first = this.peek();
+      if (!first || first.t !== 'rparen') {
+        args.push(this.parseExpr());
+        while (this.peek() && (this.peek() as Token).t === 'comma') {
+          this.next();
+          args.push(this.parseExpr());
+        }
+      }
+      const rp = this.next();
+      if (!rp || rp.t !== 'rparen') throw new Error(`函数 ${tk.v} 缺少右括号 ')'`);
+      const fn = SAFE_FUNCS[tk.v];
+      if (typeof fn !== 'function') throw new Error(`内部错误：函数 ${tk.v} 未注册`);
+      const fname = tk.v;
+      if (fname === 'pow' || fname === 'min' || fname === 'max' || fname === 'atan2') {
+        if (args.length !== 2) throw new Error(`${fname} 需要恰好 2 个参数，收到 ${args.length}`);
+        const a = args[0], b = args[1];
+        return (x, y, z) => fn(a(x, y, z), b(x, y, z));
+      }
+      if (args.length !== 1) throw new Error(`${fname} 需要恰好 1 个参数，收到 ${args.length}`);
+      const a = args[0];
+      return (x, y, z) => fn(a(x, y, z));
+    }
+    if (tk.t === 'lparen') {
+      const inner = this.parseExpr();
+      const rp = this.next();
+      if (!rp || rp.t !== 'rparen') throw new Error("缺少右括号 ')'");
+      return inner;
+    }
+    throw new Error(`意外的 token: '${(tk as Token & { v?: string }).v ?? tk.t}'`);
+  }
+}
+
 /**
- * 解析用户自定义三维隐函数字符串，编译为可执行函数。
- * 支持变量：x, y, z；数学函数：sin, cos, tan, exp, log, sqrt, abs, pow, min, max, PI, E
- * 安全限制：仅允许白名单内的 token，拒绝任意代码执行。
+ * 解析用户自定义三维隐函数字符串，编译为可执行闭包。
+ * 支持变量：x, y, z；常量：PI, E；
+ * 数学函数：sin/cos/tan/asin/acos/atan/sinh/cosh/tanh/exp/log/log2/log10/
+ *           sqrt/cbrt/abs/sign/floor/ceil/round/trunc/pow/min/max/atan2；
+ * 运算符：+ - * / ^（幂）和一元正负、括号。
+ * 安全保证：纯 AST 求值，无 eval / new Function / with，无任何属性访问逃逸路径。
  */
 export function compileCustomFormula(expr: string): CompiledFormula {
   const key = expr.trim();
   if (compiledCache.has(key)) return compiledCache.get(key)!;
+  if (!key) throw new Error('自定义公式不能为空');
 
-  const sanitized = sanitizeExpression(key);
-  const fnBody = `with(Math){ return ${sanitized}; }`;
+  const tokens = tokenize(key);
+  if (tokens.length === 0) throw new Error('表达式为空');
+  const parser = new Parser(tokens);
+  const node = parser.parse();
 
-  // 使用 Function 构造器（比 eval 安全，但仍需 sanitize 前置）
-  const fn = new Function('x', 'y', 'z', fnBody) as (x: number, y: number, z: number) => number;
-
-  const wrapped: TpmsFunction = (mx, my, mz, _w) => fn(mx, my, mz);
-  const compiled: CompiledFormula = { fn: wrapped, expr: key };
+  const fn: TpmsFunction = (mx, my, mz, _w) => node(mx, my, mz);
+  const compiled: CompiledFormula = { fn, expr: key };
   compiledCache.set(key, compiled);
   return compiled;
-}
-
-/** 表达式 sanitize：只允许白名单字符和函数名 */
-function sanitizeExpression(expr: string): string {
-  // 1) 替换常量
-  let s = expr.replace(/\bPI\b/g, 'Math.PI').replace(/\bE\b/g, 'Math.E');
-  // 2) 替换数学函数（加 Math. 前缀）
-  const safeFuncs = ['sin', 'cos', 'tan', 'exp', 'log', 'sqrt', 'abs', 'pow', 'min', 'max', 'floor', 'ceil', 'round'];
-  for (const f of safeFuncs) {
-    s = s.replace(new RegExp(`\\b${f}\\b(\\s*\\()`, 'g'), `Math.${f}$1`);
-  }
-  // 3) 拒绝危险字符
-  const dangerous = /[;{}]|\b(?:eval|Function|constructor|prototype|window|document|globalThis|process|require|import|fetch)\b/i;
-  if (dangerous.test(s)) {
-    throw new Error('表达式包含不允许的字符或函数');
-  }
-  // 4) 只允许数字、运算符、括号、变量 x/y/z、Math. 前缀
-  const allowed = /^[\d\s\+\-\*\/\^\(\)\.,x y zM a t h\.]+$/;
-  if (!allowed.test(s)) {
-    throw new Error('表达式包含非法字符');
-  }
-  // 5) 替换 ^ 为 **
-  s = s.replace(/\^/g, '**');
-  return s;
 }
 
 /** 获取某类型的场函数（含自定义解析） */
