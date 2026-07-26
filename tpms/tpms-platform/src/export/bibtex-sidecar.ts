@@ -20,10 +20,12 @@ function mapType(type: string): string {
 
 /**
  * 生成 BibTeX 引用文本（供论文 supplementary 使用）
+ * meshHash：基于网格数据的确定性哈希，保证同参数多次导出得到一致 cite key（科研可复现）
  */
-export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null): string {
+export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null, meshHash: string): string {
   const now = new Date().toISOString();
-  const hash = Math.random().toString(36).substring(2, 10);
+  // 用确定性 meshHash 截断作为 cite key，保证可复现（与 generateJSONSidecar 对齐）
+  const hash = meshHash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8) || 'unnamed';
   const doi = DOI_MAP[mapType(state.type)] || '';
 
   return `@misc{tpms_explorer_${hash},

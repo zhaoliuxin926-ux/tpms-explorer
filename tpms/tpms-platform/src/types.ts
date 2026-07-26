@@ -112,8 +112,8 @@ export interface BuildParams {
   preview: boolean;
 }
 
-/** 导出格式 */
-export type ExportFormat = 'stl' | 'vtk' | 'vti' | 'inp' | '3mf' | 'py' | 'm' | 'svg' | 'json' | 'bibtex';
+/** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */
+export type ExportFormat = 'stl' | 'vtk' | 'vti' | 'py' | 'm' | 'svg' | 'json' | 'bibtex';
 
 /** Gibson-Ashby 经验参数（按曲面类型） */
 export interface GibsonAshbyParams {
