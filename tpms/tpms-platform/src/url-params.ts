@@ -84,9 +84,9 @@ export function parseURLParams(search: string): Partial<AppState> {
     };
   }
 
-  // 自定义公式
+  // 自定义公式（URLSearchParams 已自动编解码，无需再包一层）
   if (q.has('formula')) {
-    state.customFormula = decodeURIComponent(q.get('formula')!);
+    state.customFormula = q.get('formula') ?? '';
   }
 
   return state;

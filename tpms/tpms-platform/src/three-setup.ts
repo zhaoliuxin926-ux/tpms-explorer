@@ -28,6 +28,9 @@ export interface ThreeContext {
   composerRT: THREE.WebGLRenderTarget;
   bloom: UnrealBloomPass;
   resize: (w: number, h: number) => void;
+  /** 释放所有场景级 WebGL 资源（renderer/PMREM/composer/纹理/几何/材质 + 解绑事件）。
+   *  SPA 无卸载场景时不会被调用；提供它是为了在 WebGL 上下文强制重建、热重载或测试中防止泄漏。 */
+  dispose: () => void;
   /** WebGL 上下文是否处于丢失状态（用于外部渲染循环判断是否跳过渲染） */
   readonly contextLost: boolean;
 }
@@ -185,30 +188,24 @@ export function initThree(container: HTMLElement): ThreeContext {
   // ─────────────────────────────────────────────────────
   // 6b. WebGL 上下文丢失 / 恢复（防止黑屏不可恢复）
   // ─────────────────────────────────────────────────────
-  renderer.domElement.addEventListener(
-    'webglcontextlost',
-    (e: Event) => {
-      // 必须 preventDefault，否则浏览器会永久丢弃上下文，无法恢复
-      e.preventDefault();
-      contextLost = true;
-      console.warn('[Three] WebGL 上下文丢失，已暂停渲染，等待自动恢复…');
-    },
-    false
-  );
-  renderer.domElement.addEventListener(
-    'webglcontextrestored',
-    () => {
-      contextLost = false;
-      // 恢复后重建后处理尺寸并补渲染一帧（three 内部已重置 GL 状态）
-      const pr = Math.min(window.devicePixelRatio || 1, 2);
-      renderer.setPixelRatio(pr);
-      composer.setPixelRatio(pr);
-      composer.setSize(container.clientWidth, container.clientHeight);
-      composer.render();
-      console.info('[Three] WebGL 上下文已恢复，渲染继续。');
-    },
-    false
-  );
+  const onContextLost = (e: Event) => {
+    // 必须 preventDefault，否则浏览器会永久丢弃上下文，无法恢复
+    e.preventDefault();
+    contextLost = true;
+    console.warn('[Three] WebGL 上下文丢失，已暂停渲染，等待自动恢复…');
+  };
+  const onContextRestored = () => {
+    contextLost = false;
+    // 恢复后重建后处理尺寸并补渲染一帧（three 内部已重置 GL 状态）
+    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(pr);
+    composer.setPixelRatio(pr);
+    composer.setSize(container.clientWidth, container.clientHeight);
+    composer.render();
+    console.info('[Three] WebGL 上下文已恢复，渲染继续。');
+  };
+  renderer.domElement.addEventListener('webglcontextlost', onContextLost, false);
+  renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false);
 
   // 对 composer.render 做极薄守卫：上下文丢失期间直接跳过。
   // 等价于在 animate 循环中 `if (ctx.contextLost) return`，但改动完全局限在本文件，
@@ -327,10 +324,58 @@ export function initThree(container: HTMLElement): ThreeContext {
     smaa.setSize(w * pr, h * pr);
   };
 
+  // ─────────────────────────────────────────────────────
+  // 13. dispose：释放所有场景级 WebGL 资源
+  // ─────────────────────────────────────────────────────
+  let disposed = false;
+  const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
+    // 解绑 context 监听
+    renderer.domElement.removeEventListener('webglcontextlost', onContextLost, false);
+    renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored, false);
+    // 控制器（内部注册了 domElement 事件）
+    controls.dispose();
+    // 遍历场景释放 geometry / material / 贴图
+    scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      const mat = (mesh as THREE.Mesh).material;
+      if (mat) {
+        if (Array.isArray(mat)) mat.forEach((m) => { disposeMaterial(m); });
+        else disposeMaterial(mat);
+      }
+    });
+    // 显式释放独立纹理与渲染目标
+    bgTex.dispose();
+    shadowTex.dispose();
+    envTex.dispose();
+    composerRT.dispose();
+    // 后处理与生成器
+    pmrem.dispose();
+    composer.dispose();
+    // 渲染器（含 WebGL 上下文）最后释放，并从 DOM 移除 canvas
+    renderer.dispose();
+    if (renderer.domElement.parentNode) {
+      renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
+  };
+
   return {
     scene, camera, renderer, composer, controls,
     gridHelper, shadowPlane, axesHelper, refGrid, axisGroup, pmrem, clipPlane,
-    composerRT, bloom, resize,
+    composerRT, bloom, resize, dispose,
     get contextLost() { return contextLost; },
   };
+}
+
+/** 释放单个材质及其贴图（map/normalMap 等常见通道） */
+function disposeMaterial(mat: THREE.Material): void {
+  const anyMat = mat as THREE.Material & Record<string, THREE.Texture | undefined>;
+  const texKeys = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'alphaMap'];
+  for (const k of texKeys) {
+    const tex = anyMat[k];
+    if (tex && typeof (tex as THREE.Texture).dispose === 'function') (tex as THREE.Texture).dispose();
+  }
+  mat.dispose();
 }
