@@ -18,6 +18,9 @@ tpms/.verify/verify_visual.mjs
 tpms/.verify/verify_visual2.mjs
 tpms/.verify/verify_platform_frd.mjs
 tpms/.verify/verify_platform_all.mjs
+tpms/.verify/diag_rotate.mjs
+tpms/.verify/diag_drag_stack.mjs
+tpms/.verify/check_deploy_subpath.mjs
 
 # 副项目运行时产物
 claude-code-workflow/.trash/

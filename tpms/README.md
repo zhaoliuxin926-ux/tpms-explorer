@@ -45,13 +45,14 @@
 
 ## 两个版本怎么选
 
-| | 单文件版 `web/` | 工程版 `tpms-platform/` |
+| | 单文件版 `docs/` | 工程版 `tpms-platform/` |
 |---|---|---|
 | **定位** | 主交付 · 双击即开 | 进阶研究 / 批量导出 |
-| **构建** | 无（纯 HTML + CDN） | `npm install && npm run dev` |
+| **在线** | 站点首页 | `platform/` 子路径（落地页有入口） |
+| **构建** | 无（纯 HTML + 本地 vendor bundle） | `npm install && npm run dev` |
 | **导出** | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / Python / MATLAB / BibTeX / JSON |
-| **性能** | 拖动低清预览、松手高清 | Web Worker 并行 + 多级 LOD |
-| **适合** | 演示、分享链接 | 科研复现、参数批量生成 |
+| **性能** | 拖动低清预览、松手高清 + 按需渲染 | Web Worker 并行 + 多级 LOD + 按需渲染 |
+| **适合** | 演示、分享链接、离线双击 | 科研复现、参数批量生成 |
 
 > 单文件版刻意保持零构建：一个 `index.html` 双击即可运行，便于本地打开与静态部署。
 
@@ -92,12 +93,17 @@
 - 详见 `docs/README-体验说明.md`。
 
 ### 工程版
+- **在线访问**：GitHub Pages 子路径 `platform/`（落地页「工程版（科研进阶）」入口），与线上单文件版同源部署。
+- 本地开发：
+
 ```bash
 cd tpms/tpms-platform
 npm install
 npm run dev      # 访问 http://localhost:5173
 # 或 npm run build && npm run preview
 ```
+
+- 线上更新流程：`npm run build` → 拷 `dist/*` → `docs/platform/`（删 `assets/*.map`）→ commit + push。
 
 ---
 
