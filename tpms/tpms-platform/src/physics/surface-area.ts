@@ -11,6 +11,7 @@
 import {
   computeSurfaceArea as rawComputeSurfaceArea,
 } from '../geometry/mesh-utils';
+import { wcToMmFactor } from '../core/units';
 
 /**
  * 计算物理缩放后的总表面积。
@@ -21,7 +22,7 @@ import {
  */
 export function computeSurfaceArea(positions: Float32Array, indices: Uint32Array, cellSize: number): number {
   const rawArea = rawComputeSurfaceArea(positions, indices);
-  const scale = cellSize / (2 * Math.PI);
+  const scale = wcToMmFactor(cellSize);
   return rawArea * scale * scale;
 }
 

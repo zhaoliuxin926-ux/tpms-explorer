@@ -23,6 +23,7 @@ import {
   generateJSONSidecar,
 } from './export';
 import { evaluateField } from './core/tpms-functions';
+import { DISPLAY_SCALE, wcToMmFactor } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
 import { exportSliceSVG } from './measure/svg-slice-exporter';
@@ -137,6 +138,9 @@ window.addEventListener('load', () => {
 
   // 6) 同步 UI 状态与文本
   const s = getState();
+  // URL 参数（如 ?autoRotate=0）恢复的旋转开关需同步到 controls
+  //（initThree 默认开启 autoRotate，不同步则 state 关了模型仍在转）
+  ctx.controls.autoRotate = s.autoRotate;
   syncUI(s);
   updateBadges(s.type, s.model, s.material, s.structureMode);
   updateStructureDesc(s.structureMode);
@@ -146,15 +150,25 @@ window.addEventListener('load', () => {
   // 7) 初始重建
   rebuild(false);
 
-  // 8) 动画循环
-  animate();
+  // 8) 启动按需渲染：任意相机变化（拖拽/缩放/自动旋转）触发重绘
+  ctx.controls.addEventListener('change', requestRender);
+  requestRender();
 });
 
-// ── 动画循环 ─────────────────────────────────────────────
-function animate(): void {
-  animId = requestAnimationFrame(animate);
-  ctx.controls.update();
+// ── 按需渲染（P2-3，对齐单文件版方案）──────────────────────
+// 空闲（无自动旋转、阻尼已静止、无交互）时彻底停止 RAF，省 GPU；
+// controls.update() 返回 true（阻尼/自动旋转仍在推进）则自动续帧。
+let rafScheduled = false;
+function requestRender(): void {
+  if (rafScheduled) return;
+  rafScheduled = true;
+  animId = requestAnimationFrame(renderFrame);
+}
+function renderFrame(): void {
+  rafScheduled = false;
+  const moving = ctx.controls.update();
   ctx.composer.render();
+  if (moving) requestRender();
 }
 
 // 页面卸载时取消动画帧，避免内存泄漏
@@ -261,13 +275,13 @@ function applyGeometry(positions: Float32Array, normals: Float32Array, indices: 
       depthWrite: false,
       clippingPlanes: [ctx.clipPlane],
     }));
-    meshStrut.scale.set(0.33, 0.33, 0.33);
+    meshStrut.scale.set(DISPLAY_SCALE, DISPLAY_SCALE, DISPLAY_SCALE);
     ctx.scene.add(meshStrut);
     if (meshFill) { ctx.scene.remove(meshFill); meshFill = null; }
   } else {
     // surface / solid 模式
     meshFill = new THREE.Mesh(baseGeo, mat);
-    meshFill.scale.set(0.33, 0.33, 0.33);
+    meshFill.scale.set(DISPLAY_SCALE, DISPLAY_SCALE, DISPLAY_SCALE);
     meshFill.castShadow = true;
     meshFill.receiveShadow = true;
     ctx.scene.add(meshFill);
@@ -279,11 +293,11 @@ function applyGeometry(positions: Float32Array, normals: Float32Array, indices: 
 
   // 测量工具同步
   if (bboxAnnotation && baseGeo) {
-    bboxAnnotation.update(baseGeo);
+    bboxAnnotation.update(baseGeo, getState().cellSize);
   }
   if (caliperTool) {
     caliperTool.dispose();
-    caliperTool = meshFill ? new CaliperTool(ctx.renderer, ctx.camera, ctx.scene, meshFill) : null;
+    caliperTool = meshFill ? new CaliperTool(ctx.renderer, ctx.camera, ctx.scene, meshFill, getState().cellSize) : null;
     if (caliperTool) {
       const btn = document.getElementById('btn-caliper');
       if (btn) btn.classList.add('on');
@@ -303,7 +317,8 @@ function applyGeometry(positions: Float32Array, normals: Float32Array, indices: 
       const tick = () => {
         progress = Math.min(1, (performance.now() - startTime) / duration);
         const ease = 1 - Math.pow(1 - progress, 3);
-        target.scale.set(0.33 * ease, 0.33 * ease, 0.33 * ease);
+        target.scale.set(DISPLAY_SCALE * ease, DISPLAY_SCALE * ease, DISPLAY_SCALE * ease);
+        requestRender(); // 按需渲染：渐入动画每帧重绘
         if (progress < 1) requestAnimationFrame(tick);
       };
       tick();
@@ -311,6 +326,7 @@ function applyGeometry(positions: Float32Array, normals: Float32Array, indices: 
   }
 
   updateStats();
+  requestRender(); // 按需渲染：几何更新后重绘
 }
 
 // ── Worker 回调 ─────────────────────────────────────────────
@@ -453,6 +469,8 @@ function updateClipPlane(): void {
   // 移动 shadow plane 到截面处增强 3D 感知（clipPlane 为世界坐标，阴影盘同处世界空间）
   ctx.shadowPlane.position.y = showClip ? yClip - 0.02 : -2.04;
   ctx.gridHelper.visible = !showClip;
+
+  requestRender(); // 按需渲染：裁剪面变化需重绘
 }
 
 // ── 基础等值 ─────────────────────────────────────────────
@@ -716,7 +734,7 @@ function bindUIEvents(): void {
     if (!baseGeo || !baseGeo.index) return;
     const positions = baseGeo.attributes.position.array as Float32Array;
     const indices = baseGeo.index.array as Uint32Array;
-    exportBinarySTL(positions, indices, `tpms-${getState().type}-p${getState().porosity}-${getState().structureMode}.stl`);
+    exportBinarySTL(positions, indices, `tpms-${getState().type}-p${getState().porosity}-${getState().structureMode}.stl`, wcToMmFactor(getState().cellSize));
   });
 
   // 导出中心：VTK / VTI / Python / MATLAB / BibTeX / JSON 统一入口
@@ -767,7 +785,7 @@ function bindUIEvents(): void {
     const btn = document.getElementById('btn-bbox');
     if (!bboxAnnotation) {
       bboxAnnotation = new BoundingBoxAnnotation(ctx.scene);
-      if (baseGeo) bboxAnnotation.update(baseGeo);
+      if (baseGeo) bboxAnnotation.update(baseGeo, getState().cellSize);
       btn?.classList.add('on');
     } else {
       bboxAnnotation.dispose();
@@ -781,7 +799,7 @@ function bindUIEvents(): void {
     const btn = document.getElementById('btn-caliper');
     if (!caliperTool) {
       if (meshFill) {
-        caliperTool = new CaliperTool(ctx.renderer, ctx.camera, ctx.scene, meshFill);
+        caliperTool = new CaliperTool(ctx.renderer, ctx.camera, ctx.scene, meshFill, getState().cellSize);
         caliperTool.enable();
         btn?.classList.add('on');
       }
@@ -799,7 +817,7 @@ function bindUIEvents(): void {
     // 几何顶点存于 wc 空间（经 0.33 缩放后显示），clipPlane 为世界坐标，
     // 需将其换算到几何空间再求交，否则截面位置/方向与屏幕显示不符。
     const localPlane = ctx.clipPlane.clone();
-    localPlane.constant /= 0.33;
+    localPlane.constant /= DISPLAY_SCALE;
     const svg = exportSliceSVG(baseGeo, localPlane, {
       type: s.type,
       slice: s.slice,
@@ -827,6 +845,7 @@ function bindUIEvents(): void {
   window.addEventListener('resize', () => {
     const container = document.getElementById('canvas-container')!;
     ctx.resize(container.clientWidth, container.clientHeight);
+    requestRender(); // 按需渲染：视口变化重绘
   });
 
   // 空间梯度按钮
@@ -1306,7 +1325,7 @@ function handleExport(fmt: string | null): void {
         exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`);
         break;
       case 'vtk':
-        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`);
+        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize));
         break;
       case 'vti': {
         if (s.type === 'custom' && !s.customFormula.trim()) {

@@ -3,10 +3,15 @@
  */
 import { downloadBlob } from './download';
 
+/**
+ * @param scale wc → mm 缩放因子（core/units 的 wcToMmFactor），
+ *              与 STL 同约定（模型总宽 = cellSize mm）。默认 1 保持旧行为。
+ */
 export function exportVTK(
   positions: Float32Array,
   indices: Uint32Array,
-  filename: string
+  filename: string,
+  scale = 1
 ): void {
   const vertCount = positions.length / 3;
   const triCount = indices.length / 3;
@@ -23,7 +28,7 @@ export function exportVTK(
   const pointsBuf: string[] = new Array(vertCount);
   for (let v = 0; v < vertCount; v++) {
     const i = v * 3;
-    pointsBuf[v] = `${positions[i]!.toFixed(6)} ${positions[i + 1]!.toFixed(6)} ${positions[i + 2]!.toFixed(6)}\n`;
+    pointsBuf[v] = `${(positions[i]! * scale).toFixed(6)} ${(positions[i + 1]! * scale).toFixed(6)} ${(positions[i + 2]! * scale).toFixed(6)}\n`;
   }
   parts.push(pointsBuf.join(''));
 

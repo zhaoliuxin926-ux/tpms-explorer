@@ -4,10 +4,10 @@
  */
 
 import * as THREE from 'three';
+import { DISPLAY_SCALE, wcToMmFactor } from '../core/units';
 
 const LABEL_COLOR = '#00ff88';
 const LINE_COLOR = 0x00ff88;
-const SCALE = 0.33; // 与主线程 mesh scale 一致
 
 export class BoundingBoxAnnotation {
   private scene: THREE.Scene;
@@ -21,14 +21,14 @@ export class BoundingBoxAnnotation {
     this.scene.add(this.group);
   }
 
-  /** 根据几何体更新标注（geometry 应为原始未缩放空间） */
-  update(geometry: THREE.BufferGeometry): void {
+  /** 根据几何体更新标注（geometry 为 wc 空间；cellSize 用于物理 mm 换算） */
+  update(geometry: THREE.BufferGeometry, cellSize: number): void {
     this.clear();
     if (!geometry.boundingBox) geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
 
-    const min = box.min.clone().multiplyScalar(SCALE);
-    const max = box.max.clone().multiplyScalar(SCALE);
+    const min = box.min.clone().multiplyScalar(DISPLAY_SCALE);
+    const max = box.max.clone().multiplyScalar(DISPLAY_SCALE);
     const size = new THREE.Vector3().subVectors(max, min);
     const center = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5);
 
@@ -48,10 +48,11 @@ export class BoundingBoxAnnotation {
     this.line.renderOrder = 999;
     this.group.add(this.line);
 
-    // 三轴尺寸标签（原始 mm 值 = world size / SCALE）
-    const xmm = size.x / SCALE;
-    const ymm = size.y / SCALE;
-    const zmm = size.z / SCALE;
+    // 三轴尺寸标签：显示尺寸 → wc（÷显示缩放）→ 物理 mm（× cellSize/(2π)，1 period = 1 mm）
+    const f = wcToMmFactor(cellSize);
+    const xmm = (size.x / DISPLAY_SCALE) * f;
+    const ymm = (size.y / DISPLAY_SCALE) * f;
+    const zmm = (size.z / DISPLAY_SCALE) * f;
     this.addLabel(`${xmm.toFixed(1)} mm`, new THREE.Vector3(center.x, min.y - 0.12, min.z));
     this.addLabel(`${ymm.toFixed(1)} mm`, new THREE.Vector3(max.x + 0.12, center.y, min.z));
     this.addLabel(`${zmm.toFixed(1)} mm`, new THREE.Vector3(min.x - 0.12, min.y - 0.12, center.z));

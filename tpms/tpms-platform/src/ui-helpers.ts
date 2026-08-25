@@ -160,7 +160,7 @@ export const GLOSSARY: Record<string, { title: string; body: string }> = {
   },
   weight: {
     title: '权重系数 · Weight',
-    body: '公式每一项前的乘数（a/b/c/d），决定各数学项对曲面的相对贡献。注：权重交互调节 UI 预留、暂未启用，当前为固定比例。',
+    body: '公式每一项前的乘数（a/b/c/d），决定各数学项对曲面的相对贡献。在"当前曲面隐函数"区拖动权重滑块可实时调节，曲面随各项配比重塑。',
   },
 };
 

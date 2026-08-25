@@ -1,20 +1,20 @@
 /**
  * 交互式三维游标卡尺
- * 用户在 TPMS 曲面上点击两点，实时计算并显示空间距离。
+ * 用户在 TPMS 曲面上点击两点，实时计算并显示空间距离（物理 mm）。
  */
 
 import * as THREE from 'three';
+import { DISPLAY_SCALE, wcToMmFactor } from '../core/units';
 
 const MARKER_COLOR = 0xff3366;
 const LINE_COLOR = 0xff3366;
-// 坐标缩放因子，必须与 main.ts 中 meshFill / meshStrut 的 scale（0.33）保持一致
-const MESH_SCALE = 0.33;
 
 export class CaliperTool {
   private renderer: THREE.WebGLRenderer;
   private camera: THREE.Camera;
   private scene: THREE.Scene;
   private targetMesh: THREE.Mesh | null;
+  private cellSize: number;
   private points: THREE.Vector3[] = [];
   private markers: THREE.Mesh[] = [];
   private line: THREE.Line | null = null;
@@ -27,11 +27,13 @@ export class CaliperTool {
     camera: THREE.Camera,
     scene: THREE.Scene,
     targetMesh: THREE.Mesh | null,
+    cellSize: number,
   ) {
     this.renderer = renderer;
     this.camera = camera;
     this.scene = scene;
     this.targetMesh = targetMesh;
+    this.cellSize = cellSize;
     this.onClickBound = this.onClick.bind(this);
   }
 
@@ -84,7 +86,9 @@ export class CaliperTool {
       const mid = new THREE.Vector3()
         .addVectors(this.points[0], this.points[1])
         .multiplyScalar(0.5);
-      this.label = this.createLabel(`${(dist / MESH_SCALE).toFixed(3)} mm`, mid);
+      // 世界距离 → wc 距离（÷显示缩放）→ 物理 mm（× cellSize/(2π)，1 period = 1 mm）
+      const mm = (dist / DISPLAY_SCALE) * wcToMmFactor(this.cellSize);
+      this.label = this.createLabel(`${mm.toFixed(3)} mm`, mid);
       this.label.renderOrder = 1002;
       this.scene.add(this.label);
     }
