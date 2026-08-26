@@ -177,7 +177,8 @@ function renderFrame(): void {
 window.addEventListener('beforeunload', () => cancelAnimationFrame(animId));
 
 // ── 重建调度 ─────────────────────────────────────────────
-function rebuild(preview: boolean): void {
+/** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
+function rebuild(preview: boolean): boolean {
   const s = getState();
   // 三级 LOD：preview 低分辨率 → 中等过渡 → 全高清
   let R: number;
@@ -194,9 +195,9 @@ function rebuild(preview: boolean): void {
   const key = cacheKey(s, R);
   const cached = geoCache.get(key);
   if (cached) {
-    // 缓存命中：瞬间恢复
+    // 缓存命中：瞬间恢复（注意：此路径不派发 worker 结果——调用方若在等待结果需以此返回值区分）
     applyGeometry(cached.positions, cached.normals, cached.indices, cached.vertCount, cached.faceCount);
-    return;
+    return true;
   }
 
   const params: BuildParams = {
@@ -216,6 +217,7 @@ function rebuild(preview: boolean): void {
   };
 
   bridge.build(params);
+  return false;
 }
 
 function scheduleRebuild(preview: boolean, skipHistory = false): void {
@@ -531,7 +533,12 @@ function updateStats(): void {
   const tortEl = document.getElementById('stat-tort');
 
   if (porosityEl) porosityEl.textContent = (lastPorosityEstimate * 100).toFixed(1) + '%';
-  if (materialEl) materialEl.textContent = ((1 - lastPorosityEstimate) * 100).toFixed(1) + '%';
+  // 显示材料名（非体积占比——占比语义放 title，避免"材料 24.5%"的误导）
+  if (materialEl) {
+    const mat = getState().material;
+    materialEl.textContent = MATERIAL_LABEL[mat] || mat;
+    materialEl.title = `材料体积占比 ≈ ${((1 - lastPorosityEstimate) * 100).toFixed(1)}%`;
+  }
   if (vertEl && baseGeo) vertEl.textContent = (baseGeo.attributes.position.count / 1000).toFixed(1) + 'k';
   if (triEl && baseGeo) triEl.textContent = (baseGeo.index!.count / 3000).toFixed(1) + 'k';
 
@@ -1185,22 +1192,24 @@ async function runSweep(): Promise<void> {
   const endPorosity = 90;
   const step = 5;
   const frames: string[] = [];
+  const configs: unknown[] = [];
 
   for (let p = startPorosity; p <= endPorosity && !sweepAbort; p += step) {
     const progress = ((p - startPorosity) / (endPorosity - startPorosity)) * 100;
     bar.style.width = `${progress}%`;
     status.textContent = `孔隙率 ${p}% (${Math.round(progress)}%)`;
 
-    // 更新状态并触发重建
+    // 更新状态并重建（直接调 rebuild 绕过 150ms 防抖；LRU 命中时无 worker 结果，不可等待）
     setState({ porosity: p });
     syncUI(getState());
-
-    // 等待 Worker 完成
-    await new Promise<void>(resolve => {
-      const handler = () => { resolve(); bridge.removeResultListener(handler); };
-      bridge.addResultListener(handler);
-      scheduleRebuild(false);
-    });
+    if (rebuildTimer) clearTimeout(rebuildTimer);
+    const fromCache = rebuild(false);
+    if (!fromCache) {
+      await new Promise<void>(resolve => {
+        const handler = () => { resolve(); bridge.removeResultListener(handler); };
+        bridge.addResultListener(handler);
+      });
+    }
 
     // 延迟一帧确保渲染完成
     await new Promise(r => setTimeout(r, 200));
@@ -1211,7 +1220,8 @@ async function runSweep(): Promise<void> {
     const dataUrl = canvas.toDataURL('image/png');
     frames.push(dataUrl);
 
-    // 生成参数配置文件
+    // 生成参数配置（收集到数组，循环结束后合并为单个 JSON 下载，
+    // 避免逐帧连发自动下载触发浏览器多文件下载拦截）
     const config = {
       frame: (p - startPorosity) / step,
       porosity: p,
@@ -1229,12 +1239,7 @@ async function runSweep(): Promise<void> {
       generatedAt: new Date().toISOString(),
       platform: 'TPMS Explorer v2.0',
     };
-    
-    const configBlob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const configA = document.createElement('a');
-    configA.href = URL.createObjectURL(configBlob);
-    configA.download = `tpms_sweep_p${p}%.json`;
-    configA.click();
+    configs.push(config);
 
     // 添加缩略图
     const img = document.createElement('img');
@@ -1246,14 +1251,21 @@ async function runSweep(): Promise<void> {
     status.textContent = '扫描完成，正在下载...';
     bar.style.width = '100%';
 
-    // 逐帧下载 PNG
+    // 逐帧下载 PNG（250ms 间隔，降低浏览器连发下载拦截概率）
     for (let i = 0; i < frames.length; i++) {
       const a = document.createElement('a');
       a.href = frames[i];
       a.download = `tpms_sweep_p${startPorosity + i * step}%.png`;
       a.click();
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 250));
     }
+
+    // 全部帧参数合并为单个 JSON
+    const configBlob = new Blob([JSON.stringify(configs, null, 2)], { type: 'application/json' });
+    const configA = document.createElement('a');
+    configA.href = URL.createObjectURL(configBlob);
+    configA.download = 'tpms_sweep_configs.json';
+    configA.click();
 
     // 导出汇总 CSV
     let csv = 'frame,porosity,type,cellSize,thickness,structureMode,container,material\n';
@@ -1274,10 +1286,10 @@ async function runSweep(): Promise<void> {
     setTimeout(() => { overlay.style.display = 'none'; }, 1000);
   }
 
-  // 恢复原始孔隙率
+  // 恢复原始孔隙率（程序行为，不进 undo 历史）
   setState({ porosity: s.porosity });
   syncUI(getState());
-  scheduleRebuild(false);
+  scheduleRebuild(false, true);
 }
 
 // ── 论文配图模式 ─────────────────────────────────────────────

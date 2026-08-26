@@ -128,8 +128,8 @@ const SAFE_FUNCS: Record<string, (a: number, b?: number) => number> = {
   atan2: (a, b) => Math.atan2(a, b as number),
 };
 
-/** 白名单常量 */
-const SAFE_CONSTS: Record<string, number> = { PI: Math.PI, E: Math.E };
+/** 白名单常量（小写 pi/e 为 UI 提示文案承诺的写法，与 PI/E 等价） */
+const SAFE_CONSTS: Record<string, number> = { PI: Math.PI, E: Math.E, pi: Math.PI, e: Math.E };
 
 type Token =
   | { t: 'num'; v: number }
