@@ -1078,7 +1078,8 @@ function toggleCompare(): void {
 }
 
 function captureSnapshot(side: 'A' | 'B'): void {
-  const canvas = document.querySelector('canvas')!;
+  // 显式定位渲染 canvas（依赖文档序的第一个 canvas 会因 loader/对比面板的 DOM 变化而脆弱）
+  const canvas = document.querySelector('#canvas-container canvas') as HTMLCanvasElement;
   const dataUrl = canvas.toDataURL('image/png');
   const targetCanvas = document.getElementById(side === 'A' ? 'compare-canvas-a' : 'compare-canvas-b') as HTMLCanvasElement;
   const ctx2d = targetCanvas.getContext('2d')!;

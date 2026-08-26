@@ -1,7 +1,7 @@
 // 红队修复复验：M1 URL 权重恢复 / M2 custom 面板隐藏 / M3 深色引导卡 / m1 高亮残留 / m3 引导期快捷键守卫
 import { chromium } from 'playwright';
 
-const BASE = 'http://localhost:4811/';
+const BASE = process.env.BASE || 'http://localhost:4811/';
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const errors = [];
 let pass = 0, fail = 0;
