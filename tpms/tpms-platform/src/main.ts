@@ -38,6 +38,7 @@ import {
   initOnboard,
   refreshWeightUI,
   MATERIAL_LABEL,
+  initTipToggle,
 } from './ui-helpers';
 
 // ── 全局变量 ─────────────────────────────────────────────
@@ -136,6 +137,7 @@ window.addEventListener('load', () => {
   initGlossary();
   initOnboard();
   initPresetCard();
+  initTipToggle();
   initTheme();
 
   // 6) 同步 UI 状态与文本

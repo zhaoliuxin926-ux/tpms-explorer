@@ -208,6 +208,10 @@
   .tipbar .ti.b{background:var(--gyroid)}
   .tipbar .ti.c{background:var(--diamond)}
   .tip-sep{flex:none;width:1px;height:14px;background:rgba(255,255,255,.14)}
+  .tip-extra{display:none}
+  .tipbar.open .tip-extra{display:contents}
+  .tip-toggle{appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#aab6c6;font-size:.68rem;font-weight:600;border-radius:999px;padding:3px 10px;cursor:pointer;flex:none;transition:all .15s;pointer-events:auto}
+  .tip-toggle:hover{background:rgba(255,255,255,.12);color:#e6ecf4}
   /* 桌面端隐藏移动 sheet 手柄 */
   @media(min-width:981px){.sheet-handle{display:none}}
   /* 平板/移动：画布占满视口，控件变成底部可上拉 sheet */
@@ -424,7 +428,7 @@
         <div class="axes-hint"><span><kbd>拖拽</kbd> 旋转　<kbd>滚轮</kbd> 缩放　<kbd>右键</kbd> 平移</span></div>
         <div class="empty" id="empty">当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。</div>
         <div class="v-foot" id="tips">
-          <div class="tipbar"><span class="ti a">📊</span><span id="tip1"></span><span class="tip-sep"></span><span class="ti b">🧬</span><span id="tip2"></span><span class="tip-sep"></span><span class="ti c">💡</span><span id="tip3"></span></div>
+          <div class="tipbar" id="tipbar"><span class="ti a">📊</span><span id="tip1"></span><button class="tip-toggle" id="tip-toggle" aria-expanded="false" title="展开 / 收起曲面与壁厚建议">建议 ▸</button><span class="tip-extra"><span class="tip-sep"></span><span class="ti b">🧬</span><span id="tip2"></span><span class="tip-sep"></span><span class="ti c">💡</span><span id="tip3"></span></span></div>
         </div>
         <div class="preset-card" id="preset-card" aria-hidden="true">
           <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭">×</button></div>
@@ -1835,6 +1839,17 @@ rebuild();
   document.getElementById('btn-onboard').addEventListener('click', openOnboard);
   const hasParams = location.search && location.search.length>1;
   if(localStorage.getItem(KEY)!=='1' && !hasParams){ setTimeout(openOnboard, 750); }
+})();
+
+// 底部建议条收纳（方向 E）：默认仅显示孔隙率建议，曲面/壁厚建议按需展开
+(function(){
+  const bar=document.getElementById('tipbar'), btn=document.getElementById('tip-toggle');
+  if(!bar||!btn) return;
+  btn.addEventListener('click',()=>{
+    const open=bar.classList.toggle('open');
+    btn.setAttribute('aria-expanded',String(open));
+    btn.textContent=open?'收起 ▾':'建议 ▸';
+  });
 })();
 
 // 术语解释层（方向 C）：悬停/点击 .term 显示词条卡

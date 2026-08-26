@@ -1,7 +1,7 @@
 // 修复验证：B1 权重滑块接线 / B2 统计面板 / B3 新手引导 / B4 快捷键 / 0 pageerror
 import { chromium } from 'playwright';
 
-const BASE = 'http://localhost:4811/';
+const BASE = process.env.BASE || 'http://localhost:4811/';
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const errors = [];
 let pass = 0, fail = 0;
