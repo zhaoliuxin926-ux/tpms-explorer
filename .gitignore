@@ -29,3 +29,8 @@ claude-code-workflow/crdt-data/
 
 # 其他
 *.zip
+# 红队一次性对抗脚本与截图（非正式回归套件）
+tpms/.verify/redteam/rt_*.mjs
+tpms/.verify/redteam/shots/
+tpms/.verify/redteam/dark_single.mjs
+tpms/.verify/redteam/subpath_spot.mjs

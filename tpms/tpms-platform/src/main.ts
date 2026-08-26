@@ -36,6 +36,8 @@ import {
   initPresetCard,
   initGlossary,
   initOnboard,
+  refreshWeightUI,
+  MATERIAL_LABEL,
 } from './ui-helpers';
 
 // ── 全局变量 ─────────────────────────────────────────────
@@ -216,8 +218,9 @@ function rebuild(preview: boolean): void {
   bridge.build(params);
 }
 
-function scheduleRebuild(preview: boolean): void {
-  if (!preview) pushHistory();  // 仅完整重建时记录历史
+function scheduleRebuild(preview: boolean, skipHistory = false): void {
+  // 仅完整重建时记录历史；undo/redo 恢复后的重建跳过（否则会把恢复态压栈、丢弃 redo 分支）
+  if (!preview && !skipHistory) pushHistory();
   if (rebuildTimer) clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(() => rebuild(preview), preview ? 16 : 150);
 }
@@ -615,20 +618,8 @@ function bindUIEvents(): void {
     });
   }
 
-  // 权重滑块
-  const weightIds = ['fw-a', 'fw-b', 'fw-c', 'fw-d'];
-  weightIds.forEach((id, idx) => {
-    const el = document.getElementById(id) as HTMLInputElement;
-    if (el) {
-      el.addEventListener('input', () => {
-        const w = [...getState().weights] as [number, number, number, number];
-        w[idx] = +el.value;
-        setState({ weights: w });
-        scheduleRebuild(true);
-      });
-      el.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
-    }
-  });
+  // 权重滑块：由 refreshWeightsUI() 在每次重建权重行时绑定（见 syncUI），
+  // 静态绑定会在滑块 DOM 重建后失效，故不在此处绑定。
 
   // 曲面类型按钮
   document.querySelectorAll('[data-type]').forEach(btn => {
@@ -717,8 +708,11 @@ function bindUIEvents(): void {
 
   document.getElementById('btn-share')?.addEventListener('click', () => {
     const url = buildShareURL();
+    // 无 clipboard-write 权限的环境（Firefox/失焦标签/沙箱 iframe）会 reject，回退到手动复制
     navigator.clipboard.writeText(url).then(() => {
-      alert('分享链接已复制到剪贴板！');
+      flashToast('分享链接已复制到剪贴板');
+    }).catch(() => {
+      window.prompt('复制失败，请手动复制分享链接：', url);
     });
   });
 
@@ -836,9 +830,9 @@ function bindUIEvents(): void {
     URL.revokeObjectURL(url);
   });
 
-  // 统计面板切换
+  // 统计面板切换（CSS 依据 .stat-overlay.open 显示 .stat-full）
   document.getElementById('stat-toggle')?.addEventListener('click', () => {
-    document.getElementById('stat-details')?.classList.toggle('show');
+    document.getElementById('statbox')?.classList.toggle('open');
   });
 
   // 窗口大小变化
@@ -889,12 +883,19 @@ function bindUIEvents(): void {
     customEnabled.addEventListener('change', () => {
       const field = document.getElementById('custom-formula-field')!;
       field.style.display = customEnabled.checked ? 'block' : 'none';
+      let hasFormula = false;
       if (customEnabled.checked) {
         setState({ type: 'custom' });
+        // 公式为空时不立即重建（worker 会因缺公式报错），等公式输入事件触发
+        const cf = document.getElementById('custom-formula') as HTMLTextAreaElement | null;
+        hasFormula = !!cf && cf.value.trim().length > 0;
       } else {
         setState({ type: 'gyroid', customFormula: '' });
       }
-      scheduleRebuild(false);
+      // custom 无权重项（隐藏权重面板），恢复时切回 gyroid 重建权重行；同步类型按钮 active
+      syncUI(getState());
+      updateBadges(getState().type, getState().model, getState().material, getState().structureMode);
+      if (!customEnabled.checked || hasFormula) scheduleRebuild(false);
     });
   }
 
@@ -913,19 +914,21 @@ function bindUIEvents(): void {
     // 忽略输入框内的按键
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    // 新手引导打开时不响应快捷键（Esc/方向键由引导自身处理）
+    if (document.getElementById('ob-card')?.classList.contains('show')) return;
 
-    // Ctrl+Z 撤销
+    // Ctrl+Z 撤销（重建跳过 pushHistory，保住 redo 分支）
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       const prev = undo();
-      if (prev) { syncUI(prev); updateBadges(prev.type, prev.model, prev.material, prev.structureMode); updateStructureDesc(prev.structureMode); scheduleRebuild(false); flashToast('已撤销'); }
+      if (prev) { syncUI(prev); updateBadges(prev.type, prev.model, prev.material, prev.structureMode); updateStructureDesc(prev.structureMode); scheduleRebuild(false, true); flashToast('已撤销'); }
       return;
     }
     // Ctrl+Shift+Z / Ctrl+Y 重做
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
       e.preventDefault();
       const next = redo();
-      if (next) { syncUI(next); updateBadges(next.type, next.model, next.material, next.structureMode); updateStructureDesc(next.structureMode); scheduleRebuild(false); flashToast('已重做'); }
+      if (next) { syncUI(next); updateBadges(next.type, next.model, next.material, next.structureMode); updateStructureDesc(next.structureMode); scheduleRebuild(false, true); flashToast('已重做'); }
       return;
     }
 
@@ -936,6 +939,7 @@ function bindUIEvents(): void {
       if (types[idx]) {
         setState({ type: types[idx] });
         const s = getState();
+        syncUI(s);
         updateBadges(s.type, s.model, s.material, s.structureMode);
         scheduleRebuild(false);
         flashToast(`已切换至 ${types[idx].toUpperCase()}`);
@@ -982,10 +986,16 @@ function bindUIEvents(): void {
       return;
     }
 
-    // 数字 7-9：快速切换材料
-    if (e.key === '7') { setState({ material: 'tc4' }); syncUI(getState()); scheduleRebuild(false); flashToast('TC4 钛合金'); return; }
-    if (e.key === '8') { setState({ material: 'polymer' }); syncUI(getState()); scheduleRebuild(false); flashToast('PLLA 高分子'); return; }
-    if (e.key === '9') { setState({ material: 'thermal' }); syncUI(getState()); scheduleRebuild(false); flashToast('导热材料'); return; }
+    // 数字 9：循环切换材料（1-8 已被 8 类曲面切换占用）
+    if (e.key === '9') {
+      const mats: AppState['material'][] = ['auto', 'tc4', 'polymer', 'thermal'];
+      const next = mats[(mats.indexOf(getState().material) + 1) % mats.length];
+      setState({ material: next });
+      syncUI(getState());
+      scheduleRebuild(false);
+      flashToast(MATERIAL_LABEL[next]);
+      return;
+    }
 
     // Shift+1/2：快速切换容器形状
     if (e.key === '!') { setState({ containerShape: 'cube' }); syncUI(getState()); scheduleRebuild(false); flashToast('立方体容器'); return; }
@@ -1008,7 +1018,7 @@ function bindUIEvents(): void {
 
     // ? 键：快捷键帮助
     if (e.key === '?') {
-      flashToast('1-6 曲面 | 7-9 材料 | Shift+1/2 容器 | F 全屏 | P 截图 | Ctrl+Z 撤销 | R 重置 | V 截面 | E 导出');
+      flashToast('1-8 曲面 | 9 材料 | Shift+1/2 容器 | F 全屏 | P 截图 | Ctrl+Z 撤销 | R 旋转 | V 复位视角 | E 导出 STL');
       return;
     }
 
@@ -1103,9 +1113,6 @@ function syncUI(s: AppState): void {
   const sv = document.getElementById('slice-value');
   if (sv) sv.textContent = s.slice >= 99 ? '完整' : `${Math.round((s.slice + 100) / 2)}%`;
 
-  const weightIds = ['fw-a', 'fw-b', 'fw-c', 'fw-d'];
-  weightIds.forEach((id, idx) => setVal(id, s.weights[idx]));
-
   // 自动旋转按钮
   document.getElementById('btn-rotate')?.classList.toggle('on', s.autoRotate);
 
@@ -1134,6 +1141,28 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-blend]').forEach(el => {
     el.classList.toggle('active', (s as any).hybrid.blendFunction === el.getAttribute('data-blend'));
   });
+
+  // 权重滑块行按当前曲面类型整体重建（类型/预设/undo/URL 恢复后必然经过 syncUI）
+  refreshWeightsUI();
+}
+
+/** 重建公式权重滑块并接线（拖动预览 / 松手正式重建） */
+function refreshWeightsUI(): void {
+  const s = getState();
+  refreshWeightUI(
+    s.type,
+    [...s.weights],
+    (idx, val) => {
+      const w = [...getState().weights] as [number, number, number, number];
+      w[idx] = val;
+      setState({ weights: w });
+      scheduleRebuild(true);
+    },
+    () => {
+      scheduleRebuild(false);
+      scheduleHdUpgrade();
+    },
+  );
 }
 
 // ── 参数扫描 ─────────────────────────────────────────────

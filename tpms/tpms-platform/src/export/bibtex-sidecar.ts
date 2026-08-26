@@ -4,12 +4,14 @@ const DOI_MAP: Record<string, string> = {
   gyroid: '10.1016/j.ijsolstr.2017.02.015',
   diamond: '10.1016/j.actbio.2018.04.011',
   schwarz: '10.1016/j.addma.2017.03.019',
-  'i-wp': '',
+  'i-wp': '10.1016/j.mechmat.2022.104504',
   'f-rd': '',
-  neovius: '',
+  neovius: '10.1016/j.eml.2020.100688',
   lidinoid: '',
   splitp: '',
   custom: '',
+  // f-rd / lidinoid / splitp：原始数学文献（Schoen 1970 NASA TR、Lidin & Larsson 1990）无 DOI，
+  // 亦未检索到可靠的现代专文 DOI，宁缺毋滥保持空——生成 BibTeX 时省略 doi 行
 };
 
 function mapType(type: string): string {
@@ -27,13 +29,13 @@ export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null, 
   // 用确定性 meshHash 截断作为 cite key，保证可复现（与 generateJSONSidecar 对齐）
   const hash = meshHash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8) || 'unnamed';
   const doi = DOI_MAP[mapType(state.type)] || '';
+  const doiLine = doi ? `  doi = {https://doi.org/${doi}},\n` : '';
 
   return `@misc{tpms_explorer_${hash},
   title = {TPMS ${state.type} Scaffold: Porosity ${state.porosity}% | Cell Size ${state.cellSize} mm},
   author = {TPMS Explorer Platform},
   year = {${new Date().getFullYear()}},
-  doi = {${doi ? 'https://doi.org/' + doi : ''}},
-  keywords = {TPMS, ${state.type}, scaffold, porosity, additive manufacturing, bone tissue engineering},
+${doiLine}  keywords = {TPMS, ${state.type}, scaffold, porosity, additive manufacturing, bone tissue engineering},
   note = {Generated on ${now}. Structure: ${state.structureMode}, Container: ${state.containerShape}. Sv=${metrics?.svRatio.toFixed(3)} mm$^{-1}$, E*/Es=${metrics?.gibsonAshbyE.toFixed(4)}, C1=${metrics?.C1.toFixed(2)}, K=${metrics?.permeability ? (metrics.permeability * 1e6).toFixed(2) + ' um$^2$' : 'N/A'}. Mean pore: ${metrics?.poreStats.meanDiameter.toFixed(3)} mm. Reproducible via: ${window.location.href}},
   url = {${window.location.href}}
 }`;

@@ -19,8 +19,8 @@ export function setState(partial: Partial<AppState>): void {
   const prev = _state;
   _state = { ...prev, ...partial };
 
-  // 类型变更时自动重置权重
-  if (partial.type && partial.type !== prev.type) {
+  // 类型变更时自动重置权重；URL 恢复等显式携带 weights 的调用以传入值为准
+  if (partial.type && partial.type !== prev.type && partial.weights === undefined) {
     _state.weights = getDefaultWeights(partial.type);
   }
 }
