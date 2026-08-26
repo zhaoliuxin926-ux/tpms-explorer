@@ -170,6 +170,74 @@ export function setActiveWeightKey(key: string | null): void {
   activeWeightKey = key;
 }
 
+/** 高亮公式中与正在拖动的权重对应的项 */
+export function highlightWeightTerm(key: string): void {
+  setActiveWeightKey(key);
+  document.querySelectorAll('#formula-display .term').forEach(t => {
+    t.classList.toggle('term-hl', (t as HTMLElement).dataset.w === key);
+  });
+  document.querySelectorAll('.fw-tag').forEach(t => {
+    t.classList.toggle('on', (t as HTMLElement).dataset.w === key);
+  });
+}
+
+export function clearWeightHighlight(): void {
+  setActiveWeightKey(null);
+  document.querySelectorAll('#formula-display .term').forEach(t => t.classList.remove('term-hl'));
+  document.querySelectorAll('.fw-tag').forEach(t => t.classList.remove('on'));
+}
+
+/**
+ * 按当前曲面类型生成公式权重滑块行（对齐单文件版 refreshWeightUI）。
+ * 每次类型/预设/undo 恢复后重建 DOM 并重新绑定事件；
+ * onInput(idx, val) 在拖动中触发（预览重建），onChange 在松手时触发（正式重建 + 高清升级）。
+ */
+export function refreshWeightUI(
+  type: string,
+  weights: number[],
+  onInput: (idx: number, val: number) => void,
+  onChange: () => void,
+): void {
+  // 重建即清残留高亮（拖动中切类型时原滑块的 change 不会再触发）
+  clearWeightHighlight();
+  const terms = WEIGHT_TERMS[type];
+  const panel = document.getElementById('formula-weights');
+  const container = document.getElementById('weight-rows');
+  if (!panel || !container) return;
+  // custom 等无权重曲面：隐藏权重面板
+  if (!terms || terms.length === 0) {
+    panel.classList.remove('show');
+    container.innerHTML = '';
+    return;
+  }
+  panel.classList.add('show');
+  container.innerHTML = terms
+    .map(([label, key], i) => {
+      const v = weights[i] ?? 1;
+      return (
+        `<div class="fw-row"><span class="fw-tag" data-w="${key}">${label}</span>` +
+        `<input type="range" id="fw-${key}" min="0" max="2" value="${v}" step="0.1" role="slider" aria-label="权重 ${label}" aria-valuemin="0" aria-valuemax="2" aria-valuenow="${v}">` +
+        `<span class="fw-val" id="fw-${key}-val">${v.toFixed(1)}</span></div>`
+      );
+    })
+    .join('');
+  terms.forEach(([, key], i) => {
+    const el = document.getElementById(`fw-${key}`) as HTMLInputElement | null;
+    const valEl = document.getElementById(`fw-${key}-val`);
+    if (!el || !valEl) return;
+    el.addEventListener('input', () => {
+      valEl.textContent = (+el.value).toFixed(1);
+      el.setAttribute('aria-valuenow', el.value);
+      highlightWeightTerm(key);
+      onInput(i, +el.value);
+    });
+    el.addEventListener('change', () => {
+      clearWeightHighlight();
+      onChange();
+    });
+  });
+}
+
 /** 更新公式显示面板 */
 export function updateFormulaDisplay(type: string, weights: number[], iso: number): void {
   const suffix = `<span class="c">${iso.toFixed(3)}</span>`;
@@ -394,37 +462,153 @@ export function initGlossary(): void {
   });
 }
 
-/** 新手引导 */
+/** 新手引导（6 步交互式，对齐单文件版；spotlight 聚焦 + 演示驱动） */
 const ONBOARD_KEY = 'tpms_onboard_v1';
 
-function openOnboard(): void {
-  const overlay = document.getElementById('onboard-overlay');
-  if (overlay) {
-    overlay.classList.add('show');
-    overlay.setAttribute('aria-hidden', 'false');
-  }
-}
-
-function closeOnboard(): void {
-  const overlay = document.getElementById('onboard-overlay');
-  if (overlay) {
-    overlay.classList.remove('show');
-    overlay.setAttribute('aria-hidden', 'true');
-  }
-  try {
-    localStorage.setItem(ONBOARD_KEY, '1');
-  } catch {
-    // ignore
-  }
+interface OnboardStep {
+  title: string;
+  body: string;
+  demo: { label: string; run: () => void } | null;
+  target: () => HTMLElement | null;
 }
 
 export function initOnboard(): void {
+  const spotEl = document.getElementById('ob-spot');
+  const cardEl = document.getElementById('ob-card');
+  if (!spotEl || !cardEl) return;
+  const spot: HTMLElement = spotEl;
+  const card: HTMLElement = cardEl;
+  let idx = 0;
+  let opened = false;
+
+  function demoPorosity(): void {
+    const el = document.getElementById('porosity') as HTMLInputElement | null;
+    if (!el) return;
+    el.value = '88';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function demoType(): void {
+    (document.querySelector('[data-type="schwarz"]') as HTMLElement | null)?.click();
+  }
+  function demoSlice(): void {
+    const el = document.getElementById('slice') as HTMLInputElement | null;
+    if (!el) return;
+    el.value = '20';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const steps: OnboardStep[] = [
+    {
+      title: '欢迎来到 TPMS 探索器',
+      body: '你眼前这个就是 <b>Gyroid 螺旋曲面</b>——三重周期性极小曲面家族里最经典的一员，蝴蝶翅膀、细胞膜里都能找到它的影子。先<b>拖动画面</b>转一圈，感受它的立体形态。',
+      demo: null,
+      target: () => document.querySelector('.viewer'),
+    },
+    {
+      title: '孔隙率：把“空”调出来',
+      body: '<b>孔隙率</b>就是结构里有多少比例是“空的”。拖动这个滑块，看 Gyroid 怎么从致密变得通透——这正是骨支架、滤膜设计的核心旋钮。',
+      demo: { label: '演示 · 调到高孔隙', run: demoPorosity },
+      target: () => (document.getElementById('porosity') as HTMLElement | null)?.closest('.field') ?? null,
+    },
+    {
+      title: '一个家族，多种形态',
+      body: 'TPMS 不止一种。点这里切到 <b>Diamond</b> 或 <b>Schwarz P</b>，对比螺旋、笼状、片状截然不同的几何，还可以在下方公式区拖动<b>权重滑块</b>重塑曲面。',
+      demo: { label: '演示 · 切到 Schwarz P', run: demoType },
+      target: () => document.querySelector('.controls .sect'),
+    },
+    {
+      title: '截面扫描：切开看内部',
+      body: '想知道内部孔道长什么样？拖动<b>截面滑块</b>，像切蛋糕一样沿 Z 轴逐层剖开曲面，看清内部连通的通道网络。',
+      demo: { label: '演示 · 剖到中部', run: demoSlice },
+      target: () => (document.getElementById('slice') as HTMLElement | null)?.closest('.field') ?? null,
+    },
+    {
+      title: '一键进入真实应用',
+      body: '最后试试这些<b>应用场景预设</b>：仿生骨支架、轻量化零件、散热结构——它们把“看懂结构”和“真实用途”直接连起来。',
+      demo: null,
+      target: () => document.querySelector('.scenes'),
+    },
+    {
+      title: '把结果带走：导出与分享',
+      body: '配好参数后，右下角工具栏提供 <b>截图 PNG</b>（论文配图）、<b>STL 导出</b>（3D 打印 / 仿真）、<b>复制分享链接</b>（含全部参数，打开即可复现）。<br><br>点击试试 ↓',
+      demo: { label: '演示 · 复制分享链接', run: () => document.getElementById('btn-share')?.click() },
+      target: () => document.querySelector('.v-tools'),
+    },
+  ];
+
+  function positionSpot(el: HTMLElement | null): void {
+    if (!el) {
+      spot.classList.remove('show');
+      return;
+    }
+    // 目标可能位于默认折叠的 <details> 内：先展开并滚入视野，否则聚光灯定位到全零矩形
+    const det = el.closest('details');
+    if (det && !det.open) det.open = true;
+    el.scrollIntoView({ block: 'nearest' });
+    const r = el.getBoundingClientRect();
+    const pad = 7;
+    spot.style.left = `${r.left - pad}px`;
+    spot.style.top = `${r.top - pad}px`;
+    spot.style.width = `${r.width + pad * 2}px`;
+    spot.style.height = `${r.height + pad * 2}px`;
+    spot.classList.add('show');
+    const below = r.bottom < window.innerHeight * 0.6;
+    card.style.bottom = below ? '28px' : 'auto';
+    card.style.top = below ? 'auto' : '24px';
+  }
+
+  function closeOnboard(): void {
+    opened = false;
+    card.classList.remove('show');
+    spot.classList.remove('show');
+    try {
+      localStorage.setItem(ONBOARD_KEY, '1');
+    } catch {
+      // ignore
+    }
+  }
+
+  function go(i: number): void {
+    idx = Math.max(0, Math.min(steps.length - 1, i));
+    render();
+  }
+
+  function openOnboard(): void {
+    idx = 0;
+    opened = true;
+    card.classList.add('show');
+    render();
+  }
+
+  function render(): void {
+    const s = steps[idx];
+    const isLast = idx === steps.length - 1;
+    const dots = steps.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('');
+    const demoHtml = s.demo ? `<button class="ob-demo" id="ob-demo">${s.demo.label}</button>` : '';
+    card.innerHTML =
+      `<div class="ob-head"><span class="ob-step">第 ${idx + 1} 步 / 共 ${steps.length} 步</span><span class="ob-dots">${dots}</span></div>` +
+      `<h4>${s.title}</h4><p>${s.body}</p>${demoHtml}` +
+      `<div class="ob-foot"><button class="ob-btn ghost" id="ob-skip">跳过引导</button>` +
+      `${idx > 0 ? '<button class="ob-btn ghost" id="ob-prev">上一步</button>' : ''}` +
+      `<button class="ob-btn primary" id="ob-next">${isLast ? '开始探索' : '下一步'}</button></div>`;
+    positionSpot(s.target());
+    const demoBtn = document.getElementById('ob-demo');
+    if (demoBtn && s.demo) demoBtn.addEventListener('click', s.demo.run);
+    document.getElementById('ob-skip')?.addEventListener('click', closeOnboard);
+    document.getElementById('ob-next')?.addEventListener('click', () => (isLast ? closeOnboard() : go(idx + 1)));
+    document.getElementById('ob-prev')?.addEventListener('click', () => go(idx - 1));
+  }
+
   document.getElementById('btn-onboard')?.addEventListener('click', openOnboard);
-  document.getElementById('ob-card')?.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement).id === 'ob-card') closeOnboard();
+  window.addEventListener('resize', () => {
+    if (opened) positionSpot(steps[idx].target());
   });
   document.addEventListener('keydown', (e) => {
+    if (!opened) return;
     if (e.key === 'Escape') closeOnboard();
+    else if (e.key === 'ArrowRight') go(idx + 1);
+    else if (e.key === 'ArrowLeft') go(idx - 1);
   });
 
   const hasParams = location.search && location.search.length > 1;
