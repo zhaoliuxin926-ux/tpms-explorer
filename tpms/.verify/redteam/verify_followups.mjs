@@ -1,7 +1,7 @@
 // 遗留修复验证：m4 redo / m2 clipboard / DOI 行为
 import { chromium } from 'playwright';
 
-const BASE = 'http://localhost:4811/';
+const BASE = process.env.BASE || 'http://localhost:4811/';
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const errors = [];
 let pass = 0, fail = 0;
@@ -13,7 +13,7 @@ const browser = await chromium.launch({
   args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader'],
 });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
-await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:4811' });
+await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(BASE).origin });
 const page = await ctx.newPage();
 page.setDefaultTimeout(45000);
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));

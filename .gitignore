@@ -36,3 +36,4 @@ tpms/.verify/redteam/dark_single.mjs
 tpms/.verify/redteam/subpath_spot.mjs
 tpms/.verify/redteam/verify_opt3.mjs
 tpms/.verify/redteam/diag_sweep.mjs
+tpms/.verify/redteam/audit_dark.mjs
