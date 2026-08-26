@@ -462,6 +462,18 @@ export function initGlossary(): void {
   });
 }
 
+/** 底部建议条收纳（方向 E）：默认仅孔隙率建议，曲面/壁厚建议按需展开 */
+export function initTipToggle(): void {
+  const bar = document.getElementById('tipbar');
+  const btn = document.getElementById('tip-toggle');
+  if (!bar || !btn) return;
+  btn.addEventListener('click', () => {
+    const open = bar.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = open ? '收起 ▾' : '建议 ▸';
+  });
+}
+
 /** 新手引导（6 步交互式，对齐单文件版；spotlight 聚焦 + 演示驱动） */
 const ONBOARD_KEY = 'tpms_onboard_v1';
 
