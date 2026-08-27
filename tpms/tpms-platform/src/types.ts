@@ -28,6 +28,9 @@ export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | '
 export const ENDPLATE_MAX_UI_MM = 3.0;
 export const ENDPLATE_CLAMP_FRAC = 0.4;
 
+/** 动态剖切轴向 */
+export type SliceAxis = 'x' | 'y' | 'z';
+
 /** 应用完整状态 */
 export interface AppState {
   type: TpmType;
@@ -45,6 +48,10 @@ export interface AppState {
   coloring: ColoringMode;
   /** 实心加载端板厚度（mm，单侧）；0 = 关闭 */
   endplateMm: number;
+  /** 动态剖切轴向（渲染层裁切，不进入几何缓存键） */
+  sliceAxis: SliceAxis;
+  /** 剖切反向（保留法线负侧） */
+  sliceInvert: boolean;
   hybrid: {
     enabled: boolean;
     typeB: TpmType;
@@ -71,6 +78,8 @@ export const DEFAULT_STATE: AppState = {
   gradientDir: 'z',
   coloring: 'none',
   endplateMm: 0,
+  sliceAxis: 'z',
+  sliceInvert: false,
   hybrid: {
     enabled: false,
     typeB: 'diamond',

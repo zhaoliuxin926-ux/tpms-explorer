@@ -19,7 +19,7 @@ const suites = [
   { name: 'verify_fixes（红队复验 10 项）', cmd: ['node', 'redteam/verify_fixes.mjs'], env: { BASE: BASE_PLAT } },
   { name: 'verify_followups（遗留修复 10 项）', cmd: ['node', 'redteam/verify_followups.mjs'], env: { BASE: BASE_PLAT } },
   { name: 'verify_tip_toggle（tip 收纳 10 项）', cmd: ['node', 'redteam/verify_tip_toggle.mjs'], env: {} },
-  { name: 'verify（单文件版 18 项）', cmd: ['node', 'verify.mjs'], env: {} },
+  { name: 'verify（单文件版 18 项）', cmd: ['node', 'verify.mjs'], env: { BASE: `http://localhost:${PORT_DOCS}/` } },
 ];
 
 function startServer(port, dir) {

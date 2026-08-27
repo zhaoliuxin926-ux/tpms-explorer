@@ -80,6 +80,11 @@ export function parseURLParams(search: string): Partial<AppState> {
   // 加载端板厚度（mm）；缺省 = 关闭（数值参数无注入面）
   state.endplateMm = clamp(q.get('ep'), 0, ENDPLATE_MAX_UI_MM, 0);
 
+  // 剖切轴向 / 反向
+  const sa = q.get('sa');
+  if (sa === 'x' || sa === 'y' || sa === 'z') state.sliceAxis = sa;
+  state.sliceInvert = q.get('si') === '1';
+
   // 混合模式（hybridType/hybridBlend 必须过白名单：否则恶意 URL 可注入任意字符串，
   // 经导出脚本的单引号插值落地为可执行 Python/MATLAB 代码——任意代码执行）
   if (q.get('hybrid') === '1') {
