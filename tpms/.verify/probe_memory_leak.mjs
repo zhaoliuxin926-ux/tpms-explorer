@@ -27,7 +27,7 @@ const ROOT = path.resolve(HERE, '../..');
 const DEPLOYED = path.join(ROOT, 'docs/platform');
 const PORT = 4831;
 const BASE = `http://localhost:${PORT}/`;
-const CYCLES = 80;
+const CYCLES = Number(process.env.LEAK_ROUNDS || 80);   // 阶段 V：支持 200 轮压测（LEAK_ROUNDS=200）
 const LEAK_BUDGET_MB = 5;
 
 const C = process.stdout.isTTY || process.env.FORCE_COLOR
