@@ -50,3 +50,5 @@ tpms/.verify/smooth_impact*.mjs
 tpms/.verify/preview_perf.mjs
 tpms/.verify/probe_bisect_bias.mjs
 tpms/.verify/web/shots/
+tpms/.verify/burr_baseline.json
+tpms/.verify/burr_after.json

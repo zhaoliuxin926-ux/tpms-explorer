@@ -42,7 +42,9 @@ gradient_dir = '${safeId(state.gradientDir)}'
 kk = cell_size  # 频率倍率：平台顶点域恒 [-pi, pi]，周期数编码在频率上
 # 倍频曲面（I-WP/F-RD 含 cos2kx 项）特征频率 2k，分辨率密度加倍补偿弦切误差
 fk = 28 if (tpms_type in ('iwp', 'frd', 'neovius') or (structure_mode == 'gradient_shell' and gradient_dir != 'z')) else 14
-R = min(96, 19 + cell_size * fk)
+# A2 密度保优：触 96 上限后预算让渡给每周期密度（与平台 units.hdResolution 同源）
+r_lin = 19 + cell_size * fk
+R = int(r_lin) if r_lin <= 96 else int(min(96, np.ceil(cell_size * fk)))
 N = R + 1
 
 # 生成坐标网格（弧度域 [-pi, pi]，公式频率乘 kk）
@@ -205,7 +207,13 @@ if any(strcmp(tpms_type, {'iwp', 'frd', 'neovius'})) || strcmp(structure_mode, '
 else
     fk = 14;
 end
-R = min(96, 19 + cell_size * fk);
+% A2 密度保优：触 96 上限后预算让渡给每周期密度（与平台 units.hdResolution 同源）
+r_lin = 19 + cell_size * fk;
+if r_lin <= 96
+    R = round(r_lin);
+else
+    R = min(96, ceil(cell_size * fk));
+end
 N = R + 1;
 x = linspace(-pi, pi, N);
 y = linspace(-pi, pi, N);

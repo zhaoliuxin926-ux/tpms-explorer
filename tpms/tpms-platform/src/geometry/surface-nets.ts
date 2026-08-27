@@ -485,8 +485,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
 
   /**
    * 发射四边形 A→B→C→D（环绕一条穿越网格边的 4 个 cell 顶点，按周边序）。
-   * o = 外向单位方向（实体端指向空气端的轴向）：n=(B−A)×(D−A) 与默认拆分
-   * (A,B,C)(A,C,D) 正面同向，n·o<0 时反向拆分 ⇒ 缠绕与场符号严格一致。
+   * o = 外向单位方向（实体端指向空气端的轴向）：以周边序叉积 n=(B−A)×(D−A)
+   * 定缠绕符号，flip 时逐三角形交换末两端 ⇒ 缠绕与场符号严格一致。
+   *
+   * 【B1 最短对角线】对角线不再硬编码 v0-v2：比较 |v0−v2| 与 |v1−v3| 取短者，
+   * 抑制固定取向造成的各向异性斜纹与细长面。同一顶点集重新剖分，拓扑不变量
+   * （开放边/非流形边/体积）不受影响，由 mesh_audit/mesh_audit 29 案例守门。
    * 镜像钳位会让相邻角共享同一 cell 顶点：4 顶点去重后按剩余顶点发射
    * 定向三角形（3 个）或跳过（<3 个，纯退化）。
    */
@@ -512,13 +516,27 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     const d1x = positions[iE] - positions[i0];
     const d1y = positions[iE + 1] - positions[i0 + 1];
     const d1z = positions[iE + 2] - positions[i0 + 2];
-    if (b1x * d1y * oz + b1y * d1z * ox + b1z * d1x * oy
-      - b1z * d1y * ox - b1y * d1x * oz - b1x * d1z * oy >= 0) {
-      pushTri(v0, v1, v2);
-      if (v3 >= 0) pushTri(v0, v2, v3);
+    const windingPositive =
+      b1x * d1y * oz + b1y * d1z * ox + b1z * d1x * oy
+      - b1z * d1y * ox - b1y * d1x * oz - b1x * d1z * oy >= 0;
+
+    // B1：v3 存在时按最短对角线选择拆分方式（两条候选的对角线长度比较）
+    let useDiag13 = false;
+    if (v3 >= 0) {
+      const i2 = v2 * 3, i3b = v3 * 3;
+      const d02x = positions[i2] - positions[i0], d02y = positions[i2 + 1] - positions[i0], d02z = positions[i2 + 2] - positions[i0];
+      const d13x = positions[i3b] - positions[i1], d13y = positions[i3b + 1] - positions[i1], d13z = positions[i3b + 2] - positions[i1];
+      useDiag13 = (d13x * d13x + d13y * d13y + d13z * d13z) < (d02x * d02x + d02y * d02y + d02z * d02z);
+    }
+
+    const em = (p: number, q: number, r: number) => { windingPositive ? pushTri(p, q, r) : pushTri(p, r, q); };
+    if (!useDiag13) {
+      em(v0, v1, v2);
+      if (v3 >= 0) em(v0, v2, v3);
     } else {
-      pushTri(v0, v2, v1);
-      if (v3 >= 0) pushTri(v0, v3, v2);
+      // 对角线 v1-v3：周边序 (A,B,C,D) 下 (A,B,D)+(B,C,D)，法向与 diag02 同侧
+      em(v0, v1, v3);
+      em(v1, v2, v3);
     }
   };
 

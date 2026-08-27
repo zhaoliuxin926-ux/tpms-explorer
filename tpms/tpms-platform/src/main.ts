@@ -27,7 +27,7 @@ import {
   generateJSONSidecar,
 } from './export';
 import { evaluateField } from './core/tpms-functions';
-import { DISPLAY_SCALE, wcToMmFactor, resolutionPerPeriod } from './core/units';
+import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
 import { exportSliceSVG } from './measure/svg-slice-exporter';
@@ -195,9 +195,9 @@ function rebuild(preview: boolean): boolean {
   if (preview) {
     R = 28;  // Level 1: 极低分辨率，拖动时丝滑跟手
   } else if (isFirstBuild) {
-    R = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));  // Level 3: 首屏直接高清（倍频曲面密度加倍）
+    R = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);  // Level 3: 首屏直接高清
   } else {
-    R = Math.min(72, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir) * 10 / 14);  // Level 2: 中等分辨率（倍频同步加倍）
+    R = l2Resolution(s.type, s.structureMode, s.gradientDir, s.cellSize);  // Level 2: 中等分辨率
   }
   const iso = baseIso(s);
 
@@ -243,7 +243,7 @@ function scheduleRebuild(preview: boolean, skipHistory = false): void {
 function scheduleHdUpgrade(): void {
   setTimeout(() => {
     const s = getState();
-    const fullR = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));
+    const fullR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
     bridge.build({
       type: s.type,
       iso: baseIso(s),
@@ -1477,7 +1477,7 @@ function handleExport(fmt: string | null): void {
   if (needGeo) {
     // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
     // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
-    const hdR = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));
+    const hdR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
     if (lastBuildResolution < hdR) {
       const res = buildSurface({
         type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
@@ -1602,7 +1602,7 @@ function downloadText(text: string, filename: string, mime: string): void {
  * 注：导出基础场（type A），异构混合/壳变换不写入，供 ParaView 自由 re-contour。
  */
 function buildVtiField(s: AppState): { field: Float32Array; dims: [number, number, number] } {
-  const R = Math.min(72, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir) * 10 / 14);   // 倍频曲面密度同步加倍
+  const R = l2Resolution(s.type, s.structureMode, s.gradientDir, s.cellSize);   // 倍频曲面密度同步加倍
   const N = R + 1;
   const field = new Float32Array(N * N * N);
   const k = s.cellSize;
