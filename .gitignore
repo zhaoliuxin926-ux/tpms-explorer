@@ -23,10 +23,6 @@ tpms/.verify/diag_drag_stack.mjs
 tpms/.verify/check_deploy_subpath.mjs
 tpms/.verify/diag_typemore.mjs
 
-# 副项目运行时产物
-claude-code-workflow/.trash/
-claude-code-workflow/crdt-data/
-
 # 其他
 *.zip
 # 红队一次性对抗脚本与截图（非正式回归套件）
@@ -52,4 +48,5 @@ tpms/.verify/mesh_diag_*.mjs
 tpms/.verify/proj_isolation*.mjs
 tpms/.verify/smooth_impact*.mjs
 tpms/.verify/preview_perf.mjs
+tpms/.verify/probe_bisect_bias.mjs
 tpms/.verify/web/shots/
