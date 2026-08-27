@@ -799,10 +799,20 @@ function buildSurface(type, iso, periods, R, options={}){
     const b1x=positions[i1]-positions[i0], b1y=positions[i1+1]-positions[i0+1], b1z=positions[i1+2]-positions[i0+2];
     const iE=(v3>=0?v3:v2)*3;
     const d1x=positions[iE]-positions[i0], d1y=positions[iE+1]-positions[i0+1], d1z=positions[iE+2]-positions[i0+2];
-    if(b1x*d1y*oz + b1y*d1z*ox + b1z*d1x*oy - b1z*d1y*ox - b1y*d1x*oz - b1x*d1z*oy >= 0){
-      pushTri(v0,v1,v2); if(v3>=0) pushTri(v0,v2,v3);
+    // B1 最短对角线（与平台 surface-nets.ts 同源）：缠绕判定独立于拆分选择
+    const windingPositive = (b1x*d1y*oz + b1y*d1z*ox + b1z*d1x*oy - b1z*d1y*ox - b1y*d1x*oz - b1x*d1z*oy >= 0);
+    let useDiag13=false;
+    if(v3>=0){
+      const i2=v2*3, i3b=v3*3;
+      const d02x=positions[i2]-positions[i0], d02y=positions[i2+1]-positions[i0], d02z=positions[i2+2]-positions[i0];
+      const d13x=positions[i3b]-positions[i1], d13y=positions[i3b+1]-positions[i1], d13z=positions[i3b+2]-positions[i1];
+      useDiag13 = (d13x*d13x+d13y*d13y+d13z*d13z) < (d02x*d02x+d02y*d02y+d02z*d02z);
+    }
+    const em=(p,q,r)=>{ windingPositive ? pushTri(p,q,r) : pushTri(p,r,q); };
+    if(!useDiag13){
+      em(v0,v1,v2); if(v3>=0) em(v0,v2,v3);
     } else {
-      pushTri(v0,v2,v1); if(v3>=0) pushTri(v0,v3,v2);
+      em(v0,v1,v3); em(v1,v2,v3);
     }
   };
   const R2s = R*R, NNs = N*N;   // cellVert 用 R²、field 用 N²，两套步长严禁混用
@@ -921,6 +931,11 @@ function buildSurface(type, iso, periods, R, options={}){
       ];
     };
     const projectOne=()=>{
+      // 投影仍仅 solid 调用（下方调用处保留条件）。
+      // 【2026-08-28 A1 尝试定案（已回退，与平台同源）】壳类平方场 Newton
+      // 机理失效：中线 dv≈0 ⇒ ∇f≈0 且 fC≈−(t/2)² 大负值，「|f|>guardK·h·|g|」
+      // 恒真 ⇒ 门控跳过的恰是最需修复的中线顶点。正确路径=dv 符号锁边的
+      // shell-aware 专用投影（projOnly −29.5% 高危区），见项目记忆。
       for(let v=0; v<vi; v++){
         if(frozen[v]) continue;
         const i3=v*3;
@@ -983,7 +998,33 @@ function buildSurface(type, iso, periods, R, options={}){
           }
         }
         cur.set(next);
-        if(mode==='solid_network') projectOne();
+        if(mode==='solid_network') projectOne();   // A1 定案：壳类门控投影实测无效已回退（见函数注释）
+      }
+      // 【B3 解析边界吸附（与平台同源）】端面/侧壁/柱面精确平整，仅 frozen 类顶点：
+      // 孔口环与盖心理论位置就是容器截面，质心浮点抖动即端面离面折痕来源
+      {
+        const SNAP_TOL = 0.04;
+        for(let v=0; v<vi; v++){
+          if(!frozen[v]) continue;
+          const i3=v*3;
+          const px=cur[i3]/Math.PI, py=cur[i3+1]/Math.PI, pz=cur[i3+2]/Math.PI;
+          if(container==='cylinder'){
+            if(pz> 1-SNAP_TOL){ cur[i3+2]= Math.PI; continue; }
+            if(pz<-1+SNAP_TOL){ cur[i3+2]=-Math.PI; continue; }
+            const r2=px*px+py*py;
+            if(r2>(1-SNAP_TOL)*(1-SNAP_TOL)){
+              const r=Math.sqrt(r2), s=Math.PI/r;
+              cur[i3]*=s; cur[i3+1]*=s;
+            }
+            continue;
+          }
+          if(pz> 1-SNAP_TOL){ cur[i3+2]= Math.PI; continue; }
+          if(pz<-1+SNAP_TOL){ cur[i3+2]=-Math.PI; continue; }
+          if(px> 1-SNAP_TOL){ cur[i3]= Math.PI; continue; }
+          if(px<-1+SNAP_TOL){ cur[i3]=-Math.PI; continue; }
+          if(py> 1-SNAP_TOL){ cur[i3+1]= Math.PI; continue; }
+          if(py<-1+SNAP_TOL){ cur[i3+1]=-Math.PI; continue; }
+        }
       }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(cur,3));
   }
