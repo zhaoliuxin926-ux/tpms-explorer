@@ -18,6 +18,7 @@ import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
 import { EQUATION_PRESETS, validateEquation } from './core/equation-parser';
+import { mapGeometry } from './core/manifold-mapping';
 import { sampleDirectionalGrid, directionalModulus, orthotropicCompliance } from './physics/homogenization';
 import type { PhysicsMetrics } from './types';
 import {
@@ -78,7 +79,7 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}`;
 }
 
 // ── 主题切换（明 / 暗 / 系统）─────────────────────────────
@@ -322,6 +323,20 @@ function applyGeometry(
         })
       : null;
   })();
+
+  // 【阶段 IV】非欧度规空间映射：顶点级连续 warp（水密/流形性质由构造继承）。
+  // 映射改变几何 ⇒ 法线重算（THREE 路径）；恒等映射零开销跳过。
+  const manifold = s0.manifold ?? { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' };
+  if (manifold.kind !== 'identity' && manifold.kind !== undefined) {
+    mapGeometry(manifold.kind, manifold, { half: Math.PI * s0.cellSize }, positions);
+    const tmpGeo = new THREE.BufferGeometry();
+    tmpGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    tmpGeo.setIndex(new THREE.BufferAttribute(indices.slice(), 1));
+    tmpGeo.computeVertexNormals();
+    const nn = tmpGeo.getAttribute('normal').array as Float32Array;
+    normals.set(nn.subarray(0, Math.min(normals.length, nn.length)));
+    tmpGeo.dispose();
+  }
 
   baseGeo = new THREE.BufferGeometry();
   baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -1224,6 +1239,36 @@ function bindUIEvents(): void {
   });
 
   // 异构混合启用（智能着色联动：开启推荐 Field Map，关闭时若因混合而开的 Field Map 回退单色）
+  // 【阶段 IV】非欧度规空间映射接线
+  const MANIFOLD_LABEL: Record<string, string> = {
+    identity: '无（平面周期）', cylinder: '圆柱弯曲', torus: '环面闭合', hyperbolic: '双曲径向', metric: '应力线各向异性',
+  };
+  const manifoldSel = document.getElementById('manifold-kind') as HTMLSelectElement | null;
+  if (manifoldSel) {
+    for (const [k, v] of Object.entries(MANIFOLD_LABEL)) {
+      const o = document.createElement('option');
+      o.value = k; o.textContent = v;
+      manifoldSel.appendChild(o);
+    }
+    manifoldSel.addEventListener('change', () => {
+      const st = getState();
+      setState({ manifold: { ...st.manifold, kind: manifoldSel.value as AppState['manifold']['kind'] } });
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  }
+  const manifoldRadius = document.getElementById('manifold-radius') as HTMLInputElement | null;
+  if (manifoldRadius) {
+    manifoldRadius.addEventListener('input', () => {
+      const st = getState();
+      setState({ manifold: { ...st.manifold, radius: +manifoldRadius.value } });
+      const mv = document.getElementById('manifold-radius-value');
+      if (mv) mv.textContent = (+manifoldRadius.value).toFixed(1);
+      scheduleRebuild(true);
+    });
+    manifoldRadius.addEventListener('change', () => scheduleRebuild(false));
+  }
+
   const hybridEnabled = document.getElementById('hybrid-enabled') as HTMLInputElement;
   if (hybridEnabled) {
     hybridEnabled.addEventListener('change', () => {
@@ -1676,6 +1721,12 @@ function syncUI(s: AppState): void {
     const hv = document.getElementById('hybrid-width-value');
     if (hv) hv.textContent = (s as any).hybrid.blendWidth.toFixed(2);
   }
+
+  // 【阶段 IV】空间映射同步
+  const msel = document.getElementById('manifold-kind') as HTMLSelectElement | null;
+  if (msel) msel.value = s.manifold.kind;
+  const mr = document.getElementById('manifold-radius') as HTMLInputElement | null;
+  if (mr) { mr.value = String(s.manifold.radius); const mv = document.getElementById('manifold-radius-value'); if (mv) mv.textContent = s.manifold.radius.toFixed(1); }
 
   // 着色模式：高亮 + 场口径非法时置灰禁用（状态里残留的非法 'field' 由
   // effectiveColoring 在重建参数处优雅回退，这里只负责视觉一致）

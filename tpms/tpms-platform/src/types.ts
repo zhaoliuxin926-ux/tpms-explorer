@@ -34,6 +34,19 @@ export const ENDPLATE_CLAMP_FRAC = 0.4;
 /** 动态剖切轴向 */
 export type SliceAxis = 'x' | 'y' | 'z';
 
+/** 【阶段 IV】非欧度规空间映射类型（作用于生成网格的顶点级连续 warp） */
+export type ManifoldKind = 'identity' | 'cylinder' | 'torus' | 'hyperbolic' | 'metric';
+
+export interface ManifoldConfig {
+  kind: ManifoldKind;
+  /** 弯曲半径（mm；cylinder 需 > 域半宽、torus 需满足双半径约束） */
+  radius: number;
+  /** metric 沿轴缩放 */
+  scale: number;
+  /** metric 轴 */
+  axis: 'x' | 'y' | 'z';
+}
+
 /** 应用完整状态 */
 export interface AppState {
   type: TpmType;
@@ -63,6 +76,8 @@ export interface AppState {
     blendWidth: number;
     axis: BlendAxis;
   };
+  /** 【阶段 IV】非欧度规空间映射（identity = 关闭） */
+  manifold: ManifoldConfig;
   customFormula: string;
 }
 
@@ -92,6 +107,7 @@ export const DEFAULT_STATE: AppState = {
     blendWidth: 1.0,
     axis: 'x',
   },
+  manifold: { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' },
   customFormula: '',
 };
 

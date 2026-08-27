@@ -938,6 +938,19 @@ window.addEventListener('error', function(e) {
         <div class="model-desc" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上选择）。开启后自动推荐「场权重」着色直观呈现过渡带。</div>
       </details>
       <details class="sect">
+        <summary class="sect-h">空间映射 (Manifold)</summary>
+        <div class="field">
+          <div class="lbl"><span>映射类型</span></div>
+          <select id="manifold-kind" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+          </select>
+          <div id="manifold-radius-row" style="margin-top:8px">
+            <div class="lbl"><span>弯曲半径 R (mm)</span><span class="val" id="manifold-radius-value">15.0</span></div>
+            <input type="range" id="manifold-radius" min="8" max="30" value="15" step="0.5">
+          </div>
+          <div class="field-note">非欧度规空间映射：对生成的封闭网格做顶点级连续弯曲（圆柱 / 环面 / 双曲径向 / 应力线各向异性）。水密性与流形性质由映射的单射性构造保证；圆柱需 R 大于域半宽，环面需满足双半径约束。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>
