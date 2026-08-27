@@ -15,10 +15,11 @@
  * （geoCache 缓存命中补色）两侧共用同一实现，杜绝两条路径语义分叉。
  */
 
-import type { ColoringMode, GradientDirection } from '../types';
+import type { ColoringMode, GradientDirection, TpmType } from '../types';
 import type { HybridConfig } from '../core/hybrid-functions';
 import { getHybridWeightFn } from '../core/hybrid-functions';
 import { getGradientEvaluator } from '../core/gradient-functions';
+import { estimateCurvatureScalars } from './curvature';
 
 /** [s, r, g, b] 停靠点；取值参考 Moreland Cool-Warm 采样 */
 const COOLWARM_STOPS: ReadonlyArray<readonly [number, number, number, number]> = [
@@ -47,6 +48,16 @@ export interface VertexColorOptions {
   /** hybrid.enabled 时传入完整配置；缺省表示混合未启用 → field 落到梯度口径 */
   hybrid?: HybridConfig;
   gradientDir: GradientDirection;
+  /**
+   * 曲率口径（mean/gauss_curvature）必需：隐函数场配置，须与屏幕几何同源。
+   * 缺失时优雅退化为高度着色，不抛错。
+   */
+  field?: {
+    type: TpmType;
+    customFormula: string;
+    weights: [number, number, number, number];
+    periods: number;
+  };
 }
 
 const INV_PI = 1 / Math.PI;
@@ -62,6 +73,17 @@ export function computeVertexColors(
 ): Float32Array | null {
   if (vertCount === 0 || positions.length < vertCount * 3) return null;
   const colors = new Float32Array(vertCount * 3);
+
+  // 曲率口径：数值中心差分 ∇F/Hessian → 对称截断分位数归一化标量
+  if (opts.mode === 'mean_curvature' || opts.mode === 'gauss_curvature') {
+    if (!opts.field) return computeVertexColors(positions, vertCount, { ...opts, mode: 'elevation' });
+    const scalars = estimateCurvatureScalars(
+      positions, vertCount, { ...opts.field, hybrid: opts.hybrid },
+      opts.mode === 'mean_curvature' ? 'mean' : 'gauss',
+    );
+    for (let i = 0; i < vertCount; i++) sampleCoolWarmInto(scalars[i], colors, i * 3);
+    return colors;
+  }
 
   if (opts.mode === 'elevation') {
     for (let i = 0; i < vertCount; i++) {

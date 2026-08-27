@@ -53,7 +53,27 @@ function runSuite({ name, cmd, env }) {
 
 const srvPlat = startServer(PORT_PLAT, PLAT_DIR);
 const srvDocs = startServer(PORT_DOCS, DOCS_DIR);
-await new Promise(r => setTimeout(r, 3000));
+
+// 端口就绪轮询替代固定 sleep(3000)：新构建产物落在联想管家实时扫描窗口时，
+// 固定等待会间歇性 ERR_CONNECTION_REFUSED（fix_check 假阴性 flake，2026-08-27 实录）
+import net from 'node:net';
+function waitPort(port, timeoutMs = 20000) {
+  const t0 = Date.now();
+  return new Promise((resolve, reject) => {
+    (function probe() {
+      const s = net.connect({ host: 'localhost', port, timeout: 800 });
+      s.on('connect', () => { s.destroy(); resolve(); });
+      s.on('error', () => retry());
+      s.on('timeout', () => { s.destroy(); retry(); });
+      function retry() {
+        if (Date.now() - t0 > timeoutMs) reject(new Error(`端口 ${port} 未就绪`));
+        else setTimeout(probe, 300);
+      }
+    })();
+  });
+}
+await Promise.all([waitPort(PORT_PLAT), waitPort(PORT_DOCS)]);
+console.log('[服务] 4814(docs/platform) 与 8125(docs) 已就绪');
 
 const results = [];
 for (const s of suites) results.push([s.name, await runSuite(s)]);

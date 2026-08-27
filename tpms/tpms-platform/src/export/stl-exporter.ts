@@ -98,3 +98,112 @@ export function exportBinarySTL(
   const buf = buildBinarySTL(positions, indices, scale, normals);
   downloadBlob(new Blob([buf], { type: 'model/stl' }), filename);
 }
+
+/**
+ * CFD Multi-Patch ASCII STL（OpenFOAM-ready）
+ *
+ * 按三角面片质心与定向几何法线把网格分入四个 boundary patch：
+ *   · inlet : c_z ≤ z_min+ε 且 n_z < −0.7（底面强外向 → 流动入口候选）
+ *   · outlet: c_z ≥ z_max−ε 且 n_z > 0.7（顶面强外向 → 出口候选）
+ *   · sides : 贴 x/y 边界裁剪面的面片（侧壁周期/对称边界候选）
+ *   · wall  : 其余内部多孔曲面
+ * ε = 对应轴包围盒跨度的 1%（含绝对下限）。注意这里是固相网格，
+ * OpenFOAM 以补集为流动域时出入口语义需按物理朝向复核——本函数忠实执行
+ * 几何分类规则，不做方向臆断。
+ *
+ * 输出标准多 solid ASCII STL（`solid <name> … endsolid <name>` 四区块），
+ * snappyHexMesh / surfaceConvert 可直接读取分块命名边界。
+ */
+export type CfdPatchName = 'inlet' | 'outlet' | 'sides' | 'wall';
+const PATCH_ORDER: readonly CfdPatchName[] = ['inlet', 'outlet', 'sides', 'wall'];
+
+export function buildMultiSolidSTL(
+  positions: Float32Array,
+  indices: Uint32Array,
+  scale = 1,
+  normals?: Float32Array,
+): string {
+  const triCount = indices.length / 3;
+
+  // 包围盒（缩放后 mm 域）
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity, zmin = Infinity, zmax = -Infinity;
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i] * scale, y = positions[i + 1] * scale, z = positions[i + 2] * scale;
+    if (x < xmin) xmin = x; if (x > xmax) xmax = x;
+    if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+    if (z < zmin) zmin = z; if (z > zmax) zmax = z;
+  }
+  const epsX = Math.max((xmax - xmin) * 0.01, scale * 1e-3);
+  const epsY = Math.max((ymax - ymin) * 0.01, scale * 1e-3);
+  const epsZ = Math.max((zmax - zmin) * 0.01, scale * 1e-3);
+
+  const chunks: Record<CfdPatchName, string[]> = { inlet: [], outlet: [], sides: [], wall: [] };
+  const fmt = (v: number): string => v.toFixed(6);
+
+  for (let t = 0; t < triCount; t++) {
+    let i0 = indices[t * 3] * 3;
+    let i1 = indices[t * 3 + 1] * 3;
+    let i2 = indices[t * 3 + 2] * 3;
+
+    const ax = positions[i1] - positions[i0];
+    const ay = positions[i1 + 1] - positions[i0 + 1];
+    const az = positions[i1 + 2] - positions[i0 + 2];
+    const bx = positions[i2] - positions[i0];
+    const by = positions[i2 + 1] - positions[i0 + 1];
+    const bz = positions[i2 + 2] - positions[i0 + 2];
+    let gx = ay * bz - az * by;
+    let gy = az * bx - ax * bz;
+    let gz = ax * by - ay * bx;
+
+    if (normals) {
+      // 与 binary 导出同一缠绕定向约定：几何法线与顶点解析法线反向则交换 v1/v2
+      const nx = normals[i0] + normals[i1] + normals[i2];
+      const ny = normals[i0 + 1] + normals[i1 + 1] + normals[i2 + 1];
+      const nz = normals[i0 + 2] + normals[i1 + 2] + normals[i2 + 2];
+      if (nx * gx + ny * gy + nz * gz < 0) {
+        const tmp = i1; i1 = i2; i2 = tmp;
+        gx = -gx; gy = -gy; gz = -gz;
+      }
+    }
+    const gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1;
+    const nx = gx / gl, ny = gy / gl, nz = gz / gl;
+
+    const cx = (positions[i0] + positions[i1] + positions[i2]) / 3 * scale;
+    const cy = (positions[i0 + 1] + positions[i1 + 1] + positions[i2 + 1]) / 3 * scale;
+    const cz = (positions[i0 + 2] + positions[i1 + 2] + positions[i2 + 2]) / 3 * scale;
+
+    let patch: CfdPatchName = 'wall';
+    if (cz <= zmin + epsZ && nz < -0.7) patch = 'inlet';
+    else if (cz >= zmax - epsZ && nz > 0.7) patch = 'outlet';
+    else if (cx <= xmin + epsX || cx >= xmax - epsX || cy <= ymin + epsY || cy >= ymax - epsY) patch = 'sides';
+
+    const lines = chunks[patch];
+    lines.push(
+      ` facet normal ${fmt(nx)} ${fmt(ny)} ${fmt(nz)}\n`,
+      '  outer loop\n',
+      `   vertex ${fmt(positions[i0] * scale)} ${fmt(positions[i0 + 1] * scale)} ${fmt(positions[i0 + 2] * scale)}\n`,
+      `   vertex ${fmt(positions[i1] * scale)} ${fmt(positions[i1 + 1] * scale)} ${fmt(positions[i1 + 2] * scale)}\n`,
+      `   vertex ${fmt(positions[i2] * scale)} ${fmt(positions[i2 + 1] * scale)} ${fmt(positions[i2 + 2] * scale)}\n`,
+      '  endloop\n',
+      ' endfacet\n',
+    );
+  }
+
+  let out = '';
+  for (const name of PATCH_ORDER) {
+    out += `solid ${name}\n${chunks[name].join('')}endsolid ${name}\n`;
+  }
+  return out;
+}
+
+/** Multi-solid ASCII STL 下载（mm 缩放与 binary 入口一致）。 */
+export function exportMultiSolidSTL(
+  positions: Float32Array,
+  indices: Uint32Array,
+  filename: string,
+  scale = 1,
+  normals?: Float32Array,
+): void {
+  const text = buildMultiSolidSTL(positions, indices, scale, normals);
+  downloadBlob(new Blob([text], { type: 'model/stl' }), filename);
+}

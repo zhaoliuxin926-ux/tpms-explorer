@@ -34,12 +34,21 @@ ob.show && /第 1 步 \/ 共 6/.test(ob.step1 || '') && /欢迎/.test(ob.title |
   ? ok('B3 首访自动弹出第 1/6 步') : bad('B3 首访自动弹出', JSON.stringify(ob));
 
 // B3-2 spotlight 聚焦 .viewer（spot 有尺寸）
-let spot = await page.evaluate(() => {
-  const s = document.getElementById('ob-spot');
-  return { show: s?.classList.contains('show'), w: s?.offsetWidth, h: s?.offsetHeight };
-});
-spot.show && (spot.w || 0) > 50 && (spot.h || 0) > 50
-  ? ok('B3 spotlight 聚焦视口') : bad('B3 spotlight', JSON.stringify(spot));
+// 轮询等待替代固定 sleep+单次采样：冷启动慢时 spot 尚在展开过渡（实测 4×4 假阴性）
+let spot = null;
+try {
+  await page.waitForFunction(() => {
+    const s = document.getElementById('ob-spot');
+    return !!s && s.classList.contains('show') && (s.offsetWidth || 0) > 50 && (s.offsetHeight || 0) > 50;
+  }, null, { timeout: 10000 });
+  spot = { show: true, ok: true };
+} catch {
+  spot = await page.evaluate(() => {
+    const s = document.getElementById('ob-spot');
+    return { show: s?.classList.contains('show'), w: s?.offsetWidth, h: s?.offsetHeight };
+  });
+}
+spot.ok ? ok('B3 spotlight 聚焦视口') : bad('B3 spotlight', JSON.stringify(spot));
 
 // B3-3 演示按钮驱动（第 2 步孔隙率滑块变 88）；用 DOM click 绕过 Playwright 对重建 DOM 的 actionability 等待
 const domClick = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);

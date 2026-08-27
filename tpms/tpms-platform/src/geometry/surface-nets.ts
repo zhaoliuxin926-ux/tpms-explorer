@@ -1119,7 +1119,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       ? computeVertexColors(positions, vertCount, {
           mode: params.coloring,
           hybrid: hybridEnabled ? params.hybrid : undefined,
-          gradientDir: params.gradientDir,
+          gradientDir: params.gradientDir,          field: {
+            type: params.type,
+            customFormula: params.customFormula,
+            weights: params.weights,
+            periods: params.periods,
+          },
         })
       : null;
 

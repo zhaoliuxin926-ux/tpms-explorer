@@ -21,8 +21,8 @@ export type MaterialPreset = 'auto' | 'tc4' | 'polymer' | 'thermal';
 /** 梯度方向 */
 export type GradientDirection = 'z' | 'radial' | 'spherical';
 
-/** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 */
-export type ColoringMode = 'none' | 'field' | 'elevation';
+/** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 / 平均与高斯曲率 */
+export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | 'gauss_curvature';
 
 /** 应用完整状态 */
 export interface AppState {
@@ -126,7 +126,7 @@ export interface BuildParams {
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */
-export type ExportFormat = 'stl' | 'vtk' | 'vti' | 'py' | 'm' | 'svg' | 'json' | 'bibtex';
+export type ExportFormat = 'stl' | 'vtk' | 'vti' | 'py' | 'm' | 'svg' | 'json' | 'bibtex' | 'cfdstl';
 
 /** Gibson-Ashby 经验参数（按曲面类型） */
 export interface GibsonAshbyParams {
