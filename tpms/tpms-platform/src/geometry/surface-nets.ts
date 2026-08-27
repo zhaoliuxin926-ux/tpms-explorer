@@ -670,6 +670,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     if (vertCount <= 0) return;
     const hStep = span / R;
     const kpi = 1 / (k * Math.PI);
+    // 仅 solid 调用（见下方调用处的 A1 定案注释）。壳类平方场 Newton 机理失效,
+    // 其修复须用 dv 符号锁边的专用投影, 见 progress.md 2026-08-28 条目。
     const rawAt = (a: number, b2: number, c2: number, p2x: number, p2y: number, p2z: number): number => {
       const v = hybridFn ? hybridFn(a, b2, c2, p2x, w) : projSolidFn!(a, b2, c2, w);
       return tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
@@ -787,14 +789,54 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         }
       }
       cur.set(next);
-      // 每轮平滑后立即写回；投影仅用于 solid_network：杆状网络顶点跨面
-      // 吸附收益为正（diamond −6.4→−5.0%），而 shell 的亚格厚壁会产生
-      // 「中线质心顶点」，投影沿法向折叠到任意一侧（projOnly 实测 −29.5%），
-      // 壳类依靠切向平滑保体积即可（raw 实测 +0.8% / −4.65%）。
+      // 每轮平滑后立即写回；投影仍仅 solid_network。
+      // 【2026-08-28 A1 尝试定案（已回退）】曾按需求实现壳类门控投影
+      // （0.25h 限幅 + |∇f|<1e-4 奇异冻结 + 亚格壁禁动），burr_probe 实测
+      // shell 残差纹丝不动（±1% 噪声）——机理解明：平方场 F=dv²−(t/2)² 在
+      // 壳中线 dv≈0 处 ∇f≈0 而 fC≈−(t/2)² 为大负值，「|f|>guardK·h·|g|」
+      // 守卫恒真 ⇒ 门控系统性跳过的恰是最需要修复的中线顶点；贴近壁面的
+      // 顶点本就无需修复。平方场 Newton 对壳类结构性失效。
+      // 正确路径（下批候选，高危需独立攻关）：shell-aware 投影——先按 dv
+      // 符号锁边、目标解 dv²=(t/2)²−f 偏置、配合薄壁冻结；此即当年
+      // projOnly −29.5% 折叠事故的高危领域，须以 29 案例矩阵全程押注验证。
       for (let i = 0; i < vertCount * 3; i++) positions[i] = cur[i];
-      // 文献审计 P4 实测定案：2 步投影在高曲率细杆上振荡/跨越反而丢体积
-      // （diamond −5.8→−10.4%）；顶点出生于半格内，1 步 Newton 即收敛点
       if (mode === 'solid_network') projectVertices(1);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // 9b. 【B3 解析边界吸附】端面/侧壁/柱面精确平整（仅 frozen 类顶点）
+  //     孔口环(frozen)与封盖扇心(frozenCap)天然躺在容器截面上——理论位置是
+  //     解析平面 z=±π / x,y=±π 或柱面 r=π。质心均值的浮点抖动虽小，但在端面
+  //     上构成「离面高频折痕」的直接来源。判界 ε=0.04 与法线段 BTOL 同口径；
+  //     只动 frozen 类顶点避免误拍孔壁过渡区。非 frozen 的一般表面顶点不属
+  //     截断线，保持等值面形状不动。
+  // ──────────────────────────────────────────────────────────────
+  {
+    const SNAP_TOL = 0.04;
+    for (let vi = 0; vi < vertCount; vi++) {
+      if (!frozen[vi]) continue;
+      const i3 = vi * 3;
+      const px = positions[i3] / Math.PI, py = positions[i3 + 1] / Math.PI, pz = positions[i3 + 2] / Math.PI;
+      if (container === 'cylinder') {
+        if (pz > 1 - SNAP_TOL) { positions[i3 + 2] = Math.PI; continue; }
+        if (pz < -1 + SNAP_TOL) { positions[i3 + 2] = -Math.PI; continue; }
+        const r2 = px * px + py * py;
+        if (r2 > (1 - SNAP_TOL) * (1 - SNAP_TOL)) {
+          const r = Math.sqrt(r2);
+          const s = Math.PI / r;   // 径向归一化到精确柱面 r=π(wc)
+          positions[i3] *= s;
+          positions[i3 + 1] *= s;
+        }
+        continue;
+      }
+      // 立方体：逐面互斥判定（一个 frozen 顶点只贴一个面）
+      if (pz > 1 - SNAP_TOL) { positions[i3 + 2] = Math.PI; continue; }
+      if (pz < -1 + SNAP_TOL) { positions[i3 + 2] = -Math.PI; continue; }
+      if (px > 1 - SNAP_TOL) { positions[i3] = Math.PI; continue; }
+      if (px < -1 + SNAP_TOL) { positions[i3] = -Math.PI; continue; }
+      if (py > 1 - SNAP_TOL) { positions[i3 + 1] = Math.PI; continue; }
+      if (py < -1 + SNAP_TOL) { positions[i3 + 1] = -Math.PI; continue; }
     }
   }
 
