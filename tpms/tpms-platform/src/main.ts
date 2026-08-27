@@ -12,6 +12,7 @@ import { WorkerBridge } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import { computePhysicsMetrics } from './physics/gibson-ashby';
+import { buildSurface } from './geometry/surface-nets';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
@@ -23,7 +24,7 @@ import {
   generateJSONSidecar,
 } from './export';
 import { evaluateField } from './core/tpms-functions';
-import { DISPLAY_SCALE, wcToMmFactor } from './core/units';
+import { DISPLAY_SCALE, wcToMmFactor, resolutionPerPeriod } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
 import { exportSliceSVG } from './measure/svg-slice-exporter';
@@ -48,8 +49,12 @@ let baseGeo: THREE.BufferGeometry | null = null;
 let meshFill: THREE.Mesh | null = null;
 let meshStrut: THREE.LineSegments | null = null;
 let lastPorosityEstimate = 0;
+let lastMeshSolidFraction: number | null = null;
+let nmWarned = false;   // 采样定理警示防刷屏：占比回落后才允许再次提示
 let lastPhysicsMetrics: PhysicsMetrics | null = null;
 let lastIsoUsed = 0;
+// 当前 baseGeo 的构建分辨率（导出前用于判断是否需要同步升级到高清）
+let lastBuildResolution = 0;
 let animId: number;
 let bboxAnnotation: BoundingBoxAnnotation | null = null;
 let caliperTool: CaliperTool | null = null;
@@ -187,9 +192,9 @@ function rebuild(preview: boolean): boolean {
   if (preview) {
     R = 28;  // Level 1: 极低分辨率，拖动时丝滑跟手
   } else if (isFirstBuild) {
-    R = Math.min(88, 19 + s.cellSize * 14);  // Level 3: 首屏直接高清
+    R = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));  // Level 3: 首屏直接高清（倍频曲面密度加倍）
   } else {
-    R = Math.min(64, 19 + s.cellSize * 10);  // Level 2: 中等分辨率，松手后快速过渡
+    R = Math.min(72, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir) * 10 / 14);  // Level 2: 中等分辨率（倍频同步加倍）
   }
   const iso = baseIso(s);
 
@@ -233,7 +238,7 @@ function scheduleRebuild(preview: boolean, skipHistory = false): void {
 function scheduleHdUpgrade(): void {
   setTimeout(() => {
     const s = getState();
-    const fullR = Math.min(88, 19 + s.cellSize * 14);
+    const fullR = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));
     bridge.build({
       type: s.type,
       iso: baseIso(s),
@@ -350,7 +355,19 @@ function onWorkerResult(res: WorkerResponse): void {
   }
 
   lastPorosityEstimate = res.porosityEstimate;
+  lastMeshSolidFraction = res.meshSolidFraction ?? null;
+  // 红队 V-3a：混叠公式（如 sin(x*40)…）的非流形边占比可达 7%——采样定理警示
+  {
+    const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
+    if (nmRatio > 0.02 && !nmWarned) {
+      nmWarned = true;
+      flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
+    } else if (nmRatio <= 0.02) {
+      nmWarned = false;
+    }
+  }
   if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
+  lastBuildResolution = res.resolution;
 
   // 物理指标
   if (res.surfaceArea != null && res.envelopeVolume != null) {
@@ -360,7 +377,6 @@ function onWorkerResult(res: WorkerResponse): void {
       res.surfaceArea,
       res.envelopeVolume,
       getState().material,
-      getState().cellSize,
       getState().structureMode
     );
   }
@@ -391,6 +407,8 @@ function onWorkerResult(res: WorkerResponse): void {
 
 function onWorkerError(err: string): void {
   console.error('[Main] Worker error:', err);
+  // 红队 V-2：静默失败通道——公式 NaN/退化权重/超容量等构建错误必须让用户看见
+  flashToast(`构建失败：${err}`);
 }
 
 // ── 材质管理 ─────────────────────────────────────────────
@@ -539,7 +557,10 @@ function updateStats(): void {
   if (materialEl) {
     const mat = getState().material;
     materialEl.textContent = MATERIAL_LABEL[mat] || mat;
-    materialEl.title = `材料体积占比 ≈ ${((1 - lastPorosityEstimate) * 100).toFixed(1)}%`;
+    const meshPct = lastMeshSolidFraction != null ? (lastMeshSolidFraction * 100).toFixed(1) : null;
+    materialEl.title = meshPct != null
+      ? `材料体积占比（网格实测）≈ ${meshPct}%`
+      : `材料体积占比 ≈ ${((1 - lastPorosityEstimate) * 100).toFixed(1)}%`;
   }
   if (vertEl && baseGeo) vertEl.textContent = (baseGeo.attributes.position.count / 1000).toFixed(1) + 'k';
   if (triEl && baseGeo) triEl.textContent = (baseGeo.index!.count / 3000).toFixed(1) + 'k';
@@ -734,10 +755,8 @@ function bindUIEvents(): void {
   });
 
   document.getElementById('btn-stl')?.addEventListener('click', () => {
-    if (!baseGeo || !baseGeo.index) return;
-    const positions = baseGeo.attributes.position.array as Float32Array;
-    const indices = baseGeo.index.array as Uint32Array;
-    exportBinarySTL(positions, indices, `tpms-${getState().type}-p${getState().porosity}-${getState().structureMode}.stl`, wcToMmFactor(getState().cellSize));
+    // 统一走导出中心路径：共享 HD 锁（此前该入口无锁，拖动后 350ms 内导出 preview 网格，两入口产物不一致）
+    handleExport('stl');
   });
 
   // 导出中心：VTK / VTI / Python / MATLAB / BibTeX / JSON 统一入口
@@ -1303,7 +1322,14 @@ function enterFigureMode(): void {
     camPos: ctx.camera.position.clone(),
     target: ctx.controls.target.clone(),
     fov: ctx.camera.fov,
+    pixelRatio: ctx.renderer.getPixelRatio(),
+    cssW: ctx.renderer.domElement.clientWidth,
+    cssH: ctx.renderer.domElement.clientHeight,
   };
+  // 论文配图 2x 提分（对齐单文件版）：半屏窗口下普通 DPR 导出的 PNG 达不到期刊 300dpi 要求
+  ctx.renderer.setPixelRatio(Math.min(saved.pixelRatio * 2, 3));
+  ctx.renderer.setSize(saved.cssW, saved.cssH, false);
+  ctx.composer.setSize(saved.cssW, saved.cssH);
 
   // 隐藏 UI
   document.body.classList.add('figure-mode');
@@ -1332,7 +1358,7 @@ function enterFigureMode(): void {
     // 导出 JSON sidecar
     const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
     const meshHash = pos ? hashArray(pos) : 'nogeo';
-    const json = generateJSONSidecar(s, lastPhysicsMetrics, meshHash);
+    const json = generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed });
     const ja = document.createElement('a');
     ja.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     ja.download = `tpms-figure-${s.type}-p${s.porosity}-${Date.now()}.json`;
@@ -1348,6 +1374,9 @@ function enterFigureMode(): void {
       ctx.camera.fov = saved.fov;
       ctx.camera.updateProjectionMatrix();
       ctx.controls.update();
+      ctx.renderer.setPixelRatio(saved.pixelRatio);
+      ctx.renderer.setSize(saved.cssW, saved.cssH, false);
+      ctx.composer.setSize(saved.cssW, saved.cssH);
     }, 300);
   }, 400);
 }
@@ -1363,28 +1392,89 @@ function handleExport(fmt: string | null): void {
     flashToast('请先生成有效曲面再导出');
     return;
   }
+  if (needGeo) {
+    // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
+    // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
+    const hdR = Math.min(96, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir));
+    if (lastBuildResolution < hdR) {
+      const res = buildSurface({
+        type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
+        targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+        containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
+        hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
+      });
+      if (res.type === 'result' && res.vertCount > 0) {
+        applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount);
+        lastBuildResolution = hdR;
+        if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
+        // 与 onWorkerResult 对齐：指标/缓存也同步更新，否则紧随的 JSON/bib 导出拿到
+        // R=28 陈旧 metrics（svRatio 偏差实测 +15%），sidecar 自相矛盾
+        lastPorosityEstimate = res.porosityEstimate;
+  lastMeshSolidFraction = res.meshSolidFraction ?? null;
+  // 红队 V-3a：混叠公式（如 sin(x*40)…）的非流形边占比可达 7%——采样定理警示
+  {
+    const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
+    if (nmRatio > 0.02 && !nmWarned) {
+      nmWarned = true;
+      flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
+    } else if (nmRatio <= 0.02) {
+      nmWarned = false;
+    }
+  }
+        if (res.surfaceArea != null && res.envelopeVolume != null) {
+          lastPhysicsMetrics = computePhysicsMetrics(
+            getState().type, res.porosityEstimate, res.surfaceArea, res.envelopeVolume,
+            getState().material, getState().structureMode
+          );
+        }
+        geoCache.set(cacheKey(getState(), hdR), {
+          positions: new Float32Array(res.positions!),
+          normals: new Float32Array(res.normals!),
+          indices: new Uint32Array(res.indices!),
+          vertCount: res.vertCount,
+          faceCount: res.triCount,
+        });
+        requestRender();
+      }
+    }
+  }
   try {
     switch (fmt) {
-      case 'stl':
-        exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`);
+      case 'stl': {
+        // 与 btn-stl 工具栏入口共用同一 mm 缩放（wc 域 ±π → cellSize mm），两入口产物必须一致
+        const stlNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
+        exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, wcToMmFactor(getState().cellSize), stlNormals);
         break;
-      case 'vtk':
-        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize));
+      }
+      case 'vtk': {
+        const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
+        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize), vtkNormals);
         break;
+      }
       case 'vti': {
         if (s.type === 'custom' && !s.customFormula.trim()) {
           flashToast('自定义公式为空，无法导出体素场');
           return;
         }
         const { field, dims } = buildVtiField(s);
-        exportVTI(field, dims, `${base}.vti`);
+        // FieldData 携带 re-contour 所需 iso 与 mm 单位（solid 用 isoUsed，shell 类用 0）
+        exportVTI(field, dims, `${base}.vti`, {
+          cellSizeMm: s.cellSize,
+          isoUsed: lastIsoUsed,
+          type: s.type,
+          structureMode: s.structureMode,
+        });
         break;
       }
       case 'py':
-        exportPythonScript(s, `${base}.py`);
-        break;
       case 'm':
-        exportMatlabScript(s, `${base}.m`);
+        // custom 公式无法翻译成 numpy/MATLAB 表达式，脚本只会必然报错——直接拦截
+        if (s.type === 'custom') {
+          flashToast('自定义公式暂不支持脚本导出，请改用 STL/VTK 网格导出');
+          return;
+        }
+        if (fmt === 'py') exportPythonScript(s, `${base}.py`);
+        else exportMatlabScript(s, `${base}.m`);
         break;
       case 'bibtex': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
@@ -1395,7 +1485,7 @@ function handleExport(fmt: string | null): void {
       case 'json': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(generateJSONSidecar(s, lastPhysicsMetrics, meshHash), `${base}.json`, 'application/json');
+        downloadText(generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }), `${base}.json`, 'application/json');
         break;
       }
       default:
@@ -1423,7 +1513,7 @@ function downloadText(text: string, filename: string, mime: string): void {
  * 注：导出基础场（type A），异构混合/壳变换不写入，供 ParaView 自由 re-contour。
  */
 function buildVtiField(s: AppState): { field: Float32Array; dims: [number, number, number] } {
-  const R = Math.min(64, 19 + s.cellSize * 10);
+  const R = Math.min(72, 19 + s.cellSize * resolutionPerPeriod(s.type, s.structureMode, s.gradientDir) * 10 / 14);   // 倍频曲面密度同步加倍
   const N = R + 1;
   const field = new Float32Array(N * N * N);
   const k = s.cellSize;
@@ -1444,8 +1534,8 @@ function buildVtiField(s: AppState): { field: Float32Array; dims: [number, numbe
 
 function hashArray(arr: Float32Array): string {
   let h = 0;
-  const n = Math.min(arr.length, 3000);
-  for (let i = 0; i < n; i++) {
+  // 全量 hash：此前只取前 3000 分量（约前 1000 顶点），不同网格可能碰撞出相同 cite key
+  for (let i = 0; i < arr.length; i++) {
     h = ((h * 31) ^ Math.floor(arr[i] * 1000)) >>> 0;
   }
   return h.toString(36) + '-' + (arr.length / 3 | 0);

@@ -179,6 +179,9 @@ async function releaseSlider(page, selector){
   // 读取 clipboard 权限
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
 
+  // 新 context 首访会弹新手引导（ob-spot 遮罩挡住工具栏），先按 Esc 关闭再点分享
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
   await page.locator('#btn-share').click();
   await page.waitForTimeout(500);
 

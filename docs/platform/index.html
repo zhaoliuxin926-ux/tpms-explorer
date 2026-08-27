@@ -666,7 +666,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-jlntgDEn.js"></script>
+  <script type="module" crossorigin src="./assets/index-CavfF3Zr.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Bhgj_bvf.js">
 </head>
 <body>
@@ -683,7 +683,7 @@ window.addEventListener('error', function(e) {
       <div class="mark"></div>
       <div>
         <h1>TPMS 结构参数探索器</h1>
-        <div class="sub">交互式探索三重周期性极小曲面 · 实时等值面重建</div>
+        <div class="sub">交互式探索<span class="gloss-term" data-term="periodicity">三重周期性</span><span class="gloss-term" data-term="minimal-surface">极小曲面</span> · 实时等值面重建</div>
       </div>
     </a>
     <div class="spacer"></div>
@@ -807,7 +807,7 @@ window.addEventListener('error', function(e) {
         <summary class="sect-h">应用场景预设</summary>
         <div class="scenes">
           <button class="scene" data-preset="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
-          <button class="scene" data-preset="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Gyroid · 桁架轻量化</span></span></button>
+          <button class="scene" data-preset="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Gyroid · 高孔隙低密度</span></span></button>
           <button class="scene" data-preset="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
           <button class="scene" data-preset="catalyst"><span class="ic">⚗️</span><span><span class="nm">催化载体</span><br><span class="ds">I-WP · 最大化接触面积</span></span></button>
           <button class="scene" data-preset="acoustic"><span class="ic">🔊</span><span><span class="nm">声学超材料</span><br><span class="ds">Gyroid · 声子带隙</span></span></button>
@@ -821,7 +821,8 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-structure="shell">等厚双壳<span class="o-sub">Shell</span></button>
           <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
         </div>
-        <div class="model-desc" id="structure-desc">实体网络：bias−V 生成的杆状实体网络，是 TPMS 最常见的表示形式。</div>
+        <div class="model-desc" id="structure-desc">实体网络：把等值面一侧填成实体（截断 TPMS 的 solid 表示；严格 TPMS 是 C=0 的零厚度曲面）。</div>
+        <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="gradient">什么是梯度双壳？</span>　·　<span class="gloss-term" data-term="structure-vs-model">结构拓扑 vs 表现形式</span></div>
       </details>
       <details class="sect">
         <summary class="sect-h">表现形式</summary>
@@ -898,11 +899,12 @@ window.addEventListener('error', function(e) {
       <details class="sect" open>
         <summary class="sect-h">当前曲面隐函数</summary>
         <div class="formula">
-          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定）</div>
+          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定 · level-set 近似式）</div>
           <div class="eq" id="formula-display"></div>
         </div>
         <div class="fw" id="formula-weights">
           <div id="weight-rows"></div>
+          <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="weight">抽动权重</span>，观察公式项如何驱动曲面变形</div>
         </div>
       </details>
     </div>
@@ -976,6 +978,6 @@ window.addEventListener('error', function(e) {
     }, 800);
   });
 })();
-</script>
+</script>
 </body>
 </html>

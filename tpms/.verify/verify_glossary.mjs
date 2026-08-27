@@ -28,6 +28,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   page.on('console', msg => { const t = msg.text(); if (msg.type() === 'error' && !/favicon|Failed to load resource|net::ERR|404/i.test(t)) errors.push(t); });
   page.on('pageerror', err => errors.push(err.message));
   await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  // 新 context 首访弹新手引导（ob-spot 遮罩挡住 canvas），按 Esc 关闭
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
   await page.waitForTimeout(3000);
   log('页面无 JS 错误', errors.length === 0, errors.slice(0,2).join(' | '));
   await ctx.close();
@@ -53,7 +56,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 
   // T3: .gloss-term 元素数量 = 6
   const termCount = await page.locator('.gloss-term').count();
-  log('.gloss-term 共 6 个', termCount === 6, `实际=${termCount}`);
+  log('.gloss-term 共 10 个（+副标题 periodicity/minimal-surface + structure-vs-model/gradient 挂点）', termCount === 10, `实际=${termCount}`);
 
   // slice/iso-c/weight 术语位于默认折叠的 <details> 分区，先展开再交互
   await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
@@ -82,7 +85,11 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   }
 
   // T6: 点击 viewer 外部区域 → 隐藏
-  await page.locator('#canvas-container').click({ position: { x: 50, y: 50 } });
+  // swiftshader 下 canvas 持续重绘会让 actionability 检查挂起——用 evaluate 派发原生点击（项目已知坑）
+  await page.evaluate(() => {
+    // 直接对 canvas 容器派发（视口坐标 (50,50) 会命中顶栏首页链接导致导航）
+    document.getElementById('canvas-container').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
   await page.waitForTimeout(200);
   const hiddenAfterOutsideClick = await page.locator('#gloss').evaluate(el => !el.classList.contains('show'));
   log('点击外部 → 卡片隐藏', hiddenAfterOutsideClick);

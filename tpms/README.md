@@ -23,7 +23,7 @@
 （仓库根）
 ├── docs/                      ← 主交付：单文件版（GitHub Pages 源目录，双击即开，无构建）
 │   ├── index.html             ← 落地页（项目介绍 + 展示图）
-│   ├── app.html               ← 主应用（Three.js 0.160 CDN，Surface Nets 重建）
+│   ├── app.html               ← 主应用（Three.js 0.160 本地 vendor bundle，离线双击即开，Surface Nets 重建）
 │   ├── README-体验说明.md     ← 单文件版使用说明
 │   └── shots/                 ← 展示截图
 │       ├── 01~05 官方展示图   ← 被落地页引用，勿移
@@ -36,7 +36,7 @@
     │   └── 30 个源文件 · Web Worker 重建 · 7 种导出格式
     ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
     ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
-    ├── .verify/               ← Playwright 验证脚本（gitignored）
+    ├── .verify/               ← 回归验证脚本（已入库；run_all.mjs 一键全量 + parity_math.mjs 数学一致性）
     ├── .diag/                 ← 诊断探针脚本（gitignored）
     └── .zcode/                ← 计划文件（gitignored）
 ```
@@ -118,10 +118,10 @@ npm run dev      # 访问 http://localhost:5173
 ---
 
 ## 技术要点
-- **Surface Nets 等值面重建**：自研替代 Marching Cubes，避免 256 条查找表，天然三角网更轻。
+- **Surface Nets v2 等值面重建**：自研替代 Marching Cubes，避免 256 条查找表。以「网格边穿越」为面提取键（构造性水密），孔口自动封盖，切向平滑 + 解析投影保体积，导出 STL 严格水密、定向一致、固相体积偏差 ≤6%（21 案例审计 `tpms/.verify/mesh_audit.mjs` 全过）。
 - **孔隙率二分搜索**：在目标孔隙率下反解等值常数 C，所见即所得。
 - **渐进式重建**：拖动滑块低分辨率预览，松手后高清重建，保证 60fps 交互。
-- **零依赖交付**：单文件版仅依赖 Three.js CDN，开箱即用。
+- **零依赖交付**：单文件版内联 Three.js 0.160 IIFE bundle（docs/vendor/three.bundle.js，1.3MB），断网双击即开。
 
 ---
 
@@ -132,3 +132,28 @@ npm run dev      # 访问 http://localhost:5173
 - [ ] 文档与示例丰富：持续补充截图、公式说明与典型科研/教学使用案例。
 
 > 这是一个长期维护的个人项目。如果你觉得有用，或有想加的功能 / 发现的 bug，欢迎参与共建。
+
+
+---
+
+## 🔧 开发流程速查（长期有效，从 agent_memory 提炼）
+
+### 验证（一键全量）
+```bash
+cd tpms/.verify && node run_all.mjs     # 6 套 UI 回归（需先起服务，见下）
+node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
+```
+UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
+
+### 工程版部署到 GitHub Pages
+```bash
+cd tpms/tpms-platform && rm -rf dist && npm run build
+# 拷贝 dist/* → docs/platform/（删除 assets/*.map sourcemap）
+```
+
+### 单文件版 vendor bundle（three 0.160 + addons，IIFE）
+升级 three 或重建 bundle 时：用 rolldown programmatic API 将主模块 + 11 个 addons 打成单 IIFE 挂 `window.THREE`，输出 `docs/vendor/three.bundle.js`。
+⚠️ 必须是传统 `<script>` 加载（不能用 ESM/importmap）：file:// 协议下 Chrome CORS 完全阻断本地 ESM（origin=null）。
+
+### 数学一致性守护
+`.verify/parity_math.mjs` 断言：8 曲面公式三处实现互证（tpms-functions / surface-nets / app.html）、iso 指纹、法线方向、网格拓扑、STL 字节包围盒、导出脚本与平台语义对齐。**改公式或导出逻辑前先跑它。**

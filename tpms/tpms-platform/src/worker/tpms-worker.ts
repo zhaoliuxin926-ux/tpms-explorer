@@ -34,6 +34,8 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
       surfaceArea: result.surfaceArea,
       envelopeVolume: result.envelopeVolume,
       svRatio: result.svRatio,
+      meshSolidFraction: result.meshSolidFraction,
+      nmEdgeCount: result.nmEdgeCount,
       buildTimeMs: performance.now() - t0,
     };
     // Transferable 零拷贝传输
