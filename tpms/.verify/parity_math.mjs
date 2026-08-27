@@ -420,7 +420,7 @@ const snSrc = readFileSync(join(PLATFORM, 'src/geometry/surface-nets.ts'), 'utf-
 check('法线: shell 类取负（指离实体，STL 惯例）', /if \(mode !== 'solid_network'\) \{ gx = -gx/.test(snSrc));
 check('main: btn-stl 走 handleExport（两入口一致 + HD 锁）', /btn-stl'\)\?\.addEventListener\('click', \(\) => \{\s*\/\/ 统一走导出中心路径[\s\S]*?handleExport\('stl'\)/.test(mainSrc));
 check('main: 同步 HD 路径更新 metrics 与缓存', /geoCache\.set\(cacheKey\(getState\(\), hdR\)/.test(mainSrc));
-check('main: custom 类型脚本导出已拦截', /自定义公式暂不支持脚本导出/.test(mainSrc));
+check('main: custom 脚本导出走编译校验（阶段 I AST 翻译放行）', /getCompiledCustomFormula\(s\.customFormula\)/.test(mainSrc) && !/自定义公式暂不支持脚本导出/.test(mainSrc));
 
 // ── 5. 物理统计与引用 ────────────────────────────────────────
 const { estimatePoreStats } = (await imp(BUNDLE));

@@ -16,7 +16,7 @@
  */
 
 import type { TpmType } from '../types';
-import { getTpmsFunction, type Weights } from '../core/tpms-functions';
+import { getTpmsFunction, getCompiledCustomFormula, type Weights } from '../core/tpms-functions';
 import { getHybridWeightFn } from '../core/hybrid-functions';
 
 /** 曲率模式种类 */
@@ -29,12 +29,48 @@ export interface CurvatureFieldConfig {
   weights: [number, number, number, number];
   periods: number;
   hybrid?: import('../core/hybrid-functions').HybridConfig;  // 轴向可选（缺省 x）
+  /** 自定义公式动态参数（与渲染场同源：k=periods, t=壁厚系数, iso=基准等值；缺省 1/0） */
+  thickness?: number;
+  iso?: number;
 }
 
 const H_STEP = 0.02;
 
+/** 由 ∇F 与 Hessian 六分量计算 [meanH, gaussK]（FD 与 AD 快速路径共用同一公式核） */
+function curvatureFromGH(
+  gx: number, gy: number, gz: number,
+  fxx: number, fyy: number, fzz: number, fxy: number, fyz: number, fxz: number,
+): [number, number] {
+  const gl2 = Math.max(gx * gx + gy * gy + gz * gz, 1e-24);
+  const gl2i = 1 / gl2;
+  const gl3inv = gl2i / Math.sqrt(gl2);
+  const gl4inv = gl2i * gl2i;
+
+  const trace = fxx + fyy + fzz;
+  // ∇F·H·∇Fᵀ
+  const ghg = gx * gx * fxx + gy * gy * fyy + gz * gz * fzz + 2 * (gx * gy * fxy + gx * gz * fxz + gy * gz * fyz);
+  const mean = -(gl2 * trace - ghg) * gl3inv / 2;
+
+  // adj(H)：对称矩阵伴随，对角元
+  const a11 = fyy * fzz - fyz * fyz;
+  const a22 = fxx * fzz - fxz * fxz;
+  const a33 = fxx * fyy - fxy * fxy;
+  // ∇F·adj(H)·∇Fᵀ 内联展开
+  const qaa = gx * gx * a11 + gy * gy * a22 + gz * gz * a33;
+  const qab = 2 * (
+    gx * gy * (fxz * fyz - fzz * fxy)
+    + gx * gz * (fxy * fyz - fyy * fxz)
+    + gy * gz * (fxy * fxz - fxx * fyz)
+  );
+  const gauss = (qaa + qab) * gl4inv;
+
+  // 数值清洗：任何有限性破坏一律归零（配色走中性白）
+  const safe = (v: number): number => (Number.isFinite(v) ? (Math.abs(v) > 1e12 ? Math.sign(v) * 1e12 : v) : 0);
+  return [safe(mean), safe(gauss)];
+}
+
 /** 构造物理坐标下的隐函数采样器 F(px,py,pz)；must 与 surface-nets 场填充同源 */
-function makeFieldSampler(cfg: CurvatureFieldConfig): (px: number, py: number, pz: number) => number {
+function makeFieldSampler(cfg: CurvatureFieldConfig): (x: number, y: number, z: number) => number {
   const k = cfg.periods;
   const w = cfg.weights as Weights;
   const PI = Math.PI;
@@ -72,44 +108,20 @@ function curvaturesAt(
   const fxx = (fxp - 2 * f00 + fxm) / h2;
   const fyy = (fyp - 2 * f00 + fym) / h2;
   const fzz = (fzp - 2 * f00 + fzm) / h2;
-  // 交叉项：混合差分 (F₊₊−F₊₋−F₋₊+F₋₋)/(4h²)
   const fxy = (F(x + h, y + h, z) - F(x + h, y - h, z) - F(x - h, y + h, z) + F(x - h, y - h, z)) / (4 * h2);
   const fyz = (F(x, y + h, z + h) - F(x, y + h, z - h) - F(x, y - h, z + h) + F(x, y - h, z - h)) / (4 * h2);
   const fxz = (F(x + h, y, z + h) - F(x + h, y, z - h) - F(x - h, y, z + h) + F(x - h, y, z - h)) / (4 * h2);
 
-  const gl2 = Math.max(gx * gx + gy * gy + gz * gz, 1e-24);
-  const gl = Math.sqrt(gl2);
-  const gl4inv = 1 / Math.max(gl2 * gl2, 1e-48);
-  const gl3inv = 1 / Math.max(gl2 * gl, 1e-36);
-
-  const trace = fxx + fyy + fzz;
-  // ∇F·H·∇Fᵀ
-  const ghg = gx * gx * fxx + gy * gy * fyy + gz * gz * fzz + 2 * (gx * gy * fxy + gx * gz * fxz + gy * gz * fyz);
-  const mean = -(gl2 * trace - ghg) * gl3inv / 2;
-
-  // adj(H)：对称矩阵伴随，对角元
-  const a11 = fyy * fzz - fyz * fyz;
-  const a22 = fxx * fzz - fxz * fxz;
-  const a33 = fxx * fyy - fxy * fxy;
-  // ∇F·adj(H)·∇Fᵀ 内联展开：
-  // = gx²(fyy·fzz−fyz²) + gy²(fxx·fzz−fxz²) + gz²(fxx·fyy−fxy²)
-  //   + 2[ gx·gy(fxz·fyz−fzz·fxy) + gx·gz(fxy·fyz−fyy·fxz) + gy·gz(fxy·fxz−fxx·fyz) ]
-  const qaa = gx * gx * a11 + gy * gy * a22 + gz * gz * a33;
-  const qab = 2 * (
-    gx * gy * (fxz * fyz - fzz * fxy)
-    + gx * gz * (fxy * fyz - fyy * fxz)
-    + gy * gz * (fxy * fxz - fxx * fyz)
-  );
-  const gauss = (qaa + qab) * gl4inv;
-
-  // 数值清洗：任何有限性破坏一律归零（配色走中性白）
-  const safe = (v: number): number => (Number.isFinite(v) ? (Math.abs(v) > 1e12 ? Math.sign(v) * 1e12 : v) : 0);
-  return [safe(mean), safe(gauss)];
+  return curvatureFromGH(gx, gy, gz, fxx, fyy, fzz, fxy, fyz, fxz);
 }
 
 /**
  * 全顶点曲率标量 → 已归一化到 [0,1] 的数组（对称截断分位数，Cool-Warm 直接可用）。
  * 返回长度 vertCount。
+ *
+ * 【阶段 I AD 快速路径】custom 单场（非 hybrid）公式改走 Dual Number AD：
+ * ∇F 与 Hessian 一次遍历精确得出（链长因子：物理坐标对弧度坐标的一阶 πk / 二阶 (πk)²），
+ * 消除 19 点差分的截断噪声；其余场保持中心差分模板。
  */
 export function estimateCurvatureScalars(
   positions: Float32Array,
@@ -122,10 +134,34 @@ export function estimateCurvatureScalars(
   const F = makeFieldSampler(cfg);
   const INV_PI = 1 / Math.PI;
 
+  // AD 快速路径：custom 单场 + 公式非空
+  let exact: ((x: number, y: number, z: number) => [number, number]) | null = null;
+  if (!cfg.hybrid?.enabled && cfg.type === 'custom' && cfg.customFormula.trim()) {
+    const compiled = getCompiledCustomFormula(cfg.customFormula);
+    const p = { k: cfg.periods, t: cfg.thickness ?? 1, iso: cfg.iso ?? 0 };
+    const s = Math.PI * cfg.periods;
+    exact = (x, y, z) => {
+      const g = compiled.gradient(x * s, y * s, z * s, p);
+      const h = compiled.hessian(x * s, y * s, z * s, p);
+      return curvatureFromGH(
+        g[0] * s, g[1] * s, g[2] * s,
+        h[0] * s * s, h[1] * s * s, h[2] * s * s,
+        h[3] * s * s, h[4] * s * s, h[5] * s * s,
+      );
+    };
+  }
+
   const vals = new Float32Array(vertCount);
-  for (let i = 0; i < vertCount; i++) {
-    const [m, g] = curvaturesAt(F, positions[i * 3] * INV_PI, positions[i * 3 + 1] * INV_PI, positions[i * 3 + 2] * INV_PI);
-    vals[i] = kind === 'mean' ? m : g;
+  if (exact) {
+    for (let i = 0; i < vertCount; i++) {
+      const [m, g] = exact(positions[i * 3] * INV_PI, positions[i * 3 + 1] * INV_PI, positions[i * 3 + 2] * INV_PI);
+      vals[i] = kind === 'mean' ? m : g;
+    }
+  } else {
+    for (let i = 0; i < vertCount; i++) {
+      const [m, g] = curvaturesAt(F, positions[i * 3] * INV_PI, positions[i * 3 + 1] * INV_PI, positions[i * 3 + 2] * INV_PI);
+      vals[i] = kind === 'mean' ? m : g;
+    }
   }
 
   // 对称截断分位数：98% 分位的 |值| 作为显示半程（抽样排序上限 65536 控制成本）

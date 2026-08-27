@@ -17,6 +17,7 @@ import { analyzeTortuosity3D } from './physics/tortuosity';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
+import { EQUATION_PRESETS, validateEquation } from './core/equation-parser';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
@@ -30,7 +31,7 @@ import {
   generateBibTeX,
   generateJSONSidecar,
 } from './export';
-import { evaluateField } from './core/tpms-functions';
+import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
@@ -314,6 +315,8 @@ function applyGeometry(
             customFormula: s0.customFormula,
             weights: s0.weights,
             periods: s0.cellSize,
+            thickness: s0.thickness,
+            iso: baseIso(s0),
           },
         })
       : null;
@@ -1309,14 +1312,59 @@ function bindUIEvents(): void {
     });
   }
 
-  // 自定义公式输入
+  // 自定义公式输入 + 沙箱实时校验（阶段 I：错误定位高亮 + 预设样例库）
   const customFormula = document.getElementById('custom-formula') as HTMLTextAreaElement;
+  const customStatus = document.getElementById('custom-formula-status');
   if (customFormula) {
+    /** 校验当前输入并刷新状态条；返回是否可重建（空/非法 → false） */
+    const updateCustomStatus = (): boolean => {
+      if (!customStatus) return true;
+      const raw = customFormula.value.trim();
+      if (!raw) { customStatus.hidden = true; customStatus.className = 'custom-status'; return false; }
+      const res = validateEquation(raw);
+      customStatus.hidden = false;
+      if (res.ok) {
+        const used: string[] = [];
+        if (res.usage.coord) used.push('r/theta/phi');
+        if (res.usage.k) used.push('k');
+        if (res.usage.t) used.push('t');
+        if (res.usage.iso) used.push('iso');
+        customStatus.className = 'custom-status ok';
+        customStatus.textContent = `✓ 语法有效${used.length ? ` · 引用参数：${used.join(' / ')}` : ''}`;
+        return true;
+      }
+      customStatus.className = 'custom-status err';
+      customStatus.textContent = `✗ 位置 ${res.pos}：${res.message}`;
+      return false;
+    };
     customFormula.addEventListener('input', () => {
+      const valid = updateCustomStatus();
       setState({ customFormula: customFormula.value.trim() });
-      scheduleRebuild(true);
+      // 非法/空公式不触发重建（保留旧模型 + 错误提示），与启用开关的 hasFormula 守卫一致
+      if (valid) scheduleRebuild(true);
+      document.querySelectorAll('#custom-presets .chip').forEach((c) => c.classList.toggle('active', (c as HTMLElement).dataset.expr === customFormula.value.trim()));
     });
-    customFormula.addEventListener('change', () => scheduleRebuild(false));
+    customFormula.addEventListener('change', () => { if (updateCustomStatus()) scheduleRebuild(false); });
+
+    // 预设样例芯片（点击回填 → 校验 → 重建）
+    const presetRow = document.getElementById('custom-presets');
+    if (presetRow) {
+      for (const p of EQUATION_PRESETS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.textContent = p.name;
+        b.title = `${p.desc}\n${p.expr}`;
+        b.dataset.expr = p.expr;
+        b.addEventListener('click', () => {
+          customFormula.value = p.expr;
+          setState({ customFormula: p.expr });
+          if (updateCustomStatus()) scheduleRebuild(false);
+          presetRow.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === b));
+        });
+        presetRow.appendChild(b);
+      }
+    }
   }
 
   // ── 键盘快捷键 ─────────────────────────────────────────────
@@ -1911,10 +1959,14 @@ function handleExport(fmt: string | null): void {
       }
       case 'py':
       case 'm':
-        // custom 公式无法翻译成 numpy/MATLAB 表达式，脚本只会必然报错——直接拦截
-        if (s.type === 'custom') {
-          flashToast('自定义公式暂不支持脚本导出，请改用 STL/VTK 网格导出');
-          return;
+        // 【阶段 I】自定义公式经 AST→NumPy/MATLAB 翻译后可导出；编译失败（含 hybrid B 侧）才拦截
+        if (s.type === 'custom' || (s.hybrid.enabled && s.hybrid.typeB === 'custom')) {
+          try {
+            getCompiledCustomFormula(s.customFormula);
+          } catch (err) {
+            flashToast('自定义公式无法翻译为脚本：' + (err instanceof Error ? err.message : String(err)));
+            return;
+          }
         }
         if (fmt === 'py') exportPythonScript(s, `${base}.py`);
         else exportMatlabScript(s, `${base}.m`);
@@ -1968,7 +2020,7 @@ function buildVtiField(s: AppState): { field: Float32Array; dims: [number, numbe
       const my = ((iy / R) * 2 - 1) * Math.PI * k;
       for (let ix = 0; ix < N; ix++) {
         const mx = ((ix / R) * 2 - 1) * Math.PI * k;
-        field[idx++] = evaluateField(s.type, mx, my, mz, w, s.customFormula);
+        field[idx++] = evaluateField(s.type, mx, my, mz, w, s.customFormula, { k: s.cellSize, t: s.thickness, iso: baseIso(s) });
       }
     }
   }

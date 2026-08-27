@@ -74,10 +74,11 @@ export function createHybridField(
   typeB: TpmType,
   config: HybridConfig,
   customA: string = '',
-  customB: string = ''
+  customB: string = '',
+  dyn?: import('./tpms-functions').CustomFormulaDyn
 ): (mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number {
-  const fA = getTpmsFunction(typeA, customA);
-  const fB = getTpmsFunction(typeB, customB);
+  const fA = getTpmsFunction(typeA, customA, dyn);
+  const fB = getTpmsFunction(typeB, customB, dyn);
   const weightFn = getHybridWeightFn(config);
 
   return (mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => {
