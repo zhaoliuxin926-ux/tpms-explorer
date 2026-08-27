@@ -1148,7 +1148,7 @@ function isoFromPorosity(type, p){ const t=(p-60)/30;
   if(type==='splitp') return -0.6 + t*1.2;
   return -0.3 + t*0.7;
 }
-function resolutionFromCell(c, preview=false){ const fk = (state.type==='iwp'||state.type==='frd'||state.type==='neovius')?28:14; const full = Math.min(96, 19 + c*fk); return preview ? Math.min(32, full) : full; }
+function resolutionFromCell(c, preview=false){ const fk = (state.type==='iwp'||state.type==='frd'||state.type==='neovius')?28:14; const linear = 19 + c*fk; const full = linear<=96 ? Math.round(linear) : Math.min(96, Math.ceil(c*fk)); return preview ? Math.min(32, full) : full; }
 function baseIso(){ let iso = isoFromPorosity(state.type, state.porosity); if(state.model==='solid') iso -= (state.thickness-1)*0.12; return iso; }
 
 let scene, camera, renderer, controls, group, pmrem, axesHelper, baseGeo=null, meshFill=null, rebuildTimer=null, lastPorosityEstimate=null;

@@ -38,3 +38,30 @@ export function resolutionPerPeriod(type: string, structureMode?: string, gradie
   if (structureMode === 'gradient_shell' && gradientDir && gradientDir !== 'z') return 28;
   return 14;
 }
+
+/** HD 分辨率上限（BufferPool 容量 N³≤1M ⇒ R≤99，留余量定 96） */
+export const RES_CAP_HD = 96;
+
+/**
+ * 【A2 密度保优】HD 重建分辨率（单一来源；main.ts / script-exporter / app.html 同步消费）。
+ *
+ * 旧公式 min(96, 19+k·pp) 在触顶后把「19 格截距」也压进 96 预算，每周期实际
+ * 密度跌至 (96−19)/k——倍频 k=5 时仅 15.4/周期，较设计值 28 断崖 −45%
+ * （毛刺诊断报告 R1）。修正语义：
+ *   · 未触顶：线性式原样保留（既有审计标定与渲染体验零变动）
+ *   · 触顶：预算全部让渡给特征周期密度 ceil(k·pp)，砍掉无效截距
+ */
+export function hdResolution(type: string, structureMode?: string, gradientDir?: string, k = 3): number {
+  const pp = resolutionPerPeriod(type, structureMode, gradientDir);
+  const linear = 19 + k * pp;
+  if (linear <= RES_CAP_HD) return Math.round(linear);
+  return Math.min(RES_CAP_HD, Math.ceil(k * pp));
+}
+
+/** L2 中间档分辨率（同 A2 触顶语义，cap=72、密度带 10/14 折扣） */
+export function l2Resolution(type: string, structureMode?: string, gradientDir?: string, k = 3): number {
+  const pp = resolutionPerPeriod(type, structureMode, gradientDir) * 10 / 14;
+  const linear = 19 + k * pp;
+  if (linear <= 72) return Math.round(linear);
+  return Math.min(72, Math.ceil(k * pp));
+}
