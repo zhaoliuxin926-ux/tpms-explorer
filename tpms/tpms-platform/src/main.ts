@@ -18,6 +18,7 @@ import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
 import { EQUATION_PRESETS, validateEquation } from './core/equation-parser';
+import { sampleDirectionalGrid, directionalModulus, orthotropicCompliance } from './physics/homogenization';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
@@ -1309,6 +1310,49 @@ function bindUIEvents(): void {
       syncUI(getState());
       updateBadges(getState().type, getState().model, getState().material, getState().structureMode);
       if (!customEnabled.checked || hasFormula) scheduleRebuild(false);
+    });
+  }
+
+  // ── 各向异性模量曲面（RVE 均质化，τ-调制方向张量 → E(n) 球面热力图）──
+  const rveBtn = document.getElementById('btn-rve');
+  if (rveBtn) {
+    rveBtn.addEventListener('click', () => {
+      const st = getState();
+      const canvas = document.getElementById('rve-canvas') as HTMLCanvasElement | null;
+      const readout = document.getElementById('rve-readout');
+      if (!canvas || !readout) return;
+      try {
+        const st2 = estimateAnisotropicStiffness(1 - st.porosity / 100, st.type);
+        const E = st2.E;
+        const nu = 0.3;
+        // 6×6 S：正交各向异性 E_i + 统一 ν（近似耦合；S_ij = −ν_ij/E_j 形式的对角缩放）
+        const S = orthotropicCompliance(E[0], E[1], E[2], nu);
+        const grid = sampleDirectionalGrid(S, 36, 72);
+        // Cool-Warm 热力图
+        const ctx = canvas.getContext('2d')!;
+        const W = canvas.width, H = canvas.height;
+        const img = ctx.createImageData(W, H);
+        for (let py = 0; py < H; py++) {
+          const ir = Math.min(grid.rows, Math.floor((py / H) * (grid.rows + 1)));
+          for (let px2 = 0; px2 < W; px2++) {
+            const ic = Math.min(grid.cols - 1, Math.floor((px2 / W) * grid.cols));
+            const v = grid.E[ir * grid.cols + ic];
+            const t = grid.emax > grid.emin ? (v - grid.emin) / (grid.emax - grid.emin) : 0.5;
+            // 蓝→白→红
+            const r8 = t < 0.5 ? 60 + 195 * (t * 2) : 255;
+            const g8 = t < 0.5 ? 80 + 155 * (t * 2) : 250 - 155 * (t - 0.5) * 2;
+            const b8 = t < 0.5 ? 220 : 250 - 220 * (t - 0.5) * 2;
+            const o = (py * W + px2) * 4;
+            img.data[o] = r8; img.data[o + 1] = g8; img.data[o + 2] = b8; img.data[o + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+        canvas.style.display = 'block';
+        const baseE = BASE_MODULUS[st.material === 'auto' ? 'tc4' : st.material] || BASE_MODULUS.tc4;
+        readout.textContent = `E(x/y/z) = ${E.map((e) => (e * baseE).toFixed(2)).join(' / ')} GPa · E(n)∈[${(grid.emin * baseE).toFixed(2)}, ${(grid.emax * baseE).toFixed(2)}] GPa · E(100)=${(directionalModulus(S, 1, 0, 0) * baseE).toFixed(2)} GPa`;
+      } catch (err) {
+        readout.textContent = '计算失败：' + (err instanceof Error ? err.message : String(err));
+      }
     });
   }
 
