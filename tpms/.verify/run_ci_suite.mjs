@@ -94,6 +94,7 @@ try {
   results.push(['hybrid_audit 多相混合（水密/极限/双语言残差）', await runStep('混合审计', 'hybrid_audit.mjs')]);
   results.push(['industrial_export_audit 工业格式（GLB+3MF）', await runStep('工业格式审计', 'industrial_export_audit.mjs')]);
   results.push(['custom_equation_audit 自定义公式沙箱（AST+AD+代码生成）', await runStep('自定义公式审计', 'custom_equation_audit.mjs')]);
+  results.push(['homogenization_audit RVE 均质化+方向模量', await runStep('均质化审计', 'homogenization_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务

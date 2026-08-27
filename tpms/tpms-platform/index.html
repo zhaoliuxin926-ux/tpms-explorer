@@ -784,6 +784,14 @@ window.addEventListener('error', function(e) {
 
     <div class="panel controls">
       <div class="sheet-handle" id="sheet-handle"></div>
+      <details class="sect">
+        <summary class="sect-h">各向异性模量曲面 (RVE 均质化)</summary>
+        <div class="field">
+          <button class="opt" id="btn-rve" style="width:100%">计算方向模量曲面 E(n)</button>
+          <canvas id="rve-canvas" width="252" height="126" style="width:100%;margin-top:8px;border-radius:8px;display:none" title="方向杨氏模量 E(n) 球面展开热力图（横轴 φ∈[0,2π] 方位角，纵轴 θ∈[0,π] 极角）"></canvas>
+          <div class="field-note" id="rve-readout">以当前曲面几何的迂曲度调制方向刚度张量，计算任意方向 n 的杨氏模量 E(n) = 1/(nᵢnⱼnₖnℓSᵢⱼₖₗ) 并绘制球面热力图。</div>
+        </div>
+      </details>
       <details class="sect" open>
         <summary class="sect-h">TPMS 曲面类型</summary>
         <div class="opt-row">
