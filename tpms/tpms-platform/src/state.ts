@@ -88,6 +88,7 @@ export function buildShareURL(): string {
     wd: String(s.weights[3]),
   });
   params.set('grad', s.gradientDir);
+  if (s.endplateMm > 0) params.set('ep', String(s.endplateMm));
   if (s.hybrid.enabled) {
     params.set('hybrid', '1');
     params.set('hybridType', s.hybrid.typeB);
