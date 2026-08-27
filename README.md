@@ -1,6 +1,6 @@
 # 工作区 · 总导航
 
-本工作区并排放着**两个独立项目**，外加开发 / 验证辅助目录。
+本工作区只有一个主项目，外加开发 / 验证辅助目录。
 
 ---
 
@@ -24,21 +24,15 @@
 
 ---
 
-## 🅱 副项目：Claude Code 工作流全景架构图
-> 与 TPMS **无关**。单文件、零依赖、可离线的工作流可视化工具（阶段 → 节点 → 连线），支持编辑 / 撤销 / CRDT 多人协作光标。
-- `claude-code-workflow/` —— 主交付 + 协作后端 + 测试，详见其内 `README.md`。
-
----
-
 ## 🗂 开发 / 记忆辅助（不参与交付）
 - `tpms/agent_memory/` —— 项目进度 / 上下文 / 缺陷 / 审计报告（gitignored）
 - `tpms/.verify/` —— Playwright 验证脚本
 - `tpms/.diag/` —— 诊断 / 探针脚本
 - `tpms/.zcode/plans` —— 计划文件
-- `.git` / `.gitignore` / `.workbuddy/`
+- `.git` / `.gitignore`
 
 ---
 
 ## 📌 备注
 - 目录布局（2026-07-24 起）：单文件版交付在仓库根 `docs/`（GitHub Pages 源目录），工程版源码与项目记忆在 `tpms/` 子目录（`tpms-platform/` / `agent_memory/` 等），见上方目录树。
-- 根目录仅保留工作区导航 `README.md` 与副项目 `claude-code-workflow/`。
+- 根目录仅保留工作区导航 `README.md`。
