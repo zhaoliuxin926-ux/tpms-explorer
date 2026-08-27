@@ -11,10 +11,11 @@ import { initStateFromURL } from './url-params';
 import { WorkerBridge } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
-import type { ColoringMode } from './types';
+import type { ColoringMode, SliceAxis } from './types';
 import { computePhysicsMetrics } from './physics/gibson-ashby';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
+import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
@@ -356,8 +357,9 @@ function applyGeometry(
     if (meshStrut) { ctx.scene.remove(meshStrut); meshStrut = null; }
   }
 
-  // 截面裁剪
+  // 截面裁剪 + stencil 封边 overlay（依赖新 baseGeo，必须在裁切后同步重建）
   updateClipPlane();
+  syncCapOverlay();
 
   // 测量工具同步
   if (bboxAnnotation && baseGeo) {
@@ -424,6 +426,7 @@ function onWorkerResult(res: WorkerResponse): void {
   }
   if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
   lastBuildResolution = res.resolution;
+  if (getState().slice < 100) schedulePercolation(80);   // 重建完成后刷新连通性预检
 
   // 物理指标
   if (res.surfaceArea != null && res.envelopeVolume != null) {
@@ -541,17 +544,195 @@ function getMaterial(preset: MaterialPreset, model: string): MeshPhysicalMateria
 }
 
 // ── 截面裁剪 ─────────────────────────────────────────────
+// ── 动态剖切（三轴 + 反向 + stencil 封边）─────────────────
+// 显示空间：mesh 缩放 DISPLAY_SCALE=0.33，wc ±π → 视口 ±1.036；滑杆 100=完整。
+let capStencilGroup: THREE.Group | null = null;
+let capPlaneMesh: THREE.Mesh | null = null;
+const CAP_COLOR = 0x0ea5a3;   // 剖面着色（纯色 cap，主题青）
+
+function disposeCapOverlay(): void {
+  if (capStencilGroup) {
+    ctx.scene.remove(capStencilGroup);
+    capStencilGroup.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.material) {
+        const mat = m.material as THREE.Material | THREE.Material[];
+        if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+        else mat.dispose();
+      }
+    });
+    capStencilGroup = null;
+  }
+  if (capPlaneMesh) {
+    ctx.scene.remove(capPlaneMesh);
+    (capPlaneMesh.material as THREE.Material).dispose();
+    capPlaneMesh.geometry.dispose();
+    capPlaneMesh = null;
+  }
+}
+
+/** 按 baseGeo + 当前剖切平面重建 stencil 封边 overlay（three.js webgl_clipping_stencil 模式） */
+function syncCapOverlay(): void {
+  const s = getState();
+  const active = s.slice < 100 && s.model !== 'strut' && !!baseGeo;
+  disposeCapOverlay();
+  if (!active || !baseGeo) { requestRender(); return; }
+
+  // ① stencil 组：对同一 geometry 以 Back/Front 双 pass 写入模板缓冲
+  const group = new THREE.Group();
+  const baseMat = new THREE.MeshBasicMaterial();
+  baseMat.depthWrite = false; baseMat.depthTest = false; baseMat.colorWrite = false;
+  baseMat.stencilWrite = true; baseMat.stencilFunc = THREE.AlwaysStencilFunc;
+  const back = baseMat.clone();
+  back.side = THREE.BackSide;
+  back.clippingPlanes = [ctx.clipPlane];
+  back.stencilFail = THREE.IncrementWrapStencilOp;
+  back.stencilZFail = THREE.IncrementWrapStencilOp;
+  back.stencilZPass = THREE.IncrementWrapStencilOp;
+  const backMesh = new THREE.Mesh(baseGeo, back);
+  backMesh.renderOrder = 6;
+  backMesh.scale.setScalar(DISPLAY_SCALE);
+  group.add(backMesh);
+  const front = baseMat.clone();
+  front.side = THREE.FrontSide;
+  front.clippingPlanes = [ctx.clipPlane];
+  front.stencilFail = THREE.DecrementWrapStencilOp;
+  front.stencilZFail = THREE.DecrementWrapStencilOp;
+  front.stencilZPass = THREE.DecrementWrapStencilOp;
+  const frontMesh = new THREE.Mesh(baseGeo, front);
+  frontMesh.renderOrder = 6;
+  frontMesh.scale.setScalar(DISPLAY_SCALE);
+  group.add(frontMesh);
+  ctx.scene.add(group);
+  capStencilGroup = group;
+
+  // ② 剖面着色平面：stencilRef≠0 处着色（即被裁掉的开口截面）
+  const capMat = new THREE.MeshBasicMaterial({
+    color: CAP_COLOR,
+    side: THREE.DoubleSide,
+    stencilWrite: true,
+    stencilRef: 0,
+    stencilFunc: THREE.NotEqualStencilFunc,
+    stencilFail: THREE.ReplaceStencilOp,
+    stencilZFail: THREE.ReplaceStencilOp,
+    stencilZPass: THREE.ReplaceStencilOp,
+    clippingPlanes: [],
+  });
+  const planeMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), capMat);
+  planeMesh.renderOrder = 6.1;
+  ctx.scene.add(planeMesh);
+  capPlaneMesh = planeMesh;
+
+  placeCapPlaneMesh();
+  requestRender();
+}
+
+/** 把剖面 mesh 贴到当前 clipPlane 上（每帧裁切变化时同步姿态） */
+function placeCapPlaneMesh(): void {
+  if (!capPlaneMesh) return;
+  ctx.clipPlane.coplanarPoint(capPlaneMesh.position);
+  capPlaneMesh.lookAt(
+    capPlaneMesh.position.x - ctx.clipPlane.normal.x,
+    capPlaneMesh.position.y - ctx.clipPlane.normal.y,
+    capPlaneMesh.position.z - ctx.clipPlane.normal.z,
+  );
+}
+
 function updateClipPlane(): void {
   const s = getState();
   const showClip = s.slice < 100;
-  const yClip = showClip ? (s.slice / 100) * 1.6 : 100;
-  ctx.clipPlane.constant = yClip;
+  const c = (s.slice / 100) * 1.6;
+  const normal = s.sliceAxis === 'x' ? new THREE.Vector3(1, 0, 0)
+    : s.sliceAxis === 'y' ? new THREE.Vector3(0, 1, 0)
+      : new THREE.Vector3(0, 0, 1);
+  if (s.sliceInvert) normal.negate();
+  ctx.clipPlane.normal.copy(normal);
+  ctx.clipPlane.constant = showClip ? c : 100;
 
-  // 移动 shadow plane 到截面处增强 3D 感知（clipPlane 为世界坐标，阴影盘同处世界空间）
-  ctx.shadowPlane.position.y = showClip ? yClip - 0.02 : -2.04;
-  ctx.gridHelper.visible = !showClip;
+  // shadow 盘仅对 z 轴语义成立；x/y 轴剖切时隐藏以保持视觉一致
+  const zAxis = s.sliceAxis === 'z';
+  ctx.shadowPlane.position.y = showClip && zAxis ? c - 0.02 : -2.04;
+  ctx.gridHelper.visible = !(showClip && zAxis);
 
+  placeCapPlaneMesh();
   requestRender(); // 按需渲染：裁剪面变化需重绘
+}
+
+// ── 截面连通性预检（Percolation Preflight）───────────────
+let percolTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePercolation(delayMs: number): void {
+  if (percolTimer) clearTimeout(percolTimer);
+  percolTimer = setTimeout(() => runPercolation(), delayMs);
+}
+
+function runPercolation(): void {
+  const s = getState();
+  const card = document.getElementById('percolation-card');
+  if (!card) return;
+  if (s.slice >= 100) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const note = document.getElementById('pc-note');
+  const setVals = (a: string, b: string, c2: string, d: string) => {
+    document.getElementById('pc-through')!.textContent = a;
+    document.getElementById('pc-cavity')!.textContent = b;
+    document.getElementById('pc-island')!.textContent = c2;
+    document.getElementById('pc-porosity')!.textContent = d;
+  };
+
+  if (s.hybrid.enabled) {
+    setVals('—', '—', '—', '—');
+    if (note) note.textContent = '混合（Hybrid）场暂不支持连通性预检。';
+    return;
+  }
+  if (lastIsoUsed === 0) {
+    setVals('—', '—', '—', '—');
+    if (note) note.textContent = '等待网格重建完成…';
+    return;
+  }
+
+  const result = analyzeSection(
+    {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: s.containerShape, isoUsed: lastIsoUsed, endplateMm: s.endplateMm,
+    },
+    { axis: s.sliceAxis, posNorm: (s.slice / 100) * (1 - 0.02), sampleN: 96 },
+  );
+
+  if (!result) {
+    setVals('—', '—', '—', '—');
+    if (note) note.textContent = '该曲面类型（Lidinoid / Split-P / 自定义公式）暂不支持预检。';
+    return;
+  }
+
+  setVals(
+    String(result.throughChannels),
+    String(result.closedCavities),
+    '…',
+    `${(result.sectionPorosity * 100).toFixed(1)}%`,
+  );
+  // 孤岛用 3D 固相连通判定：2D 截面孤立斑是蜂窝切片的必然表象，非打印风险；
+  // 真正的悬空结构=3D 上既不触边界也不触剖切面的固相连通片（无支撑锚）
+  const islands3D = analyzeIslands3D(
+    {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: s.containerShape, isoUsed: lastIsoUsed, endplateMm: s.endplateMm,
+    },
+    s.sliceAxis, (s.slice / 100) * (1 - 0.02),
+  );
+  const islandEl = document.getElementById('pc-island');
+  if (islandEl) {
+    islandEl.textContent = String(islands3D.isolatedIslands3D);
+    islandEl.style.color = islands3D.isolatedIslands3D > 0 ? '#ef4444' : '';
+  }
+
+  const warn: string[] = [];
+  if (islands3D.isolatedIslands3D > 0) warn.push(`检测到 ${islands3D.isolatedIslands3D} 处 3D 悬空孤岛（无锚定固相块）：打印时缺支撑，建议提高孔隙率或更换剖切轴向`);
+  if (result.closedCavities > 0) warn.push(`截面 ${result.closedCavities} 处封闭死腔（2D 视角）：残留粉末/树脂可能无法排出`);
+  if (note) note.textContent = warn.length ? '⚠ ' + warn.join('；') : '截面拓扑健康：贯通通道连续，无 3D 悬空孤岛。';
 }
 
 // ── 基础等值 ─────────────────────────────────────────────
@@ -566,6 +747,7 @@ function baseIso(s: AppState): number {
 
 // ── 清理几何 ─────────────────────────────────────────────
 function disposeGeometry(): void {
+  disposeCapOverlay();   // stencil overlay 共享 baseGeo 引用，必须先于 baseGeo 释放移除
   if (meshFill) {
     ctx.scene.remove(meshFill);
     meshFill.geometry.dispose();
@@ -721,8 +903,26 @@ function bindUIEvents(): void {
       const sv = document.getElementById('slice-value');
       if (sv) sv.textContent = +sliceEl.value >= 99 ? '完整' : `${Math.round((+sliceEl.value + 100) / 2)}%`;
       updateClipPlane();
+      schedulePercolation(300);   // 拖动中 300ms 防抖：3D 剖切即时，连通性分析滞后
     });
+    sliceEl.addEventListener('change', () => runPercolation());
   }
+
+  // 剖切轴向 / 反向按钮
+  document.querySelectorAll('[data-slice-axis]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ax = btn.getAttribute('data-slice-axis');
+      if (ax === 'invert') {
+        setState({ sliceInvert: !getState().sliceInvert });
+        syncUI(getState());
+      } else {
+        setState({ sliceAxis: ax as SliceAxis });
+        syncUI(getState());
+      }
+      updateClipPlane();
+      runPercolation();
+    });
+  });
 
   // 权重滑块：由 refreshWeightsUI() 在每次重建权重行时绑定（见 syncUI），
   // 静态绑定会在滑块 DOM 重建后失效，故不在此处绑定。
@@ -1239,6 +1439,11 @@ function syncUI(s: AppState): void {
     const ev2 = document.getElementById('endplate-value');
     if (ev2) ev2.textContent = s.endplateMm <= 0 ? '关' : `${s.endplateMm.toFixed(1)} mm`;
   }
+  // 剖切轴向/反向按钮态
+  document.querySelectorAll('[data-slice-axis]').forEach(el => {
+    const ax = el.getAttribute('data-slice-axis');
+    el.classList.toggle('active', ax === 'invert' ? !!s.sliceInvert : s.sliceAxis === ax);
+  });
 
   // 自动旋转按钮
   document.getElementById('btn-rotate')?.classList.toggle('on', s.autoRotate);

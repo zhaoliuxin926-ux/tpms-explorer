@@ -666,8 +666,8 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-DeBfcjGW.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/three-Bhgj_bvf.js">
+  <script type="module" crossorigin src="./assets/index-BLYUGOB7.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-DekO_kuB.js">
 </head>
 <body>
 <div id="loader" class="loader-overlay">
@@ -852,9 +852,25 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-container="cylinder">圆柱体容器<span class="o-sub">Cylinder</span></button>
         </div>
         <div class="field">
-          <div class="lbl"><span class="gloss-term" data-term="slice">截面扫描</span><span class="val" id="slice-value">完整</span></div>
+          <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
+          <div class="opt-row" style="margin-bottom:6px">
+            <button class="opt active" data-slice-axis="z">Z 轴<span class="o-sub">Z</span></button>
+            <button class="opt" data-slice-axis="x">X 轴<span class="o-sub">X</span></button>
+            <button class="opt" data-slice-axis="y">Y 轴<span class="o-sub">Y</span></button>
+            <button class="opt" data-slice-axis="invert" id="btn-slice-invert" title="反向剖切：保留另一半">反向 ⇄</button>
+          </div>
           <input type="range" id="slice" min="-100" max="100" value="100" step="1">
-          <div class="field-note">沿 Z 轴逐层剖切，可观察内部连通孔道。</div>
+          <div class="field-note">拖动滑块透视内部孔道拓扑；松手后自动进行截面连通性预检。</div>
+        </div>
+        <div class="field" id="percolation-card" style="display:none">
+          <div class="lbl"><span>截面连通性预检</span></div>
+          <div class="opt-row two" style="gap:4px">
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-through">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">贯通通道</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-cavity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">封闭死腔</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-island">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">悬空孤岛</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-porosity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">截面孔隙率</div></div>
+          </div>
+          <div class="field-note" id="pc-note">拖动剖切滑块后自动分析。</div>
         </div>
         <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
       </details>

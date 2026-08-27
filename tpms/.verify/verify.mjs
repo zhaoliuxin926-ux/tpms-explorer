@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 
-const BASE = 'http://127.0.0.1:8123';
+// BASE 可由 run_all/run_ci_suite 注入（其自起的 docs 服务端口）；独立直跑时回退 8123
+const BASE = process.env.BASE || 'http://localhost:8123';
 const OUT = 'shots';
 fs.mkdirSync(OUT, { recursive: true });
 

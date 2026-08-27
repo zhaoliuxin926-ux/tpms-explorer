@@ -89,6 +89,8 @@ export function buildShareURL(): string {
   });
   params.set('grad', s.gradientDir);
   if (s.endplateMm > 0) params.set('ep', String(s.endplateMm));
+  if (s.sliceAxis !== 'z') params.set('sa', s.sliceAxis);
+  if (s.sliceInvert) params.set('si', '1');
   if (s.hybrid.enabled) {
     params.set('hybrid', '1');
     params.set('hybridType', s.hybrid.typeB);

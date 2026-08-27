@@ -127,9 +127,8 @@ try {
   const heapStart = await gcAndMeasure();
 
   // ── 压力循环：80 次滑块调节（每次 input → preview 重建 → 150ms 防
-  //    抖后 HD 重建入队 worker）；每 16 次多等一拍并翻转顶点着色模式
-  //    （none↔elevation，均恒可用），后 1/4 保持 elevation 使 worker
-  //    重建携带 colors 走 Transferable 零拷贝路径 ──
+  //    抖后 HD 重建入队 worker）；每 16 拍翻转顶点着色，每 20 拍切换
+  //    剖切深度（激活 stencil cap + percolation 路径），压满渲染/分析双管线 ──
   const t0 = Date.now();
   for (let i = 0; i < CYCLES; i++) {
     const v = i % 2 === 0 ? '62' : '88';
@@ -146,6 +145,15 @@ try {
         const btn = document.querySelector(`[data-coloring="${mode}"]`);
         btn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       }, wantColoring);
+    }
+    // 每 20 拍切换剖切深度（stencil overlay 挂卸 + 3D 孤岛 BFS）
+    if (i % 20 === 10) {
+      await page.evaluate((sv) => {
+        const el = document.querySelector('#slice');
+        el.value = sv;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }, i % 40 === 10 ? '80' : '45');
     }
     await page.waitForTimeout(slow ? 600 : 70);
   }
