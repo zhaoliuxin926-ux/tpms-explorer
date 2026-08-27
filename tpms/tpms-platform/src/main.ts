@@ -18,6 +18,7 @@ import { computeVertexColors } from './geometry/vertex-coloring';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
+  exportMultiSolidSTL,
   exportVTK,
   exportVTI,
   exportPythonScript,
@@ -299,8 +300,15 @@ function applyGeometry(
     return eff !== 'none'
       ? computeVertexColors(positions, vertCount, {
           mode: eff,
-          hybrid: eff === 'field' && s0.hybrid.enabled ? s0.hybrid : undefined,
+          // 混合对所有标量口径生效（field 权重 / 曲率的 f_A·w+f_B 混合场均依赖它）
+          hybrid: s0.hybrid.enabled ? s0.hybrid : undefined,
           gradientDir: s0.gradientDir,
+          field: {
+            type: s0.type,
+            customFormula: s0.customFormula,
+            weights: s0.weights,
+            periods: s0.cellSize,
+          },
         })
       : null;
   })();
@@ -925,6 +933,7 @@ function bindUIEvents(): void {
   document.querySelectorAll('[data-gradient]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ gradientDir: btn.getAttribute('data-gradient') as AppState['gradientDir'] });
+      syncUI(getState()); // 存量缺陷修复：本仓库 setState 不刷 UI，处理器负责同步高亮
       scheduleRebuild(false);
     });
   });
@@ -1460,7 +1469,7 @@ function handleExport(fmt: string | null): void {
   if (!fmt) return;
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
-  const needGeo = fmt === 'stl' || fmt === 'vtk';
+  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl';
   if (needGeo && (!baseGeo || !baseGeo.index)) {
     flashToast('请先生成有效曲面再导出');
     return;
@@ -1522,6 +1531,13 @@ function handleExport(fmt: string | null): void {
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
         exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize), vtkNormals);
+        break;
+      }
+      case 'cfdstl': {
+        // CFD Multi-Patch：与 binary 同一缠绕定向约定 + mm 缩放，OpenFOAM 分块边界
+        // （成功提示由函数末尾的通用 toast 统一给出，此处不再叠加）
+        const cfdNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
+        exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, wcToMmFactor(getState().cellSize), cfdNormals);
         break;
       }
       case 'vti': {

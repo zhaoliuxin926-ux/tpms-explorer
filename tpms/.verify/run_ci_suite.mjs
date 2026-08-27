@@ -88,6 +88,7 @@ const results = [];
 try {
   results.push(['mesh_audit 几何质量门（29 案例）', await runStep('几何质量门', 'mesh_audit.mjs')]);
   results.push(['parity_math 数学同源（74 断言）', await runStep('数学同源', 'parity_math.mjs')]);
+  results.push(['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', await runStep('仿真导出校验', 'sim_export_check.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
