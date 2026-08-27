@@ -92,6 +92,7 @@ try {
   results.push(['endplate_audit 端板专项（水密/满填/体积增量）', await runStep('端板审计', 'endplate_audit.mjs')]);
   results.push(['micro_physics_audit 迂曲度+各向异性刚度', await runStep('微物理审计', 'micro_physics_audit.mjs')]);
   results.push(['hybrid_audit 多相混合（水密/极限/双语言残差）', await runStep('混合审计', 'hybrid_audit.mjs')]);
+  results.push(['industrial_export_audit 工业格式（GLB+3MF）', await runStep('工业格式审计', 'industrial_export_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
