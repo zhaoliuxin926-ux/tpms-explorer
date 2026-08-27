@@ -1,7 +1,25 @@
-// 求值器安全回归（正式套件，纯 Node 直跑 TS 源码，无需浏览器）
+// 求值器安全回归（正式套件，纯 Node；TS 源码经 rolldown 打包后导入）
 // 覆盖：9 项功能语义 + 24 项攻击载荷拦截 + 编译缓存 + 空/非法输入
 // 运行：node evaluator_check.mjs（在 tpms/.verify/ 下）
-import { compileCustomFormula, getTpmsFunction, getDefaultWeights } from '../tpms-platform/src/core/tpms-functions.ts';
+// 【阶段 I 改造】tpms-functions 现依赖 equation-parser（extensionless 相对导入），
+// Node TS 直跑不支持；改用与 mesh_audit 同款 rolldown 临时 bundle 模式。
+import { writeFileSync, rmSync } from 'node:fs';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const PLATFORM = join(dirname(fileURLToPath(import.meta.url)), '../tpms-platform');
+const BUNDLE = tmpdir() + '/tpms_evaluator_check_bundle.mjs';
+{
+  const entry = tmpdir() + `/tpms_evaluator_check_entry_${process.pid}.ts`;
+  writeFileSync(entry, `export { compileCustomFormula, getTpmsFunction, getDefaultWeights } from ${JSON.stringify(PLATFORM + '/src/core/tpms-functions.ts')};`);
+  const rolldown = PLATFORM + '/node_modules/.bin/rolldown.cmd';
+  const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
+  if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
+  try { rmSync(entry, { force: true }); } catch { /* 忽略 */ }
+}
+const { compileCustomFormula, getTpmsFunction, getDefaultWeights } = await import(pathToFileURL(BUNDLE));
 
 let pass = 0, fail = 0;
 const ok = (name) => { pass++; console.log('PASS', name); };

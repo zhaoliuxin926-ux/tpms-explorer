@@ -57,6 +57,9 @@ export interface VertexColorOptions {
     customFormula: string;
     weights: [number, number, number, number];
     periods: number;
+    /** 自定义公式动态参数（与渲染场同源；缺省 1/0） */
+    thickness?: number;
+    iso?: number;
   };
 }
 

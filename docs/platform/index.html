@@ -231,6 +231,14 @@
   .model-desc{margin-top:11px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--panel-border);
     border-radius:var(--radius-s);font-size:.78rem;color:var(--ink-2);line-height:1.55}
   .field-note{margin-top:9px;font-size:.72rem;color:var(--ink-3);line-height:1.45}
+  /* 自定义公式沙箱：实时校验状态条 + 预设样例芯片 */
+  .custom-status{margin-top:7px;font-size:.72rem;line-height:1.4;padding:5px 8px;border-radius:6px;font-family:ui-monospace,Consolas,monospace}
+  .custom-status.err{display:block;color:#ff8a80;background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.35)}
+  .custom-status.ok{display:block;color:#7bd88f;background:rgba(76,175,80,.10);border:1px solid rgba(76,175,80,.28)}
+  .custom-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .custom-presets .chip{font-size:.7rem;padding:4px 9px;border-radius:999px;border:1px solid var(--line,rgba(255,255,255,.14));background:transparent;color:var(--ink-2);cursor:pointer;transition:all .15s}
+  .custom-presets .chip:hover{border-color:var(--accent,#4fc3f7);color:var(--accent,#4fc3f7)}
+  .custom-presets .chip.active{background:var(--accent,#4fc3f7);border-color:var(--accent,#4fc3f7);color:#08131c;font-weight:600}
   .formula{background:var(--panel-2);border:1px solid var(--panel-border);border-radius:var(--radius-s);padding:11px 12px}
   .formula .cap{font-size:.7rem;color:var(--ink-3);margin-bottom:6px;letter-spacing:.4px}
   .formula .eq{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:.82rem;color:var(--ink);line-height:1.65;word-break:break-word}
@@ -666,7 +674,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-CZrgYK_K.js"></script>
+  <script type="module" crossorigin src="./assets/index-CuftuKJz.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-DekO_kuB.js">
 </head>
 <body>
@@ -731,6 +739,8 @@ window.addEventListener('error', function(e) {
         <div class="export-menu" id="export-menu" aria-hidden="true">
           <div class="xm-title">导出中心 · 科研 / 打印 / 复现</div>
           <button class="xm-item" data-export="stl"><span class="xm-col"><span class="xm-name">STL 网格</span><span class="xm-desc">三角面片，可 3D 打印 / 切片</span></span><span class="xm-ext">.stl</span></button>
+          <button class="xm-item" data-export="glb"><span class="xm-col"><span class="xm-name">彩色 3D 模型 (GLB)</span><span class="xm-desc">携带顶点着色，glTF 2.0 二进制</span></span><span class="xm-ext">.glb</span></button>
+          <button class="xm-item" data-export="3mf"><span class="xm-col"><span class="xm-name">3D 打印工业格式 (3MF)</span><span class="xm-desc">原生 mm 尺度 + 端板/构型元数据</span></span><span class="xm-ext">.3mf</span></button>
           <button class="xm-item" data-export="vtk"><span class="xm-col"><span class="xm-name">VTK PolyData</span><span class="xm-desc">ParaView 直接可读的三角网格</span></span><span class="xm-ext">.vtk</span></button>
           <button class="xm-item" data-export="cfdstl"><span class="xm-col"><span class="xm-name">CFD Multi-Patch STL (OpenFOAM)</span><span class="xm-desc">inlet / outlet / sides / wall 分块边界</span></span><span class="xm-ext">.stl</span></button>
           <button class="xm-item" data-export="vti"><span class="xm-col"><span class="xm-name">VTI 体素场</span><span class="xm-desc">隐函数标量场，可自由 re-contour</span></span><span class="xm-ext">.vti</span></button>
@@ -939,7 +949,10 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="field" id="custom-formula-field" style="display:none">
           <textarea id="custom-formula" placeholder="输入三维隐函数 f(x,y,z)，支持 sin, cos, tan, sqrt, pow, abs, pi 等。例如：sin(x)*cos(y) + sin(y)*cos(z)" rows="3"></textarea>
-          <div class="field-note">可用变量：x, y, z（弧度域）；可用函数：sin, cos, tan, sqrt, pow, abs, log, exp, pi, e</div>
+          <div id="custom-formula-status" class="custom-status" hidden></div>
+          <div class="field-note">可用变量：x, y, z（弧度域）、r, theta, phi（球坐标导出）；全局参数：k（周期数）、t（壁厚系数）、iso（基准等值）；函数：sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, log, log2, log10, sqrt, cbrt, abs, sign, floor, ceil, round, trunc, pow, min, max, atan2；常量：PI, E</div>
+          <div class="lbl" style="margin-top:8px"><span>预设样例库</span></div>
+          <div class="opt-row custom-presets" id="custom-presets"></div>
         </div>
       </details>
       <details class="sect" open>
@@ -1024,6 +1037,6 @@ window.addEventListener('error', function(e) {
     }, 800);
   });
 })();
-</script>
+</script>
 </body>
 </html>

@@ -118,6 +118,9 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const gradientEvaluator = mode === 'gradient_shell' ? getGradientEvaluator(gradientDir) : null;
 
   // hybrid / custom / lidinoid / splitp 无法使用 sin/cos 查表，需实时求值
+  // 【自定义公式动态参数】k=周期数 / t=壁厚系数 / iso=基准等值（构建配置值，非二分产物——
+  // 公式引用二分结果会构成循环依赖）。每次 build 新建对象，场/法线/投影各获取路径共享直读。
+  const eqDyn = { k: periods, t: thickness, iso };
   const hybridEnabled = hybrid.enabled;
   const useLookup = !hybridEnabled && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
 
@@ -125,9 +128,9 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
 
   if (hybridEnabled) {
-    hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula);
+    hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
   } else if (!useLookup) {
-    tpmFn = getTpmsFunction(type, customFormula);
+    tpmFn = getTpmsFunction(type, customFormula, eqDyn);
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -691,7 +694,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   //    顶点只沿曲面滑动——体积保真由机制保证，阶梯感由切向平滑消除。
   //    投影把残余法向偏差拉回解析连续场零面（消除栅格低通偏差）。
   // ──────────────────────────────────────────────────────────────
-  const projSolidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula));
+  const projSolidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
   const projectVertices = (newtonIters: number): void => {
     if (vertCount <= 0) return;
     const hStep = span / R;
@@ -1045,7 +1048,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         const needNumericGrad = hybridEnabled || mode !== 'solid_network' || type === 'custom';
         if (needNumericGrad) {
           // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
-          const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula));
+          const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
           // px = mx/(k·π)（px = ix/R·2-1 与 mx = kπ·px 的线性关系），差分时物理坐标须随弧度坐标联动
           const rawAt = (a: number, b2: number, c2: number): number => {
             const p2x = a / (k * Math.PI), p2y = b2 / (k * Math.PI), p2z = c2 / (k * Math.PI);
@@ -1210,6 +1213,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
             customFormula: params.customFormula,
             weights: params.weights,
             periods: params.periods,
+            thickness: params.thickness,
+            iso: params.iso,
           },
         })
       : null;

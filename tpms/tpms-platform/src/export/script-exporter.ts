@@ -1,5 +1,24 @@
 import type { AppState } from '../types';
+import { getCompiledCustomFormula } from '../core/tpms-functions';
 import { downloadBlob } from './download';
+
+/**
+ * 自定义公式的基准等值 iso_base（与 main.ts baseIso 同源：solid 模式含壁厚偏置）。
+ * 仅当公式 AST 引用 iso 时才有数值意义，但恒前置定义无害。
+ */
+function baseIsoOf(s: AppState): string {
+  return s.model === 'solid' ? `${-((s.thickness - 1) * 0.12)}` : '0.0';
+}
+
+/** 自定义公式 → NumPy 表达式（坐标 x/y/z 为弧度域，脚本网格变量是 ±π 域 → wrap kk*X） */
+function customPyExpr(s: AppState): string {
+  return getCompiledCustomFormula(s.customFormula).toPython((ax) => `kk*${ax.toUpperCase()}`);
+}
+
+/** 自定义公式 → MATLAB 表达式（.* ./ .^ 向量化） */
+function customMlExpr(s: AppState): string {
+  return getCompiledCustomFormula(s.customFormula).toMatlab((ax) => `kk*${ax.toUpperCase()}`);
+}
 
 /**
  * 纵深防御：插值进 Python/MATLAB 单引号字符串的标识符统一走此函数，
@@ -88,7 +107,12 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
     else:
         raise ValueError(f'Unsupported type: {t}')
 
-V = tpms_field(X, Y, Z, weights)
+if tpms_type == 'custom':
+    # 【阶段 I】自定义公式 AST→NumPy 向量化翻译（沙箱坐标 x/y/z 为弧度域 = kk·X）
+    iso_base = ${baseIsoOf(state)}   # 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
+    V = ${customPyExpr(state)}
+else:
+    V = tpms_field(X, Y, Z, weights)
 
 # 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
 blend_function = '${safeId(state.hybrid.blendFunction)}'
@@ -96,7 +120,11 @@ blend_axis = '${safeId(state.hybrid.axis ?? 'x')}'
 if ${state.hybrid.enabled ? 'True' : 'False'}:
     type_b = '${safeId(state.hybrid.typeB)}'
     weights_b = [${state.weights.join(', ')}]  # 与平台同源（平台 B 场复用主权重，非默认权重）
-    V_b = tpms_field(X, Y, Z, weights_b, type_b)
+    if type_b == 'custom':
+        # 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
+        V_b = ${customPyExpr(state)}
+    else:
+        V_b = tpms_field(X, Y, Z, weights_b, type_b)
     blend_center = ${safeId(state.hybrid.blendCenter)}
     blend_width = ${safeId(state.hybrid.blendWidth)}
     # 波前投影（与平台 hybrid-functions wavefrontCoord 同源）：radial=球面半径
@@ -281,7 +309,11 @@ z = linspace(-pi, pi, N);
 [X, Y, Z] = meshgrid(x, y, z);
 
 % 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
-if strcmp(tpms_type, 'gyroid')
+if strcmp(tpms_type, 'custom')
+    % 【阶段 I】自定义公式 AST→MATLAB 向量化翻译（沙箱坐标 x/y/z 为弧度域 = kk·X）
+    iso_base = ${baseIsoOf(state)};  % 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
+    V = ${customMlExpr(state)};
+elseif strcmp(tpms_type, 'gyroid')
     V = weights(1)*sin(kk*X).*cos(kk*Y) + weights(2)*sin(kk*Y).*cos(kk*Z) + weights(3)*sin(kk*Z).*cos(kk*X);
 elseif strcmp(tpms_type, 'diamond')
     V = weights(1)*sin(kk*X).*sin(kk*Y).*sin(kk*Z) ...
@@ -319,7 +351,10 @@ blend_axis = '${safeId(state.hybrid.axis ?? 'x')}';
 if ${safeId(state.hybrid.enabled)}
     type_b = '${safeId(state.hybrid.typeB)}';
     weights_b = [${state.weights.join(', ')}]  # 与平台同源（平台 B 场复用主权重，非默认权重）;
-    if strcmp(type_b, 'gyroid')
+    if strcmp(type_b, 'custom')
+        % 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
+        V_b = ${customMlExpr(state)};
+    elseif strcmp(type_b, 'gyroid')
         V_b = weights_b(1)*sin(kk*X).*cos(kk*Y) + weights_b(2)*sin(kk*Y).*cos(kk*Z) + weights_b(3)*sin(kk*Z).*cos(kk*X);
     elseif strcmp(type_b, 'diamond')
         V_b = weights_b(1)*sin(kk*X).*sin(kk*Y).*sin(kk*Z) ...
