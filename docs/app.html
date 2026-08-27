@@ -379,7 +379,7 @@
       <div class="mark"></div>
       <div>
         <h1>TPMS 结构参数探索器</h1>
-        <div class="sub">交互式探索三重周期性极小曲面 · 实时等值面重建</div>
+        <div class="sub">交互式探索<span class="gloss-term" data-term="periodicity">三重周期性</span><span class="gloss-term" data-term="minimal-surface">极小曲面</span> · 实时等值面重建</div>
       </div>
     </a>
     <div class="spacer"></div>
@@ -496,11 +496,11 @@
         <summary class="sect-h">应用场景预设</summary>
         <div class="scenes">
           <button class="scene" data-scene="bone"><span class="ic">🦴</span><span><span class="nm">仿生骨支架</span><br><span class="ds">高孔隙 Gyroid · 促进骨长入</span></span></button>
-          <button class="scene" data-scene="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Diamond · 平衡强度与重量</span></span></button>
-          <button class="scene" data-scene="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 最大化表面积</span></span></button>
-          <button class="scene" data-scene="catalyst"><span class="ic">⚗️</span><span><span class="nm">催化/过滤载体</span><br><span class="ds">Neovius · 高通量高比表</span></span></button>
-          <button class="scene" data-scene="acoustic"><span class="ic">🔊</span><span><span class="nm">声学隔振板</span><br><span class="ds">I-WP · 鲁棒吸声结构</span></span></button>
-          <button class="scene" data-scene="electrode"><span class="ic">🔋</span><span><span class="nm">电池电极/分离膜</span><br><span class="ds">F-RD · 极致比表面积</span></span></button>
+          <button class="scene" data-scene="lightweight"><span class="ic">⚙️</span><span><span class="nm">轻量化零件</span><br><span class="ds">Gyroid · 高孔隙低密度</span></span></button>
+          <button class="scene" data-scene="heat"><span class="ic">🌡</span><span><span class="nm">散热结构</span><br><span class="ds">Schwarz P · 高比表面积换热</span></span></button>
+          <button class="scene" data-scene="catalyst"><span class="ic">⚗️</span><span><span class="nm">催化/过滤载体</span><br><span class="ds">I-WP · 均匀孔道低压降</span></span></button>
+          <button class="scene" data-scene="acoustic"><span class="ic">🔊</span><span><span class="nm">声学隔振板</span><br><span class="ds">Gyroid · 周期通道吸声</span></span></button>
+          <button class="scene" data-scene="electrode"><span class="ic">🔋</span><span><span class="nm">电池电极/分离膜</span><br><span class="ds">Neovius · 宽通道高负载</span></span></button>
         </div>
       </details>
       <details class="sect">
@@ -510,7 +510,8 @@
           <button class="opt" data-structure="shell">等厚双壳<span class="o-sub">Shell</span></button>
           <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
         </div>
-        <div class="model-desc" id="structure-desc">实体网络：bias−V 生成的杆状实体网络，是 TPMS 最常见的表示形式。</div>
+        <div class="model-desc" id="structure-desc">实体网络：把等值面一侧填成实体（截断 TPMS 的 solid 表示；严格 TPMS 是 C=0 的零厚度曲面）。</div>
+        <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="gradient">什么是梯度双壳？</span>　·　<span class="gloss-term" data-term="structure-vs-model">结构拓扑 vs 表现形式</span></div>
       </details>
       <details class="sect">
         <summary class="sect-h">表现形式</summary>
@@ -543,7 +544,7 @@
       <details class="sect" open>
         <summary class="sect-h">当前曲面隐函数</summary>
         <div class="formula">
-          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定）</div>
+          <div class="cap">f(x, y, z) = <span class="gloss-term" data-term="iso-c">C</span>　（C 由孔隙率决定 · level-set 近似式）</div>
           <div class="eq" id="formula-display"></div>
         </div>
         <div class="fw" id="formula-weights">
@@ -582,7 +583,7 @@ function buildSurface(type, iso, periods, R, options={}){
   for(let i=0;i<N;i++){ const a=(-half + (i/R)*span)*k; sn[i]=Math.sin(a); cs[i]=Math.cos(a); cs2[i]=Math.cos(2*a); }
   // 基础 TPMS 场 V（弧度域），不经过模式/容器变换，供二分搜索和模式公式复用
   const V = new Float32Array(N*N*N);
-  let minV = Infinity, maxV = -Infinity;
+  let minV = Infinity, maxV = -Infinity, nonFiniteCount = 0;
   for(let iz=0; iz<N; iz++){ const Sz=sn[iz],Cz=cs[iz],C2z=cs2[iz];
     for(let iy=0; iy<N; iy++){ const Sy=sn[iy],Cy=cs[iy],C2y=cs2[iy];
       for(let ix=0; ix<N; ix++){ const Sx=sn[ix],Cx=cs[ix],C2x=cs2[ix]; let v;
@@ -595,6 +596,7 @@ function buildSurface(type, iso, periods, R, options={}){
         else if(type==='splitp') v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z);
         else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
         V[idxF(ix,iy,iz)] = v;
+        if(!isFinite(v)) nonFiniteCount++;
         if(v<minV) minV=v; if(v>maxV) maxV=v;
       } } }
   // 物理坐标（归一化到 [-1,1]），供容器边界函数使用。ix/R ∈ [0,1] → px ∈ [-1,1]
@@ -637,8 +639,8 @@ function buildSurface(type, iso, periods, R, options={}){
     const dv = v - bias;
     if(mode==='gradient_shell'){
       const zPhys = iz/R;                          // 0~1
-      // 底部保留 30% 最小壁厚，避免 tGrad=0 导致底层全实心；顶部到 100%，形成渐变
-      const tGrad = tEff * (0.3 + 0.7*zPhys);
+      // 与工程版 gradient-functions.ts 对齐：底部厚（×1.5，承重）→ 顶部薄（×0.5），倍率均值 1.0
+      const tGrad = tEff * (1.5 - zPhys);
       return dv*dv - (tGrad/2)*(tGrad/2);
     }
     return dv*dv - (tEff/2)*(tEff/2);              // shell
@@ -706,13 +708,27 @@ function buildSurface(type, iso, periods, R, options={}){
       biasBase = biasForShell;
     }
   }
-  // 生成最终场 field：F_final = max(F_tpms, F_bound)，等值面取 0
+  // 【红队守卫】退化场（权重全零）与非有限场（公式 NaN/Inf）走显式失败，
+  // 避免静默产出「满容器方糖」或空网格
+  if (nonFiniteCount > 0) throw new Error('公式结果含非有限值（NaN/Inf），请检查公式定义域');
+  if (!isFinite(maxV - minV) || maxV - minV < 1e-9) throw new Error('曲面场退化为常数：权重不能全为 0');
+
+  // 生成最终场 field：F_final = max(F_tpms, F_bound)，等值面取 0。
+  // 【2026-08-27 v2】边界层显式覆写为空气（−ε）：不能依赖 max(F, bound)——
+  // max 只会抬升，公式在面上的正值会压过负壳，导致实体相与外壳融合、
+  // 封闭侧变成空气相（STL 反相的根源）。覆写后实体相在表面自然截断，
+  // 孔口以开口环留在面平面上，由下方封盖通道用扇面封死。
   const field = new Float32Array(N*N*N);
   for(let iz=0; iz<N; iz++){ const zB=iz*N*N;
     for(let iy=0; iy<N; iy++){ const yB=zB+iy*N;
       for(let ix=0; ix<N; ix++){
         const f = tpmsAt(V[yB+ix], biasBase, iz, tEffBase);
-        field[yB+ix] = Math.max(f, boundArr[yB+ix]);
+        // 【2026-08-27 v2】统一封盖规则：容器外(b>=0)或网格边界层一律空气。
+        // max(f, clip) 不行——公式在圆柱角落的正瓣会压过负裁剪（实测 +109%→+27%），
+        // 公式不知道容器的存在，容器裁剪必须无条件覆写。
+        const dAx = Math.min(ix, R-ix, iy, R-iy, iz, R-iz);
+        const b = boundArr[yB+ix];
+        field[yB+ix] = (b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b);
       }
     }
   }
@@ -728,24 +744,9 @@ function buildSurface(type, iso, periods, R, options={}){
   // 实体比例 = 分子/分母 = solidEstimate；孔隙率 = 1 - solidEstimate
   // 优点：与 μCT 体积扫描对齐；cube/cylinder 一致；与二分搜索的 countSolid 单调性一致。
   // 性能：R³ 次循环 = 重建主循环的同级开销；8 角 V 求和是 cache-friendly 的连续内存访问。
-  let monteCarloInside = 0, monteCarloSolid = 0;
-  for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
-    // cell 中心物理坐标 [-1+1/R, 1-1/R]
-    const px = (cx+0.5)/R*2 - 1;
-    const py = (cy+0.5)/R*2 - 1;
-    const pz = (cz+0.5)/R*2 - 1;
-    if(boundAt(px,py,pz) >= 0) continue;  // 容器外，不计入
-    monteCarloInside++;
-    // 8 角 V 算术平均 = cell 中心 V（三线性插值在 (0.5, 0.5, 0.5) 处的值）
-    let v = 0;
-    for(let dz=0; dz<2; dz++) for(let dy=0; dy<2; dy++) for(let dx=0; dx<2; dx++) v += V[idxF(cx+dx,cy+dy,cz+dz)];
-    v *= 0.125;  // / 8
-    // tpmsAt 已在二分搜索中定义和验证；与 countSolid 用同一公式 → 二分目标=蒙特卡洛目标
-    const f = tpmsAt(v, biasBase, cz, tEffBase);
-    if(f > 0) monteCarloSolid++;
-  }
-  // 旧变量名 materialAccum/validCells 保留以免 return 签名变化，但已不使用
-  const materialAccum = monteCarloSolid, validCells = monteCarloInside;
+  // 【2026-08-27 v2】格子中心 MC 已移除：porosityEstimate 改为网格实测口径
+  // （1 − meshSolidFraction，发散体积/包络），格子 MC 的量化偏差不再污染显示。
+  const materialAccum = 0, validCells = 0;
   // isoUsed 返回名义等值常数：杆模式返回 bias，壳模式返回 tEff/2（壁面位置），
   // 用于公式右值显示，让用户看到与孔隙率对应的参数（避免显示恒为 0）
   const isoUsedReport = mode==='solid_network' ? biasBase : tEffBase/2;
@@ -775,20 +776,102 @@ function buildSurface(type, iso, periods, R, options={}){
   const vAt=(x,y,z)=> (x<0||y<0||z<0||x>=R||y>=R||z>=R)?-1:cellVert[x+y*R+z*R*R];
   const indices=[];
   const pushTri=(a,b,c)=>{ indices.push(a,b,c); };
-  const pushQuad=(a,b,c,d)=>{ indices.push(a,b,c, a,c,d); };
-  // 尝试用四角顶点围一个面；四角不全时降级补三角，封住 Surface Nets 边界处的菱形裂缝
-  const tryFace=(a,b,c,d)=>{
-    const A=vAt(a[0],a[1],a[2]),B=vAt(b[0],b[1],b[2]),C=vAt(c[0],c[1],c[2]),D=vAt(d[0],d[1],d[2]);
-    if(A>=0&&B>=0&&C>=0&&D>=0){ pushQuad(A,B,C,D); return; }
-    // 缺一个角：用三个存在的顶点补三角，填上原本会丢失的洞
-    const e=[[A,a],[B,b],[C,c],[D,d]].filter(p=>p[0]>=0);
-    if(e.length===3) pushTri(e[0][0],e[1][0],e[2][0]);
+  // 【2026-08-27 v2】面提取以「网格边穿越等值面」为键（对齐工程版 surface-nets.ts）。
+  // 旧 tryFace 只判「四个邻接 cell 是否有顶点」，不校验共享边是否穿越——
+  // 鞍点/退化构型下产生成片虚假 quad 与裂缝（实测单模型数万开放边/非流形边）。
+  // 新不变量：每条穿越网格边恰产出一个 quad，同一网格面两侧严格配对 ⇒
+  // 水密由构造保证；缠绕由场符号决定（外向=空气侧）。
+  // cellVert 镜像钳位查询：孔口封盖环落在边界层，环绕 cell 可能越界一格，
+  // 钳位后与相邻真实 cell 共享顶点 → 由 pushOrientedQuad 的去重逻辑收缩为三角形
+  const cvAt=(x,y,z)=>{
+    const xc=x<0?0:x>=R?R-1:x, yc=y<0?0:y>=R?R-1:y, zc=z<0?0:z>=R?R-1:z;
+    return cellVert[xc+yc*R+zc*R*R];
   };
-  for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
-    if(vAt(cx,cy,cz)<0) continue;
-    tryFace([cx,cy,cz],[cx+1,cy,cz],[cx+1,cy+1,cz],[cx,cy+1,cz]);
-    tryFace([cx,cy,cz],[cx+1,cy,cz],[cx+1,cy,cz+1],[cx,cy,cz+1]);
-    tryFace([cx,cy,cz],[cx,cy+1,cz],[cx,cy+1,cz+1],[cx,cy,cz+1]);
+  const pushOrientedQuad=(a,b,c,d,ox,oy,oz)=>{
+    if(a<0||b<0||c<0||d<0) return;
+    let v0=a,v1=b,v2=c,v3=d;
+    if(v0===v1||v0===v2||v0===v3||v1===v2||v1===v3||v2===v3){
+      const uniq=[]; for(const x of [v0,v1,v2,v3]) if(!uniq.includes(x)) uniq.push(x);
+      if(uniq.length<3) return;
+      v0=uniq[0]; v1=uniq[1]; v2=uniq[2]; v3=uniq.length===4?uniq[3]:-1;
+    }
+    const i0=v0*3, i1=v1*3;
+    const b1x=positions[i1]-positions[i0], b1y=positions[i1+1]-positions[i0+1], b1z=positions[i1+2]-positions[i0+2];
+    const iE=(v3>=0?v3:v2)*3;
+    const d1x=positions[iE]-positions[i0], d1y=positions[iE+1]-positions[i0+1], d1z=positions[iE+2]-positions[i0+2];
+    if(b1x*d1y*oz + b1y*d1z*ox + b1z*d1x*oy - b1z*d1y*ox - b1y*d1x*oz - b1x*d1z*oy >= 0){
+      pushTri(v0,v1,v2); if(v3>=0) pushTri(v0,v2,v3);
+    } else {
+      pushTri(v0,v2,v1); if(v3>=0) pushTri(v0,v3,v2);
+    }
+  };
+  const R2s = R*R, NNs = N*N;   // cellVert 用 R²、field 用 N²，两套步长严禁混用
+  for(let cz=0; cz<=R; cz++) for(let cy=0; cy<=R; cy++){
+    const rowBase = cz*NNs + cy*N;
+    for(let cx=0; cx<=R; cx++){
+      const pIdx = rowBase + cx;
+      const fp = field[pIdx], pPos = fp > 0;
+      // +x 出边：终点 (cx+1,cy,cz)；环绕 cell 共享 cell-x 层 = cx，周边 y-z 平面
+      if(cx<R && ((field[pIdx+1]>0)!==pPos)){
+        if(cy>=1 && cy<R && cz>=1 && cz<R){
+          pushOrientedQuad(cvAt(cx,cy-1,cz-1), cvAt(cx,cy,cz-1), cvAt(cx,cy,cz), cvAt(cx,cy-1,cz), pPos?1:-1, 0, 0);
+        }
+      }
+      // +y 出边：终点 (cx,cy+1,cz)；环绕 cell 共享 cell-y 层 = cy，周边 x-z 平面
+      if(cy<R && ((field[pIdx+N]>0)!==pPos)){
+        if(cx>=1 && cx<R && cz>=1 && cz<R){
+          pushOrientedQuad(cvAt(cx-1,cy,cz-1), cvAt(cx-1,cy,cz), cvAt(cx,cy,cz), cvAt(cx,cy,cz-1), 0, pPos?1:-1, 0);
+        }
+      }
+      // +z 出边：终点 (cx,cy,cz+1)；环绕 cell 共享 cell-z 层 = cz，周边 x-y 平面
+      if(cz<R && ((field[pIdx+NNs]>0)!==pPos)){
+        if(cx>=1 && cx<R && cy>=1 && cy<R){
+          pushOrientedQuad(cvAt(cx-1,cy-1,cz), cvAt(cx,cy-1,cz), cvAt(cx,cy,cz), cvAt(cx-1,cy,cz), 0, 0, pPos?1:-1);
+        }
+      }
+    }
+  }
+  // 端面封盖（pore capping）：边界层为空气后，触及表面的孔道以开口环收尾。
+  // 边界流形上每个开口顶点恰有一条出向开口边 → succ 环链直接追踪；
+  // 三角形 (C, ring[i+1], ring[i]) 与开口有向边反向配对 ⇒ 盖片缠绕自动继承
+  // 界面的「外向=离实体」约定，无需平面符号推理。
+  const frozen = new Uint8Array(vi + 65536);
+  const frozenCap = new Uint8Array(vi + 65536);
+  {
+    const KM = vi + 1;
+    const dirCnt = new Map(), undCnt = new Map();
+    for(let t=0; t<indices.length; t+=3){
+      const a=indices[t], b=indices[t+1], c=indices[t+2];
+      const put=(u,v)=>{
+        const dk=u*KM+v; dirCnt.set(dk,(dirCnt.get(dk)||0)+1);
+        const uk=u<v?u*KM+v:v*KM+u; undCnt.set(uk,(undCnt.get(uk)||0)+1);
+      };
+      put(a,b); put(b,c); put(c,a);
+    }
+    const succ = new Map();
+    for(const [uk,cnt] of undCnt){
+      if(cnt!==1) continue;
+      const u=Math.floor(uk/KM), v=uk%KM;
+      const su=(dirCnt.get(u*KM+v)||0)===1?u:v;
+      const sv=su===u?v:u;
+      if(succ.has(su)) continue;
+      succ.set(su,sv);
+      frozen[su]=1; frozen[sv]=1;
+    }
+    const visited = new Uint8Array(vi);
+    for(const [start] of succ){
+      if(visited[start]) continue;
+      const ring=[start]; visited[start]=1;
+      let cur2=succ.get(start);
+      while(cur2!==undefined && cur2!==start && !visited[cur2]){ visited[cur2]=1; ring.push(cur2); cur2=succ.get(cur2); }
+      if(cur2!==start || ring.length<3) continue;
+      let gx=0,gy=0,gz=0;
+      for(const r of ring){ gx+=positions[r*3]; gy+=positions[r*3+1]; gz+=positions[r*3+2]; }
+      const m=ring.length; gx/=m; gy/=m; gz/=m;
+      positions.push(gx,gy,gz);
+      const cIdx=vi++; frozen[cIdx]=1; frozenCap[cIdx]=1;
+      for(let i2=0; i2<m; i2++) pushTri(cIdx, ring[(i2+1)%m], ring[i2]);
+    }
   }
   const geo = new THREE.BufferGeometry();
   geo.setIndex(indices);
@@ -801,34 +884,107 @@ function buildSurface(type, iso, periods, R, options={}){
   // 在高金属度下表现为反光斑纹与高光错位。
   // smoothing 数组提到 buildSurface 顶层，让平滑段和法线段共享。
   const n = positions.length;
-  const cur = n > 0 ? new Float32Array(n) : null;
-  if(cur){ for(let i=0;i<n;i++) cur[i]=positions[i]; }
+  const cur = n > 0 ? Float32Array.from(positions) : null;
   if(cur){
+    // 【2026-08-27 v2】切向平滑 + 联合投影（与工程版 surface-nets.ts 同源）：
+    //  · 切向平滑剥掉位移的法向分量——从机制上杜绝薄壁/细杆的跨侧拉扯（体积保真）
+    //  · 投影仅用于 solid_network：壳类的亚格厚壁会产生「中线质心顶点」，
+    //    投影沿法向折叠到任意一侧（工程版 projOnly 实测 −29.5%）
+    //  · 投影场用复合场三线性采样（单文件无 custom/hybrid 公式求值器）；
+    //    梯度病态守卫 + 位移限幅，防 f/|g|² 爆炸转成定向漂移
     const neighbor=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
     const lambda=0.5;
-    // 【优化 P0-3】preview 模式只跑 1 轮平滑（~50% 时间节省），full 模式 2 轮
-    const iters = isPreview ? 1 : 2;
-    const next=new Float32Array(n);
-    for(let it=0; it<iters; it++){
-      next.set(cur);
-      for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
-        const vi2=cx+cy*R+cz*R*R;
-        const self=cellVert[vi2];
-        if(self<0) continue;
-        let nx=0,ny=0,nz=0,nc=0;
-        for(const [dx,dy,dz] of neighbor){
-          const nb=vAt(cx+dx,cy+dy,cz+dz);
-          if(nb>=0){ nx+=cur[nb*3]; ny+=cur[nb*3+1]; nz+=cur[nb*3+2]; nc++; }
-        }
-        if(nc>0){
-          const i3=self*3;
-          next[i3]   = cur[i3]   + lambda*(nx/nc - cur[i3]);
-          next[i3+1] = cur[i3+1] + lambda*(ny/nc - cur[i3+1]);
-          next[i3+2] = cur[i3+2] + lambda*(nz/nc - cur[i3+2]);
-        }
+    const mu=-0.53;
+    const hStep = span / R;
+    // 复合场三线性采样：返回 [f, gx, gy, gz]（场值 + 物理梯度）
+    const fieldF=(wx,wy,wz)=>{
+      let gx=(wx+half)/span*R, gy=(wy+half)/span*R, gz=(wz+half)/span*R;
+      gx=gx<0?0:gx>R-1e-6?R-1e-6:gx;
+      gy=gy<0?0:gy>R-1e-6?R-1e-6:gy;
+      gz=gz<0?0:gz>R-1e-6?R-1e-6:gz;
+      const ix=gx|0, iy=gy|0, iz=gz|0;
+      const tx=gx-ix, ty=gy-iy, tz=gz-iz;
+      const b000=ix+iy*N+iz*N*N;
+      const c000=field[b000], c100=field[b000+1], c010=field[b000+N], c110=field[b000+N+1];
+      const c001=field[b000+NNs], c101=field[b000+NNs+1], c011=field[b000+N+NNs], c111=field[b000+N+NNs+1];
+      const z0x=c000*(1-tx)+c100*tx, z0y=c010*(1-tx)+c110*tx;
+      const z1x=c001*(1-tx)+c101*tx, z1y=c011*(1-tx)+c111*tx;
+      const wL=1-tz, wU=tz;
+      const fz0=z0x*(1-ty)+z0y*ty, fz1=z1x*(1-ty)+z1y*ty;
+      const dfxL=(c100-c000)*(1-ty)+(c110-c010)*ty, dfxU=(c101-c001)*(1-ty)+(c111-c011)*ty;
+      const dfyL=(c010-c000)*(1-tx)+(c110-c100)*tx, dfyU=(c011-c001)*(1-tx)+(c111-c101)*tx;
+      return [
+        fz0*wL+fz1*wU,
+        (dfxL*wL+dfxU*wU)/hStep,
+        (dfyL*wL+dfyU*wU)/hStep,
+        (fz1-fz0)/hStep
+      ];
+    };
+    const projectOne=()=>{
+      for(let v=0; v<vi; v++){
+        if(frozen[v]) continue;
+        const i3=v*3;
+        const wx=cur[i3], wy=cur[i3+1], wz=cur[i3+2];
+        const ppx=wx/Math.PI, ppy=wy/Math.PI, ppz=wz/Math.PI;
+        if(Math.abs(ppx)>0.97||Math.abs(ppy)>0.97||Math.abs(ppz)>0.97) continue;
+        const [fVal,gx,gy,gz]=fieldF(wx,wy,wz);
+        const len2=gx*gx+gy*gy+gz*gz;
+        if(!(len2>1e-16)) continue;
+        if(Math.abs(fVal)>2.4*hStep*Math.sqrt(len2)) continue;
+        let stepN=fVal/len2;
+        const dispLen=Math.sqrt(len2)*Math.abs(stepN);
+        if(dispLen>1.2*hStep) stepN*=(1.2*hStep)/dispLen;
+        cur[i3]-=gx*stepN; cur[i3+1]-=gy*stepN; cur[i3+2]-=gz*stepN;
       }
-      cur.set(next);
-    }
+    };
+    const next=new Float32Array(n);
+    for(let it=0; it<2; it++){
+      const coef = it%2===0 ? lambda : mu;
+      next.set(cur);
+        for(let cz=0; cz<R; cz++) for(let cy=0; cy<R; cy++) for(let cx=0; cx<R; cx++){
+          const vi2=cx+cy*R+cz*R*R;
+          const self=cellVert[vi2];
+          if(self<0) continue;
+          if(frozenCap[self]) continue;
+          const rim = frozen[self]===1;
+          let nx=0,ny=0,nz=0,nc=0;
+          for(const [dx,dy,dz] of neighbor){
+            const nb=vAt(cx+dx,cy+dy,cz+dz);
+            if(nb>=0){ nx+=cur[nb*3]; ny+=cur[nb*3+1]; nz+=cur[nb*3+2]; nc++; }
+          }
+          if(nc>0){
+            const i3=self*3;
+            let dx=nx/nc-cur[i3], dy=ny/nc-cur[i3+1], dz=nz/nc-cur[i3+2];
+            const ppx=cur[i3]/Math.PI, ppy=cur[i3+1]/Math.PI, ppz=cur[i3+2]/Math.PI;
+            if(rim){
+              // 环顶点：面内约束（去掉面法向分量），磨平轮廓锯齿
+              let pnx=0, pny=0, pnz=0;
+              if(container==='cylinder' && Math.abs(ppz)<=0.96){
+                const r2=ppx*ppx+ppy*ppy;
+                if(r2>1e-9){ const rr=Math.sqrt(r2); pnx=ppx/rr; pny=ppy/rr; } else { dx=0; dy=0; dz=0; }
+              } else if(ppz>0.96) pnz=1;
+              else if(ppz<-0.96) pnz=-1;
+              else if(container==='cube' && Math.abs(ppx)>0.96) pnx=ppx>0?1:-1;
+              else if(container==='cube' && Math.abs(ppy)>0.96) pny=ppy>0?1:-1;
+              else if(Math.abs(ppz)>0.96) pnz=ppz>0?1:-1;
+              const dn=dx*pnx+dy*pny+dz*pnz;
+              dx-=pnx*dn; dy-=pny*dn; dz-=pnz*dn;
+            } else if(Math.abs(ppx)<=0.97 && Math.abs(ppy)<=0.97 && Math.abs(ppz)<=0.97){
+              const [ ,sgx,sgy,sgz]=fieldF(cur[i3],cur[i3+1],cur[i3+2]);
+              const gl2=sgx*sgx+sgy*sgy+sgz*sgz;
+              if(gl2>1e-16){
+                const dot=(dx*sgx+dy*sgy+dz*sgz)/gl2;
+                dx-=sgx*dot; dy-=sgy*dot; dz-=sgz*dot;
+              }
+            }
+            next[i3]   = cur[i3]   + coef*dx;
+            next[i3+1] = cur[i3+1] + coef*dy;
+            next[i3+2] = cur[i3+2] + coef*dz;
+          }
+        }
+        cur.set(next);
+        if(mode==='solid_network') projectOne();
+      }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(cur,3));
   }
   // 解析法线：用隐函数梯度 ∇f 精确计算每个顶点的法线，替代离散的 computeVertexNormals()。
@@ -842,6 +998,7 @@ function buildSurface(type, iso, periods, R, options={}){
   // 【优化 P0-3】preview 模式跳过耗时的解析法线（~30% 时间节省），
   // 让 buildSurface 三轮内（每帧 16ms 内）完成，拖动滑块时跟手性显著提升。
   // full 模式用解析法线保证高金属度下的高光质量。
+  // 【红队 V-3b】piecewise/混叠公式数值梯度恒 0 → 法线 (0,0,0)：解析段之后统一兜底
   if(cur && !isPreview){
     const normals = new Float32Array(n);
     const BTOL = 0.04;   // 归一化空间边界判定容差
@@ -909,6 +1066,27 @@ function buildSurface(type, iso, periods, R, options={}){
       }
       normals[i3]=gx; normals[i3+1]=gy; normals[i3+2]=gz;
     }
+    // 【红队 V-3b】piecewise/混叠公式数值梯度恒 0 → 法线 (0,0,0) 黑斑：
+    // 零法线顶点用离散面法线兜底重算
+    let zeroN = 0;
+    const nv = n / 3;
+    for (let i = 0; i < nv; i++) {
+      if (Math.abs(normals[i*3]) + Math.abs(normals[i*3+1]) + Math.abs(normals[i*3+2]) < 1e-6) zeroN++;
+    }
+    if (zeroN > 0) {
+      const scratch = new Float32Array(nv * 3);
+      const tmpGeo = new THREE.BufferGeometry();
+      tmpGeo.setAttribute('position', new THREE.Float32BufferAttribute(cur, 3));
+      tmpGeo.setIndex(indices);
+      tmpGeo.computeVertexNormals();
+      const dn = tmpGeo.attributes.normal.array;
+      for (let i = 0; i < nv; i++) {
+        if (Math.abs(normals[i*3]) + Math.abs(normals[i*3+1]) + Math.abs(normals[i*3+2]) < 1e-6) {
+          normals[i*3] = dn[i*3]; normals[i*3+1] = dn[i*3+1]; normals[i*3+2] = dn[i*3+2];
+        }
+      }
+      tmpGeo.dispose();
+    }
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals,3));
   } else {
     geo.computeVertexNormals();
@@ -917,7 +1095,24 @@ function buildSurface(type, iso, periods, R, options={}){
   // 孔隙率估算：分母用容器内有效体素数（validCells），排除容器外角落。
   // 圆柱容器下避免把圆外立方体角落误算成 TPMS 材料，让孔隙率显示与立方体一致。
   const solidEstimate = validCells > 0 ? materialAccum / validCells : 0;
-  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-solidEstimate, isoUsed: isoUsedReport };
+  // 【2026-08-27 v2】网格实测固相体积分数（发散定理），与格子 MC 估算独立——
+  // 薄壁/倍频曲面下格子 MC 有最高 13pp 量化偏差，实测才是 STL 的真实材料占比
+  let meshSolidFraction = 0;
+  if (cur && indices.length > 0) {
+    let vol6 = 0;
+    for (let t = 0; t < indices.length; t += 3) {
+      const i0 = indices[t]*3, i1 = indices[t+1]*3, i2 = indices[t+2]*3;
+      vol6 += cur[i0]*(cur[i1+1]*cur[i2+2]-cur[i1+2]*cur[i2+1])
+        + cur[i0+1]*(cur[i1+2]*cur[i2]-cur[i1]*cur[i2+2])
+        + cur[i0+2]*(cur[i1]*cur[i2+1]-cur[i1+1]*cur[i2]);
+    }
+    const mm = 0.33;
+    const env = container === 'cylinder'
+      ? Math.PI * Math.pow(Math.PI * mm, 2) * (2 * Math.PI * mm)
+      : Math.pow(2 * Math.PI * mm, 3);
+    meshSolidFraction = env > 0 ? Math.min(1, Math.abs(vol6) / 6 * mm * mm * mm / env) : 0;
+  }
+  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-(meshSolidFraction || (1-solidEstimate)), isoUsed: isoUsedReport, meshSolidFraction };
 }
 
 const COLORS = { gyroid:0x6366f1, diamond:0xf59e0b, schwarz:0x10b981, neovius:0xec4899, iwp:0x0ea5e9, frd:0xa855f7, lidinoid:0x14b8a6, splitp:0xf43f5e };
@@ -936,8 +1131,8 @@ const WEIGHT_TERMS = {
 };
 const MODEL_DESC = {
   surface:'壳模型（Surface）：提取 TPMS 等值面薄壳，展示曲面几何与拓扑。最接近 3D 打印中的薄壁表示，可观察真实曲面形貌。',
-  strut:'杆模型（Lattice）：以等值面网格的线框骨架呈现，形似桁架结构。适合理解节点连接方式与载荷传递路径，常用于轻量化设计。',
-  solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。壁厚系数会直接改变实体材料占比，用于评估填充率与力学性能。',
+  strut:'杆模型（Lattice）：同一等值面网格的线框渲染视角，便于观察连接拓扑与孔道走向。它不改变几何，导出的仍是完整曲面（非杆件桁架点阵）。',
+  solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。材料占比由孔隙率决定（壁厚系数在此模式下主要影响显示）。',
 };
 const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube' };
 const CLIP_LIMIT = 1.32;
@@ -953,7 +1148,7 @@ function isoFromPorosity(type, p){ const t=(p-60)/30;
   if(type==='splitp') return -0.6 + t*1.2;
   return -0.3 + t*0.7;
 }
-function resolutionFromCell(c, preview=false){ const full = Math.min(88, 19 + c*14); return preview ? Math.min(32, full) : full; }
+function resolutionFromCell(c, preview=false){ const fk = (state.type==='iwp'||state.type==='frd'||state.type==='neovius')?28:14; const full = Math.min(96, 19 + c*fk); return preview ? Math.min(32, full) : full; }
 function baseIso(){ let iso = isoFromPorosity(state.type, state.porosity); if(state.model==='solid') iso -= (state.thickness-1)*0.12; return iso; }
 
 let scene, camera, renderer, controls, group, pmrem, axesHelper, baseGeo=null, meshFill=null, rebuildTimer=null, lastPorosityEstimate=null;
@@ -1188,7 +1383,7 @@ function renderMeasurements(){
   const u = UNIT[measureUnit] || UNIT.mm;
   const f = u.f;
   const side_mm = 2*Math.PI*MM_PER_UNIT;   // cube 边长 / cylinder 高（mm）
-  const r_mm = MM_PER_UNIT;                 // cylinder 半径（mm）
+  const r_mm = Math.PI * MM_PER_UNIT;       // cylinder 半径（mm）：phys 半径 1 = wc π
   const area = lastMeasure.Araw * Math.pow(MM_PER_UNIT*f, 2);
   const Vc = lastMeasure.vol_mm3 * Math.pow(f, 3);
   const por = lastPorosityEstimate==null ? 0 : lastPorosityEstimate;
@@ -1210,7 +1405,14 @@ function rebuild(preview=false){
   const iso = baseIso();
   const R = resolutionFromCell(state.cellSize, preview);
   const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
-  const { geo, vertCount, triCount, porosityEstimate, isoUsed } = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview });
+  let bs;
+  try {
+    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview });
+  } catch (e) {
+    alert('构建失败：' + (e && e.message ? e.message : e));
+    return false;
+  }
+  const { geo, vertCount, triCount, porosityEstimate, isoUsed, meshSolidFraction } = bs;
   if(meshFill){ group.remove(meshFill); meshFill.material.dispose(); meshFill=null; }
   if(baseGeo){ baseGeo.dispose(); }
   baseGeo = geo;
@@ -1226,7 +1428,7 @@ function rebuild(preview=false){
   }
   const ms = (performance.now()-t0).toFixed(1);
   const quality = preview ? '预览' : '高清';
-  document.getElementById('stats').innerHTML = `顶点 <b>${vertCount.toLocaleString()}</b>　三角面 <b>${triCount.toLocaleString()}</b><br>分辨率 <b>${R}</b>³（${quality}）　重建 <b>${ms}</b> ms<br>估算孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b>　材料占比 <b>${((1-porosityEstimate)*100).toFixed(1)}%</b>`;
+  document.getElementById('stats').innerHTML = `顶点 <b>${vertCount.toLocaleString()}</b>　三角面 <b>${triCount.toLocaleString()}</b><br>分辨率 <b>${R}</b>³（${quality}）　重建 <b>${ms}</b> ms<br>估算孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b>　材料占比 <b>${(meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100 > 0 ? (( meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100).toFixed(1) : '0.0'}%</b>`;
   document.getElementById('stat-mini').innerHTML = `孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b> · 材料 <b>${((1-porosityEstimate)*100).toFixed(1)}%</b>`;
   renderMeasurements();
   updateFormula(isoUsed);
@@ -1253,8 +1455,8 @@ function updateTips(){
   const p=state.porosity, th=state.thickness;
   const est = lastPorosityEstimate==null ? `目标孔隙率 ${p}%` : `目标 ${p}% / 估算 ${(lastPorosityEstimate*100).toFixed(1)}%`;
   document.getElementById('tip1').textContent = p>80 ? `${est}：高孔隙，利于细胞/组织长入，但力学强度下降` : p<70 ? `${est}：偏致密，力学支撑更好，内部可用空间有限` : `${est}：平衡区间，兼顾力学性能与功能性`;
-  document.getElementById('tip2').textContent = { gyroid:'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选', diamond:'Diamond 高对称、节点连接强，承载与轻量化表现优异', schwarz:'Schwarz P 表面积最大、连通性极佳，适合换热与催化', neovius:'Neovius 是 Schwarz P 的伴随曲面，通道更宽、节点更显著，力学刚度更高', iwp:'I-WP 平衡曲面，孔隙分布均匀，兼顾强度与渗透性，常用于催化剂载体', frd:'F-RD 形态复杂、比表面积大，通道曲折，适合需要长停留时间的反应与传质场景', lidinoid:'Lidinoid 属三周期极小曲面，通道网络比 Gyroid 更复杂，兼顾连通性与力学，用于高级多孔设计', splitp:'Split-P 是 Schwarz P 的广义分裂变体，兼具 P 型与双曲特征，结构可调范围广' }[state.type];
-  document.getElementById('tip3').textContent = th>1.5 ? `壁厚 ${th}：偏厚，坚固但增重` : th<0.8 ? `壁厚 ${th}：偏薄，轻量化好，注意制造极限` : `壁厚 ${th}：适中，强度与重量平衡`;
+  document.getElementById('tip2').textContent = { gyroid:'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选', diamond:'Diamond 高对称、节点连接强，承载与轻量化表现优异', schwarz:'Schwarz P 连通性极佳，中高孔隙率区间比表面积表现好，常用于换热与催化', neovius:'Neovius 是 Schwarz P 的伴随曲面，通道更宽、节点更显著，力学刚度更高', iwp:'I-WP 平衡曲面，孔隙分布均匀，兼顾强度与渗透性，常用于催化剂载体', frd:'F-RD 形态复杂、比表面积大，通道曲折，适合需要长停留时间的反应与传质场景', lidinoid:'Lidinoid 属三周期极小曲面，通道网络比 Gyroid 更复杂，兼顾连通性与力学，用于高级多孔设计', splitp:'Split-P 是 Schwarz P 的广义分裂变体，兼具 P 型与双曲特征，结构可调范围广' }[state.type];
+  document.getElementById('tip3').textContent = (state.structureMode==='solid_network') ? `壁厚系数 ${th}：当前模式下材料量由孔隙率决定，此系数主要影响显示` : th>1.5 ? `壁厚 ${th}：偏厚，坚固但增重` : th<0.8 ? `壁厚 ${th}：偏薄，轻量化好，注意制造极限` : `壁厚 ${th}：适中，强度与重量平衡`;
 }
 function updateBadges(){
   // v-head 徽章在布局重构中移除，状态信息改为同步到页面 title，便于用户辨识当前配置
@@ -1266,9 +1468,9 @@ function updateBadges(){
 function updateStructureDesc(){
   const m=state.structureMode;
   const descs={
-    solid_network:'实体网络：bias−V 生成的杆状实体网络，是 TPMS 最经典的表示形式，材料集中在等值面一侧。',
+    solid_network:'实体网络：把等值面一侧填成实体——截断 TPMS 的 solid 表示（严格的 TPMS 是 C=0 的零厚度极小曲面），材料集中在等值面一侧。',
     shell:'等厚双壳：(V−bias)²−(t/2)² 生成有真实壁厚的双层薄壳，更接近 3D 打印的实际制造形态。',
-    gradient_shell:'梯度双壳：壁厚随 Z 轴高度线性渐变（底部薄、顶部厚），用于功能梯度多孔结构设计。'
+    gradient_shell:'梯度双壳：壁厚随 Z 轴高度线性渐变（底部厚、顶部薄），用于功能梯度多孔结构设计。'
   };
   document.getElementById('structure-desc').textContent=descs[m];
 }
@@ -1355,7 +1557,8 @@ unitBtns.forEach(b=> b.addEventListener('click', ()=>{
   renderMeasurements();
 }));
 
-const PRESETS={ bone:{porosity:84, cellSize:2, thickness:0.8, type:'gyroid', model:'surface', structureMode:'shell', containerShape:'cylinder', material:'tc4', slice:34}, lightweight:{porosity:68, cellSize:4, thickness:1.3, type:'diamond', model:'strut', structureMode:'solid_network', containerShape:'cube', material:'polymer', slice:100}, heat:{porosity:74, cellSize:3, thickness:0.6, type:'schwarz', model:'solid', structureMode:'gradient_shell', containerShape:'cube', material:'thermal', slice:16}, catalyst:{porosity:80, cellSize:3, thickness:0.7, type:'neovius', model:'surface', structureMode:'shell', containerShape:'cube', material:'polymer', slice:50}, acoustic:{porosity:76, cellSize:3, thickness:1.0, type:'iwp', model:'solid', structureMode:'shell', containerShape:'cube', material:'polymer', slice:50}, electrode:{porosity:82, cellSize:3, thickness:0.6, type:'frd', model:'solid', structureMode:'gradient_shell', containerShape:'cube', material:'tc4', slice:16} };
+// 预设参数与工程版 types.ts PRESET_SCENES 对齐（2026-08-26 统一双版本基准，slice 为单文件版独有教学剖切位）
+const PRESETS={ bone:{porosity:70, cellSize:3, thickness:1.3, type:'gyroid', model:'surface', structureMode:'gradient_shell', containerShape:'cylinder', material:'tc4', slice:34}, lightweight:{porosity:90, cellSize:4, thickness:1.3, type:'gyroid', model:'strut', structureMode:'solid_network', containerShape:'cube', material:'polymer', slice:100}, heat:{porosity:74, cellSize:2, thickness:1.0, type:'schwarz', model:'surface', structureMode:'shell', containerShape:'cube', material:'thermal', slice:16}, catalyst:{porosity:80, cellSize:3, thickness:1.1, type:'iwp', model:'surface', structureMode:'solid_network', containerShape:'cube', material:'polymer', slice:50}, acoustic:{porosity:72, cellSize:3, thickness:1.0, type:'gyroid', model:'surface', structureMode:'shell', containerShape:'cube', material:'polymer', slice:50}, electrode:{porosity:78, cellSize:3, thickness:1.2, type:'neovius', model:'surface', structureMode:'solid_network', containerShape:'cube', material:'tc4', slice:16} };
 document.querySelectorAll('[data-scene]').forEach(b=> b.addEventListener('click', ()=>{ Object.assign(state, PRESETS[b.dataset.scene]); state.weights=[1,1,1,1]; refreshWeightUI(); setActive('[data-type]','type',state.type); setActive('[data-model]','model',state.model); setActive('[data-material]','material',state.material); setActive('[data-structure]','structure',state.structureMode); setActive('[data-container]','container',state.containerShape); updateStructureDesc(); syncSliders(); updateBadges(); updateTips(); syncTypeMore(); scheduleRebuild(false); showPresetCard(b.dataset.scene); }));
 
 // 预设场景教学卡（方向 D）：点预设不只是换参数，而是讲清"为什么这样配"——
@@ -1363,22 +1566,22 @@ document.querySelectorAll('[data-scene]').forEach(b=> b.addEventListener('click'
 const PRESET_TEACH = {
   bone:{ ic:'🦴', grad:'linear-gradient(140deg,#6366f1,#8b5cf6)', title:'仿生骨支架 · 为什么这样配？',
     body:'骨组织需要“长进去”的空间和接近人骨的力学环境，所以每个参数都围绕“连通 + 高孔隙 + 生物相容”选择：',
-    chain:[['Gyroid','连续螺旋通道，孔隙全连通，利于骨长入与营养输运'],['84% 高孔隙','给细胞和组织留足空间，接近松质骨孔隙水平'],['圆柱容器','贴合骨植入物 / 填充物的轴对称外形'],['TC4 钛合金','生物相容性最好的医用金属之一'],['截面 34%','剖开验证内部孔道是否真正贯通']]},
+    chain:[['Gyroid','连续螺旋通道，孔隙全连通，利于骨长入与营养输运'],['70% 高孔隙','给细胞和组织留足空间，接近松质骨孔隙水平'],['圆柱容器','贴合骨植入物 / 填充物的轴对称外形'],['TC4 钛合金','生物相容性最好的医用金属之一'],['截面 34%','剖开验证内部孔道是否真正贯通']]},
   lightweight:{ ic:'⚙️', grad:'linear-gradient(140deg,#f59e0b,#f97316)', title:'轻量化零件 · 为什么这样配？',
     body:'轻量化的核心是“该省的材料省，该留的强度留”，所以选了连接强、可承力的组合：',
-    chain:[['Diamond','节点连接清晰、高对称，载荷传递路径明确'],['68% 偏致密','在减重与承载之间取平衡'],['杆模型','线框直观看桁架式连接，是轻量化分析的常用视角'],['PLLA 高分子','低密度材料，进一步减重']]},
+    chain:[['Gyroid','连续螺旋通道无节点应力集中，高孔隙下仍保持良好比刚度'],['90% 高孔隙','极限减重，配合大单元（4×）进一步降低密度'],['杆模型','同一曲面的线框渲染视角，便于观察连接拓扑（导出仍为完整曲面）'],['PLLA 高分子','低密度材料，进一步减重']]},
   heat:{ ic:'🌡', grad:'linear-gradient(140deg,#10b981,#14b8a6)', title:'散热结构 · 为什么这样配？',
     body:'换热效率取决于“表面积 × 流动”，这个预设把两者都拉满：',
-    chain:[['Schwarz P','同体积下比表面积最大，通道规则无死角'],['梯度双壳','壁厚沿 Z 轴渐变（功能梯度），匹配温度梯度'],['实体模型','模拟真实制造件的填充状态'],['高导热复合材','快速把热量从热源导走'],['截面 16%','从底部剖切，观察流道入口形态']]},
+    chain:[['Schwarz P','通道规则无死角，中高孔隙率区间比表面积表现好'],['等厚双壳','薄壁结构最大化换热面积同时保留承力骨架'],['小单元 2×','单元越密总表面积越大，对流越充分'],['高导热复合材','快速把热量从热源导走'],['截面 16%','从底部剖切，观察流道入口形态']]},
   catalyst:{ ic:'⚗️', grad:'linear-gradient(140deg,#ec4899,#db2777)', title:'催化/过滤载体 · 为什么这样配？',
-    body:'催化与过滤都要求“流体能过 + 反应面够大”，Neovius 在两者之间取得了漂亮平衡：',
-    chain:[['Neovius','曲率高、比表面积大，反应位点多且孔道连续'],['80% 高孔隙','保证高通量，压降低、不易堵塞'],['壳模型','薄壁最大限度释放内表面'],['高分子载体','轻、易成型，可负载活性组分'],['截面 50%','看孔道是否贯穿、壁面是否完整']]},
+    body:'催化与过滤都要求“流体能过 + 反应面够大”，I-WP 的平衡曲面特性在两者之间取得了漂亮折中：',
+    chain:[['I-WP','平衡曲面双相分布均匀，孔道连续且压降特性好'],['80% 高孔隙','保证高通量，压降低、不易堵塞'],['实体网络','薄壁网络最大限度释放内表面'],['高分子载体','轻、易成型，可负载活性组分'],['截面 50%','看孔道是否贯穿、壁面是否完整']]},
   acoustic:{ ic:'🔊', grad:'linear-gradient(140deg,#0ea5e9,#0284c7)', title:'声学隔振板 · 为什么这样配？',
-    body:'声学结构靠“内部多次散射 + 刚性骨架”吸能，I-WP 的几何天然适合这件事：',
-    chain:[['I-WP','高对称双相结构，刚度好、对声波散射强'],['76% 孔隙','在刚性足够的前提下保留吸声空腔'],['实体模型','模拟真实吸声板的填充状态'],['高分子基材','阻尼好、轻，便于贴装'],['截面 50%','观察腔体连通与壁厚分布']]},
+    body:'声学结构靠“内部多次散射 + 刚性骨架”吸能，Gyroid 的螺旋通道几何天然适合这件事：',
+    chain:[['Gyroid','螺旋通道形成周期性声学路径，利于带隙设计'],['72% 孔隙','在刚性足够的前提下保留吸声空腔'],['等厚双壳','薄壁提供周期性散射界面'],['高分子基材','阻尼好、轻，便于贴装'],['截面 50%','观察腔体连通与壁厚分布']]},
   electrode:{ ic:'🔋', grad:'linear-gradient(140deg,#a855f7,#7c3aed)', title:'电池电极/分离膜 · 为什么这样配？',
-    body:'电极追求“尽可能大的有效反应面积装进有限体积”，F-RD 是同族里比表面积的冠军：',
-    chain:[['F-RD','同体积比表面积最大，电子/离子通路充足'],['82% 高孔隙','容纳更多电解液、缩短扩散距离'],['梯度双壳','壁厚沿厚度渐变，兼顾集流体侧强度与界面侧活性'],['钛/金属基','导电与耐腐蚀兼顾'],['截面 16%','从集流体侧剖切，看梯度过渡']]}
+    body:'电极追求“尽可能大的有效反应面积装进有限体积”，Neovius 的宽通道大节点结构很适合：',
+    chain:[['Neovius','通道宽、节点强，高孔隙率下离子迁移通路充足'],['78% 高孔隙','容纳更多电解液、缩短扩散距离'],['实体网络','全连通骨架承载活性物质'],['钛/金属基','导电与耐腐蚀兼顾'],['截面 16%','从集流体侧剖切，看梯度过渡']]}
 };
 let presetCardTimer=null;
 function showPresetCard(key){
@@ -1639,7 +1842,8 @@ document.getElementById('btn-stl').addEventListener('click', ()=>{
     if(!ok) return;
   }
   // 二进制 STL：同网格下体积仅为 ASCII 的约 1/5–1/10，切片软件加载更快
-  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); const stl=new STLExporter().parse(tmp, { binary:true }); tmp.material.dispose();
+  // wc 顶点域恒 [-π,π]：导出前统一缩放到 cellSize mm（1 period = 1 mm），文件名 c 参数才真实反映尺寸
+  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); tmp.scale.setScalar(state.cellSize/(2*Math.PI)); tmp.updateMatrixWorld(true); const stl=new STLExporter().parse(tmp, { binary:true }); tmp.material.dispose();
   // 文件名带关键参数，便于管理多个导出件（与 PNG 导出的时间戳思路一致）
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([stl], { type:'model/stl' })); a.download=`tpms-${state.type}-p${state.porosity}-c${state.cellSize}-${state.structureMode}.stl`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 });
@@ -1651,7 +1855,12 @@ document.getElementById('btn-gltf').addEventListener('click', ()=>{
     const ok = confirm('当前为杆模型（线框视图）。\n\nglTF 将导出完整的等值面网格（与壳模型相同的封闭曲面），而非视图中的细杆桁架。\n\n继续导出？');
     if(!ok) return;
   }
-  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial());
+  // glTF 规范单位为米：先 wc→mm 再 ×0.001（Blender 导入即显示真实 mm 尺度）。
+  // 注意：THREE 0.160 的 GLTFExporter 会忽略 node.scale（实测 node.scale 无输出、顶点域不变），
+  // 必须把缩放 bake 进 geometry 顶点，不能依赖 mesh.scale + updateMatrixWorld（STL/OBJ 导出器不受此影响）
+  const gltfScale=state.cellSize/(2*Math.PI)*0.001;
+  const gltfGeo=baseGeo.clone(); gltfGeo.applyMatrix4(new THREE.Matrix4().makeScale(gltfScale,gltfScale,gltfScale));
+  const tmp=new THREE.Mesh(gltfGeo, new THREE.MeshStandardMaterial());
   new GLTFExporter().parse(tmp, (res)=>{
     const blob = (res instanceof ArrayBuffer)
       ? new Blob([res], { type:'model/gltf-binary' })
@@ -1667,7 +1876,7 @@ document.getElementById('btn-obj').addEventListener('click', ()=>{
     const ok = confirm('当前为杆模型（线框视图）。\n\nOBJ 将导出完整的等值面网格（与壳模型相同的封闭曲面），而非视图中的细杆桁架。\n\n继续导出？');
     if(!ok) return;
   }
-  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial());
+  const tmp=new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial()); tmp.scale.setScalar(state.cellSize/(2*Math.PI)); tmp.updateMatrixWorld(true);
   const obj = new OBJExporter().parse(tmp);
   tmp.material.dispose();
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([obj], { type:'text/plain' })); a.download=`tpms-${state.type}-p${state.porosity}-c${state.cellSize}.obj`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
@@ -1789,7 +1998,7 @@ rebuild();
     el.value=20; el.dispatchEvent(new Event('input',{bubbles:true}));
   }
   const steps=[
-    {title:'欢迎来到 TPMS 探索器', body:'你眼前这个就是 <b>Gyroid 螺旋曲面</b>——三重周期性极小曲面家族里最经典的一员，蝴蝶翅膀、细胞膜里都能找到它的影子。先<b>拖动画面</b>转一圈，感受它的立体形态。', demo:null, target:function(){return document.querySelector('.viewer')}},
+    {title:'欢迎来到 TPMS 探索器', body:'你眼前这个就是 <b>Gyroid 螺旋曲面</b>——三重周期性极小曲面家族里最经典的一员，蝴蝶翅膀、细胞膜里都能找到它的影子。<b>三重周期</b>指它沿 x/y/z 三个方向平移后与自身重合，能像晶胞一样无限堆叠；<b>极小</b>指它像肥皂膜一样处处平均曲率为零。先<b>拖动画面</b>转一圈，感受它的立体形态。', demo:null, target:function(){return document.querySelector('.viewer')}},
     {title:'孔隙率：把“空”调出来', body:'<b>孔隙率</b>就是结构里有多少比例是“空的”。拖动这个滑块，看 Gyroid 怎么从致密变得通透——这正是骨支架、滤膜设计的核心旋钮。', demo:{label:'演示 · 调到高孔隙', run:demoPorosity}, target:function(){return document.getElementById('porosity').closest('.field')}},
     {title:'一个家族，三种形态', body:'TPMS 不止一种。点这里切到 <b>Diamond</b> 或 <b>Schwarz P</b>，对比螺旋、笼状、片状三种截然不同的几何。', demo:{label:'演示 · 切到 Schwarz P', run:demoType}, target:function(){return document.querySelectorAll('.controls .sect')[0]}},
     {title:'截面扫描：切开看内部', body:'想知道内部孔道长什么样？拖动<b>截面滑块</b>，像切蛋糕一样沿 Z 轴逐层剖开曲面，看清内部连通的通道网络。', demo:{label:'演示 · 剖到中部', run:demoSlice}, target:function(){return document.getElementById('slice').closest('.field')}},
@@ -1857,13 +2066,16 @@ rebuild();
 // 术语解释层（方向 C）：悬停/点击 .term 显示词条卡
 (function(){
   const GLOSSARY = {
-    porosity: {title:'孔隙率 · Porosity', body:'结构里“空”的体积占比。75% 表示约四分之三是贯通孔洞。孔隙越高越轻、越通透，但承载能力下降；仿生骨支架常用 70–85%。'},
-    'cell-density': {title:'单元密度 · Cell Size', body:'TPMS 在空间中重复的周期数。密度越高，曲面“褶皱”越密、结构越精细，同时算力开销越大。'},
-    thickness: {title:'壁厚系数 · Thickness', body:'曲面薄壳的厚度倍率，仅在实体/壳模型里改变真实材料占比。越厚越坚固，越薄越轻量。'},
+    periodicity: {title:'三重周期性 · Triply Periodic', body:'TPMS 的“TP”即 Triply Periodic：曲面沿 x、y、z 三个独立方向平移一个周期后与自身重合，像三维壁纸图案一样无限重复填充空间。这正是它能作为“晶胞”堆叠成任意尺寸多孔材料的原因——本工具的“单元密度”就是这个重复次数。'},
+    'minimal-surface': {title:'极小曲面 · Minimal Surface', body:'“极小”指平均曲率处处为零——像绷在框上的肥皂膜，表面积在给定边界下取到局部极小。严格的 TPMS 是 C=0 处那张零厚度曲面；把一侧填成实体或加厚成壳后，看到的是它的“截断/增厚表示”，等值面也随之偏离严格的极小位置。'},
+    'structure-vs-model': {title:'结构拓扑 vs 表现形式', body:'“结构拓扑”（实体网络/等厚双壳/梯度双壳）改变数学场与几何，是真实的结构参数；“表现形式”（壳/杆/实体）多数情况只改变渲染视角（透明度/线框），不改变几何本身。导出的网格始终是完整等值面。'},
+    porosity: {title:'孔隙率 · Porosity', body:'结构里“空”的体积占比，数学上等于水平集一侧的体积份额——孔隙率滑块正是通过移动等值面 C 来控制它。75% 表示约四分之三是贯通孔洞；仿生骨支架常用 70–85%。'},
+    'cell-density': {title:'单元密度 · Cell Size', body:'TPMS 在空间中重复的周期数（单胞个数）。注意：国际文献里的 cell size 通常指单个单胞的尺寸，与本工具的“重复次数”语义相反——检索文献时用 unit cells / periodicity 更容易对上。密度越高，结构越精细，同时算力开销越大。'},
+    thickness: {title:'壁厚系数 · Thickness', body:'薄壳厚度的设定倍率。注意：实体网络与双壳的实际材料量由孔隙率反解控制——默认模式下拖动它主要改变显示效果，真实壁厚跟随孔隙率变化（双壳模式下它影响 v-域等宽带初值）。'},
     slice: {title:'截面扫描 · Cross-section', body:'用虚拟平面沿 Z 轴逐层切开曲面，露出内部连通的孔道。拖到中部即可观察 TPMS 的三维通道网络。'},
-    gradient: {title:'梯度双壳 · Gradient Shell', body:'梯度双壳模式下，壁厚沿 Z 轴高度线性渐变（底部薄、顶部厚），形成功能梯度多孔结构。骨支架常用：致密端承力，疏松端促骨长入。'},
+    gradient: {title:'梯度双壳 · Gradient Shell', body:'梯度双壳模式下，壁厚沿 Z 轴高度线性渐变（底部厚 ×1.5、顶部薄 ×0.5，与工程版一致），形成功能梯度多孔结构。骨支架常用：致密端承力，疏松端促骨长入。'},
     'iso-c': {title:'等值常数 C · Isovalue', body:'公式 f(x,y,z)=C 里的 C。场函数值恰好等于 C 的所有点连成一张面，就是等值面。调高 C 材料变多、孔隙变小——这正是孔隙率滑块背后的数学。'},
-    weight: {title:'权重系数 · Weight', body:'公式每一项前的乘数。把某项权重调大，曲面就朝那个方向“倾斜”变形。拖动它，直接看到数学项如何塑造几何。'}
+    weight: {title:'权重系数 · Weight', body:'公式每一项前的乘数。把某项权重调大，曲面就朝那个方向“倾斜”变形。注意：非对称加权后的曲面是启发式变体，一般不再是严格的 TPMS/极小曲面成员，适合探索形状而非严格结构。'}
   };
   const gloss=document.getElementById('gloss');
   const gt=document.getElementById('gloss-title');

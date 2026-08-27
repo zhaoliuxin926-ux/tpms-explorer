@@ -18,12 +18,14 @@ const gyroid: TpmsFunction = (mx, my, mz, w) =>
   w[1] * Math.sin(my) * Math.cos(mz) +
   w[2] * Math.sin(mz) * Math.cos(mx);
 
-/** Diamond: cos x·cos y·cos z - sin x·sin y·sin z (四项权重版) */
+/** Diamond: sin x·sin y·sin z + sin x·cos y·cos z + cos x·sin y·cos z + cos x·cos y·sin z (四项权重版)
+ *  必须与 surface-nets.ts 渲染查表、ui-helpers.ts 公式栏、单文件版 app.html 保持一致（.verify/parity_math.mjs 守护）。
+ *  历史教训：此处曾写成 ccc−sss+css+scs 组合，导致 VTI/hybrid/脚本导出与屏幕渲染是不同曲面。 */
 const diamond: TpmsFunction = (mx, my, mz, w) =>
-  w[0] * Math.cos(mx) * Math.cos(my) * Math.cos(mz) -
-  w[1] * Math.sin(mx) * Math.sin(my) * Math.sin(mz) +
-  w[2] * Math.cos(mx) * Math.sin(my) * Math.sin(mz) +
-  w[3] * Math.sin(mx) * Math.cos(my) * Math.sin(mz);
+  w[0] * Math.sin(mx) * Math.sin(my) * Math.sin(mz) +
+  w[1] * Math.sin(mx) * Math.cos(my) * Math.cos(mz) +
+  w[2] * Math.cos(mx) * Math.sin(my) * Math.cos(mz) +
+  w[3] * Math.cos(mx) * Math.cos(my) * Math.sin(mz);
 
 /** Schwarz P: cos x + cos y + cos z */
 const schwarz: TpmsFunction = (mx, my, mz, w) =>

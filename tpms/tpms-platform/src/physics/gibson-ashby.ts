@@ -14,7 +14,9 @@ const C1_MAP: Record<string, number> = {
   custom: 0.38,  // default to gyroid value
 };
 
-const C2 = 1.5;
+// Gibson & Ashby (1997) 开孔泡沫塑性坍塌：σ*/σs ≈ 0.23·ρ^1.5（弯曲主导）。
+// TPMS 网格略强于随机开孔泡沫，取 0.3 作为折中上界；原值 1.5 高估 ~6.5×，无文献出处。
+const C2 = 0.3;
 
 /**
  * 各向异性系数估算
@@ -118,7 +120,6 @@ export function computePhysicsMetrics(
   surfaceArea: number,
   envelopeVolume: number,
   material: string,
-  cellSize: number,
   structureMode: string = 'solid_network'
 ): PhysicsMetrics {
   // 统一孔隙率单位：Worker 返回的是 0-100 百分比，内部计算需要 0-1 分数
@@ -133,7 +134,7 @@ export function computePhysicsMetrics(
   const baseSigma = BASE_YIELD_STRENGTH[resolvedMaterial] || BASE_YIELD_STRENGTH.tc4;
   const svRatio = envelopeVolume > 0 ? surfaceArea / envelopeVolume : 0;
   const permeability = estimatePermeability(porosityPercent, svRatio);
-  const poreStats = estimatePoreStats(porosityPercent, cellSize, type, svRatio);
+  const poreStats = estimatePoreStats(porosityPercent, type, svRatio);
   const anisotropy = getAnisotropy(type);
 
   const result: PhysicsMetrics = {

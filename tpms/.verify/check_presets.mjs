@@ -14,7 +14,8 @@ page.on('dialog', d => d.accept());
 await page.goto(BASE + '/app.html?type=gyroid&porosity=70', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
 
-const expect = { catalyst:'neovius', acoustic:'iwp', electrode:'frd' };
+// 2026-08-26：预设已对齐工程版 PRESET_SCENES（催化=iwp / 声学=gyroid / 电极=neovius）
+const expect = { catalyst:'iwp', acoustic:'gyroid', electrode:'neovius' };
 for (const key of Object.keys(expect)) {
   await page.locator(`[data-scene="${key}"]`).click();
   await page.waitForTimeout(1200); // 等待重建

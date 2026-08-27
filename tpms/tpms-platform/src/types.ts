@@ -91,6 +91,10 @@ export interface WorkerResponse {
   surfaceArea?: number;
   envelopeVolume?: number;
   svRatio?: number;
+  /** 网格实测固相体积分数（发散定理），与 porosityEstimate（公式格子 MC）独立 */
+  meshSolidFraction?: number;
+  /** 非流形边数（鞍点掐捏残留），供采样定理警示 */
+  nmEdgeCount?: number;
   buildTimeMs: number;
   error?: string;
 }
@@ -187,8 +191,8 @@ export const PRESET_SCENES: PresetScene[] = [
   {
     key: 'bone',
     label: '仿生骨支架',
-    description: '骨支架：高孔隙率（84%）+ 梯度双壳结构，底部致密承重、顶部疏松促骨长入。材质：TC4 钛合金。',
-    state: { type: 'gyroid', model: 'surface', structureMode: 'gradient_shell', containerShape: 'cylinder', porosity: 84, cellSize: 3, thickness: 1.3, material: 'tc4' },
+    description: '骨支架：高孔隙率（70%）+ 梯度双壳结构，底部致密承重、顶部疏松促骨长入。材质：TC4 钛合金。',
+    state: { type: 'gyroid', model: 'surface', structureMode: 'gradient_shell', containerShape: 'cylinder', porosity: 70, cellSize: 3, thickness: 1.3, material: 'tc4' },
   },
   {
     key: 'lightweight',

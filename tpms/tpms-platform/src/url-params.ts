@@ -53,14 +53,17 @@ export function parseURLParams(search: string): Partial<AppState> {
     state.material = q.get('material') as MaterialPreset;
   }
 
-  // 权重
-  const w: [number, number, number, number] = [
-    clamp(q.get('wa'), 0, 2, 1),
-    clamp(q.get('wb'), 0, 2, 1),
-    clamp(q.get('wc'), 0, 2, 1),
-    clamp(q.get('wd'), 0, 2, 1),
-  ];
-  state.weights = w;
+  // 权重：仅 URL 显式携带 wa/wb/wc/wd 之一时覆盖。
+  // 无条件覆盖会让 setState 的"类型变更重置为该类型默认权重"语义在 URL 路径永不生效
+  //（当前各类型默认恰为全 1 故无害，未来默认非全 1 时会静默出错）
+  if (q.has('wa') || q.has('wb') || q.has('wc') || q.has('wd')) {
+    state.weights = [
+      clamp(q.get('wa'), 0, 2, 1),
+      clamp(q.get('wb'), 0, 2, 1),
+      clamp(q.get('wc'), 0, 2, 1),
+      clamp(q.get('wd'), 0, 2, 1),
+    ];
+  }
 
   // 自动旋转
   if (q.has('autoRotate')) {
@@ -73,12 +76,15 @@ export function parseURLParams(search: string): Partial<AppState> {
     state.gradientDir = q.get('grad') as GradientDirection;
   }
 
-  // 混合模式
+  // 混合模式（hybridType/hybridBlend 必须过白名单：否则恶意 URL 可注入任意字符串，
+  // 经导出脚本的单引号插值落地为可执行 Python/MATLAB 代码——任意代码执行）
   if (q.get('hybrid') === '1') {
+    const rawTypeB = q.get('hybridType');
+    const rawBlend = q.get('hybridBlend');
     state.hybrid = {
       enabled: true,
-      typeB: (q.get('hybridType') as TpmType) || 'diamond',
-      blendFunction: (q.get('hybridBlend') as 'sigmoid' | 'linear') || 'sigmoid',
+      typeB: rawTypeB && VALID.type.includes(rawTypeB as TpmType) ? (rawTypeB as TpmType) : 'diamond',
+      blendFunction: rawBlend === 'linear' || rawBlend === 'sigmoid' ? rawBlend : 'sigmoid',
       blendCenter: clamp(q.get('hybridCenter'), -2, 2, 0),
       blendWidth: clamp(q.get('hybridWidth'), 0.1, 5, 1.0),
     };

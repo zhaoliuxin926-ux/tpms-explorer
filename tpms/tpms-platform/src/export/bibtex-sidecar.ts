@@ -21,6 +21,14 @@ function mapType(type: string): string {
 }
 
 /**
+ * BibTeX 自由文本转义：LaTeX 编译 .bbl 时 % 起注释作用（静默吞掉其后内容），
+ * & 报 Misplaced alignment tab，_ # 同样需转义。URL 统一用 \url{...} 包裹（需 \usepackage{url}）。
+ */
+function escapeBibText(s: string): string {
+  return s.replace(/%/g, '\\%').replace(/&/g, '\\&').replace(/_/g, '\\_').replace(/#/g, '\\#');
+}
+
+/**
  * 生成 BibTeX 引用文本（供论文 supplementary 使用）
  * meshHash：基于网格数据的确定性哈希，保证同参数多次导出得到一致 cite key（科研可复现）
  */
@@ -30,27 +38,43 @@ export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null, 
   const hash = meshHash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8) || 'unnamed';
   const doi = DOI_MAP[mapType(state.type)] || '';
   const doiLine = doi ? `  doi = {https://doi.org/${doi}},\n` : '';
+  const url = window.location.href;
+
+  const title = escapeBibText(
+    `TPMS ${state.type} Scaffold: Porosity ${state.porosity}% | Cell Size ${state.cellSize} mm`
+  );
+
+  // 指标段仅在 metrics 可用时输出，避免 "Sv=undefined" 进入引用
+  let metricsLine = '';
+  if (metrics) {
+    metricsLine =
+      ` Sv=${metrics.svRatio.toFixed(3)} mm$^{-1}$, E*/Es=${metrics.gibsonAshbyE.toFixed(4)}, ` +
+      `C1=${metrics.C1.toFixed(2)}, K=${(metrics.permeability * 1e6).toFixed(2)} um$^2$. ` +
+      `Mean pore: ${metrics.poreStats.meanDiameter.toFixed(3)} mm.`;
+  }
 
   return `@misc{tpms_explorer_${hash},
-  title = {TPMS ${state.type} Scaffold: Porosity ${state.porosity}% | Cell Size ${state.cellSize} mm},
+  title = {${title}},
   author = {TPMS Explorer Platform},
   year = {${new Date().getFullYear()}},
 ${doiLine}  keywords = {TPMS, ${state.type}, scaffold, porosity, additive manufacturing, bone tissue engineering},
-  note = {Generated on ${now}. Structure: ${state.structureMode}, Container: ${state.containerShape}. Sv=${metrics?.svRatio.toFixed(3)} mm$^{-1}$, E*/Es=${metrics?.gibsonAshbyE.toFixed(4)}, C1=${metrics?.C1.toFixed(2)}, K=${metrics?.permeability ? (metrics.permeability * 1e6).toFixed(2) + ' um$^2$' : 'N/A'}. Mean pore: ${metrics?.poreStats.meanDiameter.toFixed(3)} mm. Reproducible via: ${window.location.href}},
-  url = {${window.location.href}}
+  note = {Generated on ${now}. Structure: ${escapeBibText(state.structureMode)}, Container: ${escapeBibText(state.containerShape)}.${metricsLine} Reproducible via: \\url{${url}}},
+  url = {\\url{${url}}}
 }`;
 }
 
 /**
  * 生成 JSON sidecar（含 mesh hash 校验值）
+ * @param build 构建上下文（分辨率与二分 iso）——第三方按参数重建网格时对齐壁厚/顶点密度所需
  */
 export function generateJSONSidecar(
   state: AppState,
   metrics: PhysicsMetrics | null,
-  meshHash: string
+  meshHash: string,
+  build?: { resolution: number; isoUsed: number | null }
 ): string {
   return JSON.stringify({
-    version: '2.0',
+    version: '2.1',
     generatedAt: new Date().toISOString(),
     parameters: {
       type: state.type,
@@ -64,6 +88,10 @@ export function generateJSONSidecar(
       gradientDir: state.gradientDir,
       hybrid: state.hybrid,
       customFormula: state.customFormula,
+    },
+    build: {
+      resolution: build?.resolution ?? null,
+      isoUsed: build?.isoUsed ?? null,
     },
     metrics: metrics ? {
       surfaceArea: metrics.surfaceArea,

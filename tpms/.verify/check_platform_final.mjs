@@ -1,7 +1,7 @@
 // 工程版终验：按需渲染（idle RAF=0）+ 0 pageerror + 曲面切换存活 + URL autoRotate 同步
 import { chromium } from 'playwright';
 
-const BASE = 'http://127.0.0.1:4812/';
+const BASE = 'http://localhost:4812/';   // vite preview 只绑 IPv6 loopback，用 127.0.0.1 会拒绝连接
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const errors = [];
 let pass = 0, fail = 0;

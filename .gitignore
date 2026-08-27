@@ -37,3 +37,19 @@ tpms/.verify/redteam/subpath_spot.mjs
 tpms/.verify/redteam/verify_opt3.mjs
 tpms/.verify/redteam/diag_sweep.mjs
 tpms/.verify/redteam/audit_dark.mjs
+
+# 一次性诊断/探针脚本（2026-08-27 网格 v2 调试过程产物；正式回归=mesh_audit.mjs/parity_math.mjs/run_all）
+tpms/.verify/field_probe.mjs
+tpms/.verify/stage_probe.mjs
+tpms/.verify/stagetime_probe.mjs
+tpms/.verify/nm_diag.mjs
+tpms/.verify/split_probe.mjs
+tpms/.verify/split_probe2.mjs
+tpms/.verify/minimal_check.mjs
+tpms/.verify/mesh_audit_tmp.mjs
+tpms/.verify/mesh_dump_*.mjs
+tpms/.verify/mesh_diag_*.mjs
+tpms/.verify/proj_isolation*.mjs
+tpms/.verify/smooth_impact*.mjs
+tpms/.verify/preview_perf.mjs
+tpms/.verify/web/shots/

@@ -1,8 +1,9 @@
 /**
  * 孔径分布估算（基于 TPMS 场特征尺度）
  *
- * 对于各向同性 TPMS，特征孔径近似为：
- * d_pore ≈ cellSize / n_periods × (porosity)^(1/3) × f(type)
+ * 物理约定（units.ts）：1 period = 1 mm，周期数 k 只改变总体尺寸，
+ * 单胞尺寸恒为 1 mm —— 特征孔径只依赖单胞与孔隙率，与 k 无关：
+ * d_pore ≈ 1mm × (porosity)^(1/3) × f(type)
  *
  * 其中 f(type) 为拓扑修正因子：
  * - Gyroid: 0.58
@@ -42,15 +43,14 @@ function mapType(type: string): string {
 
 export function estimatePoreStats(
   porosity: number,
-  cellSize: number,
   type: string,
   svRatio: number
 ): PoreStats {
   const eps = porosity / 100;
   const factor = PORE_FACTOR[mapType(type)] ?? PORE_FACTOR['gyroid'];
 
-  // 平均孔径：基于单元尺寸和孔隙率的标度律
-  const meanDiameter = cellSize * factor * Math.pow(eps, 1/3);
+  // 平均孔径：单胞恒 1mm（1 period=1mm），与周期数 cellSize 无关
+  const meanDiameter = factor * Math.pow(eps, 1/3);
 
   // 孔径分布近似为正态，σ ≈ 0.15 × mean
   const stdDiameter = meanDiameter * 0.15;

@@ -35,7 +35,7 @@ const s2 = await page.evaluate(() => ({
 }));
 s2.moreOpen && s2.active === 'splitp' ? ok('URL ?type=splitp → 自动展开 + Split-P 高亮') : bad('URL 联动', JSON.stringify(s2));
 
-// 3) 预设联动：去新页面（默认 gyroid），点 catalyst 预设（→neovius）
+// 3) 预设联动：去新页面（默认 gyroid），点 catalyst 预设（→iwp，2026-08-26 对齐工程版）
 await page.goto('http://127.0.0.1:8123/app.html', { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
 const before = await page.evaluate(() => document.querySelector('.type-more')?.hasAttribute('open'));
@@ -48,7 +48,7 @@ const s3 = await page.evaluate(() => ({
   moreOpen: document.querySelector('.type-more')?.hasAttribute('open'),
   active: document.querySelector('[data-type].active')?.dataset.type,
 }));
-before === false && s3.moreOpen && s3.active === 'neovius'
+before === false && s3.moreOpen && s3.active === 'iwp'
   ? ok('预设 catalyst → 折叠区展开 + Neovius 高亮') : bad('预设联动', JSON.stringify({ before, ...s3 }));
 
 // 4) 高级曲面切换功能正常（展开后点 lidinoid 重建）

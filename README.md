@@ -40,5 +40,5 @@
 ---
 
 ## 📌 备注
-- TPMS 主项目已整体迁入 `tpms/` 子目录（2026-07-24）：单文件版的 `index.html` / `app.html` / `shots/` 与工程版 `tpms-platform/` 均在其内，结构清爽、独立管理。
+- 目录布局（2026-07-24 起）：单文件版交付在仓库根 `docs/`（GitHub Pages 源目录），工程版源码与项目记忆在 `tpms/` 子目录（`tpms-platform/` / `agent_memory/` 等），见上方目录树。
 - 根目录仅保留工作区导航 `README.md` 与副项目 `claude-code-workflow/`。
