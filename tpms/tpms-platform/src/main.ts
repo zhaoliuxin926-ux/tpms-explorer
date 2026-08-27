@@ -21,6 +21,8 @@ import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
   exportMultiSolidSTL,
+  exportGLB,
+  export3MF,
   exportVTK,
   exportVTI,
   exportPythonScript,
@@ -1807,7 +1809,7 @@ function handleExport(fmt: string | null): void {
   if (!fmt) return;
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
-  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl';
+  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf';
   if (needGeo && (!baseGeo || !baseGeo.index)) {
     flashToast('请先生成有效曲面再导出');
     return;
@@ -1870,6 +1872,19 @@ function handleExport(fmt: string | null): void {
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
         exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize), vtkNormals);
+        break;
+      }
+      case 'glb': {
+        // 彩色 GLB：携带当前顶点色（着色模式开启时）+ mm 缩放，COLOR_0 Float32
+        const glbColors = (baseGeo!.getAttribute('color')?.array as Float32Array | undefined) ?? null;
+        exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
+        break;
+      }
+      case '3mf': {
+        // 工业格式：mm 尺度 + 端板/构型元数据（切片机可读自定义 metadata）
+        export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, wcToMmFactor(getState().cellSize), {
+          configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
+        });
         break;
       }
       case 'cfdstl': {
