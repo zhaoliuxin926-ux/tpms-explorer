@@ -97,6 +97,7 @@ export function buildShareURL(): string {
     params.set('hybridBlend', s.hybrid.blendFunction);
     params.set('hybridCenter', String(s.hybrid.blendCenter));
     params.set('hybridWidth', String(s.hybrid.blendWidth));
+    params.set('hybridAxis', s.hybrid.axis);
   }
   if (s.customFormula) params.set('formula', s.customFormula);
   const url = new URL(location.href);

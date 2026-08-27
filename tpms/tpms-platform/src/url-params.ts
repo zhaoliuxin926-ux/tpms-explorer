@@ -4,7 +4,7 @@
  */
 
 import type { AppState, TpmType, RenderModel, StructureMode, ContainerShape, MaterialPreset, GradientDirection } from './types';
-import { ENDPLATE_MAX_UI_MM } from './types';
+import { ENDPLATE_MAX_UI_MM, type BlendAxis } from './types';
 // import { getDefaultWeights } from './core/tpms-functions'; // TODO: restore when used
 
 const VALID = {
@@ -96,6 +96,7 @@ export function parseURLParams(search: string): Partial<AppState> {
       blendFunction: rawBlend === 'linear' || rawBlend === 'sigmoid' ? rawBlend : 'sigmoid',
       blendCenter: clamp(q.get('hybridCenter'), -2, 2, 0),
       blendWidth: clamp(q.get('hybridWidth'), 0.1, 5, 1.0),
+      axis: (['x','y','z','radial'].includes(q.get('hybridAxis') || '') ? q.get('hybridAxis') : 'x') as BlendAxis,
     };
   }
 

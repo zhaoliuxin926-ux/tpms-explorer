@@ -122,7 +122,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const useLookup = !hybridEnabled && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
-  let hybridFn: ((mx: number, my: number, mz: number, px: number, w: Weights) => number) | null = null;
+  let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
 
   if (hybridEnabled) {
     hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula);
@@ -200,7 +200,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           const px = phys(ix);
           let v: number;
           if (hybridFn) {
-            v = hybridFn(mx, my, mz, px, w);
+            v = hybridFn(mx, my, mz, px, phys(iy), phys(iz), w);
           } else {
             v = tpmFn!(mx, my, mz, w);
           }
@@ -699,7 +699,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     // 仅 solid 调用（见下方调用处的 A1 定案注释）。壳类平方场 Newton 机理失效,
     // 其修复须用 dv 符号锁边的专用投影, 见 progress.md 2026-08-28 条目。
     const rawAt = (a: number, b2: number, c2: number, p2x: number, p2y: number, p2z: number): number => {
-      const v = hybridFn ? hybridFn(a, b2, c2, p2x, w) : projSolidFn!(a, b2, c2, w);
+      const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : projSolidFn!(a, b2, c2, w);
       return tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
     };
     const hh = 1e-4;
@@ -796,7 +796,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
             const kpi = 1 / (k * Math.PI);
             const hh = 1e-4;
             const ev = (a: number, b2: number, c2: number, q2x: number, q2y: number, q2z: number): number => {
-              const v = hybridFn ? hybridFn(a, b2, c2, q2x, w) : projSolidFn!(a, b2, c2, w);
+              const v = hybridFn ? hybridFn(a, b2, c2, q2x, q2y, q2z, w) : projSolidFn!(a, b2, c2, w);
               return tpmsAt(v, biasBase, tEffBase, q2x, q2y, q2z);
             };
             const gxx = (ev(vx0 * k + hh, vy0 * k, vz0 * k, ppx + hh * kpi, ppy, ppz) - ev(vx0 * k - hh, vy0 * k, vz0 * k, ppx - hh * kpi, ppy, ppz)) / (2 * hh);
@@ -1049,7 +1049,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           // px = mx/(k·π)（px = ix/R·2-1 与 mx = kπ·px 的线性关系），差分时物理坐标须随弧度坐标联动
           const rawAt = (a: number, b2: number, c2: number): number => {
             const p2x = a / (k * Math.PI), p2y = b2 / (k * Math.PI), p2z = c2 / (k * Math.PI);
-            const v = hybridFn ? hybridFn(a, b2, c2, p2x, w) : solidFn!(a, b2, c2, w);
+            const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : solidFn!(a, b2, c2, w);
             // solid 模式外法线 = +∇V（固相在 V 小的一侧）；shell 类直接对模式场差分（内外壁方向自动正确）
             return mode === 'solid_network' ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
           };

@@ -15,7 +15,7 @@
  * 又足以压制双精度的减法吞没。19 次求值/顶点，仅在用户选择曲率着色时付出。
  */
 
-import type { AppState, TpmType } from '../types';
+import type { TpmType } from '../types';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { getHybridWeightFn } from '../core/hybrid-functions';
 
@@ -28,7 +28,7 @@ export interface CurvatureFieldConfig {
   customFormula: string;
   weights: [number, number, number, number];
   periods: number;
-  hybrid?: AppState['hybrid'];
+  hybrid?: import('../core/hybrid-functions').HybridConfig;  // 轴向可选（缺省 x）
 }
 
 const H_STEP = 0.02;
@@ -46,7 +46,7 @@ function makeFieldSampler(cfg: CurvatureFieldConfig): (px: number, py: number, p
   const wf = getHybridWeightFn(cfg.hybrid);
   return (x, y, z) => {
     const mx = x * PI * k, my = y * PI * k, mz = z * PI * k;
-    const wgt = wf(x);
+    const wgt = wf(x, y, z);
     return wgt * fA(mx, my, mz, w) + (1 - wgt) * fB(mx, my, mz, w);
   };
 }

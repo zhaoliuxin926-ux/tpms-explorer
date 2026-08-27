@@ -98,7 +98,7 @@ export function computeVertexColors(
     // 混合权重 w(px)：sigmoid/linear 的值域本身就是 [0,1]，直接上色
     const wf = getHybridWeightFn(opts.hybrid);
     for (let i = 0; i < vertCount; i++) {
-      sampleCoolWarmInto(wf(positions[i * 3] * INV_PI), colors, i * 3);
+      sampleCoolWarmInto(wf(positions[i * 3] * INV_PI, positions[i * 3 + 1] * INV_PI, positions[i * 3 + 2] * INV_PI), colors, i * 3);
     }
     return colors;
   }

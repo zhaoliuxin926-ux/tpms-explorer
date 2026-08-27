@@ -74,7 +74,7 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? 'H' + s.hybrid.typeB : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}`;
 }
 
 // ── 主题切换（明 / 暗 / 系统）─────────────────────────────
@@ -1217,15 +1217,56 @@ function bindUIEvents(): void {
     });
   });
 
-  // 异构混合启用
+  // 异构混合启用（智能着色联动：开启推荐 Field Map，关闭时若因混合而开的 Field Map 回退单色）
   const hybridEnabled = document.getElementById('hybrid-enabled') as HTMLInputElement;
   if (hybridEnabled) {
     hybridEnabled.addEventListener('change', () => {
-      setState({ hybrid: { ...getState().hybrid, enabled: hybridEnabled.checked } });
-      document.getElementById('hybrid-options')!.style.display = hybridEnabled.checked ? 'block' : 'none';
-      document.getElementById('hybrid-blend')!.style.display = hybridEnabled.checked ? 'block' : 'none';
+      const turningOn = hybridEnabled.checked;
+      setState({ hybrid: { ...getState().hybrid, enabled: turningOn } });
+      document.getElementById('hybrid-options')!.style.display = turningOn ? 'block' : 'none';
+      document.getElementById('hybrid-blend')!.style.display = turningOn ? 'block' : 'none';
+      // 着色联动：开→若纯色则推荐场权重；关→若场权重则回单色（显式 setState + syncUI，非静默）
+      const s0 = getState();
+      if (turningOn && s0.coloring === 'none') {
+        setState({ coloring: 'field' });
+        flashToast('已切换为「场权重」着色，直观呈现空间过渡带');
+      } else if (!turningOn && s0.coloring === 'field') {
+        setState({ coloring: 'none' });
+      }
+      syncUI(getState());
       scheduleRebuild(false);
     });
+  }
+
+  // 混合轴向按钮（x/y/z/radial）
+  document.querySelectorAll('[data-hybrid-axis]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setState({ hybrid: { ...getState().hybrid, axis: btn.getAttribute('data-hybrid-axis') as AppState['hybrid']['axis'] } });
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  });
+
+  // 过渡中心 / 宽度滑块（拖动 preview，松手 HD）
+  const centerEl = document.getElementById('hybrid-center') as HTMLInputElement;
+  if (centerEl) {
+    centerEl.addEventListener('input', () => {
+      setState({ hybrid: { ...getState().hybrid, blendCenter: +centerEl.value } });
+      const v = document.getElementById('hybrid-center-value');
+      if (v) v.textContent = (+centerEl.value).toFixed(2);
+      scheduleRebuild(true);
+    });
+    centerEl.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
+  }
+  const widthEl = document.getElementById('hybrid-width') as HTMLInputElement;
+  if (widthEl) {
+    widthEl.addEventListener('input', () => {
+      setState({ hybrid: { ...getState().hybrid, blendWidth: +widthEl.value } });
+      const v = document.getElementById('hybrid-width-value');
+      if (v) v.textContent = (+widthEl.value).toFixed(2);
+      scheduleRebuild(true);
+    });
+    widthEl.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
   }
 
   // 异构混合类型 B
@@ -1521,6 +1562,26 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-blend]').forEach(el => {
     el.classList.toggle('active', (s as any).hybrid.blendFunction === el.getAttribute('data-blend'));
   });
+
+  // 混合轴向按钮态 + 中心/宽度滑块值同步（URL 恢复/undo 后经 syncUI）
+  document.querySelectorAll('[data-hybrid-axis]').forEach(el => {
+    el.classList.toggle('active', (s as any).hybrid.axis === el.getAttribute('data-hybrid-axis'));
+  });
+  const hybridSubOn = (s as any).hybrid.enabled;
+  document.getElementById('hybrid-options')!.style.display = hybridSubOn ? 'block' : 'none';
+  document.getElementById('hybrid-blend')!.style.display = hybridSubOn ? 'block' : 'none';
+  const hc = document.getElementById('hybrid-center') as HTMLInputElement | null;
+  if (hc) {
+    hc.value = String((s as any).hybrid.blendCenter);
+    const hv = document.getElementById('hybrid-center-value');
+    if (hv) hv.textContent = (s as any).hybrid.blendCenter.toFixed(2);
+  }
+  const hw = document.getElementById('hybrid-width') as HTMLInputElement | null;
+  if (hw) {
+    hw.value = String((s as any).hybrid.blendWidth);
+    const hv = document.getElementById('hybrid-width-value');
+    if (hv) hv.textContent = (s as any).hybrid.blendWidth.toFixed(2);
+  }
 
   // 着色模式：高亮 + 场口径非法时置灰禁用（状态里残留的非法 'field' 由
   // effectiveColoring 在重建参数处优雅回退，这里只负责视觉一致）

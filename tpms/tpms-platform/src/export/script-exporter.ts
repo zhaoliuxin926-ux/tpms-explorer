@@ -92,19 +92,22 @@ V = tpms_field(X, Y, Z, weights)
 
 # 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
 blend_function = '${safeId(state.hybrid.blendFunction)}'
+blend_axis = '${safeId(state.hybrid.axis ?? 'x')}'
 if ${state.hybrid.enabled ? 'True' : 'False'}:
     type_b = '${safeId(state.hybrid.typeB)}'
     weights_b = [${state.weights.join(', ')}]  # 与平台同源（平台 B 场复用主权重，非默认权重）
     V_b = tpms_field(X, Y, Z, weights_b, type_b)
     blend_center = ${safeId(state.hybrid.blendCenter)}
     blend_width = ${safeId(state.hybrid.blendWidth)}
-    t_px = X / np.pi  # 物理坐标 [-1, 1]
+    # 波前投影（与平台 hybrid-functions wavefrontCoord 同源）：radial=球面半径
+    px_ = X / np.pi; py_ = Y / np.pi; pz_ = Z / np.pi
+    t_wave = {'x': px_, 'y': py_, 'z': pz_}.get(blend_axis, np.sqrt(px_**2 + py_**2 + pz_**2))
     if blend_function == 'linear':
         half_w = blend_width / 2
-        alpha = np.clip((t_px - (blend_center - half_w)) / blend_width, 0.0, 1.0)
+        alpha = np.clip((t_wave - (blend_center - half_w)) / blend_width, 0.0, 1.0)
     else:  # sigmoid
         k_sig = 6.0 / max(blend_width, 0.01)
-        alpha = 1 / (1 + np.exp(-k_sig * (t_px - blend_center)))
+        alpha = 1 / (1 + np.exp(-k_sig * (t_wave - blend_center)))
     V = alpha * V + (1 - alpha) * V_b
 
 # 容器边界场（SDF：外部 >= 0 = 固相包裹，与平台 max(f, bound) 一致；不用 NaN）
@@ -312,6 +315,7 @@ end
 
 % 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
 blend_function = '${safeId(state.hybrid.blendFunction)}';
+blend_axis = '${safeId(state.hybrid.axis ?? 'x')}';
 if ${safeId(state.hybrid.enabled)}
     type_b = '${safeId(state.hybrid.typeB)}';
     weights_b = [${state.weights.join(', ')}]  # 与平台同源（平台 B 场复用主权重，非默认权重）;
@@ -348,13 +352,19 @@ if ${safeId(state.hybrid.enabled)}
     end
     blend_center = ${safeId(state.hybrid.blendCenter)};
     blend_width = ${safeId(state.hybrid.blendWidth)};
-    t_px = X / pi;  % 物理坐标 [-1, 1]
+    px_ = X / pi; py_ = Y / pi; pz_ = Z / pi;
+    switch blend_axis
+        case 'y', t_wave = py_;
+        case 'z', t_wave = pz_;
+        case 'radial', t_wave = sqrt(px_.^2 + py_.^2 + pz_.^2);
+        otherwise, t_wave = px_;
+    end
     if strcmp(blend_function, 'linear')
         half_w = blend_width / 2;
-        alpha = min(max((t_px - (blend_center - half_w)) / blend_width, 0), 1);
+        alpha = min(max((t_wave - (blend_center - half_w)) / blend_width, 0), 1);
     else  % sigmoid
         k_sig = 6.0 / max(blend_width, 0.01);
-        alpha = 1 ./ (1 + exp(-k_sig * (t_px - blend_center)));
+        alpha = 1 ./ (1 + exp(-k_sig * (t_wave - blend_center)));
     end
     V = alpha .* V + (1 - alpha) .* V_b;
 end
