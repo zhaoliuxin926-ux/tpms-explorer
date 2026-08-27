@@ -26,6 +26,7 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
       positions: result.positions,
       normals: result.normals,
       indices: result.indices,
+      colors: result.colors,
       vertCount: result.vertCount,
       triCount: result.triCount,
       porosityEstimate: result.porosityEstimate,
@@ -43,6 +44,7 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     if (response.positions) transferables.push(response.positions.buffer as ArrayBuffer);
     if (response.normals) transferables.push(response.normals.buffer as ArrayBuffer);
     if (response.indices) transferables.push(response.indices.buffer as ArrayBuffer);
+    if (response.colors) transferables.push(response.colors.buffer as ArrayBuffer);
     // @ts-expect-error Worker postMessage signature mismatch in DOM typings
     self.postMessage(response, transferables);
   } catch (err) {

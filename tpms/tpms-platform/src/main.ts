@@ -11,8 +11,10 @@ import { initStateFromURL } from './url-params';
 import { WorkerBridge } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
+import type { ColoringMode } from './types';
 import { computePhysicsMetrics } from './physics/gibson-ashby';
 import { buildSurface } from './geometry/surface-nets';
+import { computeVertexColors } from './geometry/vertex-coloring';
 import type { PhysicsMetrics } from './types';
 import {
   exportBinarySTL,
@@ -203,6 +205,7 @@ function rebuild(preview: boolean): boolean {
   const cached = geoCache.get(key);
   if (cached) {
     // 缓存命中：瞬间恢复（注意：此路径不派发 worker 结果——调用方若在等待结果需以此返回值区分）
+    // 颜色不入缓存：由 applyGeometry 内部按当前着色状态现场补算
     applyGeometry(cached.positions, cached.normals, cached.indices, cached.vertCount, cached.faceCount);
     return true;
   }
@@ -221,6 +224,7 @@ function rebuild(preview: boolean): boolean {
     hybrid: s.hybrid,
     customFormula: s.customFormula,
     preview,
+    coloring: effectiveColoring(s),
   };
 
   bridge.build(params);
@@ -253,12 +257,31 @@ function scheduleHdUpgrade(): void {
       hybrid: s.hybrid,
       customFormula: s.customFormula,
       preview: false,
+      coloring: effectiveColoring(s),
     });
   }, 350);
 }
 
+// ── 着色模式 ─────────────────────────────────────────────
+/** field 口径的可用性：需异构混合开启或梯度双壳在场 */
+function fieldAvailable(s: AppState): boolean {
+  return s.hybrid.enabled || s.structureMode === 'gradient_shell';
+}
+
+/** UI 选择到 Worker 参数的有效着色模式（非法选择优雅回退，不静默丢色彩语义） */
+function effectiveColoring(s: AppState): ColoringMode {
+  return s.coloring === 'field' && !fieldAvailable(s) ? 'elevation' : s.coloring;
+}
+
 // ── 几何应用 ─────────────────────────────────────────────
-function applyGeometry(positions: Float32Array, normals: Float32Array, indices: Uint32Array, vertCount: number, _faceCount: number): void {
+function applyGeometry(
+  positions: Float32Array,
+  normals: Float32Array,
+  indices: Uint32Array,
+  vertCount: number,
+  _faceCount: number,
+  colors?: Float32Array | null,
+): void {
   disposeGeometry();
 
   if (vertCount === 0) {
@@ -268,14 +291,37 @@ function applyGeometry(positions: Float32Array, normals: Float32Array, indices: 
   }
   showEmpty(false);
 
+  // 缓存命中路径不带颜色（颜色不入缓存）：按当前状态现场补算。
+  // S(x) 只是位置的纯函数（几十万顶点 ≪10ms），远比一次 worker 往返便宜
+  const s0 = getState();
+  const cols = colors ?? (() => {
+    const eff = effectiveColoring(s0);
+    return eff !== 'none'
+      ? computeVertexColors(positions, vertCount, {
+          mode: eff,
+          hybrid: eff === 'field' && s0.hybrid.enabled ? s0.hybrid : undefined,
+          gradientDir: s0.gradientDir,
+        })
+      : null;
+  })();
+
   baseGeo = new THREE.BufferGeometry();
   baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   baseGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  if (cols) {
+    baseGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  }
   baseGeo.setIndex(new THREE.BufferAttribute(indices, 1));
   baseGeo.computeBoundingSphere();
 
-  const s = getState();
-  const mat = getMaterial(s.material, s.model);
+  const mat = getMaterial(s0.material, s0.model);
+  // 顶点色开关打在共享材质上：color attribute 缺失时必须关掉，
+  // 否则 Three.js 以未定义 attribute 参与 shader 输出（渲染黑面）
+  const wantVertexColors = !!cols && s0.model !== 'strut'; // LineBasicMaterial 无顶点色通道，线框保持纯色
+  mat.vertexColors = wantVertexColors;
+  mat.needsUpdate = true;
+
+  const s = s0;
 
   if (s.model === 'strut') {
     // 线框模式
@@ -382,7 +428,7 @@ function onWorkerResult(res: WorkerResponse): void {
   }
 
   // 应用几何
-  applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount);
+  applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);
 
   // 缓存结果
   const cKey = cacheKey(getState(), res.resolution);
@@ -521,6 +567,11 @@ function disposeGeometry(): void {
     meshStrut = null;
   }
   if (baseGeo) {
+    // 显式摘除 color attribute：顶点色开启/关闭循环时确保无陈旧引用残留
+    // （geometry.dispose() 本身会释放全部 GPU 缓冲，这里是防御性清理）
+    baseGeo.deleteAttribute('color');
+    baseGeo.deleteAttribute('position');
+    baseGeo.deleteAttribute('normal');
     baseGeo.dispose();
     baseGeo = null;
   }
@@ -878,6 +929,20 @@ function bindUIEvents(): void {
     });
   });
 
+  // 着色模式按钮（智能禁用：场口径需混合或梯度双壳在场，非法点击 toast 引导）
+  document.querySelectorAll('[data-coloring]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-coloring') as AppState['coloring'];
+      if (mode === 'field' && !fieldAvailable(getState())) {
+        flashToast('场权重着色需先开启「异构混合」或切换到「梯度双壳」');
+        return;
+      }
+      setState({ coloring: mode });
+      syncUI(getState()); // 本仓库惯例：setState 不自动刷 UI，处理器负责同步高亮
+      scheduleRebuild(false);
+    });
+  });
+
   // 异构混合启用
   const hybridEnabled = document.getElementById('hybrid-enabled') as HTMLInputElement;
   if (hybridEnabled) {
@@ -1171,6 +1236,14 @@ function syncUI(s: AppState): void {
     el.classList.toggle('active', (s as any).hybrid.blendFunction === el.getAttribute('data-blend'));
   });
 
+  // 着色模式：高亮 + 场口径非法时置灰禁用（状态里残留的非法 'field' 由
+  // effectiveColoring 在重建参数处优雅回退，这里只负责视觉一致）
+  document.querySelectorAll('[data-coloring]').forEach(el => {
+    const mode = el.getAttribute('data-coloring');
+    el.classList.toggle('active', (s as any).coloring === mode);
+    if (mode === 'field') (el as HTMLButtonElement).disabled = !fieldAvailable(s);
+  });
+
   // 权重滑块行按当前曲面类型整体重建（类型/预设/undo/URL 恢复后必然经过 syncUI）
   refreshWeightsUI();
 }
@@ -1404,7 +1477,7 @@ function handleExport(fmt: string | null): void {
         hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
       });
       if (res.type === 'result' && res.vertCount > 0) {
-        applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount);
+        applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);
         lastBuildResolution = hdR;
         if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
         // 与 onWorkerResult 对齐：指标/缓存也同步更新，否则紧随的 JSON/bib 导出拿到

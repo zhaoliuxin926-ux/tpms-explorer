@@ -666,7 +666,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-CavfF3Zr.js"></script>
+  <script type="module" crossorigin src="./assets/index-p1eLeCQ_.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Bhgj_bvf.js">
 </head>
 <body>
@@ -885,6 +885,15 @@ window.addEventListener('error', function(e) {
           </div>
         </div>
         <div class="model-desc" id="hybrid-desc">异构 TPMS：通过权重函数 w(x,y,z) 在两种曲面之间平滑过渡，减少应力集中。</div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">着色模式</summary>
+        <div class="opt-row" id="coloring-row">
+          <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>
+          <button class="opt" data-coloring="field">场权重 / 梯度<span class="o-sub">Field Map</span></button>
+          <button class="opt" data-coloring="elevation">高度分布<span class="o-sub">Z-Elevation</span></button>
+        </div>
+        <div class="model-desc" id="coloring-desc">顶点热力图（蓝→白→红）：「场」显示混合权重或壁厚梯度分布，「高度」按 Z 轴渐变着色。场口径需先开启异构混合或梯度双壳。</div>
       </details>
       <details class="sect">
         <summary class="sect-h">自定义隐函数</summary>
