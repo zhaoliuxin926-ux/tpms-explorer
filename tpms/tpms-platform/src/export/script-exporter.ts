@@ -192,6 +192,49 @@ mesh = grid.contour([iso])
 
 mesh.save('tpms_reconstructed.vtk')
 print(f'重建完成: {mesh.n_points} 顶点, {mesh.n_cells} 面片; iso_bias={iso_bias if structure_mode == "solid_network" else 0:.6f}, t_eff={t_eff if structure_mode != "solid_network" else 0:.6f}')
+
+# ── 三向几何迂曲度（与平台 physics/tortuosity.ts 同源口径）──────
+# 流体空间 = F <= 0 的体素（排除最外一圈收口壳层）；26 连通 Dijkstra
+# 欧氏最短路；τ = L_path / L0。无贯通方向返回 inf。
+import heapq as _hq
+
+def _tortuosity_axis(F, axis):
+    n = F.shape[axis]
+    src_layer, dst_layer = 1, n - 2          # 排除最外收口壳层
+    src = np.take(F, src_layer, axis=axis) <= 0
+    NEIGH = [(dx, dy, dz) for dx in (-1,0,1) for dy in (-1,0,1) for dz in (-1,0,1)
+             if (dx,dy,dz) != (0,0,0)]
+    L = [np.sqrt(dx*dx+dy*dy+dz*dz) for dx,dy,dz in NEIGH]
+    dist = np.full(F.shape, np.inf)
+    heap = []
+    for i in range(n):
+        for j in range(n):
+            idx = [0,0,0]; idx[axis] = src_layer
+            idx[(axis+1)%3] = i; idx[(axis+2)%3] = j
+            if src[tuple(idx)]:
+                dist[tuple(idx)] = 0.0
+                _hq.heappush(heap, (0.0, tuple(idx)))
+    while heap:
+        d, cur = _hq.heappop(heap)
+        if d > dist[cur]:
+            continue
+        ci = [cur[0], cur[1], cur[2]]
+        if ci[axis] == dst_layer:
+            return d / (n - 3)
+        for (dx,dy,dz), Lk in zip(NEIGH, L):
+            nb = (cur[0]+dx, cur[1]+dy, cur[2]+dz)
+            if min(nb) < 1 or max(nb) >= n - 1:
+                continue
+            if F[nb] > 0:
+                continue
+            nd = d + Lk
+            if nd < dist[nb]:
+                dist[nb] = nd
+                _hq.heappush(heap, (nd, nb))
+    return float('inf')
+
+taus = [_tortuosity_axis(F, a) for a in range(3)]
+print('三向几何迂曲度 τx/τy/τz =', ['未贯通' if not np.isfinite(t) else f'{t:.3f}' for t in taus])
 `;
   downloadBlob(new Blob([script], { type: 'text/x-python' }), filename);
 }

@@ -12,7 +12,8 @@ import { WorkerBridge } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
-import { computePhysicsMetrics } from './physics/gibson-ashby';
+import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS } from './physics/gibson-ashby';
+import { analyzeTortuosity3D } from './physics/tortuosity';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
@@ -427,6 +428,7 @@ function onWorkerResult(res: WorkerResponse): void {
   if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
   lastBuildResolution = res.resolution;
   if (getState().slice < 100) schedulePercolation(80);   // 重建完成后刷新连通性预检
+  scheduleMicroPhysics(250);                              // 三向迂曲度 + 各向异性刚度（重建后自动刷新）
 
   // 物理指标
   if (res.surfaceArea != null && res.envelopeVolume != null) {
@@ -834,12 +836,58 @@ function updateStats(): void {
   }
   if (tortEl && lastPhysicsMetrics) {
     tortEl.textContent = lastPhysicsMetrics.poreStats.tortuosity.toFixed(3);
+    tortEl.title = '经验式估算（Mackie-Meares）。三向几何迂曲度见下方 τ(x/y/z) 与 Zener 行。';
   }
+  // 三向几何迂曲度 + 各向异性刚度（异步微物理分析结果，见 scheduleMicroPhysics）
+  const tortXYZ = document.getElementById('stat-tort-xyz');
+  if (tortXYZ) tortXYZ.textContent = lastMicroTort ?? '分析中…';
+  const zenerEl = document.getElementById('stat-zener');
+  if (zenerEl) zenerEl.textContent = lastMicroStiff ?? '分析中…';
   const anisoEl = document.getElementById('stat-aniso');
   if (anisoEl && lastPhysicsMetrics) {
     anisoEl.textContent = lastPhysicsMetrics.anisotropy.toFixed(2);
     anisoEl.title = '各向异性系数 (E_max/E_min)。Gibson-Ashby 模型为各向同性近似，实际值可能因方向而异。';
   }
+}
+
+// ── 微物理分析（三向几何迂曲度 + 各向异性刚度）──────────────
+// 数据源：lastIsoUsed（worker 精确等值）+ 网格实测相对密度（与导出 STL 同口径）
+let lastMicroTort: string | null = null;
+let lastMicroStiff: string | null = null;
+let microTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleMicroPhysics(delayMs: number): void {
+  if (microTimer) clearTimeout(microTimer);
+  microTimer = setTimeout(runMicroPhysics, delayMs);
+}
+
+function runMicroPhysics(): void {
+  const s = getState();
+  if (s.hybrid.enabled) {
+    lastMicroTort = '混合模式暂不支持';
+    lastMicroStiff = '—';
+    return;
+  }
+  if (lastIsoUsed === 0) { lastMicroTort = null; lastMicroStiff = null; return; }
+  const relDensity = lastMeshSolidFraction ?? (1 - s.porosity / 100);
+  // UI 展示用 48³（~0.3s）；审计精度场景请用 sampleN=64（micro_physics_audit 口径）
+  const tort = analyzeTortuosity3D(
+    {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: s.containerShape, isoUsed: lastIsoUsed, endplateMm: s.endplateMm,
+    },
+    48,
+  );
+  const fmtTau = (t: number) => (Number.isFinite(t) ? t.toFixed(2) : '∞(未贯通)');
+  lastMicroTort = `${fmtTau(tort.tau[0])} / ${fmtTau(tort.tau[1])} / ${fmtTau(tort.tau[2])}`;
+
+  const st = estimateAnisotropicStiffness(
+    relDensity, s.type, { x: tort.tau[0], y: tort.tau[1], z: tort.tau[2] },
+  );
+  const baseE = BASE_MODULUS[s.material === 'auto' ? 'tc4' : s.material] || BASE_MODULUS.tc4;
+  lastMicroStiff = `Zener A=${st.zener.toFixed(2)} · E=${st.E.map((e) => (e * baseE).toFixed(2)).join('/')}`;
+  updateStats();   // 微物理变量就绪后刷新面板 DOM（updateStats 读取 lastMicro* 填充）
 }
 
 // ── UI 事件绑定 ─────────────────────────────────────────────

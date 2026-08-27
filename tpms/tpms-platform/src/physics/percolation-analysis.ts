@@ -56,27 +56,30 @@ export interface PercolationResult {
 /**
  * 与 surface-nets 最终场同语义的固相判定（最终场 > 0 = 实体）。
  * phys 坐标 ∈ [−1,1]³；返回 true = 固体。
+ * 供本模块与 tortuosity.ts 复用（单一语义源）。
  */
-function isSolidAt(params: SectionAnalysisParams, x: number, y: number, z: number): boolean {
+export function isSolidAt(params: SectionAnalysisParams, x: number, y: number, z: number): boolean {
   const k = params.periods;
   const PI = Math.PI;
-  // 容器外一律空气（与 boundAt 同式）
-  let bound: number;
-  if (params.container === 'cylinder') bound = Math.max(x * x + y * y - 1, Math.abs(z) - 1);
-  else bound = Math.max(Math.abs(x) - 1, Math.abs(y) - 1, Math.abs(z) - 1);
-  if (bound >= 0) return false;
 
-  // 端板带（与 surface-nets 实现同判据：|z_mm| ≥ L/2 − t_eff；此处直接 phys 比对）
+  // 端板带判定必须先于容器边界空气壳：端板实体延伸到 ±L/2 边界层，
+  // 若先判 bound 会把 z=±1 层提前打成空气，端板的 z 向封堵语义失效
+  // （micro_physics_audit 首轮实测：端板后 z 向仍误报贯通 τ=1）
   if (params.endplateMm > 0) {
     const tEff = Math.min(params.endplateMm, 0.4 * k);
-    if (Math.abs(z) >= 1 - (2 * tEff) / k - 2 / (k * PI) * 0) {
-      // 与平台一致：带内且侧向界内即实体（z 向收口层的半格差对 2D 判定无感）
+    if (Math.abs(z) >= 1 - (2 * tEff) / k) {
       let sideB: number;
       if (params.container === 'cylinder') sideB = x * x + y * y - 1;
       else sideB = Math.max(Math.abs(x) - 1, Math.abs(y) - 1);
       return sideB < 0;
     }
   }
+
+  // 容器外一律空气（与 boundAt 同式）
+  let bound: number;
+  if (params.container === 'cylinder') bound = Math.max(x * x + y * y - 1, Math.abs(z) - 1);
+  else bound = Math.max(Math.abs(x) - 1, Math.abs(y) - 1, Math.abs(z) - 1);
+  if (bound >= 0) return false;
 
   const mx = x * PI * k, my = y * PI * k, mz = z * PI * k;
   const w = params.weights;
