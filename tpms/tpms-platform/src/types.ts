@@ -24,6 +24,9 @@ export type GradientDirection = 'z' | 'radial' | 'spherical';
 /** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 / 平均与高斯曲率 */
 export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | 'gauss_curvature';
 
+/** 混合波前轴向：x/y/z 轴向平面波前，radial 球面波前 */
+export type BlendAxis = 'x' | 'y' | 'z' | 'radial';
+
 /** 端板厚度上限 UI 档位与防重叠钳制系数（两端板间隙 ≥ 0.2·L） */
 export const ENDPLATE_MAX_UI_MM = 3.0;
 export const ENDPLATE_CLAMP_FRAC = 0.4;
@@ -58,6 +61,7 @@ export interface AppState {
     blendFunction: 'sigmoid' | 'linear';
     blendCenter: number;
     blendWidth: number;
+    axis: BlendAxis;
   };
   customFormula: string;
 }
@@ -86,6 +90,7 @@ export const DEFAULT_STATE: AppState = {
     blendFunction: 'sigmoid',
     blendCenter: 0,
     blendWidth: 1.0,
+    axis: 'x',
   },
   customFormula: '',
 };

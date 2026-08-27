@@ -882,12 +882,12 @@ window.addEventListener('error', function(e) {
         <div class="model-desc" id="gradient-desc">Z 轴梯度：沿 Z 轴方向厚度连续变化，底部致密顶部疏松，适合骨支架承重设计。</div>
       </details>
       <details class="sect">
-        <summary class="sect-h">异构混合</summary>
+        <summary class="sect-h">多相混合拓扑 (Hybrid TPMS)</summary>
         <div class="field">
-          <div class="lbl"><span>启用混合</span><label class="toggle"><input type="checkbox" id="hybrid-enabled"><span class="toggle-track"></span></label></div>
+          <div class="lbl"><span>启用混合（主曲面 = 当前类型 Type A）</span><label class="toggle"><input type="checkbox" id="hybrid-enabled"><span class="toggle-track"></span></label></div>
         </div>
         <div class="field" id="hybrid-options" style="display:none">
-          <div class="lbl"><span>混合类型 B</span></div>
+          <div class="lbl"><span>次曲面 (Type B)</span></div>
           <div class="opt-row">
             <button class="opt" data-hybrid-type="gyroid">Gyroid</button>
             <button class="opt" data-hybrid-type="diamond">Diamond</button>
@@ -895,6 +895,15 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-hybrid-type="neovius">Neovius</button>
             <button class="opt" data-hybrid-type="iwp">I-WP</button>
             <button class="opt" data-hybrid-type="frd">F-RD</button>
+            <button class="opt" data-hybrid-type="lidinoid">Lidinoid</button>
+            <button class="opt" data-hybrid-type="splitp">Split-P</button>
+          </div>
+          <div class="lbl" style="margin-top:8px"><span>过渡方向 (Axis)</span></div>
+          <div class="opt-row">
+            <button class="opt active" data-hybrid-axis="x">X 轴<span class="o-sub">X</span></button>
+            <button class="opt" data-hybrid-axis="y">Y 轴<span class="o-sub">Y</span></button>
+            <button class="opt" data-hybrid-axis="z">Z 轴<span class="o-sub">Z</span></button>
+            <button class="opt" data-hybrid-axis="radial">径向<span class="o-sub">Radial</span></button>
           </div>
         </div>
         <div class="field" id="hybrid-blend" style="display:none">
@@ -903,8 +912,12 @@ window.addEventListener('error', function(e) {
             <button class="opt active" data-blend="sigmoid">Sigmoid 平滑过渡</button>
             <button class="opt" data-blend="linear">线性过渡</button>
           </div>
+          <div class="lbl" style="margin-top:8px"><span>过渡中心 z₀ / r₀</span><span class="val" id="hybrid-center-value">0.00</span></div>
+          <input type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
+          <div class="lbl" style="margin-top:8px"><span>过渡带特征宽度 δ</span><span class="val" id="hybrid-width-value">0.50</span></div>
+          <input type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
         </div>
-        <div class="model-desc" id="hybrid-desc">异构 TPMS：通过权重函数 w(x,y,z) 在两种曲面之间平滑过渡，减少应力集中。</div>
+        <div class="model-desc" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上选择）。开启后自动推荐「场权重」着色直观呈现过渡带。</div>
       </details>
       <details class="sect">
         <summary class="sect-h">着色模式</summary>
