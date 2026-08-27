@@ -89,6 +89,11 @@ export function buildShareURL(): string {
   });
   params.set('grad', s.gradientDir);
   if (s.endplateMm > 0) params.set('ep', String(s.endplateMm));
+  // 【阶段 IV】非欧度规空间映射（identity 关闭时不写入，URL 保持简洁）
+  if (s.manifold.kind !== 'identity') {
+    params.set('mfd', s.manifold.kind);
+    params.set('mfr', String(s.manifold.radius));
+  }
   if (s.sliceAxis !== 'z') params.set('sa', s.sliceAxis);
   if (s.sliceInvert) params.set('si', '1');
   if (s.hybrid.enabled) {
