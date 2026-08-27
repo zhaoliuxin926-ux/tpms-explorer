@@ -40,6 +40,7 @@ const BUNDLE = join(tmpdir(), 'tpms_parity_bundle.mjs');
     'src/export/bibtex-sidecar.ts:generateBibTeX',
     'src/export/script-exporter.ts:exportPythonScript',
     'src/export/stl-exporter.ts:buildBinarySTL',
+    'src/physics/tortuosity.ts:analyzeTortuosity3D',
   ];
   writeFileSync(entry, mods.map((m) => {
     const [f, names] = m.split(':');
@@ -47,7 +48,8 @@ const BUNDLE = join(tmpdir(), 'tpms_parity_bundle.mjs');
   }).join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
-  if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
+  if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); 
+process.exit(1); }
 }
 const imp = (p) => import(pathToFileURL(p).href);
 
@@ -454,10 +456,142 @@ const { generateBibTeX } = (await imp(BUNDLE));
   check('BibTeX: metrics=null 不输出 undefined', !/undefined/.test(bib));
 }
 
+  
+// ── 6. 【阶段 III】Hybrid 波前 α 行为级对拍（app.html hybridAlpha vs 平台语义）──
+{
+  const appSrc = readFileSync(APP_HTML, 'utf8');
+  const m = appSrc.match(/function hybridAlpha\([\s\S]*?\n}/);
+  check('P1: app.html hybridAlpha 独立函数存在', !!m);
+  if (m) {
+    const hybridAlpha = new Function('return ' + m[0])();
+    const axes = ['x', 'y', 'z', 'radial'];
+    const blends = ['sigmoid', 'linear'];
+    const wavefrontP = (axis, x, y, z) => axis === 'x' ? x : axis === 'y' ? y : axis === 'z' ? z : Math.sqrt(x * x + y * y + z * z);
+    let n = 0;
+    for (const axis of axes) {
+      for (const blend of blends) {
+        for (const [x, y, z] of [[0, 0, 0], [0.5, -0.3, 0.8], [-1, 1, -1], [3, 0, 0], [0, 2, 2]]) {
+          const hyb = { axis, blendFunction: blend, blendCenter: 0.1, blendWidth: 0.7 };
+          const t = wavefrontP(axis, x, y, z);
+          const hw = 0.7, hc = 0.1;
+          const ref = blend === 'linear'
+            ? (t <= hc - hw / 2 ? 0 : t >= hc + hw / 2 ? 1 : (t - (hc - hw / 2)) / hw)
+            : 1 / (1 + Math.exp(-(6 / hw) * (t - hc)));
+          const got = hybridAlpha(hyb, x, y, z);
+          check(`P1 hybridAlpha[${axis}/${blend}]#${n++}`, Math.abs(got - ref) < 1e-12, `${got} vs ${ref}`);
+        }
+      }
+    }
+  }
+  check('P2: app.html 混合公式 a*V[idx0] + (1−a)*VB[idx0]', /V\[idx0\] = a\*V\[idx0\] \+ \(1-a\)\*VB\[idx0\]/.test(appSrc));
+  check('P2: app.html kSig = 6/hw（陡度同源）', /6\/Math\.max\(hw, 0\.01\)/.test(appSrc));
+  check('P2: app.html radial = 球面半径', /Math\.sqrt\(px\*px\+py\*py\+pz\*pz\)/.test(appSrc));
+}
+
+// ── 7. 【阶段 III】迂曲度行为级对拍（app.html computeTortuosity3D vs 平台 analyzeTortuosity3D）──
+{
+  const appSrc = readFileSync(APP_HTML, 'utf8');
+  const a1 = appSrc.indexOf('const TORT_NEIGH');
+  const a2 = appSrc.indexOf('let tortTimer');
+  check('P3: app.html 迂曲度代码块存在', a1 >= 0 && a2 > a1);
+  if (a1 >= 0 && a2 > a1) {
+    const block = appSrc.slice(a1, a2);
+    const sandbox = new Function('state', 'isoUsed', 'tEff', 'sampleN', `
+      ${block}
+      return computeTortuosity3D(state, isoUsed, tEff, sampleN);
+    `);
+    const { analyzeTortuosity3D } = await imp(BUNDLE);
+    const cases = [
+      { type: 'gyroid', isoUsed: -0.75, tEff: -0.75 },
+      { type: 'diamond', isoUsed: -0.77, tEff: -0.77 },
+      { type: 'schwarz', isoUsed: 0, tEff: 1.1 },
+      { type: 'neovius', isoUsed: 0, tEff: 0.9 },
+      { type: 'iwp', isoUsed: 0, tEff: 1.0 },
+      { type: 'frd', isoUsed: 0, tEff: 0.8 },
+    ];
+    let n = 0;
+    for (const tc of cases) {
+      const isShell = tc.tEff !== tc.isoUsed;
+      const state = { type: tc.type, cellSize: 2, weights: [1, 1, 1, 1], structureMode: isShell ? 'shell' : 'solid_network', containerShape: 'cube', endplateMm: 0 };
+      const params = { type: tc.type, customFormula: '', weights: [1, 1, 1, 1], periods: 2, mode: isShell ? 'shell' : 'solid_network', gradientDir: 'z', container: 'cube', isoUsed: isShell ? tc.tEff / 2 : tc.isoUsed, endplateMm: 0 };
+      const plat = analyzeTortuosity3D(params, 28);
+      const app = sandbox(state, tc.isoUsed, isShell ? tc.tEff / 2 : 0, 28);
+      for (let axis = 0; axis < 3; axis++) {
+        const pv = plat.tau[axis], av = app.tau[axis];
+        const same = (Number.isFinite(pv) && Number.isFinite(av)) ? Math.abs(pv - av) < 1e-9 : (pv === av);
+        check(`P3 tortuosity[${tc.type}/axis${axis}]#${n++}`, same, `plat=${pv} app=${av}`);
+      }
+    }
+  }
+  check('P3: app.html 壳层排除', /onShell = ix===0\|\|ix===n-1/.test(appSrc));
+  check('P3: app.html L0 = n−3', /const L0 = n - 3;/.test(appSrc));
+  check('P3: app.html 26 连通（kk<26）', /kk<26/.test(appSrc));
+}
+
+// ── 8. 【阶段 III】3MF 导出结构（CRC32 已知向量 + ZIP 布局静态）──
+{
+  const appSrc = readFileSync(APP_HTML, 'utf8');
+  const m = appSrc.match(/function crc32\([\s\S]*?\n}/);
+  check('P4: app.html crc32 函数存在', !!m);
+  if (m) {
+    const crc32 = new Function(m[0] + '; return crc32;')();
+    const enc = new TextEncoder();
+    check('P4 CRC32("123456789")=0xCBF43926', crc32(enc.encode('123456789')) === 0xCBF43926);
+    check('P4 CRC32("")=0', crc32(new Uint8Array(0)) === 0);
+    check('P4 CRC32([0x00])=0xD202EF8D', crc32(new Uint8Array([0])) === 0xD202EF8D);
+  }
+  check('P4: 3MF 单元 millimeter', /<model unit="millimeter"/.test(appSrc));
+  check('P4: 3MF TPMS:EndplateMm 元数据', /TPMS:EndplateMm/.test(appSrc));
+  check('P4: 3MF EOCD 签名', /0x06054b50/.test(appSrc));
+  check('P4: 3MF local header 签名', /0x04034b50/.test(appSrc));
+  check('P4: 3MF central header 签名', /0x02014b50/.test(appSrc));
+}
+
+// ── 9. 【阶段 III】三轴剖切 + 端板语义静态对拍 ──
+{
+  const appSrc = readFileSync(APP_HTML, 'utf8');
+  const snSrc = readFileSync(join(PLATFORM, 'src/geometry/surface-nets.ts'), 'utf-8');
+  check('P5: app.html sliceAxis 状态', /sliceAxis:'z'/.test(appSrc));
+  check('P5: app.html sliceInvert 状态', /sliceInvert:false/.test(appSrc));
+  check('P5: app.html 法线按轴切换', /sliceAxis==='x' \? \[1,0,0\]/.test(appSrc));
+  check('P5: app.html 反向保留负侧', /sliceInvert \? 1 : -1/.test(appSrc));
+  const typesSrc = readFileSync(join(PLATFORM, 'src/types.ts'), 'utf-8');
+  check('平台: sliceAxis 状态类型', /sliceAxis: SliceAxis/.test(typesSrc));
+  const appEp = /1 - 2\*endplateMm\/periods - 2\/R/.test(appSrc);
+  const platEp = /2 \* endplateMm\) \/ L_mm - 2 \/ R/.test(snSrc);
+  check('P5: 端板阈值半格补偿两侧同源', appEp && platEp, `app=${appEp} plat=${platEp}`);
+  check('P5: 端板对称幅值对 ±1.0（app）', /1\.0 : -1\.0/.test(appSrc));
+  check('P5: URL sa/si 键', /sa: state\.sliceAxis/.test(appSrc) && /si: '1'/.test(appSrc));
+  check('P5: URL hb/hba/hbc/hbw/hbf 键', /hb: state\.hybrid\.typeB/.test(appSrc) && /hba: state\.hybrid\.axis/.test(appSrc) && /hbf: state\.hybrid\.blendFunction/.test(appSrc));
+  check('P5: URL 恢复白名单校验（sa）', /\['x','y','z'\]\.includes\(q\.get\('sa'\)\)/.test(appSrc));
+  check('P5: URL 恢复白名单校验（hb）', /'splitp'\]\.includes\(q\.get\('hb'\)\)/.test(appSrc));
+}
+
+// ── 10. 【阶段 III】公式抽查扩展（8 曲面 × 非对称权重 × 随机点对拍）──
+{
+  const wsets = [[1, 1, 1, 1], [0.5, 1.3, 0.8, 1.0], [1.2, 0.6, 1.1, 0.9]];
+  let n = 0;
+  for (const type of Object.keys(LIT)) {
+    for (const w of wsets) {
+      let worst = 0;
+      for (let i = 0; i < 4; i++) {
+        const x = -Math.PI + ((7 * i + n) % 13) / 13 * 2 * Math.PI;
+        const y = -Math.PI + ((11 * i + n * 3) % 13) / 13 * 2 * Math.PI;
+        const z = -Math.PI + ((5 * i + n * 7) % 13) / 13 * 2 * Math.PI;
+        const a = TPMS_FUNCTIONS[type](x, y, z, w);
+        const b = LIT[type](x, y, z, w);
+        worst = Math.max(worst, Math.abs(a - b));
+      }
+      check(`P6 文献对拍[${type}/w${wsets.indexOf(w)}]`, worst < 1e-9, `worst=${worst.toExponential(1)}`);
+      n++;
+    }
+  }
+}
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
-  process.exit(1);
 }
+
+process.exit(fail ? 1 : 0);

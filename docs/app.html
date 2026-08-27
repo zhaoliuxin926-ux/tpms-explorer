@@ -423,6 +423,7 @@
           <button class="tbtn" id="btn-stl" title="导出 STL（完整等值面网格，可 3D 打印）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
           <button class="tbtn" id="btn-gltf" title="导出 glTF (.glb，含二进制定点/法线，适合 Blender / WebGL 资产管线）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></button>
           <button class="tbtn" id="btn-obj" title="导出 OBJ（纯文本网格，兼容大多数 CAD / 建模软件）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></button>
+          <button class="tbtn" id="btn-3mf" title="导出 3MF（工业 3D 打印格式：OPC ZIP + mm 尺度 + 端板元数据）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></button>
           <button class="tbtn" id="btn-anim" title="导出剖面动画（WebM：切片平面扫过体积）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></button>
           <button class="tbtn" id="btn-full" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
           <button class="tbtn" id="btn-help" title="键盘快捷键帮助" aria-label="键盘快捷键帮助" aria-haspopup="dialog">?</button>
@@ -516,7 +517,44 @@
           <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
         </div>
         <div class="model-desc" id="structure-desc">实体网络：把等值面一侧填成实体（截断 TPMS 的 solid 表示；严格 TPMS 是 C=0 的零厚度曲面）。</div>
-        <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="gradient">什么是梯度双壳？</span>　·　<span class="gloss-term" data-term="structure-vs-model">结构拓扑 vs 表现形式</span></div>
+          <div class="field-note" id="structure-desc">实体网络：把等值面一侧填成实体——截断 TPMS 的 solid 表示（严格的 TPMS 是 C=0 的零厚度极小曲面），材料集中在等值面一侧。</div>
+        </div>
+      </details>
+      <details class="sect" id="hybrid-sect">
+        <summary class="sect-h">多相混合拓扑 (Hybrid TPMS)</summary>
+        <div class="field">
+          <div class="lbl"><span>启用混合（Type A = 当前曲面）</span><label class="toggle"><input type="checkbox" id="hybrid-enabled"><span class="toggle-track"></span></label></div>
+          <div id="hybrid-controls" style="display:none">
+            <div class="lbl" style="margin-top:8px"><span>Type B 曲面</span></div>
+            <div class="opt-row" id="hybrid-typeb-row">
+              <button class="opt active" data-hb="diamond">Diamond</button>
+              <button class="opt" data-hb="schwarz">Schwarz P</button>
+              <button class="opt" data-hb="gyroid">Gyroid</button>
+              <button class="opt" data-hb="neovius">Neovius</button>
+              <button class="opt" data-hb="iwp">I-WP</button>
+              <button class="opt" data-hb="frd">F-RD</button>
+              <button class="opt" data-hb="lidinoid">Lidinoid</button>
+              <button class="opt" data-hb="splitp">Split-P</button>
+            </div>
+            <div class="lbl" style="margin-top:8px"><span>过渡波前轴向</span></div>
+            <div class="opt-row" id="hybrid-axis-row">
+              <button class="opt active" data-haxis="x">X 轴</button>
+              <button class="opt" data-haxis="y">Y 轴</button>
+              <button class="opt" data-haxis="z">Z 轴</button>
+              <button class="opt" data-haxis="radial">径向 r</button>
+            </div>
+            <div class="lbl" style="margin-top:8px"><span>过渡函数</span></div>
+            <div class="opt-row" id="hybrid-blend-row">
+              <button class="opt active" data-hblend="sigmoid">Sigmoid</button>
+              <button class="opt" data-hblend="linear">线性过渡</button>
+            </div>
+            <div class="lbl" style="margin-top:8px"><span>过渡中心</span><span class="val" id="hybrid-center-value">0.00</span></div>
+            <input type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
+            <div class="lbl" style="margin-top:8px"><span>过渡带特征宽度 δ</span><span class="val" id="hybrid-width-value">0.50</span></div>
+            <input type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
+          </div>
+          <div class="field-note" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上）。开启后公式面板显示混合波前参数。</div>
+        </div>
       </details>
       <details class="sect">
         <summary class="sect-h">表现形式</summary>
@@ -542,6 +580,12 @@
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="slice">截面扫描</span><span class="val" id="slice-value">完整</span></div>
           <input type="range" id="slice" min="-100" max="100" value="100" step="1" role="slider" aria-label="截面扫描位置" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="100">
+          <div class="opt-row" id="slice-axis-row" style="margin-top:6px">
+            <button class="opt active" data-saxis="z">Z 轴</button>
+            <button class="opt" data-saxis="x">X 轴</button>
+            <button class="opt" data-saxis="y">Y 轴</button>
+            <button class="opt" id="btn-slice-invert">反向</button>
+          </div>
           <div class="field-note">沿 Z 轴逐层剖切，可观察内部连通孔道。</div>
         </div>
         <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
@@ -605,6 +649,39 @@ function buildSurface(type, iso, periods, R, options={}){
         if(!isFinite(v)) nonFiniteCount++;
         if(v<minV) minV=v; if(v>maxV) maxV=v;
       } } }
+  // 【阶段 III】多相混合 Hybrid（与平台 createHybridField 同源）：
+  // V_hyb = α·V_A + (1−α)·V_B，α 由波前投影坐标（x/y/z/radial）经 sigmoid/linear 给出。
+  // 混合在二分之前完成（与平台一致：二分作用于混合后的场）。
+  const hyb = options.hybrid || null;
+  if(hyb && hyb.enabled){
+    const VB = new Float32Array(N*N*N);
+    const tB = hyb.typeB;
+    for(let iz=0; iz<N; iz++){ const Sz=sn[iz],Cz=cs[iz],C2z=cs2[iz];
+      for(let iy=0; iy<N; iy++){ const Sy=sn[iy],Cy=cs[iy],C2y=cs2[iy];
+        for(let ix=0; ix<N; ix++){ const Sx=sn[ix],Cx=cs[ix],C2x=cs2[ix]; let v;
+          if(tB==='gyroid') v = w[0]*Sx*Cy + w[1]*Sy*Cz + w[2]*Sz*Cx;
+          else if(tB==='neovius') v = w[0]*3*(Cx+Cy+Cz) + w[1]*4*Cx*Cy*Cz;
+          else if(tB==='iwp') v = w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx) - w[1]*(C2x+C2y+C2z);
+          else if(tB==='frd') v = w[0]*4*Cx*Cy*Cz - w[1]*(C2x*C2y+C2y*C2z+C2z*C2x);
+          else if(tB==='diamond') v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz;
+          else if(tB==='lidinoid') v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x);
+          else if(tB==='splitp') v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z);
+          else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
+          VB[idxF(ix,iy,iz)] = v;
+        } } }
+    // 波前投影坐标（与平台 wavefrontCoord 同源）：radial = 球面半径 √(x²+y²+z²)
+    minV = Infinity; maxV = -Infinity;
+    for(let iz=0; iz<N; iz++){ const pz0=phys(iz), zB0=iz*N*N;
+      for(let iy=0; iy<N; iy++){ const py0=phys(iy), yB0=zB0+iy*N;
+        for(let ix=0; ix<N; ix++){
+          const px0=phys(ix);
+          const a = hybridAlpha(hyb, px0, py0, pz0);
+          const idx0 = yB0+ix;
+          V[idx0] = a*V[idx0] + (1-a)*VB[idx0];
+          const vv = V[idx0];
+          if(vv<minV) minV=vv; if(vv>maxV) maxV=vv;
+        } } }
+  }
   // 物理坐标（归一化到 [-1,1]），供容器边界函数使用。ix/R ∈ [0,1] → px ∈ [-1,1]
   const phys = (i)=> (i/R)*2 - 1;
   // 容器边界函数 F_bound：返回>0 表示在容器外（将被裁掉）
@@ -1170,7 +1247,127 @@ function buildSurface(type, iso, periods, R, options={}){
       : Math.pow(2 * Math.PI * mm, 3);
     meshSolidFraction = env > 0 ? Math.min(1, Math.abs(vol6) / 6 * mm * mm * mm / env) : 0;
   }
-  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-(meshSolidFraction || (1-solidEstimate)), isoUsed: isoUsedReport, meshSolidFraction };
+  return { geo, vertCount: positions.length/3, triCount: indices.length/3, solidEstimate, porosityEstimate: 1-(meshSolidFraction || (1-solidEstimate)), isoUsed: isoUsedReport, meshSolidFraction, tEffBase, biasBase };
+}
+
+// ===== 【阶段 III】三向几何迂曲度（与平台 physics/tortuosity.ts 同源语义）=====
+// 流体空间 = 非固相（排除容器外表面壳层）；26 连通 Dijkstra（欧氏边长）；
+// τ = L_path/(n−3)；未贯通方向 = Infinity。
+// 【阶段 III】混合波前 α（独立函数，供 parity_math 行为级提取对拍平台 createHybridField）
+function hybridAlpha(hyb, px, py, pz){
+  const t = hyb.axis==='x' ? px : hyb.axis==='y' ? py : hyb.axis==='z' ? pz : Math.sqrt(px*px+py*py+pz*pz);
+  const hw = hyb.blendWidth, hc = hyb.blendCenter;
+  if(hyb.blendFunction==='linear'){
+    const halfW = hw/2, lo = hc - halfW, hi = hc + halfW;
+    return t<=lo ? 0 : t>=hi ? 1 : (t-lo)/hw;
+  }
+  const kSig = 6/Math.max(hw, 0.01);
+  return 1/(1+Math.exp(-kSig*(t-hc)));
+}
+
+const TORT_NEIGH = [];
+for(let dz=-1;dz<=1;dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)
+  if(dx!==0||dy!==0||dz!==0) TORT_NEIGH.push([dx,dy,dz,Math.sqrt(dx*dx+dy*dy+dz*dz)]);
+
+function tortFluidAt(state, x, y, z, isoUsed, tEff){
+  // 与 app.html buildSurface 场语义一致：固相判定 + 容器 + 端板
+  const k = state.cellSize, PI = Math.PI;
+  // 端板带（先于容器判定，与平台 percolation-analysis 同序）
+  const ep = Math.min(Math.max(state.endplateMm||0,0), 0.4*k);
+  if(ep > 1e-9 && Math.abs(z) >= 1 - 2*ep/k){
+    const side = state.containerShape==='cylinder' ? x*x+y*y-1 : Math.max(Math.abs(x)-1, Math.abs(y)-1);
+    return side < 0;   // 端板 = 固相 ⇒ 非流体
+  }
+  const bound = state.containerShape==='cylinder'
+    ? Math.max(x*x+y*y-1, Math.abs(z)-1)
+    : Math.max(Math.abs(x)-1, Math.abs(y)-1, Math.abs(z)-1);
+  if(bound >= 0) return false;
+  const mx = x*PI*k, my = y*PI*k, mz = z*PI*k, w = state.weights;
+  const Sx=Math.sin(mx),Cy=Math.cos(my),Sy=Math.sin(my),Cz=Math.cos(mz),Sz=Math.sin(mz),Cx=Math.cos(mx),C2x=Math.cos(2*mx),C2y=Math.cos(2*my),C2z=Math.cos(2*mz);
+  let v;
+  switch(state.type){
+    case 'gyroid': v = w[0]*Sx*Cy + w[1]*Sy*Cz + w[2]*Sz*Cx; break;
+    case 'neovius': v = w[0]*3*(Cx+Cy+Cz) + w[1]*4*Cx*Cy*Cz; break;
+    case 'iwp': v = w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx) - w[1]*(C2x+C2y+C2z); break;
+    case 'frd': v = w[0]*4*Cx*Cy*Cz - w[1]*(C2x*C2y+C2y*C2z+C2z*C2x); break;
+    case 'diamond': v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz; break;
+    case 'lidinoid': v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x); break;
+    case 'splitp': v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z); break;
+    default: v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
+  }
+  if(state.structureMode==='solid_network') return !(isoUsed - v > 0);      // 流体 = v ≥ iso
+  return !((v*v) - (tEff)*(tEff) > 0);                                      // 壳：流体 = |v| ≤ tEff
+}
+
+function computeTortuosity3D(state, isoUsed, tEff, sampleN){
+  const n = sampleN;
+  const coordOf = (i)=> -1 + (2*i)/(n-1);
+  const fluid = new Uint8Array(n*n*n);
+  let fluidCnt = 0, idx = 0;
+  for(let iz=0; iz<n; iz++){ const z = coordOf(iz);
+    for(let iy=0; iy<n; iy++){ const y = coordOf(iy);
+      for(let ix=0; ix<n; ix++){
+        const onShell = ix===0||ix===n-1||iy===0||iy===n-1||iz===0||iz===n-1;
+        const isFluid = !onShell && tortFluidAt(state, coordOf(ix), y, z, isoUsed, tEff);   // tortFluidAt 返回 true = 流体
+        fluid[idx++] = isFluid?1:0;
+        if(isFluid) fluidCnt++;
+      } } }
+  const L0 = n - 3;
+  const heapK = [], heapV = [];
+  const push = (key, val)=>{ heapK.push(key); heapV.push(val); let i = heapK.length-1;
+    while(i>0){ const p=(i-1)>>1; if(heapK[p]<=heapK[i]) break;
+      const tk=heapK[p]; heapK[p]=heapK[i]; heapK[i]=tk; const tv=heapV[p]; heapV[p]=heapV[i]; heapV[i]=tv; i=p; } };
+  const pop = ()=>{ const tk=heapK[0], tv=heapV[0]; const lk=heapK.pop(), lv=heapV.pop();
+    if(heapK.length){ heapK[0]=lk; heapV[0]=lv; let i=0;
+      for(;;){ const l=2*i+1, r=l+1; let m=i;
+        if(l<heapK.length && heapK[l]<heapK[m]) m=l;
+        if(r<heapK.length && heapK[r]<heapK[m]) m=r;
+        if(m===i) break;
+        const tk=heapK[m]; heapK[m]=heapK[i]; heapK[i]=tk; const tv=heapV[m]; heapV[m]=heapV[i]; heapV[i]=tv; i=m; } }
+    return [tk, tv]; };
+  const tau = [];
+  const dist = new Float64Array(n*n*n);
+  for(let axis=0; axis<3; axis++){
+    dist.fill(Infinity); heapK.length = 0; heapV.length = 0;
+    for(let a=0; a<n; a++) for(let b=0; b<n; b++){
+      const c=[0,0,0]; c[axis]=1; c[(axis+1)%3]=a; c[(axis+2)%3]=b;
+      const i0 = c[0]+c[1]*n+c[2]*n*n;
+      if(fluid[i0]){ dist[i0]=0; push(0, i0); }
+    }
+    const lastPlane = n-2;
+    let Lpath = Infinity;
+    while(heapK.length){
+      const top = pop(); const d = top[0], i0 = top[1];
+      if(d > dist[i0]) continue;
+      const cx = i0%n, cy = ((i0/n)|0)%n, cz = (i0/(n*n))|0;
+      const coords = [cx, cy, cz];
+      if(coords[axis] === lastPlane){ Lpath = d; break; }
+      for(let kk=0; kk<26; kk++){
+        const nb = TORT_NEIGH[kk];
+        const nx = cx+nb[0], ny = cy+nb[1], nz2 = cz+nb[2];
+        if(nx<0||nx>=n||ny<0||ny>=n||nz2<0||nz2>=n) continue;
+        const nIdx = nx+ny*n+nz2*n*n;
+        if(!fluid[nIdx]) continue;
+        const nd = d + nb[3];
+        if(nd < dist[nIdx]){ dist[nIdx] = nd; push(nd, nIdx); }
+      }
+    }
+    tau.push(Number.isFinite(Lpath) ? Lpath/L0 : Infinity);
+  }
+  return { tau, fluidFraction: fluidCnt/fluid.length };
+}
+
+let tortTimer = null;
+function scheduleTortuosity(){
+  clearTimeout(tortTimer);
+  tortTimer = setTimeout(()=>{
+    if(lastIsoUsed == null) return;
+    // shell 族 isoUsed = tEffBase/2（平台同语义）：壳流体判据 |v| ≤ isoUsed
+    const r = computeTortuosity3D(state, lastIsoUsed, lastIsoUsed, 40);
+    const fmt = (t)=> Number.isFinite(t) ? t.toFixed(2) : '∞';
+    const el = document.getElementById('tort-line');
+    if(el) el.innerHTML = `三向迂曲度 τx/τy/τz <b>${fmt(r.tau[0])}/${fmt(r.tau[1])}/${fmt(r.tau[2])}</b>`;
+  }, 350);
 }
 
 const COLORS = { gyroid:0x6366f1, diamond:0xf59e0b, schwarz:0x10b981, neovius:0xec4899, iwp:0x0ea5e9, frd:0xa855f7, lidinoid:0x14b8a6, splitp:0xf43f5e };
@@ -1192,7 +1389,9 @@ const MODEL_DESC = {
   strut:'杆模型（Lattice）：同一等值面网格的线框渲染视角，便于观察连接拓扑与孔道走向。它不改变几何，导出的仍是完整曲面（非杆件桁架点阵）。',
   solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。材料占比由孔隙率决定（壁厚系数在此模式下主要影响显示）。',
 };
-const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube', endplateMm:0 };
+const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube', endplateMm:0,
+  sliceAxis:'z', sliceInvert:false,   // 【阶段 III】三轴动态剖切（与平台 sliceAxis/sliceInvert 同源）
+  hybrid:{ enabled:false, typeB:'diamond', blendFunction:'sigmoid', blendCenter:0, blendWidth:0.5, axis:'x' } };  // 【阶段 III】多相混合（与平台 HybridConfig 同源）
 const CLIP_LIMIT = 1.32;
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), CLIP_LIMIT);
 
@@ -1458,6 +1657,7 @@ function renderMeasurements(){
     `<span class="ml">比表面积 <b>${fmtNum(SSA)} ${u.inv}</b></span>`;
 }
 
+let lastIsoUsed = null, lastTEffGlobal = null;
 function rebuild(preview=false){
   const t0 = performance.now();
   const iso = baseIso();
@@ -1465,12 +1665,15 @@ function rebuild(preview=false){
   const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
   let bs;
   try {
-    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview, endplateMm:state.endplateMm });
+    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview, endplateMm:state.endplateMm, hybrid:state.hybrid });
   } catch (e) {
     alert('构建失败：' + (e && e.message ? e.message : e));
     return false;
   }
   const { geo, vertCount, triCount, porosityEstimate, isoUsed, meshSolidFraction } = bs;
+  lastIsoUsed = isoUsed;
+  lastTEffGlobal = bs.tEffBase;
+  if(!preview) scheduleTortuosity();
   if(meshFill){ group.remove(meshFill); meshFill.material.dispose(); meshFill=null; }
   if(baseGeo){ baseGeo.dispose(); }
   baseGeo = geo;
@@ -1486,7 +1689,7 @@ function rebuild(preview=false){
   }
   const ms = (performance.now()-t0).toFixed(1);
   const quality = preview ? '预览' : '高清';
-  document.getElementById('stats').innerHTML = `顶点 <b>${vertCount.toLocaleString()}</b>　三角面 <b>${triCount.toLocaleString()}</b><br>分辨率 <b>${R}</b>³（${quality}）　重建 <b>${ms}</b> ms<br>估算孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b>　材料占比 <b>${(meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100 > 0 ? (( meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100).toFixed(1) : '0.0'}%</b>`;
+  document.getElementById('stats').innerHTML = `顶点 <b>${vertCount.toLocaleString()}</b>　三角面 <b>${triCount.toLocaleString()}</b><br>分辨率 <b>${R}</b>³（${quality}）　重建 <b>${ms}</b> ms<br>估算孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b>　材料占比 <b>${(meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100 > 0 ? (( meshSolidFraction != null ? meshSolidFraction : 1-porosityEstimate)*100).toFixed(1) : '0.0'}%</b><div id="tort-line">三向迂曲度 τx/τy/τz <b>计算中…</b></div>`;
   document.getElementById('stat-mini').innerHTML = `孔隙率 <b>${(porosityEstimate*100).toFixed(1)}%</b> · 材料 <b>${((1-porosityEstimate)*100).toFixed(1)}%</b>`;
   renderMeasurements();
   updateFormula(isoUsed);
@@ -1535,7 +1738,12 @@ function updateStructureDesc(){
 function setActive(sel, attr, val){ document.querySelectorAll(sel).forEach(b=> b.classList.toggle('active', b.dataset[attr]===val)); }
 function setRangeFill(el){ const min=+el.min, max=+el.max, v=+el.value; el.style.setProperty('--p', ((v-min)/(max-min)*100)+'%'); }
 function updateSlicePlane(){
+  // 【阶段 III】三轴动态剖切（与平台 main.ts updateClipPlane 同源语义）：
+  // 法线方向由 sliceAxis 决定，sliceInvert 反向保留负侧。
   const visible = state.slice>=99;
+  const n = state.sliceAxis==='x' ? [1,0,0] : state.sliceAxis==='y' ? [0,1,0] : [0,0,1];
+  const sgn = state.sliceInvert ? 1 : -1;
+  clipPlane.normal.set(n[0]*sgn, n[1]*sgn, n[2]*sgn);
   clipPlane.constant = visible ? CLIP_LIMIT : THREE.MathUtils.lerp(-CLIP_LIMIT, CLIP_LIMIT, (state.slice+100)/200);
   document.getElementById('slice-value').textContent = visible ? '完整' : `${Math.round((state.slice+100)/2)}%`;
   setRangeFill(document.getElementById('slice'));
@@ -1547,6 +1755,7 @@ function syncSliders(){
     document.getElementById('endplate-value').textContent = state.endplateMm>0 ? (state.endplateMm).toFixed(1)+' mm' : '关';
     setRangeFill(e);
   }
+  syncHybridUI();
   document.getElementById('porosity-value').textContent=state.porosity+'%';
   document.getElementById('cell-size-value').textContent=['极低','低','中等','高','极高'][state.cellSize-1];
   document.getElementById('thickness-value').textContent=state.thickness.toFixed(1);
@@ -1614,6 +1823,74 @@ if(epEl){
 }
 const sliceEl=document.getElementById('slice');
 sliceEl.addEventListener('input', e=>{ state.slice=+e.target.value; sliceEl.setAttribute('aria-valuenow', state.slice); updateSlicePlane(); });
+// 【阶段 III】剖切轴切换 + 反向（与平台 sliceAxis/sliceInvert 同源）
+document.querySelectorAll('#slice-axis-row [data-saxis]').forEach(b => b.addEventListener('click', () => {
+  state.sliceAxis = b.dataset.saxis;
+  document.querySelectorAll('#slice-axis-row [data-saxis]').forEach(x => x.classList.toggle('active', x === b));
+  updateSlicePlane();
+}));
+const btnSliceInvert = document.getElementById('btn-slice-invert');
+if(btnSliceInvert) btnSliceInvert.addEventListener('click', () => {
+  state.sliceInvert = !state.sliceInvert;
+  btnSliceInvert.classList.toggle('active', state.sliceInvert);
+  btnSliceInvert.setAttribute('aria-pressed', String(state.sliceInvert));
+  updateSlicePlane();
+});
+// 【阶段 III】多相混合接线（与平台 HybridConfig 同源）
+const hybEnabled = document.getElementById('hybrid-enabled');
+if(hybEnabled){
+  hybEnabled.addEventListener('change', () => {
+    state.hybrid.enabled = hybEnabled.checked;
+    document.getElementById('hybrid-controls').style.display = hybEnabled.checked ? 'block' : 'none';
+    scheduleRebuild(false);
+  });
+}
+document.querySelectorAll('#hybrid-typeb-row [data-hb]').forEach(b => b.addEventListener('click', () => {
+  state.hybrid.typeB = b.dataset.hb;
+  document.querySelectorAll('#hybrid-typeb-row [data-hb]').forEach(x => x.classList.toggle('active', x === b));
+  if(state.hybrid.enabled) scheduleRebuild(false);
+}));
+document.querySelectorAll('#hybrid-axis-row [data-haxis]').forEach(b => b.addEventListener('click', () => {
+  state.hybrid.axis = b.dataset.haxis;
+  document.querySelectorAll('#hybrid-axis-row [data-haxis]').forEach(x => x.classList.toggle('active', x === b));
+  if(state.hybrid.enabled) scheduleRebuild(false);
+}));
+document.querySelectorAll('#hybrid-blend-row [data-hblend]').forEach(b => b.addEventListener('click', () => {
+  state.hybrid.blendFunction = b.dataset.hblend;
+  document.querySelectorAll('#hybrid-blend-row [data-hblend]').forEach(x => x.classList.toggle('active', x === b));
+  if(state.hybrid.enabled) scheduleRebuild(false);
+}));
+const hybCenter = document.getElementById('hybrid-center');
+if(hybCenter) hybCenter.addEventListener('input', e => {
+  state.hybrid.blendCenter = +e.target.value;
+  document.getElementById('hybrid-center-value').textContent = (+e.target.value).toFixed(2);
+  setRangeFill(hybCenter);
+  if(state.hybrid.enabled) scheduleRebuild(true);
+});
+const hybWidth = document.getElementById('hybrid-width');
+if(hybWidth) hybWidth.addEventListener('input', e => {
+  state.hybrid.blendWidth = +e.target.value;
+  document.getElementById('hybrid-width-value').textContent = (+e.target.value).toFixed(2);
+  setRangeFill(hybWidth);
+  if(state.hybrid.enabled) scheduleRebuild(true);
+});
+function syncHybridUI(){
+  const he = document.getElementById('hybrid-enabled');
+  if(he) he.checked = state.hybrid.enabled;
+  const hc = document.getElementById('hybrid-controls');
+  if(hc) hc.style.display = state.hybrid.enabled ? 'block' : 'none';
+  document.querySelectorAll('#hybrid-typeb-row [data-hb]').forEach(x => x.classList.toggle('active', x.dataset.hb === state.hybrid.typeB));
+  document.querySelectorAll('#hybrid-axis-row [data-haxis]').forEach(x => x.classList.toggle('active', x.dataset.haxis === state.hybrid.axis));
+  document.querySelectorAll('#hybrid-blend-row [data-hblend]').forEach(x => x.classList.toggle('active', x.dataset.hblend === state.hybrid.blendFunction));
+  const hce = document.getElementById('hybrid-center');
+  if(hce){ hce.value = state.hybrid.blendCenter; document.getElementById('hybrid-center-value').textContent = state.hybrid.blendCenter.toFixed(2); setRangeFill(hce); }
+  const hw = document.getElementById('hybrid-width');
+  if(hw){ hw.value = state.hybrid.blendWidth; document.getElementById('hybrid-width-value').textContent = state.hybrid.blendWidth.toFixed(2); setRangeFill(hw); }
+  // 剖切轴同步
+  document.querySelectorAll('#slice-axis-row [data-saxis]').forEach(x => x.classList.toggle('active', x.dataset.saxis === state.sliceAxis));
+  const bsi = document.getElementById('btn-slice-invert');
+  if(bsi) bsi.classList.toggle('active', state.sliceInvert);
+}
 
 // ===== 测量单位切换（T16）=====
 const unitBtns = document.querySelectorAll('#stat-unit button');
@@ -1917,6 +2194,79 @@ document.getElementById('btn-stl').addEventListener('click', ()=>{
 });
 // glTF (.glb) 导出：二进制的顶点/法线，适合 Blender、游戏引擎、WebGL 资产管线。
 // 与 STL 一致——始终导出 baseGeo（完整等值面网格），并在杆模型下给出同样的提示。
+// ===== 【阶段 III】3MF 工业格式导出（与平台 export/3mf-exporter.ts 同源语义）=====
+// OPC ZIP：[Content_Types].xml + _rels/.rels + 3D/3dmodel.model；STORED 无压缩 +
+// 手写 CRC32（3MF 规范要求消费者兼容 stored）。mm 尺度 + 端板元数据（切片机识别致密层）。
+function crc32(bytes){
+  const T = crc32.T || (crc32.T = (()=>{ const t = new Uint32Array(256);
+    for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c>>>0; } return t; })());
+  let c = 0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c = T[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function export3MF(geo, cellSizeMm, meta){
+  const pos = geo.attributes.position.array;
+  const idx = geo.index.array;
+  const nv = pos.length/3, nt = idx.length/3;
+  // XML（顶点 wc→mm 缩放：1 period = 1 mm）
+  const s = cellSizeMm/(2*Math.PI);
+  const parts = ['<?xml version="1.0" encoding="UTF-8"?>','<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">','<metadata name="Title">'+meta.title+'</metadata>','<metadata name="TPMS:Config">'+meta.config+'</metadata>','<metadata name="TPMS:PorosityPct">'+meta.porosity+'</metadata>','<metadata name="TPMS:EndplateMm">'+meta.endplate+'</metadata>','<resources>','<object id="1" type="model">','<mesh>','<vertices>'];
+  for(let i=0;i<nv;i++) parts.push(`<vertex x="${(pos[i*3]*s).toFixed(6)}" y="${(pos[i*3+1]*s).toFixed(6)}" z="${(pos[i*3+2]*s).toFixed(6)}"/>`);
+  parts.push('</vertices><triangles>');
+  for(let i=0;i<nt;i++) parts.push(`<triangle v1="${idx[i*3]}" v2="${idx[i*3+1]}" v3="${idx[i*3+2]}"/>`);
+  parts.push('</triangles></mesh></object></resources><build><item objectid="1"/></build></model>');
+  const modelStr = parts.join('');
+  const enc = new TextEncoder();
+  const modelBytes = enc.encode(modelStr);
+  const ctBytes = enc.encode('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>');
+  const relBytes = enc.encode('<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>');
+  // ZIP 组装（STORED）
+  const files = [
+    { name: '[Content_Types].xml', data: ctBytes },
+    { name: '_rels/.rels', data: relBytes },
+    { name: '3D/3dmodel.model', data: modelBytes },
+  ];
+  const chunks = [], central = [];
+  let offset = 0;
+  const w16 = (v)=> new Uint8Array([v&255,(v>>8)&255]);
+  const w32 = (v)=> new Uint8Array([v&255,(v>>8)&255,(v>>16)&255,(v>>24)&255]);
+  for(const f of files){
+    const nameB = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const local = new Uint8Array(30 + nameB.length + f.data.length);
+    local.set(w32(0x04034b50), 0); local.set(w16(20), 4); local.set(w16(0), 6);
+    local.set(w16(0), 8); local.set(w16(0), 10); local.set(w16(0), 12);
+    local.set(w32(crc), 14); local.set(w32(f.data.length), 18); local.set(w32(f.data.length), 22);
+    local.set(w16(nameB.length), 26); local.set(w16(0), 28);
+    local.set(nameB, 30); local.set(f.data, 30 + nameB.length);
+    chunks.push(local);
+    central.push({ name: nameB, crc, size: f.data.length, offset });
+    offset += local.length;
+  }
+  const cdStart = offset;
+  let cdSize = 0;
+  for(const c of central){
+    const e = new Uint8Array(46 + c.name.length);
+    e.set(w32(0x02014b50), 0); e.set(w16(20), 4); e.set(w16(20), 6); e.set(w16(0), 8); e.set(w16(0), 10);
+    e.set(w16(0), 12); e.set(w16(0), 14); e.set(w32(c.crc), 16);
+    e.set(w32(c.size), 20); e.set(w32(c.size), 24); e.set(w16(c.name.length), 28);
+    e.set(w16(0), 30); e.set(w16(0), 32); e.set(w16(0), 34); e.set(w16(0), 36);
+    e.set(w32(c.offset), 42); e.set(c.name, 46);
+    chunks.push(e); cdSize += e.length;
+  }
+  const eocd = new Uint8Array(22);
+  eocd.set(w32(0x06054b50), 0); eocd.set(w16(0), 4); eocd.set(w16(0), 6);
+  eocd.set(w16(central.length), 8); eocd.set(w16(central.length), 10);
+  eocd.set(w32(cdSize), 12); eocd.set(w32(cdStart), 16); eocd.set(w16(0), 20);
+  chunks.push(eocd);
+  return new Blob(chunks, { type: 'model/3mf' });
+}
+document.getElementById('btn-3mf').addEventListener('click', ()=>{
+  if(!baseGeo) return;
+  const meta = { title: `TPMS ${state.type} p${state.porosity}`, config: `${state.type}/${state.structureMode}/c${state.cellSize}`, porosity: state.porosity, endplate: state.endplateMm||0 };
+  const blob = export3MF(baseGeo, state.cellSize, meta);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`tpms-${state.type}-p${state.porosity}-c${state.cellSize}-${state.structureMode}.3mf`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+});
 document.getElementById('btn-gltf').addEventListener('click', ()=>{
   if(!baseGeo) return;
   if(state.model==='strut'){
@@ -1961,6 +2311,9 @@ document.getElementById('btn-share').addEventListener('click', async e=>{
     thickness: state.thickness.toFixed(1),
     slice: String(state.slice),
     ...(state.endplateMm > 0 ? { ep: String(state.endplateMm) } : {}),
+    ...(state.sliceAxis !== 'z' ? { sa: state.sliceAxis } : {}),
+    ...(state.sliceInvert ? { si: '1' } : {}),
+    ...(state.hybrid.enabled ? { hb: state.hybrid.typeB, hba: state.hybrid.axis, hbc: String(state.hybrid.blendCenter), hbw: String(state.hybrid.blendWidth), hbf: state.hybrid.blendFunction } : {}),
     material: state.material,
     autoRotate: controls.autoRotate ? '1' : '0',
       wa: String(state.weights[0]), wb: String(state.weights[1]),
@@ -2001,6 +2354,17 @@ document.getElementById('btn-share').addEventListener('click', async e=>{
   if(q.has('thickness')) state.thickness=clamp(q.get('thickness'),0.5,2.0,1.0);
   if(q.has('slice')) state.slice=clamp(q.get('slice'),-100,100,100);
   if(q.has('ep')) state.endplateMm=clamp(q.get('ep'),0,3.0,0);
+  // 【阶段 III】剖切轴 / 混合参数恢复（白名单校验，防注入先例延续）
+  if(q.has('sa') && ['x','y','z'].includes(q.get('sa'))) state.sliceAxis=q.get('sa');
+  if(q.has('si')) state.sliceInvert = q.get('si')==='1';
+  if(q.has('hb') && ['gyroid','diamond','schwarz','neovius','iwp','frd','lidinoid','splitp'].includes(q.get('hb'))){
+    state.hybrid.enabled = true;
+    state.hybrid.typeB = q.get('hb');
+    if(q.has('hba') && ['x','y','z','radial'].includes(q.get('hba'))) state.hybrid.axis=q.get('hba');
+    if(q.has('hbc')) state.hybrid.blendCenter=clamp(q.get('hbc'),-1,1,0);
+    if(q.has('hbw')) state.hybrid.blendWidth=clamp(q.get('hbw'),0.1,2.0,0.5);
+    if(q.has('hbf') && ['sigmoid','linear'].includes(q.get('hbf'))) state.hybrid.blendFunction=q.get('hbf');
+  }
   if(q.has('material')&&valid.material.includes(q.get('material'))) state.material=q.get('material');
   if(q.has('wa')) state.weights[0]=clamp(q.get('wa'),0,2,1);
   if(q.has('wb')) state.weights[1]=clamp(q.get('wb'),0,2,1);

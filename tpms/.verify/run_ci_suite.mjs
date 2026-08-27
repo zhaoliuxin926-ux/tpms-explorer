@@ -87,7 +87,7 @@ console.log(`${C.b}══════ TPMS 全量 CI 套件 ══════${
 const results = [];
 try {
   results.push(['mesh_audit 几何质量门（29 案例）', await runStep('几何质量门', 'mesh_audit.mjs')]);
-  results.push(['parity_math 数学同源（74 断言）', await runStep('数学同源', 'parity_math.mjs')]);
+  results.push(['parity_math 数学同源（184 断言）', await runStep('数学同源', 'parity_math.mjs')]);
   results.push(['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', await runStep('仿真导出校验', 'sim_export_check.mjs')]);
   results.push(['endplate_audit 端板专项（水密/满填/体积增量）', await runStep('端板审计', 'endplate_audit.mjs')]);
   results.push(['micro_physics_audit 迂曲度+各向异性刚度', await runStep('微物理审计', 'micro_physics_audit.mjs')]);
