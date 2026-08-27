@@ -21,6 +21,9 @@ export type MaterialPreset = 'auto' | 'tc4' | 'polymer' | 'thermal';
 /** 梯度方向 */
 export type GradientDirection = 'z' | 'radial' | 'spherical';
 
+/** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 */
+export type ColoringMode = 'none' | 'field' | 'elevation';
+
 /** 应用完整状态 */
 export interface AppState {
   type: TpmType;
@@ -35,6 +38,7 @@ export interface AppState {
   weights: [number, number, number, number];
   autoRotate: boolean;
   gradientDir: GradientDirection;
+  coloring: ColoringMode;
   hybrid: {
     enabled: boolean;
     typeB: TpmType;
@@ -59,6 +63,7 @@ export const DEFAULT_STATE: AppState = {
   weights: [1, 1, 1, 1],
   autoRotate: true,
   gradientDir: 'z',
+  coloring: 'none',
   hybrid: {
     enabled: false,
     typeB: 'diamond',
@@ -83,6 +88,8 @@ export interface WorkerResponse {
   positions?: Float32Array;
   normals?: Float32Array;
   indices?: Uint32Array;
+  /** 顶点颜色（Cool-Warm LUT），coloring !== 'none' 时 Worker 侧生成并零拷贝传输 */
+  colors?: Float32Array;
   vertCount: number;
   triCount: number;
   porosityEstimate: number;
@@ -114,6 +121,8 @@ export interface BuildParams {
   hybrid: AppState['hybrid'];
   customFormula: string;
   preview: boolean;
+  /** 主线程按 UI 合法性校验后下发的着色模式；缺省或 'none' 时 Worker 不产颜色 */
+  coloring?: ColoringMode;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */

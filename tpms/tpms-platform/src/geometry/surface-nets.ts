@@ -28,6 +28,7 @@ import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
 import { wcToMmFactor } from '../core/units';
+import { computeVertexColors } from './vertex-coloring';
 
 /** 线性索引辅助函数：将三维网格坐标 (ix, iy, iz) 展平为一维 */
 const idxF = (N: number) => (ix: number, iy: number, iz: number) => ix + iy * N + iz * N * N;
@@ -1110,12 +1111,25 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
 
   const buildTimeMs = performance.now() - t0;
 
+  // 顶点颜色（Colormap 热力图）：S(x) 仅依赖顶点坐标，颜色生成不参与等值面
+  // 提取，任何一步几何失败都不该被着色逻辑放大——放在最后、独立 try 无必要
+  // （内部无除零路径，退化 range 已钳中性感）。mode 由主线程校验后传入。
+  const colors =
+    params.coloring && params.coloring !== 'none' && vertCount > 0
+      ? computeVertexColors(positions, vertCount, {
+          mode: params.coloring,
+          hybrid: hybridEnabled ? params.hybrid : undefined,
+          gradientDir: params.gradientDir,
+        })
+      : null;
+
   return {
     id: 0,
     type: 'result',
     positions: positions.slice(0, vertCount * 3),
     normals: normals.slice(0, vertCount * 3),
     indices: indices.slice(0, indexCount),
+    colors: colors ?? undefined,
     vertCount,
     triCount: Math.floor(indexCount / 3),
     // 孔隙率采用网格实测口径（1 − 发散体积/包络），公式格子 MC 仅作二分目标旁证：

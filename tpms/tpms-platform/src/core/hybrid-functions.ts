@@ -40,6 +40,16 @@ function getBlendWeightFn(func: BlendFunction) {
 }
 
 /**
+ * 导出混合权重求值器（几何模块顶点着色用）。
+ * 与 createHybridField 内部严格同源——着色显示的权重就是参与混合的权重，
+ * 混合语义变更只动一处，屏幕所见与公式行为不会漂移。
+ */
+export function getHybridWeightFn(config: HybridConfig): (px: number) => number {
+  const weightFn = getBlendWeightFn(config.blendFunction);
+  return (px: number) => weightFn(px, config.blendCenter, config.blendWidth);
+}
+
+/**
  * 创建混合 TPMS 场函数
  * f_hybrid = w·f_A + (1-w)·f_B
  * 混合轴默认沿 X 轴（物理坐标 px），可通过扩展支持任意轴
@@ -53,12 +63,12 @@ export function createHybridField(
 ): (mx: number, my: number, mz: number, px: number, w: Weights) => number {
   const fA = getTpmsFunction(typeA, customA);
   const fB = getTpmsFunction(typeB, customB);
-  const weightFn = getBlendWeightFn(config.blendFunction);
+  const weightFn = getHybridWeightFn(config);
 
   return (mx: number, my: number, mz: number, px: number, w: Weights) => {
     const vA = fA(mx, my, mz, w);
     const vB = fB(mx, my, mz, w);
-    const weight = weightFn(px, config.blendCenter, config.blendWidth);
+    const weight = weightFn(px);
     return weight * vA + (1 - weight) * vB;
   };
 }
