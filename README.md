@@ -1,7 +1,7 @@
 # 工作区 · 总导航
 
 ![release](https://img.shields.io/badge/release-v2.2.0--endplates--cfd-2563eb)
-![ci](https://img.shields.io/badge/CI-5%20gates%20%C2%B7%20250%2B%20assertions-16a34a)
+![ci](https://img.shields.io/badge/CI-8%2F8%20gates%20%C2%B7%20284%20assertions-16a34a)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
 ![license-note](https://img.shields.io/badge/status-独立开源作品-8b5cf6)
 
@@ -33,6 +33,8 @@
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
 | 📐 曲率热力图 | 平均/高斯曲率（数值 Hessian）+ 场权重/高度着色 | 数值健壮性断言（混叠工况无 NaN） |
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 74/74 |
+| 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
+| 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复（含端板）+ 5 道 CI 门禁 250+ 断言 | `npm run test:all` |
 
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
