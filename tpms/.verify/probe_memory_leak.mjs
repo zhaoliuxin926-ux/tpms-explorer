@@ -127,7 +127,9 @@ try {
   const heapStart = await gcAndMeasure();
 
   // ── 压力循环：80 次滑块调节（每次 input → preview 重建 → 150ms 防
-  //    抖后 HD 重建入队 worker）；每 16 次多等一拍让 HD 排空 ──
+  //    抖后 HD 重建入队 worker）；每 16 次多等一拍并翻转顶点着色模式
+  //    （none↔elevation，均恒可用），后 1/4 保持 elevation 使 worker
+  //    重建携带 colors 走 Transferable 零拷贝路径 ──
   const t0 = Date.now();
   for (let i = 0; i < CYCLES; i++) {
     const v = i % 2 === 0 ? '62' : '88';
@@ -136,7 +138,16 @@ try {
       el.value = val;
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }, v);
-    await page.waitForTimeout(i % 16 === 15 ? 600 : 70);
+    const slow = i % 16 === 15;
+    const keepElevation = i >= CYCLES * 0.75;
+    const wantColoring = slow ? (keepElevation ? 'elevation' : (Math.floor(i / 16) % 2 === 0 ? 'elevation' : 'none')) : null;
+    if (wantColoring) {
+      await page.evaluate((mode) => {
+        const btn = document.querySelector(`[data-coloring="${mode}"]`);
+        btn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }, wantColoring);
+    }
+    await page.waitForTimeout(slow ? 600 : 70);
   }
   const loopSec = ((Date.now() - t0) / 1000).toFixed(1);
   await page.waitForTimeout(2500); // 收尾 HD 重建完成
