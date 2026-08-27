@@ -666,7 +666,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Dog1Vhp2.js"></script>
+  <script type="module" crossorigin src="./assets/index-DeBfcjGW.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Bhgj_bvf.js">
 </head>
 <body>
@@ -802,6 +802,11 @@ window.addEventListener('error', function(e) {
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
           <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>加载端板 (Endplates)</span><span class="val" id="endplate-value">关</span></div>
+          <input type="range" id="endplate" min="0" max="3.0" value="0" step="0.2">
+          <div class="field-note">上下两端生成致密实心板，防止压缩试验压盘接触处支柱早溃。孔原率目标不变时材料占比会随端板增厚上升（以实测口径为准）。厚度超过 0.4×单元总宽时自动收窄。</div>
         </div>
       </details>
       <details class="sect" open>

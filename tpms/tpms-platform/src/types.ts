@@ -24,6 +24,10 @@ export type GradientDirection = 'z' | 'radial' | 'spherical';
 /** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 / 平均与高斯曲率 */
 export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | 'gauss_curvature';
 
+/** 端板厚度上限 UI 档位与防重叠钳制系数（两端板间隙 ≥ 0.2·L） */
+export const ENDPLATE_MAX_UI_MM = 3.0;
+export const ENDPLATE_CLAMP_FRAC = 0.4;
+
 /** 应用完整状态 */
 export interface AppState {
   type: TpmType;
@@ -39,6 +43,8 @@ export interface AppState {
   autoRotate: boolean;
   gradientDir: GradientDirection;
   coloring: ColoringMode;
+  /** 实心加载端板厚度（mm，单侧）；0 = 关闭 */
+  endplateMm: number;
   hybrid: {
     enabled: boolean;
     typeB: TpmType;
@@ -64,6 +70,7 @@ export const DEFAULT_STATE: AppState = {
   autoRotate: true,
   gradientDir: 'z',
   coloring: 'none',
+  endplateMm: 0,
   hybrid: {
     enabled: false,
     typeB: 'diamond',
@@ -123,6 +130,8 @@ export interface BuildParams {
   preview: boolean;
   /** 主线程按 UI 合法性校验后下发的着色模式；缺省或 'none' 时 Worker 不产颜色 */
   coloring?: ColoringMode;
+  /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */
+  endplateMm?: number;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */

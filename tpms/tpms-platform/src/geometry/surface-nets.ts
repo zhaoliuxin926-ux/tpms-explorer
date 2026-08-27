@@ -23,6 +23,7 @@
 
 import { BufferPool, globalBufferPool } from './buffer-pool';
 import type { BuildParams, WorkerResponse } from '../types';
+import { ENDPLATE_CLAMP_FRAC } from '../types';
 import { getGradientEvaluator } from '../core/gradient-functions';
 import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
@@ -86,7 +87,17 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     type, iso, periods, resolution: R, targetPorosity,
     weights, structureMode: mode, containerShape: container,
     thickness, gradientDir, hybrid, customFormula, preview: isPreview,
+    endplateMm: endplateRaw,
   } = params;
+
+  // 【实心加载端板】单侧厚度 mm → 物理带判据 |z_mm| ≥ L/2 − t ⟺ |pz| ≥ 1 − 2t/L。
+  // 生效值钳制至 0.4·L：保证两端板之间至少留 0.2·L 的孔隙试验段（AM/压缩试样规范）。
+  const L_mm = periods;                       // 1 period = 1 mm
+  const endplateMm = Math.min(Math.max(endplateRaw ?? 0, 0), ENDPLATE_CLAMP_FRAC * L_mm);
+  const epOn = endplateMm > 1e-9;
+  // 半格补偿：收口使实际面内缩 h/2，故带下缘外扩同一半格，令名义厚度处的
+  // 实测板厚与理论对齐（体积断言 dev≤3% 达成的关键，否则系统性 −3.3%）
+  const zThresh = 1 - (2 * endplateMm) / L_mm - 2 / R;
 
   const N = R + 1;
   // 红队守卫（V-6）：超池分辨率会被 TypedArray.subarray 静默钳制，产出截肢几何
@@ -362,6 +373,21 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         // 公式不知道容器的存在，容器裁剪必须无条件覆写。
         // 覆写后实体相在容器表面自然截断，孔口以开口环留在面/柱面上，由 8c 封盖。
         const dAx = Math.min(ix, R - ix, iy, R - iy, iz, R - iz);
+        // 【实心加载端板】z 带内（|pz| ≥ zThresh）且侧向界内 ⇒ 强制实体；
+        //   · x/y 出侧壁仍空气：端板不得扩大容器横截面（CFD sides 分类/体积断言依赖）
+        //   · z 向最外层（dAz==0）保持空气收口：等值面需一侧负值闭合，端板外
+        //     表面落在 ±L/2 半格以内（k3/R61 ≈ 25µm），打印首层补偿即可对齐
+        if (epOn && Math.abs(pz) >= zThresh) {
+          const dAz = Math.min(iz, R - iz);
+          let sideB: number;
+          if (container === 'cylinder') sideB = px * px + py * py - 1;
+          else sideB = Math.max(Math.abs(px) - 1, Math.abs(py) - 1);
+          // 对称幅值对(±1.0)：首版曾用 +1.0 对收口层 −1e-6，悬殊幅值使插值 t≈1
+          // 临界吸附格线 → 共线 sliver → miso 200~400/端面破洞 10%（audit 首轮实测）。
+          // 对称后 t=0.5 健康插值，代价仅为体积断言扣除两端半格内缩。
+          field[yB + ix] = (dAz !== 0 && sideB < 0) ? 1.0 : -1.0;
+          continue;
+        }
         field[yB + ix] = (b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b);
       }
     }

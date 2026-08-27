@@ -72,7 +72,7 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? 'H' + s.hybrid.typeB : ''}|${s.customFormula}|${s.weights.join(',')}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? 'H' + s.hybrid.typeB : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}`;
 }
 
 // ── 主题切换（明 / 暗 / 系统）─────────────────────────────
@@ -226,6 +226,7 @@ function rebuild(preview: boolean): boolean {
     customFormula: s.customFormula,
     preview,
     coloring: effectiveColoring(s),
+    endplateMm: s.endplateMm,
   };
 
   bridge.build(params);
@@ -259,6 +260,7 @@ function scheduleHdUpgrade(): void {
       customFormula: s.customFormula,
       preview: false,
       coloring: effectiveColoring(s),
+      endplateMm: s.endplateMm,
     });
   }, 350);
 }
@@ -694,6 +696,21 @@ function bindUIEvents(): void {
       scheduleRebuild(true);
     });
     thickEl.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
+  }
+
+  // 滑块：加载端板厚度（mm；0=关。体素场覆写实现，preview/HD 同管线）
+  const epEl = document.getElementById('endplate') as HTMLInputElement;
+  if (epEl) {
+    const showVal = (val: number) => {
+      const v = document.getElementById('endplate-value');
+      if (v) v.textContent = val <= 0 ? '关' : `${val.toFixed(1)} mm`;
+    };
+    epEl.addEventListener('input', () => {
+      setState({ endplateMm: +epEl.value });
+      showVal(+epEl.value);
+      scheduleRebuild(true);
+    });
+    epEl.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
   }
 
   // 滑块：截面
@@ -1215,6 +1232,13 @@ function syncUI(s: AppState): void {
   if (tv) tv.textContent = s.thickness.toFixed(1);
   const sv = document.getElementById('slice-value');
   if (sv) sv.textContent = s.slice >= 99 ? '完整' : `${Math.round((s.slice + 100) / 2)}%`;
+  // 加载端板滑块（URL 恢复/undo/预设后必然经过 syncUI）
+  const epElSync = document.getElementById('endplate') as HTMLInputElement | null;
+  if (epElSync) {
+    epElSync.value = String(s.endplateMm);
+    const ev2 = document.getElementById('endplate-value');
+    if (ev2) ev2.textContent = s.endplateMm <= 0 ? '关' : `${s.endplateMm.toFixed(1)} mm`;
+  }
 
   // 自动旋转按钮
   document.getElementById('btn-rotate')?.classList.toggle('on', s.autoRotate);
@@ -1484,6 +1508,7 @@ function handleExport(fmt: string | null): void {
         targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
         containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
         hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
+        endplateMm: s.endplateMm,
       });
       if (res.type === 'result' && res.vertCount > 0) {
         applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);

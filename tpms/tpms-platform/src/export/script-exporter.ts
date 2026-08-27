@@ -38,6 +38,7 @@ weights = [${state.weights.join(', ')}]
 structure_mode = '${safeId(state.structureMode)}'
 container = '${safeId(state.containerShape)}'
 gradient_dir = '${safeId(state.gradientDir)}'
+endplate_mm = ${state.endplateMm}   # 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
 
 kk = cell_size  # 频率倍率：平台顶点域恒 [-pi, pi]，周期数编码在频率上
 # 倍频曲面（I-WP/F-RD 含 cos2kx 项）特征频率 2k，分辨率密度加倍补偿弦切误差
@@ -168,6 +169,18 @@ else:
 on_face = ((X == X.min()) | (X == X.max()) | (Y == Y.min()) | (Y == Y.max()) | (Z == Z.min()) | (Z == Z.max()))
 F = np.where((bound >= 0) | on_face, -1e-6, np.maximum(F, bound))
 
+# 【实心加载端板】(与平台 surface-nets endplateMm 同源)：z 带内侧向界内强制实体；
+# z 向最外层豁免保持收口，x/y 出侧壁不生效
+if endplate_mm > 0:
+    t_pl = min(endplate_mm, 0.4 * cell_size)
+    z_band = np.abs(pz) >= (1 - 2 * t_pl / cell_size)
+    z_face = (Z == Z.min()) | (Z == Z.max())
+    if container == 'cylinder':
+        side_in = (px**2 + py**2 - 1) < 0
+    else:
+        side_in = np.maximum(np.abs(px) - 1, np.abs(py) - 1) < 0
+    F = np.where(z_band & side_in & ~z_face, 1.0, F)
+
 # Marching Cubes 提取等值面（F = 0；坐标为 mm，1 period = 1 mm）
 # pyvista >= 0.44：UniformGrid 已改名 ImageData（旧名 0.48 起移除）；场是网格点值 → point_data
 # （旧写法 cell_data + dimensions=N+1 依赖已移除的自动转换，且引入半格偏移）
@@ -199,6 +212,7 @@ weights = [${state.weights.join(', ')}];
 structure_mode = '${safeId(state.structureMode)}';
 container = '${safeId(state.containerShape)}';
 gradient_dir = '${safeId(state.gradientDir)}';
+endplate_mm = ${state.endplateMm};   % 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
 
 kk = cell_size;  % 频率倍率：平台顶点域恒 [-pi, pi]，周期数编码在频率上
 % 倍频曲面（I-WP/F-RD 含 cos2kx 项）特征频率 2k，分辨率密度加倍补偿弦切误差
@@ -362,6 +376,19 @@ F = max(F, bound);
 % 容器外(bound>=0)或网格边界层一律空气——max 裁剪会被公式正瓣压过（实测教训）。
 on_face = (X == min(X(:))) | (X == max(X(:))) | (Y == min(Y(:))) | (Y == max(Y(:))) | (Z == min(Z(:))) | (Z == max(Z(:)));
 F(bound >= 0 | on_face) = -1e-6;
+
+% 【实心加载端板】(与平台 surface-nets endplateMm 同源)
+if endplate_mm > 0
+    t_pl = min(endplate_mm, 0.4 * cell_size);
+    z_band = abs(pz) >= (1 - 2 * t_pl / cell_size);
+    z_face = (Z == min(Z(:))) | (Z == max(Z(:)));
+    if strcmp(container, 'cylinder')
+        side_in = (px.^2 + py.^2 - 1) < 0;
+    else
+        side_in = max(abs(px) - 1, abs(py) - 1) < 0;
+    end
+    F(z_band & side_in & ~z_face) = 1.0;
+end
 iso = 0;
 
 % mm 坐标（1 period = 1 mm）

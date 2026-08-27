@@ -491,6 +491,11 @@
           <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
           <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1" role="slider" aria-label="壁厚系数" aria-valuemin="0.5" aria-valuemax="2" aria-valuenow="1">
         </div>
+        <div class="field">
+          <div class="lbl"><span>加载端板 (Endplates)</span><span class="val" id="endplate-value">关</span></div>
+          <input type="range" id="endplate" min="0" max="3.0" value="0" step="0.2" role="slider" aria-label="加载端板厚度毫米" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0">
+          <div class="field-note">上下两端生成致密实心板（压缩试验防压盘处支柱早溃）。厚度超 0.4×单元总宽时自动收窄。</div>
+        </div>
       </details>
       <details class="sect" open>
         <summary class="sect-h">应用场景预设</summary>
@@ -577,6 +582,7 @@ function buildSurface(type, iso, periods, R, options={}){
   const mode = options.structureMode || 'solid_network';   // solid_network | shell | gradient_shell
   const container = options.containerShape || 'cube';       // cube | cylinder
   const thickness = options.thickness || 1.0;               // 壳/梯度模式的物理壁厚 t
+  const endplateMm = Math.min(Math.max(options.endplateMm ?? state.endplateMm ?? 0, 0), 0.4*periods);   // 【实心加载端板】生效值(防重叠钳制)
   // 预计算各轴 sin/cos(k·坐标)，内层采样循环不再调用三角函数，大幅加速
   // cs2 为 cos(2k·坐标) 倍频项，供 I-WP / F-RD 使用
   const sn = new Float32Array(N), cs = new Float32Array(N), cs2 = new Float32Array(N);
@@ -719,9 +725,20 @@ function buildSurface(type, iso, periods, R, options={}){
   // 封闭侧变成空气相（STL 反相的根源）。覆写后实体相在表面自然截断，
   // 孔口以开口环留在面平面上，由下方封盖通道用扇面封死。
   const field = new Float32Array(N*N*N);
-  for(let iz=0; iz<N; iz++){ const zB=iz*N*N;
-    for(let iy=0; iy<N; iy++){ const yB=zB+iy*N;
+  // 【实心加载端板】(与平台 surface-nets endplateMm 同源)：生效值钳制 0.4·L；
+  // z 向最外层豁免保持空气收口，x/y 出侧壁不生效
+  const epOn = endplateMm > 1e-9;
+  const epThresh = 1 - 2*endplateMm/periods - 2/R;   // 含半格外扩补偿（与平台同步）
+  for(let iz=0; iz<N; iz++){ const zB=iz*N*N; const pze=phys(iz);
+    for(let iy=0; iy<N; iy++){ const yB=zB+iy*N; const pye=phys(iy);
       for(let ix=0; ix<N; ix++){
+        if(epOn && Math.abs(pze)>=epThresh){
+          const pxe=phys(ix); const dAz=Math.min(iz,R-iz);
+          let sideB = container==='cylinder' ? pxe*pxe+pye*pye-1 : Math.max(Math.abs(pxe)-1, Math.abs(pye)-1);
+          // 对称幅值对 ±1.0（防临界插值 sliver，理由见平台 surface-nets.ts）
+          field[yB+ix] = (dAz!==0 && sideB<0) ? 1.0 : -1.0;
+          continue;
+        }
         const f = tpmsAt(V[yB+ix], biasBase, iz, tEffBase);
         // 【2026-08-27 v2】统一封盖规则：容器外(b>=0)或网格边界层一律空气。
         // max(f, clip) 不行——公式在圆柱角落的正瓣会压过负裁剪（实测 +109%→+27%），
@@ -1175,7 +1192,7 @@ const MODEL_DESC = {
   strut:'杆模型（Lattice）：同一等值面网格的线框渲染视角，便于观察连接拓扑与孔道走向。它不改变几何，导出的仍是完整曲面（非杆件桁架点阵）。',
   solid:'实体模型（Solid）：不透明的实体填充表示，模拟最终制造件外观。材料占比由孔隙率决定（壁厚系数在此模式下主要影响显示）。',
 };
-const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube' };
+const state = { type:'gyroid', model:'surface', porosity:75, cellSize:3, thickness:1.0, slice:100, material:'auto', weights:[1,1,1,1], structureMode:'solid_network', containerShape:'cube', endplateMm:0 };
 const CLIP_LIMIT = 1.32;
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), CLIP_LIMIT);
 
@@ -1448,7 +1465,7 @@ function rebuild(preview=false){
   const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
   let bs;
   try {
-    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview });
+    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview, endplateMm:state.endplateMm });
   } catch (e) {
     alert('构建失败：' + (e && e.message ? e.message : e));
     return false;
@@ -1524,8 +1541,12 @@ function updateSlicePlane(){
   setRangeFill(document.getElementById('slice'));
 }
 function syncSliders(){
-  const p=document.getElementById('porosity'), c=document.getElementById('cell-size'), t=document.getElementById('thickness'), s=document.getElementById('slice');
+  const p=document.getElementById('porosity'), c=document.getElementById('cell-size'), t=document.getElementById('thickness'), s=document.getElementById('slice'), e=document.getElementById('endplate');
   p.value=state.porosity; c.value=state.cellSize; t.value=state.thickness; s.value=state.slice;
+  if(e){ e.value=state.endplateMm||0;
+    document.getElementById('endplate-value').textContent = state.endplateMm>0 ? (state.endplateMm).toFixed(1)+' mm' : '关';
+    setRangeFill(e);
+  }
   document.getElementById('porosity-value').textContent=state.porosity+'%';
   document.getElementById('cell-size-value').textContent=['极低','低','中等','高','极高'][state.cellSize-1];
   document.getElementById('thickness-value').textContent=state.thickness.toFixed(1);
@@ -1585,6 +1606,12 @@ cellEl.addEventListener('change', ()=> scheduleRebuild(false));
 const thEl=document.getElementById('thickness');
 thEl.addEventListener('input', e=>{ state.thickness=+e.target.value; document.getElementById('thickness-value').textContent=state.thickness.toFixed(1); setRangeFill(thEl); thEl.setAttribute('aria-valuenow', state.thickness); updateTips(); scheduleRebuild(true); });
 thEl.addEventListener('change', ()=> scheduleRebuild(false));
+const epEl=document.getElementById('endplate');
+if(epEl){
+  const showEp=v=>{ document.getElementById('endplate-value').textContent = v<=0?'关':(v.toFixed(1)+' mm'); };
+  epEl.addEventListener('input', e=>{ state.endplateMm=+e.target.value; showEp(state.endplateMm); setRangeFill(epEl); epEl.setAttribute('aria-valuenow', state.endplateMm); scheduleRebuild(true); });
+  epEl.addEventListener('change', ()=> scheduleRebuild(false));
+}
 const sliceEl=document.getElementById('slice');
 sliceEl.addEventListener('input', e=>{ state.slice=+e.target.value; sliceEl.setAttribute('aria-valuenow', state.slice); updateSlicePlane(); });
 
@@ -1933,6 +1960,7 @@ document.getElementById('btn-share').addEventListener('click', async e=>{
     cellSize: String(state.cellSize),
     thickness: state.thickness.toFixed(1),
     slice: String(state.slice),
+    ...(state.endplateMm > 0 ? { ep: String(state.endplateMm) } : {}),
     material: state.material,
     autoRotate: controls.autoRotate ? '1' : '0',
       wa: String(state.weights[0]), wb: String(state.weights[1]),
@@ -1972,6 +2000,7 @@ document.getElementById('btn-share').addEventListener('click', async e=>{
   if(q.has('cellSize')) state.cellSize=clamp(q.get('cellSize'),1,5,3);
   if(q.has('thickness')) state.thickness=clamp(q.get('thickness'),0.5,2.0,1.0);
   if(q.has('slice')) state.slice=clamp(q.get('slice'),-100,100,100);
+  if(q.has('ep')) state.endplateMm=clamp(q.get('ep'),0,3.0,0);
   if(q.has('material')&&valid.material.includes(q.get('material'))) state.material=q.get('material');
   if(q.has('wa')) state.weights[0]=clamp(q.get('wa'),0,2,1);
   if(q.has('wb')) state.weights[1]=clamp(q.get('wb'),0,2,1);
