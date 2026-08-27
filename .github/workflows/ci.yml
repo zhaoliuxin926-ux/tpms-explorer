@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · 12 gates
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tpms/tpms-platform/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tpms/tpms-platform
+        run: npm ci
+
+      - name: Type check
+        working-directory: tpms/tpms-platform
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: tpms/tpms-platform
+        run: npm run build
+
+      - name: Deploy docs/platform (CI-local copy)
+        run: |
+          rm -rf docs/platform
+          cp -r tpms/tpms-platform/dist docs/platform
+          find docs/platform -name "*.map" -delete || true
+
+      - name: Run 12-gate suite
+        working-directory: tpms/tpms-platform
+        run: npm run test:all
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ matrix.os }}
+          path: |
+            tpms/agent_memory/progress.md
+          if-no-files-found: ignore
+          retention-days: 7

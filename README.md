@@ -1,7 +1,8 @@
 # 工作区 · 总导航
 
-![release](https://img.shields.io/badge/release-v2.2.0--endplates--cfd-2563eb)
-![ci](https://img.shields.io/badge/CI-8%2F8%20gates%20%C2%B7%20284%20assertions-16a34a)
+![release](https://img.shields.io/badge/release-v2.4.0--ultimate--engine-2563eb)
+![ci](https://img.shields.io/badge/CI-12%2F12%20gates-16a34a)
+![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
 ![license-note](https://img.shields.io/badge/status-独立开源作品-8b5cf6)
 
@@ -16,7 +17,7 @@
 ```
 （仓库根）
 ├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开）
-│   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM 压缩 / OpenFOAM CFD / 脚本复现）
+│   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM/CFD/脚本/AST 沙箱/空间映射/RVE/红队矩阵）
 │   └── platform/           工程版在线部署
 └── tpms/
     ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
@@ -24,7 +25,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v2.2.0）
+### 科研与增材制造特性矩阵（v2.4.0-ultimate-engine）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -35,7 +36,11 @@
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 74/74 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
-| 🔗 分享与审计 | URL 全量恢复（含端板）+ 5 道 CI 门禁 250+ 断言 | `npm run test:all` |
+| 🔗 分享与审计 | URL 全量恢复（含端板/混合/映射）+ **12 道 CI 门禁 550+ 断言**（三平台矩阵） | `npm run test:all` |
+| 🧮 自定义公式沙箱 | 零依赖 AST（无 eval）+ Dual Number AD 精确梯度/Hessian + NumPy/MATLAB 代码生成 | custom_equation_audit 73 断言 |
+| 🌀 RVE 均质化 + E(n) 曲面 | Voigt–Reuss 精确界 + 迂曲度调制方向刚度 + 方向模量球面热力图 | homogenization_audit 13 断言 |
+| 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 12 断言 |
+| 🥊 红队极端工况矩阵 | 100+ 案例：孔隙率/容器/长宽比/高频/鞍点/极端权重三硬指标 | redteam_matrix_audit 100/100 |
 
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
