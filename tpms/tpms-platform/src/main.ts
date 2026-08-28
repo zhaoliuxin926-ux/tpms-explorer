@@ -37,7 +37,7 @@ import {
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
-import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh } from './export';
+import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
@@ -2368,6 +2368,21 @@ function handleExport(fmt: string | null): void {
           exportOpenfoamPolyMesh(vox, specimen, `${base}-polymesh.zip`, downloadBlob);
           flashToast('OpenFOAM polyMesh 导出：解压到 case 的 constant/polyMesh/ 即可求解');
         }
+        break;
+      }
+      case 'caesuite': {
+        // 【v4.0 阶段 III】CAE 验证脚本包：Abaqus/OpenFOAM 自动化求解脚本 + 壳 + 对比模板
+        const voxV = buildVoxelModel({
+          type: s.type, periods: s.cellSize, weights: s.weights,
+          structureMode: s.structureMode, containerShape: s.containerShape,
+          thickness: s.thickness, targetPorosity: s.porosity / 100,
+          iso: baseIso(s), customFormula: s.customFormula, stress: s.stress,
+        }, 40);
+        exportVerificationSuite(
+          { type: s.type, solidCount: voxV.solidCount, voidCount: 40 ** 3 - voxV.solidCount },
+          `${base}-cae-verification.zip`,
+          downloadBlob,
+        );
         break;
       }
       case 'vti': {
