@@ -58,6 +58,10 @@ structure_mode = '${safeId(state.structureMode)}'
 container = '${safeId(state.containerShape)}'
 gradient_dir = '${safeId(state.gradientDir)}'
 endplate_mm = ${state.endplateMm}   # 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
+# 【阶段 IV】应力场引导（与 core/stress-driven-field.ts 同源；none = 关闭）
+stress_preset = '${safeId(state.stress.preset)}'
+stress_strength = ${state.stress.strength}
+stress_anisotropy = ${state.stress.anisotropy}
 
 kk = cell_size  # 频率倍率：平台顶点域恒 [-pi, pi]，周期数编码在频率上
 # 倍频曲面（I-WP/F-RD 含 cos2kx 项）特征频率 2k，分辨率密度加倍补偿弦切误差
@@ -107,12 +111,57 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
     else:
         raise ValueError(f'Unsupported type: {t}')
 
+# 【阶段 IV】应力场引导：主轴各向异性坐标变换（q' = Rᵀ·S·R·q，S = diag(1/α,1,1)）
+# σ(x) 为解析预设张量；v1 = |σ| 最大主方向（与平台 eigenSym3 选择一致）
+Xs, Ys, Zs = X, Y, Z
+if stress_preset != 'none':
+    pxn = X / np.pi; pyn = Y / np.pi; pzn = Z / np.pi
+    if stress_preset == 'bending':
+        Sig_xx, Sig_xy, Sig_xz, Sig_yy, Sig_yz, Sig_zz = pzn, 0.0, 0.0, 0.0, 0.0, 0.0
+    elif stress_preset == 'cantilever':
+        Sig_xx = (1 - pxn) * pzn / 2
+        Sig_xz = 0.25 * (1 - pxn**2) * (1 - pzn**2)
+        Sig_xy, Sig_yy, Sig_yz, Sig_zz = 0.0, 0.0, 0.0, 0.0
+    else:  # torsion
+        Sig_xx, Sig_xy, Sig_yy, Sig_zz = 0.0, 0.0, 0.0, 0.0
+        Sig_xz = -pyn / np.sqrt(2)
+        Sig_yz = pxn / np.sqrt(2)
+    Sigma = np.stack([np.stack([Sig_xx, Sig_xy, Sig_xz], -1),
+                      np.stack([Sig_xy, Sig_yy, Sig_yz], -1),
+                      np.stack([Sig_xz, Sig_yz, Sig_zz], -1)], -2)
+    w_eig, v_eig = np.linalg.eigh(Sigma)
+    k_max = np.argmax(np.abs(w_eig), axis=-1)
+    v1 = np.take_along_axis(v_eig, k_max[..., None, None], axis=-1)[..., 0]
+    ref = np.where(np.abs(v1[..., 0:1]) < 0.7,
+                   np.broadcast_to(np.array([1.0, 0, 0]), v1.shape),
+                   np.broadcast_to(np.array([0.0, 1.0, 0]), v1.shape))
+    w0 = ref - (ref * v1).sum(-1, keepdims=True) * v1
+    w0 = w0 / np.linalg.norm(w0, axis=-1, keepdims=True)
+    v2 = np.cross(v1, w0)
+    u1 = v1[..., 0] * X + v1[..., 1] * Y + v1[..., 2] * Z
+    u2 = w0[..., 0] * X + w0[..., 1] * Y + w0[..., 2] * Z
+    u3 = v2[..., 0] * X + v2[..., 1] * Y + v2[..., 2] * Z
+    Xs, Ys, Zs = u1 / stress_anisotropy, u2, u3
+
+# von Mises 应力（归一化 [0,1]；壳壁厚自适应与应力云图共用）
+if stress_preset == 'bending':
+    vm = np.abs(Z / np.pi)
+elif stress_preset == 'cantilever':
+    sxx_c = (1 - X / np.pi) * (Z / np.pi) / 2
+    txz_c = 0.25 * (1 - (X / np.pi)**2) * (1 - (Z / np.pi)**2)
+    vm = np.minimum(1.0, np.sqrt(sxx_c**2 + 3 * txz_c**2))
+elif stress_preset == 'torsion':
+    vm = np.minimum(1.0, np.sqrt(3 * ((Y / np.pi)**2 + (X / np.pi)**2) / 2))
+else:
+    vm = np.zeros_like(X)
+
 if tpms_type == 'custom':
     # 【阶段 I】自定义公式 AST→NumPy 向量化翻译（沙箱坐标 x/y/z 为弧度域 = kk·X）
+    # 注：custom + stress 组合暂为各向同性回退（变换未应用于表达式），与平台一致
     iso_base = ${baseIsoOf(state)}   # 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
     V = ${customPyExpr(state)}
 else:
-    V = tpms_field(X, Y, Z, weights)
+    V = tpms_field(Xs, Ys, Zs, weights)
 
 # 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
 blend_function = '${safeId(state.hybrid.blendFunction)}'
@@ -181,7 +230,8 @@ elif structure_mode == 'shell':
         if count_shell(t_eff) / n_in > target_solid: lo = t_eff
         else: hi = t_eff
     t_eff = (lo + hi) / 2  # 平台无 0.05 下限，保持一致
-    F = V**2 - (t_eff / 2)**2
+    t_scale = np.where(stress_preset != 'none', 1.0 + stress_strength * vm, 1.0)  # 【阶段 IV】壁厚-应力耦合
+    F = V**2 - (t_eff * t_scale / 2)**2
 else:
     # solid_network：solid = {V < iso}（与平台一致），16 轮二分收敛到下分位数
     lo, hi = v_in[0] - 0.5, v_in[-1] + 0.5
@@ -287,6 +337,10 @@ structure_mode = '${safeId(state.structureMode)}';
 container = '${safeId(state.containerShape)}';
 gradient_dir = '${safeId(state.gradientDir)}';
 endplate_mm = ${state.endplateMm};   % 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
+% 【阶段 IV】应力场引导（与 core/stress-driven-field.ts 同源；'none' = 关闭）
+stress_preset = '${safeId(state.stress.preset)}';
+stress_strength = ${state.stress.strength};
+stress_anisotropy = ${state.stress.anisotropy};
 
 kk = cell_size;  % 频率倍率：平台顶点域恒 [-pi, pi]，周期数编码在频率上
 % 倍频曲面（I-WP/F-RD 含 cos2kx 项）特征频率 2k，分辨率密度加倍补偿弦切误差
@@ -307,6 +361,57 @@ x = linspace(-pi, pi, N);
 y = linspace(-pi, pi, N);
 z = linspace(-pi, pi, N);
 [X, Y, Z] = meshgrid(x, y, z);
+
+% 【阶段 IV】应力场引导：主轴各向异性坐标变换（逐点 eig，参考脚本以正确性优先）
+% custom + stress 组合暂为各向同性回退（与平台一致）
+Xs = X; Ys = Y; Zs = Z;
+if ~strcmp(stress_preset, 'none')
+    pxn = X / pi; pyn = Y / pi; pzn = Z / pi;
+    Sig = zeros([size(X), 3, 3]);
+    if strcmp(stress_preset, 'bending')
+        Sig(:,:,1,1) = pzn;
+    elseif strcmp(stress_preset, 'cantilever')
+        Sig(:,:,1,1) = (1 - pxn) .* pzn / 2;
+        Sig(:,:,1,3) = 0.25 * (1 - pxn.^2) .* (1 - pzn.^2);
+        Sig(:,:,3,1) = Sig(:,:,1,3);
+    else  % torsion
+        Sig(:,:,1,3) = -pyn / sqrt(2);
+        Sig(:,:,3,1) = Sig(:,:,1,3);
+        Sig(:,:,2,3) = pxn / sqrt(2);
+        Sig(:,:,3,2) = Sig(:,:,2,3);
+    end
+    idx = cell(size(X));
+    for iz = 1:size(X, 3)
+        for iy = 1:size(X, 2)
+            for ix = 1:size(X, 1)
+                [V0, D0] = eig(squeeze(Sig(ix, iy, iz, :)));
+                vals = diag(D0);
+                [~, kk2] = max(abs(vals));
+                v1 = V0(:, kk2);
+                u1 = v1' * [X(ix, iy, iz); Y(ix, iy, iz); Z(ix, iy, iz)];
+                if abs(v1(1)) < 0.7, r0 = [1; 0; 0]; else, r0 = [0; 1; 0]; end
+                w0 = r0 - (r0' * v1) * v1; w0 = w0 / norm(w0);
+                u2 = w0' * [X(ix, iy, iz); Y(ix, iy, iz); Z(ix, iy, iz)];
+                v2 = cross(v1, w0);
+                u3 = v2' * [X(ix, iy, iz); Y(ix, iy, iz); Z(ix, iy, iz)];
+                Xs(ix, iy, iz) = u1 / stress_anisotropy; Ys(ix, iy, iz) = u2; Zs(ix, iy, iz) = u3;
+            end
+        end
+    end
+    clear idx
+end
+
+% von Mises 应力（归一化；壳壁厚调制用）
+px = X / pi; py = Y / pi; pz = Z / pi;
+if strcmp(stress_preset, 'bending')
+    vm = abs(pz);
+elseif strcmp(stress_preset, 'cantilever')
+    vm = min(1, sqrt(((1 - px) .* pz / 2).^2 + 3 * (0.25 * (1 - px.^2) .* (1 - pz.^2)).^2));
+elseif strcmp(stress_preset, 'torsion')
+    vm = min(1, sqrt(3 * (py.^2 + px.^2) / 2));
+else
+    vm = zeros(size(X));
+end
 
 % 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
 if strcmp(tpms_type, 'custom')

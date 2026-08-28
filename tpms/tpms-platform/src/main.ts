@@ -82,7 +82,7 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}`;
 }
 
 // ── WebGPU 场计算加速（v3.0 阶段 I）────────────────────────
@@ -290,6 +290,7 @@ function rebuild(preview: boolean): boolean {
     preview,
     coloring: effectiveColoring(s),
     endplateMm: s.endplateMm,
+    stress: s.stress,
   };
 
   dispatchFullBuild(params, key);
@@ -324,6 +325,7 @@ function scheduleHdUpgrade(): void {
       preview: false,
       coloring: effectiveColoring(s),
       endplateMm: s.endplateMm,
+      stress: s.stress,
     };
     dispatchFullBuild(params, cacheKey(s, fullR));
   }, 350);
@@ -337,7 +339,9 @@ function fieldAvailable(s: AppState): boolean {
 
 /** UI 选择到 Worker 参数的有效着色模式（非法选择优雅回退，不静默丢色彩语义） */
 function effectiveColoring(s: AppState): ColoringMode {
-  return s.coloring === 'field' && !fieldAvailable(s) ? 'elevation' : s.coloring;
+  if (s.coloring === 'field' && !fieldAvailable(s)) return 'elevation';
+  if (s.coloring === 'stress_vm' && s.stress.preset === 'none') return 'elevation';
+  return s.coloring;
 }
 
 // ── 几何应用 ─────────────────────────────────────────────
@@ -1291,6 +1295,31 @@ function bindUIEvents(): void {
   });
 
   // 空间梯度按钮
+  // 【v3.0 阶段 IV】应力场引导：工况预设 + 壁厚耦合 + 各向异性
+  document.querySelectorAll('[data-stress]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setState({ stress: { ...getState().stress, preset: btn.getAttribute('data-stress') as AppState['stress']['preset'] } });
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  });
+  document.getElementById('stress-strength')?.addEventListener('input', (e) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    setState({ stress: { ...getState().stress, strength: v } });
+    const el = document.getElementById('stress-strength-value');
+    if (el) el.textContent = v.toFixed(2);
+    scheduleRebuild(true);
+  });
+  document.getElementById('stress-strength')?.addEventListener('change', () => scheduleRebuild(false));
+  document.getElementById('stress-anisotropy')?.addEventListener('input', (e) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    setState({ stress: { ...getState().stress, anisotropy: v } });
+    const el = document.getElementById('stress-anisotropy-value');
+    if (el) el.textContent = v.toFixed(2);
+    scheduleRebuild(true);
+  });
+  document.getElementById('stress-anisotropy')?.addEventListener('change', () => scheduleRebuild(false));
+
   document.querySelectorAll('[data-gradient]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ gradientDir: btn.getAttribute('data-gradient') as AppState['gradientDir'] });
@@ -1773,6 +1802,20 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-gradient]').forEach(el => {
     el.classList.toggle('active', (s as any).gradientDir === el.getAttribute('data-gradient'));
   });
+  // 【v3.0 阶段 IV】应力引导 UI 同步
+  document.querySelectorAll('[data-stress]').forEach(el => {
+    el.classList.toggle('active', (s as any).stress.preset === el.getAttribute('data-stress'));
+  });
+  {
+    const ss = document.getElementById('stress-strength') as HTMLInputElement | null;
+    if (ss) ss.value = String((s as any).stress.strength);
+    const ssv = document.getElementById('stress-strength-value');
+    if (ssv) ssv.textContent = (s as any).stress.strength.toFixed(2);
+    const sa = document.getElementById('stress-anisotropy') as HTMLInputElement | null;
+    if (sa) sa.value = String((s as any).stress.anisotropy);
+    const sav = document.getElementById('stress-anisotropy-value');
+    if (sav) sav.textContent = (s as any).stress.anisotropy.toFixed(2);
+  }
   document.querySelectorAll('[data-hybrid-type]').forEach(el => {
     el.classList.toggle('active', (s as any).hybrid.typeB === el.getAttribute('data-hybrid-type'));
   });
@@ -2166,6 +2209,7 @@ function handleExport(fmt: string | null): void {
           structureMode: s.structureMode, containerShape: s.containerShape,
           thickness: s.thickness, targetPorosity: s.porosity / 100,
           iso: baseIso(s), customFormula: s.customFormula,
+          stress: s.stress,
         }, caeR);
         const specimen = s.cellSize;   // 总宽 = cellSize mm（1 period = 1 mm 约定）
         if (fmt === 'inp') {

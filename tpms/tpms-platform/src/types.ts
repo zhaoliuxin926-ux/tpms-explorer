@@ -22,7 +22,7 @@ export type MaterialPreset = 'auto' | 'tc4' | 'polymer' | 'thermal';
 export type GradientDirection = 'z' | 'radial' | 'spherical';
 
 /** 顶点着色模式：单色实体 / 场标量（混合权重或壁厚梯度）/ 高度分布 / 平均与高斯曲率 */
-export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | 'gauss_curvature';
+export type ColoringMode = 'none' | 'field' | 'elevation' | 'mean_curvature' | 'gauss_curvature' | 'stress_vm';
 
 /** 混合波前轴向：x/y/z 轴向平面波前，radial 球面波前 */
 export type BlendAxis = 'x' | 'y' | 'z' | 'radial';
@@ -45,6 +45,17 @@ export interface ManifoldConfig {
   scale: number;
   /** metric 轴 */
   axis: 'x' | 'y' | 'z';
+}
+
+/** 【v3.0 阶段 IV】应力场引导工况（解析应力张量预设） */
+export type StressPreset = 'none' | 'bending' | 'cantilever' | 'torsion';
+
+export interface StressConfig {
+  preset: StressPreset;
+  /** 壁厚调制幅值 β（shell 模式：t = tEff·(1 + β·vm)） */
+  strength: number;
+  /** 各向异性拉伸比 α（晶胞沿最大主应力方向伸长比） */
+  anisotropy: number;
 }
 
 /** 应用完整状态 */
@@ -80,6 +91,8 @@ export interface AppState {
   manifold: ManifoldConfig;
   /** 【v3.0 阶段 I】WebGPU 场计算加速（自动探测不可用时无感回退 CPU Worker） */
   gpuAccelerate: boolean;
+  /** 【v3.0 阶段 IV】应力场引导（preset none = 关闭） */
+  stress: StressConfig;
   customFormula: string;
 }
 
@@ -111,6 +124,7 @@ export const DEFAULT_STATE: AppState = {
   },
   manifold: { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' },
   gpuAccelerate: true,
+  stress: { preset: 'none', strength: 0.5, anisotropy: 1.6 },
   customFormula: '',
 };
 
@@ -190,6 +204,8 @@ export interface BuildParams {
    * 违反时 buildSurface 抛错（导出层先行校验并 toast 引导）。
    */
   periodicRve?: boolean;
+  /** 【v3.0 阶段 IV】应力场引导调制（主轴各向异性 + 壁厚 vm 自适应） */
+  stress?: StressConfig;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */

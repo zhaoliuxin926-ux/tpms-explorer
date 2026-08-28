@@ -89,6 +89,16 @@ export function parseURLParams(search: string): Partial<AppState> {
     };
   }
 
+  // 【v3.0 阶段 IV】应力场引导恢复（preset 白名单；数值 clamp）
+  const sdRaw = q.get('sd');
+  if (sdRaw && ['bending', 'cantilever', 'torsion'].includes(sdRaw)) {
+    state.stress = {
+      preset: sdRaw as AppState['stress']['preset'],
+      strength: clamp(q.get('sds'), 0, 1, 0.5),
+      anisotropy: clamp(q.get('sda'), 1, 2.5, 1.6),
+    };
+  }
+
   // 剖切轴向 / 反向
   const sa = q.get('sa');
   if (sa === 'x' || sa === 'y' || sa === 'z') state.sliceAxis = sa;

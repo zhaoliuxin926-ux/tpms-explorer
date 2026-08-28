@@ -27,6 +27,7 @@ import { ENDPLATE_CLAMP_FRAC } from '../types';
 import { getGradientEvaluator } from '../core/gradient-functions';
 import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
+import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
 import { wcToMmFactor } from '../core/units';
 import { computeVertexColors } from './vertex-coloring';
@@ -126,7 +127,11 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // 公式引用二分结果会构成循环依赖）。每次 build 新建对象，场/法线/投影各获取路径共享直读。
   const eqDyn = { k: periods, t: thickness, iso };
   const hybridEnabled = hybrid.enabled;
-  const useLookup = !hybridEnabled && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
+  // 【v3.0 阶段 IV】应力场引导：主轴各向异性变换 + 壳壁厚 vm 自适应；
+  // 变换是逐点非线性 warp，sin/cos 查表失效 ⇒ 强制实时求值路径
+  const stressCfg = params.stress && params.stress.preset !== 'none' ? params.stress : null;
+  const stressOn = stressCfg !== null;
+  const useLookup = !hybridEnabled && !stressOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
@@ -134,7 +139,13 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   if (hybridEnabled) {
     hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
   } else if (!useLookup) {
-    tpmFn = getTpmsFunction(type, customFormula, eqDyn);
+    const baseFn = getTpmsFunction(type, customFormula, eqDyn);
+    tpmFn = stressOn
+      ? (mx: number, my: number, mz: number, w: Weights) => {
+          const [qx, qy, qz] = transformByStress(stressCfg!, mx, my, mz);
+          return baseFn(qx, qy, qz, w);
+        }
+      : baseFn;
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -282,7 +293,10 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       const tGrad = tEff * tScale;
       return dv * dv - (tGrad / 2) * (tGrad / 2);
     }
-    return dv * dv - (tEff / 2) * (tEff / 2);
+    // 【阶段 IV】应力壳：壁厚按 von Mises 自适应（高应力增厚 → 高应力区相对密度提升）
+    const tS = stressOn ? stressThicknessScale(stressCfg!, px ?? 0, py ?? 0, pz ?? 0) : 1;
+    const tLoc = tEff * tS;
+    return dv * dv - (tLoc / 2) * (tLoc / 2);
   };
 
   if (typeof targetPorosity === 'number') {
@@ -1064,7 +1078,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       //  - custom / hybrid / shell / gradient_shell：对最终场做中心差分（解析式对复合场不可靠，
       //    历史 bug：custom 回退到 diamond 梯度、hybrid 用纯 A 侧梯度——法线近反向）
       if (isNaN(gx)) {
-        const needNumericGrad = hybridEnabled || mode !== 'solid_network' || type === 'custom';
+        // 【阶段 IV】stress 变换是逐点非线性 warp，解析查表法线不感知 ⇒ 强制数值梯度
+        const needNumericGrad = hybridEnabled || stressOn || mode !== 'solid_network' || type === 'custom';
         if (needNumericGrad) {
           // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
           const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
@@ -1227,6 +1242,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       ? computeVertexColors(positions, vertCount, {
           mode: params.coloring,
           hybrid: hybridEnabled ? params.hybrid : undefined,
+          stress: stressCfg ?? undefined,
           gradientDir: params.gradientDir,          field: {
             type: params.type,
             customFormula: params.customFormula,
