@@ -47,12 +47,23 @@ export interface ManifoldConfig {
   axis: 'x' | 'y' | 'z';
 }
 
+/** 【v3.0 阶段 V】多级分形分级 TPMS 配置（F = F_macro + λ·F_micro(N·x)） */
+export interface HierarchicalConfig {
+  enabled: boolean;
+  /** 微曲面类型（宏观 = 当前 type） */
+  microType: TpmType;
+  /** 微观频率倍率 N（≥3） */
+  frequency: number;
+  /** 微观调制幅值 λ（0.1~0.5） */
+  amplitude: number;
+}
+
 /** 【v3.0 阶段 IV】应力场引导工况（解析应力张量预设） */
 export type StressPreset = 'none' | 'bending' | 'cantilever' | 'torsion';
 
 export interface StressConfig {
   preset: StressPreset;
-  /** 壁厚调制幅值 β（shell 模式：t = tEff·(1 + β·vm)） */
+  /** 孔隙板收窄幅值 β（shell 模式：t = tEff·(1 − β·vm)，高应力侧固相致密化） */
   strength: number;
   /** 各向异性拉伸比 α（晶胞沿最大主应力方向伸长比） */
   anisotropy: number;
@@ -93,6 +104,8 @@ export interface AppState {
   gpuAccelerate: boolean;
   /** 【v3.0 阶段 IV】应力场引导（preset none = 关闭） */
   stress: StressConfig;
+  /** 【v3.0 阶段 V】多级分形分级 TPMS（enabled = 关闭） */
+  hierarchical: HierarchicalConfig;
   customFormula: string;
 }
 
@@ -125,6 +138,7 @@ export const DEFAULT_STATE: AppState = {
   manifold: { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' },
   gpuAccelerate: true,
   stress: { preset: 'none', strength: 0.5, anisotropy: 1.6 },
+  hierarchical: { enabled: false, microType: 'diamond', frequency: 4, amplitude: 0.25 },
   customFormula: '',
 };
 
@@ -206,6 +220,8 @@ export interface BuildParams {
   periodicRve?: boolean;
   /** 【v3.0 阶段 IV】应力场引导调制（主轴各向异性 + 壁厚 vm 自适应） */
   stress?: StressConfig;
+  /** 【v3.0 阶段 V】多级分形分级调制（F = F_macro + λ·F_micro(N·x)） */
+  hierarchical?: HierarchicalConfig;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */

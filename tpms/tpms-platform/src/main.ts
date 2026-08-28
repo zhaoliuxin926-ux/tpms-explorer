@@ -35,6 +35,7 @@ import {
   generateJSONSidecar,
 } from './export';
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
+import { analyzeHierarchical } from './core/hierarchical-functions';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
@@ -82,7 +83,28 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}`;
+}
+
+// ── 多级分形统计（v3.0 阶段 V）：双重比表面积 + 微孔连通率 ──
+let hierStatsTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleHierarchicalStats(): void {
+  if (hierStatsTimer) clearTimeout(hierStatsTimer);
+  hierStatsTimer = setTimeout(() => {
+    const s = getState();
+    if (!s.hierarchical.enabled) return;
+    try {
+      const st = analyzeHierarchical({
+        type: s.type, microType: s.hierarchical.microType,
+        frequency: s.hierarchical.frequency, amplitude: s.hierarchical.amplitude,
+        weights: s.weights, periods: s.cellSize, iso: baseIso(s), customFormula: s.customFormula,
+      }, 48);
+      const el = document.getElementById('hier-stats');
+      if (el) {
+        el.textContent = `S 总 ${(st.ssaTotal).toFixed(2)} · S 宏观 ${(st.ssaMacro).toFixed(2)} · 微孔附加 ${(st.ssaMicroAdded).toFixed(2)} · 微孔连通率 ${(st.microConnectivity * 100).toFixed(1)}%`;
+      }
+    } catch { /* 公式病态时静默（卡片保留旧值） */ }
+  }, 400);
 }
 
 // ── WebGPU 场计算加速（v3.0 阶段 I）────────────────────────
@@ -291,9 +313,11 @@ function rebuild(preview: boolean): boolean {
     coloring: effectiveColoring(s),
     endplateMm: s.endplateMm,
     stress: s.stress,
+    hierarchical: s.hierarchical,
   };
 
   dispatchFullBuild(params, key);
+  if (s.hierarchical.enabled) scheduleHierarchicalStats();
   return false;
 }
 
@@ -326,8 +350,10 @@ function scheduleHdUpgrade(): void {
       coloring: effectiveColoring(s),
       endplateMm: s.endplateMm,
       stress: s.stress,
+      hierarchical: s.hierarchical,
     };
     dispatchFullBuild(params, cacheKey(s, fullR));
+    if (s.hierarchical.enabled) scheduleHierarchicalStats();
   }, 350);
 }
 
@@ -1295,6 +1321,37 @@ function bindUIEvents(): void {
   });
 
   // 空间梯度按钮
+  // 【v3.0 阶段 V】多级分形 TPMS：启用 + 微曲面 + 频率/幅值
+  document.getElementById('hier-enabled')?.addEventListener('click', () => {
+    const s = getState();
+    setState({ hierarchical: { ...s.hierarchical, enabled: !s.hierarchical.enabled } });
+    syncUI(getState());
+    scheduleRebuild(false);
+  });
+  document.querySelectorAll('[data-hier-micro]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setState({ hierarchical: { ...getState().hierarchical, microType: btn.getAttribute('data-hier-micro') as AppState['type'] } });
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  });
+  document.getElementById('hier-frequency')?.addEventListener('input', (e) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    setState({ hierarchical: { ...getState().hierarchical, frequency: v } });
+    const el = document.getElementById('hier-frequency-value');
+    if (el) el.textContent = String(v);
+    scheduleRebuild(true);
+  });
+  document.getElementById('hier-frequency')?.addEventListener('change', () => scheduleRebuild(false));
+  document.getElementById('hier-amplitude')?.addEventListener('input', (e) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    setState({ hierarchical: { ...getState().hierarchical, amplitude: v } });
+    const el = document.getElementById('hier-amplitude-value');
+    if (el) el.textContent = v.toFixed(2);
+    scheduleRebuild(true);
+  });
+  document.getElementById('hier-amplitude')?.addEventListener('change', () => scheduleRebuild(false));
+
   // 【v3.0 阶段 IV】应力场引导：工况预设 + 壁厚耦合 + 各向异性
   document.querySelectorAll('[data-stress]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1802,6 +1859,25 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-gradient]').forEach(el => {
     el.classList.toggle('active', (s as any).gradientDir === el.getAttribute('data-gradient'));
   });
+  // 【v3.0 阶段 V】多级分形 UI 同步
+  {
+    const he = document.getElementById('hier-enabled');
+    if (he) he.classList.toggle('on', s.hierarchical.enabled);
+    document.querySelectorAll('[data-hier-micro]').forEach(el => {
+      el.classList.toggle('active', (s as any).hierarchical.microType === el.getAttribute('data-hier-micro'));
+    });
+    const hf = document.getElementById('hier-frequency') as HTMLInputElement | null;
+    if (hf) hf.value = String((s as any).hierarchical.frequency);
+    const hfv = document.getElementById('hier-frequency-value');
+    if (hfv) hfv.textContent = String((s as any).hierarchical.frequency);
+    const ha = document.getElementById('hier-amplitude') as HTMLInputElement | null;
+    if (ha) ha.value = String((s as any).hierarchical.amplitude);
+    const hav = document.getElementById('hier-amplitude-value');
+    if (hav) hav.textContent = (s as any).hierarchical.amplitude.toFixed(2);
+    const hs = document.getElementById('hier-stats');
+    if (hs && !s.hierarchical.enabled) hs.textContent = '';
+    if (s.hierarchical.enabled) scheduleHierarchicalStats();
+  }
   // 【v3.0 阶段 IV】应力引导 UI 同步
   document.querySelectorAll('[data-stress]').forEach(el => {
     el.classList.toggle('active', (s as any).stress.preset === el.getAttribute('data-stress'));

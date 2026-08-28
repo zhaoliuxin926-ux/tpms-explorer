@@ -977,7 +977,28 @@ window.addEventListener('error', function(e) {
           <input type="range" id="stress-strength" min="0" max="1" value="0.5" step="0.05">
           <div class="lbl"><span>主轴各向异性 α</span><span class="val" id="stress-anisotropy-value">1.60</span></div>
           <input type="range" id="stress-anisotropy" min="1" max="2.5" value="1.6" step="0.05">
-          <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式壁厚随 von Mises 应力自适应增厚。配合「着色模式 → 应力云图」可视化应力分布。</div>
+          <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式高应力侧孔隙板收窄、固相致密化。配合「着色模式 → 应力云图」可视化应力分布。</div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">多级分形 TPMS (Hierarchical)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="hier-enabled">启用分级调制<span class="o-sub">F+λ·f(Nx)</span></button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>微曲面类型</span></div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <button class="opt" data-hier-micro="gyroid">Gyroid</button>
+            <button class="opt" data-hier-micro="diamond">Diamond</button>
+            <button class="opt" data-hier-micro="schwarz">Schwarz P</button>
+            <button class="opt" data-hier-micro="neovius">Neovius</button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>微观频率倍率 N</span><span class="val" id="hier-frequency-value">4</span></div>
+          <input type="range" id="hier-frequency" min="3" max="8" value="4" step="1">
+          <div class="lbl"><span>微观调制幅值 λ</span><span class="val" id="hier-amplitude-value">0.25</span></div>
+          <input type="range" id="hier-amplitude" min="0.1" max="0.5" value="0.25" step="0.05">
+          <div class="field-note" id="hier-stats"></div>
+          <div class="model-desc">F = F_macro + λ·F_micro(N·x)：宏观骨架承载与骨长入（300~600 µm），微孔供给营养输运与超高比表面积（20~50 µm）——骨组织工程支架与高效换热器的双重孔隙架构。</div>
         </div>
       </details>
       <details class="sect">

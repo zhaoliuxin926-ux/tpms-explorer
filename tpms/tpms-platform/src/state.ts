@@ -102,6 +102,12 @@ export function buildShareURL(): string {
     params.set('sds', String(s.stress.strength));
     params.set('sda', String(s.stress.anisotropy));
   }
+  // 【v3.0 阶段 V】多级分形（关闭时不写入）
+  if (s.hierarchical.enabled) {
+    params.set('hd', s.hierarchical.microType);
+    params.set('hn', String(s.hierarchical.frequency));
+    params.set('hl', String(s.hierarchical.amplitude));
+  }
   if (s.hybrid.enabled) {
     params.set('hybrid', '1');
     params.set('hybridType', s.hybrid.typeB);

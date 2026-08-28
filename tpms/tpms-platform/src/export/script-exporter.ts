@@ -230,7 +230,7 @@ elif structure_mode == 'shell':
         if count_shell(t_eff) / n_in > target_solid: lo = t_eff
         else: hi = t_eff
     t_eff = (lo + hi) / 2  # 平台无 0.05 下限，保持一致
-    t_scale = np.where(stress_preset != 'none', 1.0 + stress_strength * vm, 1.0)  # 【阶段 IV】壁厚-应力耦合
+    t_scale = np.where(stress_preset != 'none', np.maximum(0.1, 1.0 - stress_strength * vm), 1.0)  # 【阶段 IV】高应力侧孔隙板收窄（固相致密化）
     F = V**2 - (t_eff * t_scale / 2)**2
 else:
     # solid_network：solid = {V < iso}（与平台一致），16 轮二分收敛到下分位数
@@ -551,7 +551,8 @@ elseif strcmp(structure_mode, 'shell')
         if cnt / n_in > target_solid, lo = t_eff; else, hi = t_eff; end
     end
     t_eff = (lo + hi) / 2;  % 平台无 0.05 下限，保持一致
-    F = V.^2 - (t_eff / 2)^2;
+    t_scale = ones(size(V)); if ~strcmp(stress_preset, 'none'), t_scale = max(0.1, 1.0 - stress_strength * vm); end  % 【阶段 IV】高应力侧孔隙板收窄
+    F = V.^2 - (t_eff .* t_scale / 2).^2;
 else
     % solid_network：solid = {V < iso}（与平台一致），16 轮二分收敛到下分位数
     lo = v_in(1) - 0.5; hi = v_in(end) + 0.5;

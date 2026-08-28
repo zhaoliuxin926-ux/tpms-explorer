@@ -99,6 +99,17 @@ export function parseURLParams(search: string): Partial<AppState> {
     };
   }
 
+  // 【v3.0 阶段 V】多级分形恢复（microType 白名单 = 已知 TPMS 族）
+  const hdRaw = q.get('hd');
+  if (hdRaw && ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp'].includes(hdRaw)) {
+    state.hierarchical = {
+      enabled: true,
+      microType: hdRaw as AppState['hierarchical']['microType'],
+      frequency: Math.round(clamp(q.get('hn'), 3, 8, 4)),
+      amplitude: clamp(q.get('hl'), 0.1, 0.5, 0.25),
+    };
+  }
+
   // 剖切轴向 / 反向
   const sa = q.get('sa');
   if (sa === 'x' || sa === 'y' || sa === 'z') state.sliceAxis = sa;
