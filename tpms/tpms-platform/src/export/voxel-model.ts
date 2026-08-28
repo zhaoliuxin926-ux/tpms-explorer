@@ -9,8 +9,9 @@
  * （CAE 体网格导出为均匀多孔段语义，端板属增材工艺层，文档化声明）。
  */
 
-import type { TpmType, StructureMode, ContainerShape } from '../types';
+import type { TpmType, StructureMode, ContainerShape, StressConfig } from '../types';
 import { getTpmsFunction } from '../core/tpms-functions';
+import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
 
 export interface VoxelModelParams {
   type: TpmType;
@@ -22,6 +23,8 @@ export interface VoxelModelParams {
   targetPorosity: number;
   iso: number;
   customFormula: string;
+  /** 【v3.0 阶段 IV】应力场引导（与屏幕几何同语义，preset none 忽略） */
+  stress?: StressConfig;
 }
 
 export interface VoxelModel {
@@ -65,7 +68,10 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
         const i = ix + iy * N + iz * N * N;
         // boundAt 语义为归一化坐标（±1），与 surface-nets 的 phys 口径一致
         if (boundAt(px / Math.PI, py / Math.PI, pz / Math.PI) < 0) inside[i] = 1;
-        const v = tpmFn(px * k, py * k, pz * k, w);
+        // 【阶段 IV】主轴各向异性坐标变换（与 surface-nets 的包装同语义）
+        const v = params.stress && params.stress.preset !== 'none'
+          ? tpmFn(...transformByStress(params.stress, px * k, py * k, pz * k), w)
+          : tpmFn(px * k, py * k, pz * k, w);
         V[i] = v;
         if (inside[i]) { if (v < minV) minV = v; if (v > maxV) maxV = v; }
       }
@@ -106,7 +112,10 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
         const i = ix + iy * N + iz * N * N;
         if (!inside[i]) continue;
         const dv = V[i] - bias;
-        const f = params.structureMode === 'solid_network' ? bias - V[i] : dv * dv - (tEff / 2) * (tEff / 2);
+        const tS = params.stress && params.stress.preset !== 'none' && params.structureMode !== 'solid_network'
+          ? stressThicknessScale(params.stress, center(ix), center(iy), center(iz)) : 1;
+        const tLoc = tEff * tS;
+        const f = params.structureMode === 'solid_network' ? bias - V[i] : dv * dv - (tLoc / 2) * (tLoc / 2);
         if (f > 0) { solid[i] = 1; solidCount++; }
       }
     }

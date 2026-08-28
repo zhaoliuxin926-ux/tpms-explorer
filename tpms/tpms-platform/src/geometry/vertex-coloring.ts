@@ -15,11 +15,12 @@
  * （geoCache 缓存命中补色）两侧共用同一实现，杜绝两条路径语义分叉。
  */
 
-import type { ColoringMode, GradientDirection, TpmType } from '../types';
+import type { ColoringMode, GradientDirection, StressConfig, TpmType } from '../types';
 import type { HybridConfig } from '../core/hybrid-functions';
 import { getHybridWeightFn } from '../core/hybrid-functions';
 import { getGradientEvaluator } from '../core/gradient-functions';
 import { estimateCurvatureScalars } from './curvature';
+import { stressAt } from '../core/stress-driven-field';
 
 /** [s, r, g, b] 停靠点；取值参考 Moreland Cool-Warm 采样 */
 const COOLWARM_STOPS: ReadonlyArray<readonly [number, number, number, number]> = [
@@ -61,6 +62,8 @@ export interface VertexColorOptions {
     thickness?: number;
     iso?: number;
   };
+  /** 【v3.0 阶段 IV】stress_vm 口径必需：应力场配置；缺失时退化为高度着色 */
+  stress?: StressConfig;
 }
 
 const INV_PI = 1 / Math.PI;
@@ -85,6 +88,18 @@ export function computeVertexColors(
       opts.mode === 'mean_curvature' ? 'mean' : 'gauss',
     );
     for (let i = 0; i < vertCount; i++) sampleCoolWarmInto(scalars[i], colors, i * 3);
+    return colors;
+  }
+
+  // 【v3.0 阶段 IV】von Mises 应力云图：解析预设张量 → vm 归一化 [0,1]
+  if (opts.mode === 'stress_vm') {
+    if (!opts.stress || opts.stress.preset === 'none') {
+      return computeVertexColors(positions, vertCount, { ...opts, mode: 'elevation' });
+    }
+    for (let i = 0; i < vertCount; i++) {
+      const s = stressAt(opts.stress, positions[i * 3] * INV_PI, positions[i * 3 + 1] * INV_PI, positions[i * 3 + 2] * INV_PI);
+      sampleCoolWarmInto(s.vm, colors, i * 3);
+    }
     return colors;
   }
 

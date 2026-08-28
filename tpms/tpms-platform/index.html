@@ -964,6 +964,23 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">应力场引导 (Stress-Driven)</summary>
+        <div class="field">
+          <div class="lbl"><span>力学工况</span></div>
+          <div class="opt-row" id="stress-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt active" data-stress="none">无（各向同性）<span class="o-sub">Off</span></button>
+            <button class="opt" data-stress="bending">三点弯曲梁<span class="o-sub">Bending</span></button>
+            <button class="opt" data-stress="cantilever">悬臂梁<span class="o-sub">Cantilever</span></button>
+            <button class="opt" data-stress="torsion">扭转<span class="o-sub">Torsion</span></button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>壁厚-应力耦合 β</span><span class="val" id="stress-strength-value">0.50</span></div>
+          <input type="range" id="stress-strength" min="0" max="1" value="0.5" step="0.05">
+          <div class="lbl"><span>主轴各向异性 α</span><span class="val" id="stress-anisotropy-value">1.60</span></div>
+          <input type="range" id="stress-anisotropy" min="1" max="2.5" value="1.6" step="0.05">
+          <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式壁厚随 von Mises 应力自适应增厚。配合「着色模式 → 应力云图」可视化应力分布。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>
@@ -971,6 +988,7 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-coloring="elevation">高度分布<span class="o-sub">Z-Elevation</span></button>
           <button class="opt" data-coloring="mean_curvature">平均曲率<span class="o-sub">Mean H</span></button>
           <button class="opt" data-coloring="gauss_curvature">高斯曲率<span class="o-sub">Gauss K</span></button>
+          <button class="opt" data-coloring="stress_vm">应力云图<span class="o-sub">von Mises</span></button>
         </div>
         <div class="model-desc" id="coloring-desc">顶点热力图（蓝→白→红）：「场」显示混合权重或壁厚梯度，「高度」按 Z 轴渐变，两种「曲率」为隐函数解析曲率（红正蓝负，饱和于 98% 分位）。场口径需先开启异构混合或梯度双壳。</div>
       </details>

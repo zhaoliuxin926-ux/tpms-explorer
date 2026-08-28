@@ -96,6 +96,12 @@ export function buildShareURL(): string {
   }
   if (s.sliceAxis !== 'z') params.set('sa', s.sliceAxis);
   if (s.sliceInvert) params.set('si', '1');
+  // 【v3.0 阶段 IV】应力场引导（none 关闭时不写入）
+  if (s.stress.preset !== 'none') {
+    params.set('sd', s.stress.preset);
+    params.set('sds', String(s.stress.strength));
+    params.set('sda', String(s.stress.anisotropy));
+  }
   if (s.hybrid.enabled) {
     params.set('hybrid', '1');
     params.set('hybridType', s.hybrid.typeB);
