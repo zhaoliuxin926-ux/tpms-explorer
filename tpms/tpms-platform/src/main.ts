@@ -16,6 +16,7 @@ import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS } fro
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
+import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './geometry/webgpu-evaluator';
 import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
 import { EQUATION_PRESETS, validateEquation } from './core/equation-parser';
 import { mapGeometry } from './core/manifold-mapping';
@@ -81,6 +82,59 @@ const MAX_GEO_CACHE = 12;
 function cacheKey(s: Readonly<AppState>, R: number): string {
   return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}`;
 }
+
+// ── WebGPU 场计算加速（v3.0 阶段 I）────────────────────────
+// GPU 只接管 Surface Nets 第 2 步的 V 场填充（三角函数热循环），
+// 网格化/平滑/法线仍走既有 Worker 管道；任何失败无感回退 CPU。
+// seq + cacheKey 双守卫：等待 GPU 期间状态变化 ⇒ 本次作废，防旧参数覆写新状态。
+let gpuUsable: boolean | null = null;   // null = 尚未探测
+let gpuSeq = 0;
+
+function gpuConfigOf(params: BuildParams): GpuFieldConfig {
+  return {
+    type: params.type,
+    weights: params.weights,
+    periods: params.periods,
+    thickness: params.thickness,
+    iso: params.iso,
+    customFormula: params.customFormula,
+    hybrid: { ...params.hybrid, axis: params.hybrid.axis ?? 'x' },
+  };
+}
+
+function setGpuStatusText(text: string): void {
+  const el = document.getElementById('gpu-status');
+  if (el) el.textContent = text;
+}
+
+/** 完整重建派发（rebuild 非 preview 路径与 HD 升级共用）：GPU 可用则预计算场后入队 */
+function dispatchFullBuild(params: BuildParams, stateKey: string): void {
+  const s = getState();
+  if (!s.gpuAccelerate || gpuUsable === false || params.resolution < 48) {
+    bridge.build(params);
+    return;
+  }
+  const seq = ++gpuSeq;
+  void (async () => {
+    const res = await evaluateFieldGPU(gpuConfigOf(params), params.resolution);
+    if (seq !== gpuSeq || cacheKey(getState(), params.resolution) !== stateKey) return;
+    if (!res) {
+      gpuUsable = false;
+      setGpuStatusText('WebGPU 不可用 · CPU 管线回退');
+      bridge.build(params);
+      return;
+    }
+    gpuUsable = true;
+    setGpuStatusText(`WebGPU V 场 ${res.gpuMs.toFixed(1)} ms · ${params.resolution}³`);
+    bridge.build({ ...params, gpuVField: res.v });
+  })();
+}
+
+// 启动时探测一次可用性（仅状态条展示；真实判定仍以首次 evaluateFieldGPU 结果为准）
+void probeGpuAvailability().then((ok) => {
+  gpuUsable = ok;
+  setGpuStatusText(ok ? 'WebGPU 可用 · 完整重建自动启用' : 'WebGPU 不可用 · CPU 管线');
+});
 
 // ── 主题切换（明 / 暗 / 系统）─────────────────────────────
 const THEME_KEY = 'tpms-theme-platform';
@@ -236,7 +290,7 @@ function rebuild(preview: boolean): boolean {
     endplateMm: s.endplateMm,
   };
 
-  bridge.build(params);
+  dispatchFullBuild(params, key);
   return false;
 }
 
@@ -252,7 +306,7 @@ function scheduleHdUpgrade(): void {
   setTimeout(() => {
     const s = getState();
     const fullR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
-    bridge.build({
+    const params: BuildParams = {
       type: s.type,
       iso: baseIso(s),
       periods: s.cellSize,
@@ -268,7 +322,8 @@ function scheduleHdUpgrade(): void {
       preview: false,
       coloring: effectiveColoring(s),
       endplateMm: s.endplateMm,
-    });
+    };
+    dispatchFullBuild(params, cacheKey(s, fullR));
   }, 350);
 }
 
@@ -1081,6 +1136,24 @@ function bindUIEvents(): void {
     ctx.controls.update();
   });
 
+  // WebGPU 场计算加速开关（v3.0 阶段 I）：切换后重走完整重建以立即生效；
+  // 重新开启时复位可用性探测（设备热插拔/驱动恢复场景）
+  document.getElementById('btn-gpu')?.addEventListener('click', () => {
+    const s = getState();
+    const turningOn = !s.gpuAccelerate;
+    setState({ gpuAccelerate: turningOn });
+    if (turningOn) {
+      gpuUsable = null;
+      setGpuStatusText('探测中…');
+      void probeGpuAvailability().then((ok) => {
+        gpuUsable = ok;
+        setGpuStatusText(ok ? 'WebGPU 可用 · 完整重建自动启用' : 'WebGPU 不可用 · CPU 管线');
+      });
+    }
+    syncUI(getState());
+    scheduleRebuild(false, true);
+  });
+
   document.getElementById('btn-share')?.addEventListener('click', () => {
     const url = buildShareURL();
     // 无 clipboard-write 权限的环境（Firefox/失焦标签/沙箱 iframe）会 reject，回退到手动复制
@@ -1679,6 +1752,9 @@ function syncUI(s: AppState): void {
   // 混合启用复选框
   const he = document.getElementById('hybrid-enabled') as HTMLInputElement | null;
   if (he) he.checked = s.hybrid.enabled;
+
+  // WebGPU 加速开关态（v3.0 阶段 I）
+  document.getElementById('btn-gpu')?.classList.toggle('on', s.gpuAccelerate);
 
   // 自定义公式文本框（仅 custom 模式回填，避免覆盖用户正在输入）
   const cf = document.getElementById('custom-formula') as HTMLTextAreaElement | null;

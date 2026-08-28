@@ -951,6 +951,16 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">GPU 加速 (WebGPU)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">v3.0 Compute</span></button>
+          </div>
+          <div class="field-note" id="gpu-status">探测中…</div>
+          <div class="model-desc">WebGPU Compute Shader 并行填充体素场，网格化仍由 Worker CPU 管线完成；不支持的浏览器自动无感回退，GPU 与 CPU 场数学同源（webgpu_parity_audit ≤1e-6 门禁守护）。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>

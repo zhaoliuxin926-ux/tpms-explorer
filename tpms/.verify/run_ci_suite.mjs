@@ -97,6 +97,7 @@ try {
   results.push(['homogenization_audit RVE 均质化+方向模量', await runStep('均质化审计', 'homogenization_audit.mjs')]);
   results.push(['manifold_audit 非欧度规空间映射', await runStep('流形映射审计', 'manifold_audit.mjs')]);
   results.push(['redteam_matrix_audit 红队极端工况矩阵', await runStep('红队矩阵审计', 'redteam_matrix_audit.mjs')]);
+  results.push(['webgpu_parity_audit WebGPU 数学同源（门13）', await runStep('WebGPU 同源审计', 'webgpu_parity_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
