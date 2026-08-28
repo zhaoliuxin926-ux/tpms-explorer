@@ -28,6 +28,7 @@ import { getGradientEvaluator } from '../core/gradient-functions';
 import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
+import { createHierarchicalField } from '../core/hierarchical-functions';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
 import { wcToMmFactor } from '../core/units';
 import { computeVertexColors } from './vertex-coloring';
@@ -131,7 +132,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // 变换是逐点非线性 warp，sin/cos 查表失效 ⇒ 强制实时求值路径
   const stressCfg = params.stress && params.stress.preset !== 'none' ? params.stress : null;
   const stressOn = stressCfg !== null;
-  const useLookup = !hybridEnabled && !stressOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
+  const hierCfg = params.hierarchical?.enabled ? params.hierarchical : null;
+  const useLookup = !hybridEnabled && !stressOn && !hierCfg && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
@@ -140,12 +142,15 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
   } else if (!useLookup) {
     const baseFn = getTpmsFunction(type, customFormula, eqDyn);
+    // 【阶段 V】分级调制叠加在最外层（宏观侧可再含应力变换）
+    const hierFn = hierCfg ? createHierarchicalField(type, hierCfg, customFormula, eqDyn) : null;
+    const core = hierFn ?? baseFn;
     tpmFn = stressOn
       ? (mx: number, my: number, mz: number, w: Weights) => {
           const [qx, qy, qz] = transformByStress(stressCfg!, mx, my, mz);
-          return baseFn(qx, qy, qz, w);
+          return core(qx, qy, qz, w);
         }
-      : baseFn;
+      : core;
   }
 
   // ──────────────────────────────────────────────────────────────

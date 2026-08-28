@@ -3,7 +3,7 @@
  *
  * 物理语义：外载荷决定空间应力张量场 σ(x)；TPMS 单胞在主应力方向上拉伸
  * （各向异性度规 S = diag(1/α, 1, 1)，α>1 时晶胞沿最大主应力方向伸长），
- * 壳模式壁厚按 von Mises 应力自适应增厚 C(x) = C0·(1 + β·σvm(x))——
+ * 壳模式高应力侧孔隙板收窄（固相致密化）C(x) = C0·(1 − β·σvm(x))——
  * 高应力区相对密度提升，与骨小梁 Wolff 定律的力学诱导生长同构。
  *
  * 预设工况（归一化坐标 px,py,pz ∈ [−1,1]，vm 归一到 [0,1]）：
@@ -131,10 +131,16 @@ export function transformByStress(cfg: StressConfig, mx: number, my: number, mz:
   return [u1 / cfg.anisotropy, u2, u3];
 }
 
-/** 壁厚自适应因子（shell 模式）：1 + β·vm */
+/**
+ * 壳模式孔隙板宽度自适应因子：1 − β·vm（下限 0.1）。
+ * 【语义定案】shell 的 tEff 是「孔隙板宽度」（solid ⟺ |dv| > t/2）——
+ * 高应力侧收窄孔隙板 ⇒ 固相壁致密化（相对密度与 vm 正相关，Wolff 定律）。
+ * 首版 1 + β·vm 方向反了（高应力区孔隙更大），由 hierarchical_audit E 段
+ * 单调性断言红测抓获。
+ */
 export function stressThicknessScale(cfg: StressConfig, px: number, py: number, pz: number): number {
   if (cfg.preset === 'none' || cfg.strength <= 0) return 1;
-  return 1 + cfg.strength * stressAt(cfg, px, py, pz).vm;
+  return Math.max(0.1, 1 - cfg.strength * stressAt(cfg, px, py, pz).vm);
 }
 
 /** UI/导出共用的预设标签 */
