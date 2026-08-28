@@ -1002,6 +1002,29 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">逆向性能求解器 (Inverse Designer)</summary>
+        <div class="field">
+          <div class="lbl"><span>目标预设</span></div>
+          <select id="inv-preset" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+            <option value="custom">自定义目标</option>
+            <option value="cortical">股骨皮质骨 (E*=15 GPa)</option>
+            <option value="trabecular">股骨近端松质骨 (E*+κ+P)</option>
+            <option value="heatsink">高通量散热沉 (κ+P)</option>
+          </select>
+          <div class="lbl" style="margin-top:9px"><span>目标弹性模量 E* (GPa)</span><span class="val" id="inv-e-value">15.0</span></div>
+          <input type="range" id="inv-e" min="1" max="250" value="150" step="5">
+          <div class="lbl"><span>目标渗透率 κ (×10⁻⁸ m²)</span><span class="val" id="inv-k-value">10</span></div>
+          <input type="range" id="inv-k" min="0" max="300" value="10" step="1">
+          <div class="lbl"><span>目标孔隙率 P (%)</span><span class="val" id="inv-p-value">25</span></div>
+          <input type="range" id="inv-p" min="2" max="98" value="25" step="1">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:9px">
+            <button class="opt" id="btn-inv-solve">一键反演寻优<span class="o-sub">NM+LM</span></button>
+            <button class="opt" id="btn-inv-apply">应用最优解<span class="o-sub">Apply</span></button>
+          </div>
+          <div class="field-note" id="inverse-result">输入目标指标后点击「一键反演寻优」——Nelder-Mead 全局探索 + Levenberg-Marquardt 精化，8 类曲面枚举反解最优构型。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>

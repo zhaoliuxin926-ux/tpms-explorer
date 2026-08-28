@@ -36,6 +36,7 @@ import {
 } from './export';
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
+import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
@@ -1321,6 +1322,73 @@ function bindUIEvents(): void {
   });
 
   // 空间梯度按钮
+  // 【v4.0 阶段 I】逆向性能求解器
+  let inverseReport: InverseReport | null = null;
+  const invTargets = (): DesignTargets => {
+    const eV = Number((document.getElementById('inv-e') as HTMLInputElement)?.value ?? 0);
+    const kV = Number((document.getElementById('inv-k') as HTMLInputElement)?.value ?? 0);
+    const pV = Number((document.getElementById('inv-p') as HTMLInputElement)?.value ?? 0);
+    const t: DesignTargets = {};
+    if (eV > 0) t.ETarget = eV / 10;
+    if (kV > 0) t.kappaTarget = kV * 1e-8;
+    if (pV > 0) t.porosityTarget = pV / 100;
+    return t;
+  };
+  document.getElementById('inv-preset')?.addEventListener('change', (e) => {
+    const key = (e.target as HTMLSelectElement).value;
+    const preset = INVERSE_PRESETS.find((ps) => ps.key === key);
+    if (!preset) return;
+    const set = (id: string, v: number) => {
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      if (el) el.value = String(v);
+      const val = document.getElementById(id + '-value');
+      if (val) val.textContent = (id === 'inv-e' ? (v / 10).toFixed(1) : id === 'inv-p' ? String(Math.round(v)) : String(Math.round(v)));
+    };
+    set('inv-e', Math.round((preset.targets.ETarget ?? 0) * 10));
+    set('inv-k', Math.round((preset.targets.kappaTarget ?? 0) * 1e8));
+    set('inv-p', Math.round((preset.targets.porosityTarget ?? 0) * 100));
+    flashToast(preset.description);
+  });
+  for (const [id, fmt, scale] of [['inv-e', (v: number) => (v / 10).toFixed(1), 0.1], ['inv-k', (v: number) => String(v), 1], ['inv-p', (v: number) => String(v), 1]] as const) {
+    document.getElementById(id)?.addEventListener('input', (e) => {
+      const v = Number((e.target as HTMLInputElement).value);
+      const val = document.getElementById(id + '-value');
+      if (val) val.textContent = fmt(v);
+      void scale;
+      const sel = document.getElementById('inv-preset') as HTMLSelectElement | null;
+      if (sel) sel.value = 'custom';
+    });
+  }
+  document.getElementById('btn-inv-solve')?.addEventListener('click', () => {
+    const targets = invTargets();
+    if (!targets.ETarget && !targets.kappaTarget && !targets.porosityTarget) {
+      flashToast('请至少设置一个目标指标（E*/κ/P）');
+      return;
+    }
+    inverseReport = solveInverse(targets);
+    const top = inverseReport.solutions.slice(0, 3);
+    const el = document.getElementById('inverse-result');
+    if (el) {
+      el.textContent = top.map((so, i) =>
+        `${i + 1}. ${so.type} P=${(so.params.porosity * 100).toFixed(0)}% 单元 ${so.params.cellSize.toFixed(1)}mm α=${so.params.anisotropy.toFixed(2)} → E*=${so.prediction.EGPa.toFixed(2)}GPa κ=${(so.prediction.kappaM2 * 1e8).toFixed(2)}e-8 m²（J=${so.objective.toExponential(1)}，${inverseReport!.elapsedMs.toFixed(1)}ms）`,
+      ).join(' ｜ ');
+    }
+    flashToast(inverseReport.converged ? '反演收敛：目标指标全部命中（≤1e-3 相对残差）' : '反演完成：目标组合超出可行包络，已给出最优折中');
+  });
+  document.getElementById('btn-inv-apply')?.addEventListener('click', () => {
+    if (!inverseReport) { flashToast('请先执行反演寻优'); return; }
+    const best = inverseReport.solutions[0];
+    pushHistory();
+    setState({
+      type: best.type,
+      porosity: Math.round(best.params.porosity * 100),
+      cellSize: Math.max(1, Math.min(5, Math.round(best.params.cellSize))),
+    });
+    syncUI(getState());
+    scheduleRebuild(false);
+    flashToast(`已应用最优解：${best.type}（P=${(best.params.porosity * 100).toFixed(0)}%）`);
+  });
+
   // 【v3.0 阶段 V】多级分形 TPMS：启用 + 微曲面 + 频率/幅值
   document.getElementById('hier-enabled')?.addEventListener('click', () => {
     const s = getState();
