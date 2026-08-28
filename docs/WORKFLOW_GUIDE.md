@@ -3,7 +3,7 @@
 > 本指南面向四类工作流：**3D 打印与压缩试验**、**OpenFOAM 灌注 CFD 模拟**、**Python/MATLAB 脚本复现**、
 > **学术渲染与论文汇报**。所有导出链路均经过 CI 门禁审计（见文末质量基准表），数据可溯源、参数可复现。
 >
-> 适用版本：`v2.3.0-industrial-hybrid` 及以上。
+> 适用版本：`v3.0.0-nextgen-cae` 及以上。
 
 ---
 
@@ -17,6 +17,14 @@
 6. [异质多相多孔结构（Hybrid TPMS）设计指南](#六异质多相多孔结构hybrid-tpms设计指南) 🆕
 7. [微物理参数学术汇报规范（迂曲度 τ 与刚度张量）](#七微物理参数学术汇报规范) 🆕
 8. [质量与审计基准](#八质量与审计基准)
+9. [自定义公式沙箱（AST 语法规范）](#九自定义公式沙箱ast-语法规范) 🆕
+10. [非欧度规空间映射](#十非欧度规空间映射) 🆕
+11. [RVE 均质化与方向模量](#十一rve-均质化与方向模量) 🆕
+12. [红队极端工况矩阵](#十二红队极端工况矩阵) 🆕
+13. [Abaqus 有限元单胞均质化与 PBC 施加教程](#十三abaqus-有限元单胞均质化与-pbc-施加教程-v30) 🆕 v3.0
+14. [OpenFOAM polyMesh 流体秒级灌注仿真实战](#十四openfoam-polymesh-流体秒级灌注仿真实战-v30) 🆕 v3.0
+15. [主应力迹线仿生多孔骨支架参数设计原则](#十五主应力迹线仿生多孔骨支架参数设计原则-v30) 🆕 v3.0
+16. [多级分形 TPMS 换热器与生物支架多尺度应用](#十六多级分形-tpms-换热器与生物支架多尺度应用-v30) 🆕 v3.0
 
 ---
 
@@ -491,3 +499,52 @@ computed via shortest fluid path on a 64³ voxelization"*；引用文献
 
 redteam_matrix_audit（100+ 案例）：孔隙率极端 {1%, 99%} × 8 曲面 × 3 模式 × 双容器、长宽比/周期极端、极高频（periods=10）、零厚度鞍点、极端权重（全零/负值/大幅值）。三硬指标：零未捕获异常（非法输入优雅报错）、零开放边、零退化三角。p=0.99 钳制后 98% 孔隙壁厚亚体素 → 空网格属合法优雅降级。性能哨兵：80³ 全量重建 621ms（Node 直跑）≤3s 回归带。
 
+**v3.0 新增四门**：webgpu_parity_audit（34 断言：指令 IR 双后端完备性 + 8 内置/4 custom/2 hybrid 万点对拍 0.00e+0 + 模板逐字同步 + 端到端水密 + 无 GPU 优雅降级）；periodic_rve_audit（88 断言：16 门内拓扑最重——3×3×3 拼接内部缝合 100% 水密、PBC 面配对 100% 覆盖、v_right−v_left=(L,0,0) ≤1e-5、五重守卫抛错）；cae_mesh_audit（46 断言：INP 面闭合/Jacobian=h³/PBC 集不交 + polyMesh owner<neighbour/法线定向/patch 连续/cell-face 关联精确守恒 + ZIP CRC32 逐条目）；hierarchical_audit（18 断言：分级水密/λ=0 退化/微孔连通率 ≥95%/双重比表面积 coarea 分离/应力-相对密度 vm 五分桶单调递增）。合计 **16 门 · 658+ 断言**。
+
+
+## 十三、Abaqus 有限元单胞均质化与 PBC 施加教程 🆕 v3.0
+
+导出中心 →【Abaqus 体网格 (C3D8 INP)】：体素级六面体网格（默认 40³/轴），含 `*NODE`、`*ELEMENT, TYPE=C3D8, ELSET=ESOLID`、节点集 `NSET_BOTTOM/TOP` 与三对面集 `NSET_PBC_X0/X1, Y0/Y1, Z0/Z1`（仅含固相引用节点）、材料（mm-N-MPa 单位制，E 取材质基体模量）与单轴压缩载荷步模板（底部 U3=0，顶部 U3=−0.05L）。
+
+**周期性边界条件（PBC）施加要点**：
+1. 相对面节点一一对应（`NSET_PBC_X0` ↔ `NSET_PBC_X1` 等量且按 (y,z) 排序后逐点配对）；
+2. 用 `*EQUATION` 绑定三向位移：`u(X1) − u(X0) = Δ·L`（Δ 为宏观应变张量分量）；棱/角节点需按主从层次单独建方程（先角、后棱、再面，避免过约束）；
+3. 均质化：取反力合力 ΣF 除以对面面积得到宏观应力，六组独立加载工况填满 6 个宏观应变分量 → 6×6 刚度矩阵；
+4. 或直接用【周期性 RVE 网格 + PBC 配对表】导出：STL 为开放缝合网格（缝合边精确 lying on ±L/2 面），JSON 携带 `pairsX/Y/Z`（索引对）+ `edgeClasses/cornerClasses`（12 棱/8 角等价类），3×3×3 拼接内部 100% 水密（periodic_rve_audit 门禁守护）。
+
+**Jacobian 与质量**：体素六面体为轴对齐正立方体，Jacobian = h³ > 0（ratio 1.0，cae_mesh_audit 门禁守护）。诚实边界：表面呈阶梯状（非贴体），适用于均质化预研与筛选；发表级贴体网格建议以 PBC 表面网格为界重建六面体/四面体混合网格。
+
+## 十四、OpenFOAM polyMesh 流体秒级灌注仿真实战 🆕 v3.0
+
+导出中心 →【OpenFOAM polyMesh (CFD)】：ZIP 内含 `constant/polyMesh/` 五件套（points/faces/owner/neighbour/boundary），解压到 case 目录即成完整网格——**跳过 snappyHexMesh**，无布尔剖分失败面。
+
+```bash
+unzip tpms-gyroid-polymesh.zip -d myCase/
+cd myCase/system
+blockMesh          # 可跳过：网格已就绪
+simpleFoam         # 直接求解（或 interFoam 两相灌注）
+```
+
+- patch 分区：`inlet`(z−)、`outlet`(z+)、`wall`(固相界面+侧壁)；内部面 owner<neighbour、面法线 owner→neighbour 指向（cae_mesh_audit 抽样断言）；
+- cell-face 关联守恒 Σ(2·内部+边界) = 6·cells 精确成立；体素级阶梯界面建议配合 `snappyHexMeshDict` 的 layer 添加或直接以体素尺度解释结果（粘性损失偏高，属保守估计）；
+- 网格尺度：模型总宽 = cellSize mm，体素 h ≈ cellSize/40；Run 目录需自备 `0/` 场与 `system/controlDict`（本包只承载几何）。
+
+## 十五、主应力迹线仿生多孔骨支架参数设计原则 🆕 v3.0
+
+「应力场引导 (Stress-Driven)」面板：Wolff 定律的几何化——骨小梁沿主应力迹线排列、高应力区致密化。
+
+- **工况**：三点弯曲（σxx = pz，纯弯线性分布）、悬臂梁（弯矩随距离衰减 + 剪切）、扭转（τxz/τyz 环向剪应力）；
+- **各向异性 α**：晶胞沿最大主应力 v1 方向伸长（坐标变换 q' = Rᵀ·S·R·q，S = diag(1/α,1,1)，3×3 Jacobi 特征分解逐点求主轴）；α=1.4~1.8 为骨小梁典型各向异性带；
+- **孔隙板收窄 β**：壳模式高应力侧孔隙板收窄（t = tEff·(1−β·vm)，下限 0.1）→ 相对密度与 vm 正相关。hierarchical_audit E 段以 vm 五分桶 MC 断言单调递增（β=0.5 实测 [0.335→0.628]）；
+- **可视化**：着色模式 →「应力云图 (von Mises)」；β 过大（≈1）时高应力区趋于全实心属物理极限（无等值面）；
+- **汇报表述**：这是「力学启发的几何自适应」而非力学求解——σ(x) 为解析预设场，非 FEA 结果。
+
+## 十六、多级分形 TPMS 换热器与生物支架多尺度应用 🆕 v3.0
+
+「多级分形 TPMS (Hierarchical)」面板：F = F_macro + λ·F_micro(N·x)。
+
+- **骨组织工程**：宏观大孔 300~600 µm 促骨细胞长入（宏观周期取 1，cellSize 1 mm），微孔 20~50 µm 供营养输运——微孔尺度 = 宏观孔径/N，N=4~8 时微特征 125~250 µm，配合 SLM 最小壁厚约束选 λ=0.1~0.3；
+- **换热器**：微织构强化对流换热（破坏热边界层），面积密度增益由面板实时给出——N=4 时总面积密度约 1.4×宏观（coarea MC，N=8 约 2.2×）；
+- **统计口径**：S_total/S_macro 由 coarea 公式 MC 积分（|∇F| 均值），微孔附加 = S_total − S_macro；微孔连通率 = 微场空隙最大 6 连通簇占比（≥95% 视为贯通，hierarchical_audit 实测 100%）；
+- **组合**：可与应力场引导叠加（先主轴拉伸再分级调制）；与 Hybrid 互斥（同为场级组合层）；
+- **打印校验**：λ 过小（<0.1）微织构低于打印分辨率（SLM ~80 µm）将被熔池抹平；导出 STL 前先核对切片预览。
