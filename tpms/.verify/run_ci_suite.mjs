@@ -110,6 +110,7 @@ try {
   results.push(['boundary_picker_audit 边界拾取器（门23）', await runStep('边界拾取审计', 'boundary_picker_audit.mjs')]);
   results.push(['bone_morphometry_audit DICOM与骨计量（门24）', await runStep('骨计量审计', 'bone_morphometry_audit.mjs')]);
   results.push(['gcode_slicer_audit G-code切片引擎（门25）', await runStep('G-code切片审计', 'gcode_slicer_audit.mjs')]);
+  results.push(['ml_pareto_audit ML代理Pareto（门26）', await runStep('ML Pareto审计', 'ml_pareto_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
