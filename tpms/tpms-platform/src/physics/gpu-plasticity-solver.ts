@@ -156,6 +156,8 @@ export interface PlasticityParams {
    * 残差恒含几何（初始应力）内力项——各口径下平衡方程均为真实 StVK 平衡。
    */
   tangent?: 'elastic' | 'geo' | 'consistent';
+  /** 步发散即停（数字孪生坍塌检测：发散点=坍塌应变，曲线截断上报） */
+  stopOnDiverge?: boolean;
 }
 
 export interface PlasticityStepContext {
@@ -261,6 +263,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   const pcgTol = params.pcgTol ?? 1e-6;
   const pcgMaxIter = params.pcgMaxIter ?? 3000;
   const tangentMode = params.tangent ?? 'geo';
+  const stopOnDiverge = params.stopOnDiverge ?? false;
   const lame = lameFromNu(nu);
 
   const solid = params.solid;
@@ -699,6 +702,14 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代
       const pcgT = Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
       solveIncrement(fint, du, pcgT);
+      // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
+      // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
+      {
+        let duMax = 0;
+        for (let i = 0; i < nDof; i++) { const a = Math.abs(du[i]); if (a > duMax) duMax = a; }
+        const cap = 0.2 * R;
+        if (duMax > cap) { const sc = cap / duMax; for (let i = 0; i < nDof; i++) du[i] *= sc; }
+      }
       // 回溯线搜索：α ∈ {1, 1/2, 1/4} 取残差最小者；无改善则判失败（上层回退子步）
       let bestAlpha = 0, bestNorm = rNorm0;
       for (let ls = 0; ls < 4; ls++) {
@@ -816,7 +827,10 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     }
     // 步长施加到位（数值容差）即认为整步收敛
     if (Math.abs(sApplied - strain) <= 1e-12 * Math.max(maxStrain, 1e-12)) stepConverged = true;
-    if (!stepConverged) allConverged = false;
+    if (!stepConverged) {
+      allConverged = false;
+      if (stopOnDiverge) break;   // 坍塌检测：后续步在失稳结构上无意义
+    }
     wExt += stepWextAcc;
     wInt += stepWintAcc;
     wPl += stepWplAcc;
