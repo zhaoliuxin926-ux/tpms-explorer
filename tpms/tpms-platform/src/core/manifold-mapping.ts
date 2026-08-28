@@ -25,7 +25,7 @@
  *  - hyperbolic/metric：全域单调（无约束）
  */
 
-export type ManifoldKind = 'identity' | 'cylinder' | 'torus' | 'hyperbolic' | 'metric';
+export type ManifoldKind = 'identity' | 'cylinder' | 'torus' | 'hyperbolic' | 'metric' | 'poincare';
 
 export interface ManifoldConfig {
   kind: ManifoldKind;
@@ -84,6 +84,27 @@ export function mapPoint(kind: ManifoldKind, cfg: ManifoldConfig, ctx: ManifoldC
       const rH = R * Math.tan((r / R) * (Math.PI / 4));
       const s = rH / r;
       out[0] = x * s; out[1] = y * s; out[2] = z * s;
+      return;
+    }
+    case 'poincare': {
+      // 【v4.0 阶段 II】庞加莱双曲度规映射：r' = 2R₀²·r/(R₀²−r²)（自中心向外围
+      // 非线性加密），径向截断正则化 r_c = 0.95·R₀——r ≤ r_c 走双曲段，
+      // r > r_c 以截点斜率线性延拓（单射性保持：斜率恒正，无坐标发散/网格折叠）
+      const R0 = R;
+      const r = Math.sqrt(x * x + y * y + z * z);
+      if (r < 1e-12) { out[0] = 0; out[1] = 0; out[2] = 0; return; }
+      const rC = 0.95 * R0;
+      const f = (rr: number) => (2 * R0 * R0 * rr) / (R0 * R0 - rr * rr);
+      const fpc = f(Math.min(rC, 0.999 * R0));
+      let rp: number;
+      if (r <= rC) {
+        rp = f(r);
+      } else {
+        const fpC = (2 * R0 * R0 * (R0 * R0 + 3 * rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
+        rp = fpc + fpC * (r - rC);
+      }
+      const sc = rp / r;
+      out[0] = x * sc; out[1] = y * sc; out[2] = z * sc;
       return;
     }
     case 'metric': {

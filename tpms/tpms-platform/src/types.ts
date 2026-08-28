@@ -35,7 +35,7 @@ export const ENDPLATE_CLAMP_FRAC = 0.4;
 export type SliceAxis = 'x' | 'y' | 'z';
 
 /** 【阶段 IV】非欧度规空间映射类型（作用于生成网格的顶点级连续 warp） */
-export type ManifoldKind = 'identity' | 'cylinder' | 'torus' | 'hyperbolic' | 'metric';
+export type ManifoldKind = 'identity' | 'cylinder' | 'torus' | 'hyperbolic' | 'metric' | 'poincare';
 
 export interface ManifoldConfig {
   kind: ManifoldKind;

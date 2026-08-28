@@ -80,7 +80,7 @@ export function parseURLParams(search: string): Partial<AppState> {
   // 加载端板厚度（mm）；缺省 = 关闭（数值参数无注入面）
   state.endplateMm = clamp(q.get('ep'), 0, ENDPLATE_MAX_UI_MM, 0);
   // 【阶段 IV】空间映射恢复（白名单：kind 只允许已知映射族）
-  if (q.has('mfd') && ['identity', 'cylinder', 'torus', 'hyperbolic', 'metric'].includes(q.get('mfd')!)) {
+  if (q.has('mfd') && ['identity', 'cylinder', 'torus', 'hyperbolic', 'metric', 'poincare'].includes(q.get('mfd')!)) {
     state.manifold = {
       kind: q.get('mfd') as AppState['manifold']['kind'],
       radius: q.has('mfr') ? clamp(q.get('mfr'), 8, 30, 15) : 15,
