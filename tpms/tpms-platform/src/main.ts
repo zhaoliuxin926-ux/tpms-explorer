@@ -1470,7 +1470,7 @@ function bindUIEvents(): void {
   // 异构混合启用（智能着色联动：开启推荐 Field Map，关闭时若因混合而开的 Field Map 回退单色）
   // 【阶段 IV】非欧度规空间映射接线
   const MANIFOLD_LABEL: Record<string, string> = {
-    identity: '无（平面周期）', cylinder: '圆柱弯曲', torus: '环面闭合', hyperbolic: '双曲径向', metric: '应力线各向异性',
+    identity: '无（平面周期）', cylinder: '圆柱弯曲', torus: '环面闭合', hyperbolic: '双曲径向', metric: '应力线各向异性', poincare: '庞加莱双曲度规',
   };
   const manifoldSel = document.getElementById('manifold-kind') as HTMLSelectElement | null;
   if (manifoldSel) {
