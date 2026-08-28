@@ -30,6 +30,7 @@ import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
 import { wcToMmFactor } from '../core/units';
 import { computeVertexColors } from './vertex-coloring';
+import { buildPeriodicSurface } from './periodic-surface';
 
 /** 线性索引辅助函数：将三维网格坐标 (ix, iy, iz) 展平为一维 */
 const idxF = (N: number) => (ix: number, iy: number, iz: number) => ix + iy * N + iz * N * N;
@@ -81,6 +82,9 @@ function computeVertexNormals(positions: Float32Array, indices: Uint32Array, nor
  * @returns       WorkerResponse 兼容的结果对象
  */
 export function buildSurface(params: BuildParams, pool: BufferPool = globalBufferPool): WorkerResponse {
+  // 【v3.0 阶段 II】周期性 RVE 模式：wrapped 提取 + 域平面裁剪 + PBC 配对
+  // （独立管线，见 periodic-surface.ts 头部算法说明）
+  if (params.periodicRve) return buildPeriodicSurface(params, pool);
   const t0 = performance.now();
 
   const {

@@ -142,6 +142,18 @@ export interface WorkerResponse {
   meshSolidFraction?: number;
   /** 非流形边数（鞍点掐捏残留），供采样定理警示 */
   nmEdgeCount?: number;
+  /**
+   * 【v3.0 阶段 II】PBC 节点配对表（periodicRve 模式专属）：
+   * 三对面配对（索引对）+ 12 条棱等价类 + 8 个顶角等价类，
+   * 供有限元周期性边界条件（PBC）方程施加直接引用。
+   */
+  pbcPairs?: {
+    pairsX: [number, number][];
+    pairsY: [number, number][];
+    pairsZ: [number, number][];
+    edgeClasses: number[][];
+    cornerClasses: number[][];
+  };
   buildTimeMs: number;
   error?: string;
 }
@@ -171,6 +183,13 @@ export interface BuildParams {
    * 模式公式/二分。长度校验失败抛错（不静默截肢）。CPU 回退路径不携带此字段。
    */
   gpuVField?: Float32Array;
+  /**
+   * 【v3.0 阶段 II】周期性 RVE 模式（PBC-Ready）：wrapped 场索引 + 跨平面裁剪 +
+   * 缝合边精确配对（v_right − v_left = (L,0,0)），输出可三维无缝平铺的单胞网格。
+   * 约束：cube 容器 / solid_network 或 shell / 无端板 / 无 Hybrid / 无梯度；
+   * 违反时 buildSurface 抛错（导出层先行校验并 toast 引导）。
+   */
+  periodicRve?: boolean;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */
