@@ -113,6 +113,9 @@ try {
   results.push(['ml_pareto_audit ML代理Pareto（门26）', await runStep('ML Pareto审计', 'ml_pareto_audit.mjs')]);
   results.push(['gpu_plasticity_audit WebGPU弹塑性大变形（门27）', await runStep('弹塑性审计', 'gpu_plasticity_audit.mjs')]);
   results.push(['digital_twin_compression_audit 数字孪生压溃失效（门28）', await runStep('数字孪生审计', 'digital_twin_compression_audit.mjs')]);
+  results.push(['wasm_navier_stokes_audit Navier-Stokes微流体（门29）', await runStep('微流体审计', 'wasm_navier_stokes_audit.mjs')]);
+  results.push(['lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）', await runStep('LPBF审计', 'lpbf_thermo_mechanical_audit.mjs')]);
+  results.push(['nl_agent_audit 自然语言CAD代理（门31）', await runStep('NL代理审计', 'nl_agent_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
