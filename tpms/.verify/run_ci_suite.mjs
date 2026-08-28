@@ -108,6 +108,7 @@ try {
   results.push(['ct_reconstruction_audit CT重构偏差（门21）', await runStep('CT重构审计', 'ct_reconstruction_audit.mjs')]);
   results.push(['native_cae_solver_audit 原生CAE求解器（门22）', await runStep('原生CAE审计', 'native_cae_solver_audit.mjs')]);
   results.push(['boundary_picker_audit 边界拾取器（门23）', await runStep('边界拾取审计', 'boundary_picker_audit.mjs')]);
+  results.push(['bone_morphometry_audit DICOM与骨计量（门24）', await runStep('骨计量审计', 'bone_morphometry_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
