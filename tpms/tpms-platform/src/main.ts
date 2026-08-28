@@ -2113,6 +2113,44 @@ function handleExport(fmt: string | null): void {
         exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, wcToMmFactor(getState().cellSize), cfdNormals);
         break;
       }
+      case 'rvestl': {
+        // 【v3.0 阶段 II】周期性 RVE 网格 + PBC 节点配对表：主线程独立构建
+        // （wrapped 提取管线，与屏幕几何无关），STL 为开放缝合网格 + JSON 配对表
+        if (s.containerShape !== 'cube' || s.structureMode === 'gradient_shell' || s.hybrid.enabled || s.endplateMm > 0) {
+          flashToast('周期性 RVE 需：立方体容器 + solid/shell 模式 + 关闭混合与端板');
+          return;
+        }
+        const rveR = 48;
+        const rveRes = buildSurface({
+          type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: rveR,
+          targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+          containerShape: 'cube', thickness: s.thickness, gradientDir: s.gradientDir,
+          hybrid: { ...s.hybrid, enabled: false }, customFormula: s.customFormula,
+          preview: false, periodicRve: true,
+        });
+        if (rveRes.type !== 'result' || rveRes.vertCount === 0 || !rveRes.pbcPairs) {
+          flashToast('周期性 RVE 构建失败：当前参数无有效周期曲面');
+          return;
+        }
+        const scaleRve = wcToMmFactor(s.cellSize);
+        exportBinarySTL(rveRes.positions!, rveRes.indices!, `${base}-pbc-rve.stl`, scaleRve, rveRes.normals);
+        const sidecar = {
+          format: 'tpms-pbc-rve/1.0',
+          unit: 'millimeter',
+          note: 'STL 为开放缝合网格：全部开放边躺在单胞六面 (±L/2) 上，±L 配对面由 PBC 方程缝合；3×3×3 平铺内部 100% 水密',
+          params: { type: s.type, structureMode: s.structureMode, periods: s.cellSize, resolution: rveR, targetPorosity: s.porosity / 100 },
+          counts: { vertices: rveRes.vertCount, triangles: rveRes.triCount, solidFraction: rveRes.meshSolidFraction },
+          pbc: {
+            pairsX: rveRes.pbcPairs.pairsX,
+            pairsY: rveRes.pbcPairs.pairsY,
+            pairsZ: rveRes.pbcPairs.pairsZ,
+            edgeClasses: rveRes.pbcPairs.edgeClasses,
+            cornerClasses: rveRes.pbcPairs.cornerClasses,
+          },
+        };
+        downloadText(JSON.stringify(sidecar, null, 2), `${base}-pbc-rve.json`, 'application/json');
+        break;
+      }
       case 'vti': {
         if (s.type === 'custom' && !s.customFormula.trim()) {
           flashToast('自定义公式为空，无法导出体素场');
