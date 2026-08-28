@@ -99,6 +99,7 @@ try {
   results.push(['redteam_matrix_audit 红队极端工况矩阵', await runStep('红队矩阵审计', 'redteam_matrix_audit.mjs')]);
   results.push(['webgpu_parity_audit WebGPU 数学同源（门13）', await runStep('WebGPU 同源审计', 'webgpu_parity_audit.mjs')]);
   results.push(['periodic_rve_audit 周期性RVE/PBC（门14）', await runStep('周期RVE审计', 'periodic_rve_audit.mjs')]);
+  results.push(['cae_mesh_audit Abaqus/OpenFOAM体网格（门15）', await runStep('CAE体网格审计', 'cae_mesh_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务

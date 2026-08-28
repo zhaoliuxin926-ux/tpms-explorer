@@ -35,6 +35,8 @@ import {
   generateJSONSidecar,
 } from './export';
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
+import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh } from './export';
+import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
@@ -2149,6 +2151,35 @@ function handleExport(fmt: string | null): void {
           },
         };
         downloadText(JSON.stringify(sidecar, null, 2), `${base}-pbc-rve.json`, 'application/json');
+        break;
+      }
+      case 'inp':
+      case 'ofmesh': {
+        // 【v3.0 阶段 III】CAE 体网格：Abaqus C3D8 INP / OpenFOAM polyMesh（体素级）
+        if (s.type === 'custom' && !s.customFormula.trim()) {
+          flashToast('自定义公式为空，无法导出体网格');
+          return;
+        }
+        const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
+        const vox = buildVoxelModel({
+          type: s.type, periods: s.cellSize, weights: s.weights,
+          structureMode: s.structureMode, containerShape: s.containerShape,
+          thickness: s.thickness, targetPorosity: s.porosity / 100,
+          iso: baseIso(s), customFormula: s.customFormula,
+        }, caeR);
+        const specimen = s.cellSize;   // 总宽 = cellSize mm（1 period = 1 mm 约定）
+        if (fmt === 'inp') {
+          const eGPa = BASE_MODULUS[s.material] ?? BASE_MODULUS.tc4;
+          const nu = s.material === 'polymer' ? 0.35 : s.material === 'thermal' ? 0.22 : 0.34;
+          exportAbaqusInp(vox, {
+            youngModulusMPa: eGPa * 1000, poisson: nu,
+            nominalStrain: 0.05, specimenSizeMm: specimen,
+          }, `${base}-voxel.inp`);
+          flashToast(`Abaqus INP 导出：${vox.solidCount} 个 C3D8 单元（体素 h≈${(specimen / caeR).toFixed(3)} mm）`);
+        } else {
+          exportOpenfoamPolyMesh(vox, specimen, `${base}-polymesh.zip`, downloadBlob);
+          flashToast('OpenFOAM polyMesh 导出：解压到 case 的 constant/polyMesh/ 即可求解');
+        }
         break;
       }
       case 'vti': {
