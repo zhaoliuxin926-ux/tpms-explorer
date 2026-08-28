@@ -1026,6 +1026,16 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">CT 重构与制造偏差 (Micro-CT)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:4px">
+            <button class="opt" id="btn-ct-demo">生成演示 CT + 偏差分析<span class="o-sub">Otsu+EDT</span></button>
+            <button class="opt" id="btn-ct-clear">清除偏差着色<span class="o-sub">Reset</span></button>
+          </div>
+          <div class="field-note" id="ct-result">生成演示 CT 数据集（名义 TPMS + 过充偏置 + 表面粗糙噪声 + 层间漂移），Otsu 自动阈值分割 → 精确 3D EDT 重构 SDF → 逐顶点制造偏差 Blue-White-Red 热力图（蓝=欠肉 / 红=过充）。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>
