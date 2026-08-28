@@ -42,7 +42,7 @@ import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets }
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
-import { solvePlasticityCompression, type PlasticityResult } from './physics/gpu-plasticity-solver';
+import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { mapElementFieldToVertexColors } from './physics/gpu-plasticity-webgpu';
 import { sampleCoolWarmInto } from './geometry/vertex-coloring';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
@@ -327,7 +327,7 @@ function voxelizeCurrentTPMS(R: number): Uint8Array {
   return solid;
 }
 
-function drawPlasticityCurve(res: PlasticityResult): void {
+function drawPlasticityCurve(res: ReturnType<typeof runCompressionDigitalTwin>): void {
   const cv = document.getElementById('plas-curve') as HTMLCanvasElement | null;
   if (!cv) return;
   cv.style.display = 'block';
@@ -337,13 +337,13 @@ function drawPlasticityCurve(res: PlasticityResult): void {
   ctx.clearRect(0, 0, W, H);
   ctx.strokeStyle = 'rgba(148,163,184,0.4)';
   ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
-  const fMax = Math.max(...res.steps.map(st => st.reaction)) || 1;
+  const fMax = Math.max(...res.curve.map((c) => c.reaction)) || 1;
   ctx.strokeStyle = '#e11d48';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  res.steps.forEach((st, i) => {
-    const px = 14 + ((W - 28) * st.strain) / (res.steps[res.steps.length - 1].strain || 1);
-    const py = H - 12 - ((H - 26) * st.reaction) / fMax;
+  res.curve.forEach((c, i) => {
+    const px = 14 + ((W - 28) * c.strain) / (res.curve[res.curve.length - 1].strain || 1);
+    const py = H - 12 - ((H - 26) * c.reaction) / fMax;
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   });
   ctx.stroke();
@@ -351,7 +351,8 @@ function drawPlasticityCurve(res: PlasticityResult): void {
   ctx.font = '10px sans-serif';
   ctx.fillText('工程应变 ε →', W - 76, H - 3);
   ctx.save();
-  ctx.translate(9, 58); ctx.rotate(-Math.PI / 2);
+  ctx.translate(9, 58);
+  ctx.rotate(-Math.PI / 2);
   ctx.fillText('反力 F（压缩）', 0, 0);
   ctx.restore();
 }
@@ -373,12 +374,12 @@ function runPlasticityDemo(): void {
       const mat = st0.material === 'auto' ? 'tc4' : st0.material;
       const syRel = (BASE_YIELD_STRENGTH[mat] ?? 880) / (BASE_MODULUS[mat] ?? 110);
       const t0 = performance.now();
-      const res = solvePlasticityCompression({
-        R, solid, nu: 0.3, sigmaY: syRel, hardening: 0.05,
-        steps: 8, maxStrain: 0.04, tol: 1e-5, tangent: 'geo',
+      const res = runCompressionDigitalTwin({
+        R, solid, porosity: st0.porosity / 100, sigmaYRatio: syRel, failureStrain: 0.02,
+        hardening: 0.05, steps: 8, maxStrain: 0.04, tol: 1e-5,
       });
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
-      const last = res.steps[res.steps.length - 1];
+      const last = { maxPEEQ: res.peeq.length ? res.peeq.reduce((a, b) => Math.max(a, b), 0) : 0 };
       // ── 视口动画：von Mises → Cool-Warm 顶点色 ──
       const geo = baseGeo;
       const pos = geo?.getAttribute('position')?.array as Float32Array | undefined;
@@ -406,9 +407,9 @@ function runPlasticityDemo(): void {
       }
       drawPlasticityCurve(res);
       if (out) {
-        out.textContent = `R=${R} · 固相 ${res.solidVoxels} 体素 · ${res.allConverged ? '全步收敛 ✓' : '存在未收敛步 ⚠'} · ${dt}s · `
-          + `终态反力 ${last.reaction.toExponential(3)} · maxPEEQ ${last.maxPEEQ.toExponential(2)} · 能量漂移 ${(last.energy.drift * 100).toFixed(3)}%`
-          + `（材料 ${mat}：σy/E = ${syRel.toFixed(4)}）`;
+        out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain?.toFixed(3)}` : '未收敛步'}`} · ${dt}s · `
+          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · GA 预测比 ${res.gaPrediction.toFixed(3)}（DT/GA=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
+          + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`;
       }
     } catch (err) {
       if (out) out.textContent = `求解失败：${err instanceof Error ? err.message : String(err)}`;
