@@ -154,13 +154,28 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
 
   // ──────────────────────────────────────────────────────────────
   // 2. 计算基础 TPMS 场 V（存入 pool.field；后续会被最终场覆盖）
+  //    【v3.0 阶段 I】params.gpuVField 携带 WebGPU 预计算场时直接采用
+  //    （数学语义与 CPU 路径同源，webgpu_parity_audit ≤1e-6 守门），
+  //    跳过三角函数热循环；长度必须精确 N³，否则显式失败不静默截肢。
   // ──────────────────────────────────────────────────────────────
   const V = pool.field.subarray(0, N * N * N);
   let minV = Infinity;
   let maxV = -Infinity;
   let nonFiniteCount = 0;
 
-  if (useLookup) {
+  if (params.gpuVField) {
+    const gpuV = params.gpuVField;
+    if (gpuV.length !== N * N * N) {
+      throw new Error(`WebGPU 预计算场长度 ${gpuV.length} ≠ N³ = ${N * N * N}，拒绝采用（防静默截肢）`);
+    }
+    V.set(gpuV);
+    for (let i = 0; i < V.length; i++) {
+      const v = V[i];
+      if (!Number.isFinite(v)) nonFiniteCount++;
+      if (v < minV) minV = v;
+      if (v > maxV) maxV = v;
+    }
+  } else if (useLookup) {
     for (let iz = 0; iz < N; iz++) {
       const Sz = sn[iz], Cz = cs[iz], C2z = cs2[iz];
       const zB = iz * N * N;

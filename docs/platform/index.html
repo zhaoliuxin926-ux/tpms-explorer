@@ -674,7 +674,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-UhcLDDQN.js"></script>
+  <script type="module" crossorigin src="./assets/index-D4mxMS-e.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-DekO_kuB.js">
 </head>
 <body>
@@ -950,6 +950,16 @@ window.addEventListener('error', function(e) {
             <input type="range" id="manifold-radius" min="8" max="30" value="15" step="0.5">
           </div>
           <div class="field-note">非欧度规空间映射：对生成的封闭网格做顶点级连续弯曲（圆柱 / 环面 / 双曲径向 / 应力线各向异性）。水密性与流形性质由映射的单射性构造保证；圆柱需 R 大于域半宽，环面需满足双半径约束。</div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">GPU 加速 (WebGPU)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">v3.0 Compute</span></button>
+          </div>
+          <div class="field-note" id="gpu-status">探测中…</div>
+          <div class="model-desc">WebGPU Compute Shader 并行填充体素场，网格化仍由 Worker CPU 管线完成；不支持的浏览器自动无感回退，GPU 与 CPU 场数学同源（webgpu_parity_audit ≤1e-6 门禁守护）。</div>
         </div>
       </details>
       <details class="sect">

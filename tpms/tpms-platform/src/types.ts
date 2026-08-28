@@ -78,6 +78,8 @@ export interface AppState {
   };
   /** 【阶段 IV】非欧度规空间映射（identity = 关闭） */
   manifold: ManifoldConfig;
+  /** 【v3.0 阶段 I】WebGPU 场计算加速（自动探测不可用时无感回退 CPU Worker） */
+  gpuAccelerate: boolean;
   customFormula: string;
 }
 
@@ -108,6 +110,7 @@ export const DEFAULT_STATE: AppState = {
     axis: 'x',
   },
   manifold: { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' },
+  gpuAccelerate: true,
   customFormula: '',
 };
 
@@ -162,6 +165,12 @@ export interface BuildParams {
   coloring?: ColoringMode;
   /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */
   endplateMm?: number;
+  /**
+   * 【v3.0 阶段 I】WebGPU 预计算的 V 场（N³ = (R+1)³，弧度域，与 CPU 第 2 步同语义）。
+   * 由主线程 evaluateFieldGPU 产出后随请求传入；Worker 跳过三角函数热循环直接进入
+   * 模式公式/二分。长度校验失败抛错（不静默截肢）。CPU 回退路径不携带此字段。
+   */
+  gpuVField?: Float32Array;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */
