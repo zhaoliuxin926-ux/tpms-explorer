@@ -1,7 +1,7 @@
 # TPMS Explorer v6.0.0-digital-twin-hpc Release Notes（双语）
 
 > 发布日期：2026-08-28 ｜ 前置版本：v5.0.0-fullstack-cae-ecosystem（@623aa53）
-> 里程碑：**31 道 CI 门禁 · 1300+ 断言**（26 门基础上新增 5 门，全绿）
+> 里程碑：**31 道 CI 门禁 · 1000+ 断言**（26 门基础上新增 5 门，全绿）
 
 ---
 
@@ -56,6 +56,6 @@ v6.0 advances the platform from "geometry + linear physics surrogates" to a **no
 - **Stage IV — LPBF thermo-mechanics** (gate 30, 18): Gaussian volumetric heat source serpentine scan, explicit transient conduction with Jacobi double buffering (energy ledger 0.0000%), melt-pool metrics within literature bands (R=5.9e7 K/s, G×R=3.65e15 K²/s), inherent-strain residual stress capped at yield (880 MPa), distortion estimate, three-state process window; sidebar UI card.
 - **Stage V — natural-language CAD agent** (gate 31, 25): zero-dependency bilingual intent parsing → parameter patches + actions + structured logs; clamped ranges, no-hallucination unknowns, help guidance; floating chat panel applies parameters, exports STL/3MF, triggers simulations.
 
-**Engineering discipline**: 31/31 gates green (`npm run test:all`), zero regressions on v2.0–v5.0 suites; atomic per-stage delivery; honest limitations documented in WORKFLOW_GUIDE §26–30.
+**Engineering discipline**: 31/31 gates green (`npm run test:all`), 1000+ assertions, zero regressions on v2.0–v5.0 suites; atomic per-stage delivery; honest limitations documented in WORKFLOW_GUIDE §26–30.
 
-验证：`cd tpms/tpms-platform && npm run test:all`（31 门 1300+ 断言）。
+验证：`cd tpms/tpms-platform && npm run test:all`（31 门 1000+ 断言）。
