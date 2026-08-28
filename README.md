@@ -25,7 +25,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v5.0.0-fullstack-cae-ecosystem）
+### 科研与增材制造特性矩阵（v6.0.0-digital-twin-hpc）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -36,7 +36,12 @@
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 74/74 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
-| 🔗 分享与审计 | URL 全量恢复 + **26 道 CI 门禁 1000+ 断言**（三平台矩阵） | `npm run test:all` |
+| 🔗 分享与审计 | URL 全量恢复 + **31 道 CI 门禁 1300+ 断言**（三平台矩阵） | `npm run test:all` |
+| 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 42 断言 |
+| 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 21 断言 |
+| 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 15 断言 |
+| 🔥 LPBF 热-力耦合 | 高斯体热源瞬态场 + 冷却速率 G×R + 残余应力/翘曲 + 工艺窗口（v6.0） | lpbf_thermo_mechanical_audit 18 断言 |
+| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界钳制不臆造（v6.0） | nl_agent_audit 25 断言 |
 | 🧮 自定义公式沙箱 | 零依赖 AST（无 eval）+ Dual Number AD 精确梯度/Hessian + NumPy/MATLAB 代码生成 | custom_equation_audit 73 断言 |
 | 🌀 RVE 均质化 + E(n) 曲面 | Voigt–Reuss 精确界 + 迂曲度调制方向刚度 + 方向模量球面热力图 | homogenization_audit 13 断言 |
 | 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 12 断言 |
@@ -52,7 +57,7 @@
 | 💥 冲击吸能与模态 | SEA(J/g)/密实化 εd/峰值 σ_peak + 等效梁 6 阶模态（正交简并对） | impact_modal_audit 11 断言 |
 | 🩻 Micro-CT 偏差分析 | Otsu+精确 3D EDT+SDF，制造偏差过充/欠肉热力图 | ct_reconstruction_audit 11 断言 |
 
-> 📝 **Release Notes**：[docs/RELEASE_NOTES_v5.0.0.md](docs/RELEASE_NOTES_v5.0.0.md)（中英双语五阶段明细）｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
+> 📝 **Release Notes**：[docs/RELEASE_NOTES_v6.0.0.md](docs/RELEASE_NOTES_v6.0.0.md)（中英双语五阶段明细）｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。

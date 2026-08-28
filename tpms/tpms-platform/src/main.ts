@@ -43,6 +43,9 @@ import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerific
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
+import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
+import { parseNL, type NLIntent } from './core/nl-agent';
+import { DEFAULT_STATE } from './types';
 import { mapElementFieldToVertexColors } from './physics/gpu-plasticity-webgpu';
 import { sampleCoolWarmInto } from './geometry/vertex-coloring';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
@@ -422,6 +425,102 @@ function runPlasticityDemo(): void {
 }
 
 document.getElementById('btn-plasticity')?.addEventListener('click', runPlasticityDemo);
+
+// ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
+// ── AI 设计助手（v6.0 阶段 V）──────────────────────
+function applyNLIntent(intent: NLIntent): void {
+  const log = document.getElementById('nl-log');
+  const append = (text: string) => {
+    if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; }
+  };
+  append('你：' + (document.getElementById('nl-input') as HTMLInputElement).value);
+  if (intent.kind === 'help' || intent.kind === 'unknown') { append('助手：' + intent.reply); return; }
+  const patches: Partial<AppState> = {};
+  const p = intent.patches;
+  if (p.type) patches.type = p.type as AppState['type'];
+  if (p.porosity !== undefined) patches.porosity = p.porosity;
+  if (p.cellSize !== undefined) patches.cellSize = p.cellSize;
+  if (p.thickness !== undefined) patches.thickness = p.thickness;
+  if (p.material) patches.material = p.material as AppState['material'];
+  if (p.structureMode) patches.structureMode = p.structureMode as AppState['structureMode'];
+  if (p.endplateMm !== undefined) patches.endplateMm = p.endplateMm;
+  if (p.containerShape) patches.containerShape = p.containerShape as AppState['containerShape'];
+  if (Object.keys(patches).length > 0) {
+    pushHistory();
+    setState(patches);
+    append(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
+  } else {
+    append('助手：' + intent.reply);
+  }
+  for (const a of intent.actions) {
+    if (a === 'export-stl' || a === 'export-3mf') {
+      try {
+        const sNow = getState();
+        const base = `tpms-${sNow.type}-p${sNow.porosity}`;
+        if (!baseGeo) throw new Error('几何尚未就绪');
+        const pos = baseGeo.attributes.position.array as Float32Array;
+        const idx = baseGeo.index!.array as Uint32Array;
+        const scale = wcToMmFactor(sNow.cellSize);
+        if (a === 'export-stl') exportBinarySTL(pos, idx, `${base}.stl`, scale);
+        else export3MF(pos, idx, `${base}.3mf`, scale, { configName: base, porosity: sNow.porosity, endplateMm: sNow.endplateMm, structureMode: sNow.structureMode });
+        append(`助手：已导出 ${base}.${a === 'export-stl' ? 'stl' : '3mf'} ✓`);
+      } catch (err) {
+        append(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`);
+      }
+    } else if (a === 'run-simulation') {
+      runPlasticityDemo();
+      append('助手：已触发数字孪生压溃仿真（见视口面板）');
+    } else if (a === 'reset') {
+      pushHistory();
+      setState({ ...DEFAULT_STATE });
+      append('助手：已恢复默认参数 ✓');
+    } else if (a === 'preset-bone') {
+      pushHistory();
+      setState({ material: 'tc4', structureMode: 'solid_network' });
+      append('助手：已套用骨支架口径（Ti-6Al-4V · 实体网络）');
+    }
+  }
+}
+
+function wireNLChat(): void {
+  const fab = document.getElementById('nl-fab');
+  const panel = document.getElementById('nl-panel');
+  const input = document.getElementById('nl-input') as HTMLInputElement | null;
+  const send = () => {
+    if (!input || !input.value.trim()) return;
+    const intent = parseNL(input.value);
+    applyNLIntent(intent);
+    input.value = '';
+  };
+  fab?.addEventListener('click', () => { if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; });
+  document.getElementById('nl-send')?.addEventListener('click', send);
+  input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  document.querySelectorAll('.nl-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (input) input.value = (chip as HTMLElement).dataset.q ?? '';
+      send();
+    });
+  });
+}
+wireNLChat();
+
+document.getElementById('btn-lpbf')?.addEventListener('click', () => {
+  const out = document.getElementById('lpbf-result');
+  const power = Number((document.getElementById('lpbf-power') as HTMLInputElement)?.value ?? 200);
+  const speed = Number((document.getElementById('lpbf-speed') as HTMLInputElement)?.value ?? 0.8);
+  try {
+    const res = simulateLPBF({ N: 32, dx: 25e-6, power, speed, totalTime: 1.2e-3 });
+    if (out) {
+      out.style.display = 'block';
+      out.textContent = `窗口：${res.window} · 峰值 ${res.peakTemperature.toFixed(0)}K（熔池 ${res.meltPoolVoxels} 体素）· `
+        + `R=${res.coolingRate.toExponential(1)}K/s · G×R=${res.gR.toExponential(1)}K²/s · `
+        + `σ_res=${(res.residualStress / 1e6).toFixed(0)}MPa · 翘曲 ${(res.distortion * 1e6).toFixed(2)}µm · `
+        + `能量平衡 ${(res.energyBalance * 100).toFixed(3)}%`;
+    }
+  } catch (err) {
+    if (out) out.textContent = `模拟失败：${err instanceof Error ? err.message : String(err)}`;
+  }
+});
 
 // ── 重建调度 ─────────────────────────────────────────────
 /** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
