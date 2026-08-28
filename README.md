@@ -1,7 +1,7 @@
 # 工作区 · 总导航
 
-![release](https://img.shields.io/badge/release-v3.0.0--nextgen--cae-2563eb)
-![ci](https://img.shields.io/badge/CI-16%2F16%20gates%C2%B7658%2B%20assertions-16a34a)
+![release](https://img.shields.io/badge/release-v4.0.0--multiphysics--inverse--design-2563eb)
+![ci](https://img.shields.io/badge/CI-21%2F21%20gates%C2%B7780%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
 ![license-note](https://img.shields.io/badge/status-独立开源作品-8b5cf6)
@@ -25,7 +25,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v3.0.0-nextgen-cae）
+### 科研与增材制造特性矩阵（v4.0.0-multiphysics-inverse-design）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -36,7 +36,7 @@
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 74/74 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
-| 🔗 分享与审计 | URL 全量恢复（含端板/混合/映射/应力/分级）+ **16 道 CI 门禁 658+ 断言**（三平台矩阵） | `npm run test:all` |
+| 🔗 分享与审计 | URL 全量恢复 + **21 道 CI 门禁 780+ 断言**（三平台矩阵） | `npm run test:all` |
 | 🧮 自定义公式沙箱 | 零依赖 AST（无 eval）+ Dual Number AD 精确梯度/Hessian + NumPy/MATLAB 代码生成 | custom_equation_audit 73 断言 |
 | 🌀 RVE 均质化 + E(n) 曲面 | Voigt–Reuss 精确界 + 迂曲度调制方向刚度 + 方向模量球面热力图 | homogenization_audit 13 断言 |
 | 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 12 断言 |
@@ -46,8 +46,13 @@
 | 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步）与 polyMesh 五件套直通求解，免 snappyHexMesh | cae_mesh_audit 46 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |
 | 🌿 多级分形 TPMS | F=F_macro+λ·F_micro(Nx) 双重孔隙，coarea 比表面积分离 + 微孔连通率 100% | hierarchical_audit 18 断言 |
+| 🎯 逆向设计引擎 | 目标 E*/κ/P 反解最优构型（Nelder-Mead+LM，8 型枚举，κ 下限约束） | inverse_design_audit 23 断言（逆向犯罪 ≤3%） |
+| 🌀 庞加莱双曲映射 | 2R₀²r/(R₀²−r²) 骨套筒外密内疏 + 截断延拓保单射 | poincare_metric_audit 12 断言 |
+| 🔬 CAE 验证直通 | Abaqus/OpenFOAM 自动求解脚本 + E_FEM/σ_pl/κ/WSS 提取 + 对比矩阵 | cae_verification_audit 25 断言 |
+| 💥 冲击吸能与模态 | SEA(J/g)/密实化 εd/峰值 σ_peak + 等效梁 6 阶模态（正交简并对） | impact_modal_audit 11 断言 |
+| 🩻 Micro-CT 偏差分析 | Otsu+精确 3D EDT+SDF，制造偏差过充/欠肉热力图 | ct_reconstruction_audit 11 断言 |
 
-> 📝 **Release Notes**：[docs/RELEASE_NOTES_v3.0.0.md](docs/RELEASE_NOTES_v3.0.0.md)（中英双语：WebGPU/周期 RVE/CAE 体网格/应力引导/多级分形五阶段交付明细）｜[v2.4.0](docs/RELEASE_NOTES_v2.4.0.md)
+> 📝 **Release Notes**：[docs/RELEASE_NOTES_v4.0.0.md](docs/RELEASE_NOTES_v4.0.0.md)（中英双语：逆向设计/庞加莱映射/CAE 验证链/冲击模态/CT 偏差五阶段明细）｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)｜[v2.4.0](docs/RELEASE_NOTES_v2.4.0.md)
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
