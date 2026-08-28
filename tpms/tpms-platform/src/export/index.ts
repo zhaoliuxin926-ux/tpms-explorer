@@ -7,3 +7,4 @@ export { generateBibTeX, generateJSONSidecar } from './bibtex-sidecar';
 export { buildVoxelModel, type VoxelModel, type VoxelModelParams } from './voxel-model';
 export { buildAbaqusInp, exportAbaqusInp, type AbaqusExportOptions } from './abaqus-inp-exporter';
 export { buildOpenfoamPolyMesh, exportOpenfoamPolyMesh, buildStoredZip, type PolyMeshBuild } from './openfoam-polymesh-exporter';
+export { buildVerificationSuite, exportVerificationSuite } from './verification-suite';

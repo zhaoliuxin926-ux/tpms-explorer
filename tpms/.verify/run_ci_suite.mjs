@@ -103,6 +103,7 @@ try {
   results.push(['hierarchical_audit 多级分形+应力单调性（门16）', await runStep('分级TPMS审计', 'hierarchical_audit.mjs')]);
   results.push(['inverse_design_audit 逆向设计引擎（门17）', await runStep('逆向设计审计', 'inverse_design_audit.mjs')]);
   results.push(['poincare_metric_audit 庞加莱双曲映射（门18）', await runStep('庞加莱映射审计', 'poincare_metric_audit.mjs')]);
+  results.push(['cae_verification_audit CAE验证链（门19）', await runStep('CAE验证链审计', 'cae_verification_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
