@@ -3,7 +3,7 @@
 > 本指南面向四类工作流：**3D 打印与压缩试验**、**OpenFOAM 灌注 CFD 模拟**、**Python/MATLAB 脚本复现**、
 > **学术渲染与论文汇报**。所有导出链路均经过 CI 门禁审计（见文末质量基准表），数据可溯源、参数可复现。
 >
-> 适用版本：`v3.0.0-nextgen-cae` 及以上。
+> 适用版本：`v4.0.0-multiphysics-inverse-design` 及以上。
 
 ---
 
@@ -25,6 +25,10 @@
 14. [OpenFOAM polyMesh 流体秒级灌注仿真实战](#十四openfoam-polymesh-流体秒级灌注仿真实战-v30) 🆕 v3.0
 15. [主应力迹线仿生多孔骨支架参数设计原则](#十五主应力迹线仿生多孔骨支架参数设计原则-v30) 🆕 v3.0
 16. [多级分形 TPMS 换热器与生物支架多尺度应用](#十六多级分形-tpms-换热器与生物支架多尺度应用-v30) 🆕 v3.0
+17. [逆向力学与传质多目标优化设计实战](#十七逆向力学与传质多目标优化设计实战-v40) 🆕 v4.0
+18. [庞加莱非欧双曲多孔骨套筒建模范式](#十八庞加莱非欧双曲多孔骨套筒建模范式-v40) 🆕 v4.0
+19. [Abaqus / OpenFOAM 自动化求解与验证后处理](#十九abaqus--openfoam-自动化求解与验证后处理-v40) 🆕 v4.0
+20. [工业 Micro-CT 制造偏差表征与精度补偿](#二十工业-micro-ct-制造偏差表征与精度补偿-v40) 🆕 v4.0
 
 ---
 
@@ -501,6 +505,8 @@ redteam_matrix_audit（100+ 案例）：孔隙率极端 {1%, 99%} × 8 曲面 ×
 
 **v3.0 新增四门**：webgpu_parity_audit（34 断言：指令 IR 双后端完备性 + 8 内置/4 custom/2 hybrid 万点对拍 0.00e+0 + 模板逐字同步 + 端到端水密 + 无 GPU 优雅降级）；periodic_rve_audit（88 断言：16 门内拓扑最重——3×3×3 拼接内部缝合 100% 水密、PBC 面配对 100% 覆盖、v_right−v_left=(L,0,0) ≤1e-5、五重守卫抛错）；cae_mesh_audit（46 断言：INP 面闭合/Jacobian=h³/PBC 集不交 + polyMesh owner<neighbour/法线定向/patch 连续/cell-face 关联精确守恒 + ZIP CRC32 逐条目）；hierarchical_audit（18 断言：分级水密/λ=0 退化/微孔连通率 ≥95%/双重比表面积 coarea 分离/应力-相对密度 vm 五分桶单调递增）。合计 **16 门 · 658+ 断言**。
 
+**v4.0 新增四门**：inverse_design_audit（23 断言：10 组逆向犯罪测试 100% 收敛且前向误差 ≤3%、κ 下限约束语义、确定性、LM 不劣性）；poincare_metric_audit（12 断言：det(J)>0 全域 9000 采样、径向单射含延拓段、水密拓扑继承、有向边配对、py 静态同源）；cae_verification_audit（25 断言：runner 语法 ast/内容完备、脚本↔导出器节点集/patch 交叉核对、FoamFile 规范、ZIP 完整性）；impact_modal_audit（11 断言：SEA∈[5,60] J/g 物理带、ε_d 解析、正交简并对、√ρ̄ 标度）+ ct_reconstruction_audit（11 断言：Otsu 谷区、EDT 暴力逐体素一致、bias 注入恢复 ≤0.1mm）。合计 **21 门 · 780+ 断言**。
+
 
 ## 十三、Abaqus 有限元单胞均质化与 PBC 施加教程 🆕 v3.0
 
@@ -548,3 +554,49 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - **统计口径**：S_total/S_macro 由 coarea 公式 MC 积分（|∇F| 均值），微孔附加 = S_total − S_macro；微孔连通率 = 微场空隙最大 6 连通簇占比（≥95% 视为贯通，hierarchical_audit 实测 100%）；
 - **组合**：可与应力场引导叠加（先主轴拉伸再分级调制）；与 Hybrid 互斥（同为场级组合层）；
 - **打印校验**：λ 过小（<0.1）微织构低于打印分辨率（SLM ~80 µm）将被熔池抹平；导出 STL 前先核对切片预览。
+
+## 十七、逆向力学与传质多目标优化设计实战 🆕 v4.0
+
+「逆向性能求解器 (Inverse Designer)」面板：从「参数调结构」到「性能定结构」。
+
+- **目标语义**：E* 与孔隙率 P 为等值约束（相对残差平方）；κ 为**下限约束**（κ ≥ κ_target，只罚不足）——松质骨/散热沉的渗透率指标天然是下界，等式语义会因前向 κ 高于下界两个量级而伪不可行（门禁 17 红测抓获后修正）。
+- **求解器**：Nelder-Mead 自适应单纯形（双起点全局探索）→ Levenberg-Marquardt 阻尼最小二乘精化（数值 Jacobian + 手写 3×3 高斯消元，零第三方依赖）。8 类曲面外层枚举，按目标泛函 J 升序输出 Top-3。
+- **前向代理**：E* = C1·ρ̄²·E0·α（Gibson-Ashby）+ κ = ε³/(C_k·Sv²·(1−ε)²)（Kozeny-Carman，Sv = cArea(type)/cellSize）。解析代理口径（非 FEA），几何级精确验证走 CAE 验证包（§19）。
+- **可行域**：P ∈ [2%, 98%]、cellSize ∈ [1, 5] mm、α ∈ [0.5, 2.5]（<1 为方向软化——三处 clamp 必须同域，NM 自由演化/LM 钳制/解报告的域不一致会让 LM 从 NM 终点跳变边界，成本 4e-13→1.2e-1，门禁 17 红测抓获）。
+- **审计口径**：门禁 17 的 10 组「逆向犯罪测试」由已知参数生成目标再反解，断言 100% 收敛且前向误差 ≤3%；解剖预设（皮质骨/松质骨/散热沉）断言可解子集命中。
+
+## 十八、庞加莱非欧双曲多孔骨套筒建模范式 🆕 v4.0
+
+「空间映射 → 庞加莱双曲度规」：r' = 2R₀²·r/(R₀²−r²)，自中心向外围非线性拉伸加密——骨套筒外密内疏的解剖学梯度。
+
+- **径向截断正则化**：r_c = 0.95·R₀ 处以截点斜率线性延拓（f(r_c) + f'(r_c)·(r−r_c)），斜率恒正 ⇒ 全域单射、无坐标发散、det(J) > 0（poincare_metric_audit 9000 采样 + 边界带覆盖）。硬截断（半径钳制）会折叠外围壳层——必须用斜率延拓。
+- **映射正确性不变量**：拓扑继承（三角数不变）、水密继承（open=0）、有向边配对完整（det>0 的单射映射保定向）。注意「面法线径向朝外」是**错误**不变量——gyroid 曲面法线指向四面八方，与射线方向无关。
+- **URL/脚本**：`?mfd=poincare&mfr=12`；Python 导出脚本含逐式向量翻译（rad = mm·2π/cellSize 换算后 warp），MATLAB 含径向族（poincare/hyperbolic）。
+- **参数选择**：R₀ 取 10~20（弧度域）；R₀ 过小时域角（r_max = π√3·k ≈ 5.44k）远超截断点，外围全为线性延拓段（双曲特征弱化）。
+
+## 十九、Abaqus / OpenFOAM 自动化求解与验证后处理 🆕 v4.0
+
+导出中心 →【CAE 验证脚本包】：`abaqus_auto_runner.py` + `openfoam_auto_runner.py` + 壳脚本 + 对比矩阵模板。
+
+**Abaqus 准静态压缩**（abq python 2.7 方言，无 f-string）：
+```
+abaqus cae noGUI=abaqus_auto_runner.py -- --inp tpms-gyroid-voxel.inp --specimen 1.0
+```
+JobFromInputFile 提交 → NSET_TOP 反力/位移提取 → `E_FEM`（0~5% 线性拟合）、`σ_peak`、`σ_pl`（5~25% 平台均值）→ CSV。
+
+**OpenFOAM 达西渗流**（python3）：
+```
+python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
+```
+自动构建 system/ + 0/（simpleFoam、inlet/outlet 定压、wall noSlip）→ 求解 → `κ = Q·μL/(A·Δp)` + WSS 均值。
+
+**对比矩阵**：`comparison_template.csv` 七项指标（E_FEM/σ_peak/σ_pl/κ/WSS/SEA/f1），理论列来自平台物理面板（Gibson-Ashby/Kozeny-Carman/impact-energy 模块），`rel_error ≤ 15%` 为解析代理口径 PASS。cae_verification_audit 断言 runner 期望的节点集/patch 名与导出器输出 100% 交叉匹配 + FoamFile class/object 声明规范 + ZIP 完整性。
+
+## 二十、工业 Micro-CT 制造偏差表征与精度补偿 🆕 v4.0
+
+「CT 重构与制造偏差」面板：设计 → 打印 → CT 扫描 → 精度对比的科研闭环。
+
+- **管线**：灰度体素栈 → **Otsu 自动阈值**（要求双峰直方图：固相亮/孔隙暗——单峰连续灰度会让 Otsu 阈值系统性偏离等值面，实测 0.5mm 假偏差红测的根因）→ **精确 3D EDT**（Felzenszwalb 抛物线包络可分离三趟，5³ 暴力逐体素一致性断言）→ 有符号距离场 SDF（固相内为正）。
+- **偏差语义**：Δd = SDF_scan(名义顶点)。Δd > 0 = 过充（红）；Δd < 0 = 欠肉（蓝）；RMS 为制造误差总量。门禁 21 注入 bias=0.25mm 的演示 CT，恢复偏差 |均值 − bias| ≤ 0.1mm。
+- **分辨率纪律**：偏差表征的可分辨下限 = CT 体素尺寸（宽/R）；亚体素偏置（如 0.08mm @ 0.21mm 体素）不可恢复——先核对体素尺寸再设计补偿量。
+- **补偿回路**：正偏差（过充）区域 → 下调平台壁厚/孔隙率参数重新导出 → 二次打印 → 二次 CT 比对，收敛到 ±1 体素精度。
