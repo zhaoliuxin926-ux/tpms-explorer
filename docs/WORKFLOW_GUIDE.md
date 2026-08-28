@@ -3,7 +3,7 @@
 > 本指南面向四类工作流：**3D 打印与压缩试验**、**OpenFOAM 灌注 CFD 模拟**、**Python/MATLAB 脚本复现**、
 > **学术渲染与论文汇报**。所有导出链路均经过 CI 门禁审计（见文末质量基准表），数据可溯源、参数可复现。
 >
-> 适用版本：`v4.0.0-multiphysics-inverse-design` 及以上。
+> 适用版本：`v5.0.0-fullstack-cae-ecosystem` 及以上。
 
 ---
 
@@ -29,6 +29,11 @@
 18. [庞加莱非欧双曲多孔骨套筒建模范式](#十八庞加莱非欧双曲多孔骨套筒建模范式-v40) 🆕 v4.0
 19. [Abaqus / OpenFOAM 自动化求解与验证后处理](#十九abaqus--openfoam-自动化求解与验证后处理-v40) 🆕 v4.0
 20. [工业 Micro-CT 制造偏差表征与精度补偿](#二十工业-micro-ct-制造偏差表征与精度补偿-v40) 🆕 v4.0
+21. [原生 Web Worker 有限元均质化与 LBM 流体求解实战](#二十一原生-web-worker-有限元均质化与-lbm-流体求解实战-v50) 🆕 v5.0
+22. [三维交互式 CAE 边界条件拾取与载荷工况定义](#二十二三维交互式-cae-边界条件拾取与载荷工况定义-v50) 🆕 v5.0
+23. [临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读](#二十三临床-micro-ct-dicomtiff-导入与骨形态计量学参数解读-v50) 🆕 v5.0
+24. [网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南](#二十四网页端直接生成-3d-打印-g-code-与拓竹klipper-上机指南-v50) 🆕 v5.0
+25. [神经网络多物理场代理模型与 Pareto 逆向设计前沿](#二十五神经网络多物理场代理模型与-pareto-逆向设计前沿-v50) 🆕 v5.0
 
 ---
 
@@ -600,3 +605,92 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **偏差语义**：Δd = SDF_scan(名义顶点)。Δd > 0 = 过充（红）；Δd < 0 = 欠肉（蓝）；RMS 为制造误差总量。门禁 21 注入 bias=0.25mm 的演示 CT，恢复偏差 |均值 − bias| ≤ 0.1mm。
 - **分辨率纪律**：偏差表征的可分辨下限 = CT 体素尺寸（宽/R）；亚体素偏置（如 0.08mm @ 0.21mm 体素）不可恢复——先核对体素尺寸再设计补偿量。
 - **补偿回路**：正偏差（过充）区域 → 下调平台壁厚/孔隙率参数重新导出 → 二次打印 → 二次 CT 比对，收敛到 ±1 体素精度。
+
+## 二十一、原生 Web Worker 有限元均质化与 LBM 流体求解实战 🆕 v5.0
+
+「原生 CAE 快速求解」面板：无需外部求解器，浏览器内直接解算等效刚度与渗透率。
+
+- **微观 FEA（J-PCG）**：体素网格 → 6 组单位应变 KUBC 工况 → Jacobi 预条件共轭梯度 → 6×6 Voigt C 矩阵。全实心体素 ν=0.2 patch test 解析精确（C11=λ+2μ, C44=μ, Zener=1）。
+- **FD-Darcy**：z 向压差（p=1/0）SOR 求解变系数扩散方程 → κ=QL/(A·Δp)。单管解析锚点精确命中 1/R²。
+- **口径声明**：微观 FEA 剪切波动场 b=0 为结构性未解（bugs.md v5.0 条目），C44–C66 行为 Voigt 上界口径；FD-Darcy 为标量压力近似（未解析 Stokes 速度场）。
+- **分辨率**：FEA 建议 20³（秒级），LBM/Darcy 建议 12~16³（亚秒）。
+
+## 二十二、三维交互式 CAE 边界条件拾取与载荷工况定义 🆕 v5.0
+
+「CAE 边界拾取」模式：Raycaster 点击 → 法向角区域生长（≤25°）→ 面集高亮。
+
+- **BC 类型**：FIXED（全约束）/ PRESSURE（法向压强）/ INLET / OUTLET；
+- **导出注入**：INP 追加 `*NSET, NSET=BC_xxx` + `*BOUNDARY` 或 `*DSLOAD`；FOAM boundary 字典追加 patch 条目；
+- **映射守恒**：面集→节点集由构造保证（facesToNodes 去重排序），boundary_picker_audit 门禁校验。
+
+## 二十三、临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读 🆕 v5.0
+
+「CT 重构」面板扩展：支持拖入 .dcm 序列或 .tif 堆栈。
+
+- **DICOM**：显式 VR LE 子集解析（Rows/Cols/BitsAllocated/Rescale/PixelSpacing/SliceThickness），16bit signed + Rescale → 8bit 归一化；仅支持未压缩传输语法。
+- **骨形态计量**：BV/TV（体积分数）、Tb.Th（2×EDT 均值，mm）、Tb.Sp（2×孔隙 EDT 均值）、Tb.N（BV/TV/Tb.Th, mm⁻¹）、SMI（网格法面积加权法向偏差）。gyroid 壳 SMI < 1.5（板状），HA/β-TCP 烧结支架 SMI ~ 0–1。
+- **临床口径**：BV/TV 与 µCT/QCT 一致；Tb.Th 为 EDT 近似（非距离脊），≥64³ 采样时误差 ~5%。
+
+## 二十四、网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南 🆕 v5.0
+
+「打印路径预览」模式 + 导出中心【G-code】按钮。
+
+- **切片**：三角网格 z 等距切片 → 2D 轮廓链合 → 扫描线填充（80% 线距保证粘结）。
+- **G-code**：Marlin/Klipper/Bambu 三预设头部；回抽（长 travel 自动 retract/unretract）；E = 路径长 × 线宽 × 层高 / 耗材截面。
+- **上机**：Bambu 拷入 SD 卡 → P1S 局域网工作室导入；Klipper Mainsail/Fluidd 上传。
+- **诚实边界**：单壁轮廓无壁厚偏移环路；桥接/悬垂未处理；体积偏差 ~10–20%（量化+重叠），精确校准需打印标定塔。
+
+## 二十五、神经网络多物理场代理模型与 Pareto 逆向设计前沿 🆕 v5.0
+
+「ML 代理」模块：自研前馈 MLP（ReLU 隐层 + 线性输出，零依赖 Float64 矩阵运算），SGD 在线训练。
+
+- **教师信号**：解析代理（Gibson-Ashby E*/Kozeny-Carman κ/SEA 平台理想化）；
+- **Pareto 前沿**：非支配排序（E 最大化 + κ 最大化 + SEA 最大化）→ 前沿点过滤；
+- **演示口径**：MLP 训练 MSE 收敛 ≥10×；Pareto 非支配性由 ml_pareto_audit 校验。生产精度需外部数据蒸馏（论文 future work）。
+GUIDE_EOF
+echo "chapters appended"
+__zcode_status=$?
+if [ "$__zcode_status" -eq 0 ]; then pwd -P > '/c/Users/ADMINI~1/AppData/Local/Temp/zcode-51cf3aea-8620-4b49-b0df-1a3523cb2951-cwd'; fi
+exit "$__zcode_status"
+
+## 二十一、原生 Web Worker 有限元均质化与 LBM 流体求解实战 🆕 v5.0
+
+「原生 CAE 快速求解」面板：无需外部求解器，浏览器内直接解算等效刚度与渗透率。
+
+- **微观 FEA（J-PCG）**：体素网格 → 6 组单位应变 KUBC 工况 → Jacobi 预条件共轭梯度 → 6×6 Voigt C 矩阵。全实心体素 ν=0.2 patch test 解析精确（C11=λ+2μ, C44=μ, Zener=1）。
+- **FD-Darcy**：z 向压差（p=1/0）SOR 求解变系数扩散方程 → κ=QL/(A·Δp)。单管解析锚点精确命中 1/R²。
+- **口径声明**：微观 FEA 剪切波动场 b=0 为结构性未解（bugs.md v5.0 条目），C44–C66 行为 Voigt 上界口径；FD-Darcy 为标量压力近似（未解析 Stokes 速度场）。
+- **分辨率**：FEA 建议 20³（秒级），FD-Darcy 建议 12~16³（亚秒）。
+
+## 二十二、三维交互式 CAE 边界条件拾取与载荷工况定义 🆕 v5.0
+
+「CAE 边界拾取」模式：Raycaster 点击 → 法向角区域生长（≤25°）→ 面集高亮。
+
+- **BC 类型**：FIXED（全约束）/ PRESSURE（法向压强）/ INLET / OUTLET；
+- **导出注入**：INP 追加 `*NSET, NSET=BC_xxx` + `*BOUNDARY` 或 `*DSLOAD`；FOAM boundary 字典追加 patch 条目；
+- **映射守恒**：面集→节点集由构造保证（facesToNodes 去重排序），boundary_picker_audit 门禁校验。
+
+## 二十三、临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读 🆕 v5.0
+
+「CT 重构」面板扩展：支持拖入 .dcm 序列或 .tif 堆栈。
+
+- **DICOM**：显式 VR LE 子集解析（Rows/Cols/BitsAllocated/Rescale/PixelSpacing/SliceThickness），16bit signed + Rescale → 8bit 归一化；仅支持未压缩传输语法。
+- **骨形态计量**：BV/TV（体积分数）、Tb.Th（2×EDT 均值，mm）、Tb.Sp（2×孔隙 EDT 均值）、Tb.N（BV/TV/Tb.Th, mm⁻¹）、SMI（网格法面积加权法向偏差）。gyroid 壳 SMI < 1.5（板状）。
+- **临床口径**：BV/TV 与 µCT/QCT 一致；Tb.Th 为 EDT 近似（非距离脊），≥64³ 采样时误差 ~5%。
+
+## 二十四、网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南 🆕 v5.0
+
+「打印路径预览」模式 + 导出中心【G-code】按钮。
+
+- **切片**：三角网格 z 等距切片 → 2D 轮廓链合 → 扫描线填充（80% 线距保证粘结）。
+- **G-code**：Marlin/Klipper/Bambu 三预设头部；回抽（长 travel 自动 retract/unretract）；E = 路径长 × 线宽 × 层高 / 耗材截面。
+- **上机**：Bambu 拷入 SD 卡 → P1S 局域网工作室导入；Klipper Mainsail/Fluidd 上传。
+- **诚实边界**：单壁轮廓无壁厚偏移环路；桥接/悬垂未处理；体积偏差 ~10–20%（量化+重叠）。
+
+## 二十五、神经网络多物理场代理模型与 Pareto 逆向设计前沿 🆕 v5.0
+
+「ML 代理」模块：自研前馈 MLP（ReLU 隐层 + 线性输出，零依赖 Float64 矩阵运算），SGD 在线训练。
+
+- **教师信号**：解析代理（Gibson-Ashby E*/Kozeny-Carman κ/SEA 平台理想化）；
+- **Pareto 前沿**：非支配排序（E 最大化 + κ 最大化 + SEA 最大化）→ 前沿点过滤；
+- **演示口径**：MLP 训练 MSE 收敛 ≥10×；Pareto 非支配性由 ml_pareto_audit 校验。生产精度需外部数据蒸馏。
