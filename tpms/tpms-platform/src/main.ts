@@ -37,6 +37,7 @@ import {
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
+import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
@@ -1410,6 +1411,37 @@ function bindUIEvents(): void {
     syncUI(getState());
     scheduleRebuild(false);
     flashToast(`已应用最优解：${best.type}（P=${(best.params.porosity * 100).toFixed(0)}%）`);
+  });
+
+  // 【v4.0 阶段 V】CT 重构与制造偏差
+  document.getElementById('btn-ct-demo')?.addEventListener('click', () => {
+    const s = getState();
+    if (!baseGeo || s.model === 'strut') { flashToast('请先生成有效曲面（线框模式无偏差语义）'); return; }
+    try {
+      const recon = generateDemoCT({ type: s.type, periods: s.cellSize, structureMode: s.structureMode === 'gradient_shell' ? 'shell' : s.structureMode, iso: lastIsoUsed, R: 64, widthMm: 10, biasMm: 0.25, roughness: 0.15 });
+      const pos = baseGeo.attributes.position.array as Float32Array;
+      const vc = baseGeo.attributes.position.count;
+      const { deviations, stats } = sampleDeviation(recon, pos, vc);
+      const colors = deviationColors(deviations, Math.max(0.05, Math.max(Math.abs(stats.maxPositive), Math.abs(stats.maxNegative), 0.05)));
+      baseGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const mat = getMaterial(s.material, s.model);
+      mat.vertexColors = true;
+      mat.needsUpdate = true;
+      requestRender();
+      const el = document.getElementById('ct-result');
+      if (el) el.textContent = `偏差统计（vs 名义 ${s.type}）：过充 +${stats.maxPositive.toFixed(3)} mm ｜ 欠肉 ${stats.maxNegative.toFixed(3)} mm ｜ RMS ${stats.rms.toFixed(3)} mm ｜ 均值 ${stats.mean.toFixed(3)} mm（CT 64³，体素 ${(10 / 64).toFixed(2)} mm）`;
+      flashToast('CT 偏差分析完成：过充红 / 欠肉蓝 / 贴合白');
+    } catch (err) {
+      flashToast('CT 分析失败：' + (err instanceof Error ? err.message : String(err)));
+    }
+  });
+  document.getElementById('btn-ct-clear')?.addEventListener('click', () => {
+    baseGeo?.deleteAttribute('color');
+    const mat = getMaterial(getState().material, getState().model);
+    mat.vertexColors = false;
+    mat.needsUpdate = true;
+    requestRender();
+    flashToast('已清除偏差着色');
   });
 
   // 【v3.0 阶段 V】多级分形 TPMS：启用 + 微曲面 + 频率/幅值
