@@ -12,7 +12,7 @@ import { WorkerBridge } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
-import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS } from './physics/gibson-ashby';
+import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH } from './physics/gibson-ashby';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
@@ -36,6 +36,7 @@ import {
 } from './export';
 import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
+import { computeCrush, computeModal } from './physics/impact-energy';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
@@ -271,6 +272,27 @@ function renderFrame(): void {
 
 // 页面卸载时取消动画帧，避免内存泄漏
 window.addEventListener('beforeunload', () => cancelAnimationFrame(animId));
+
+// ── 动态冲击/模态统计（v4.0 阶段 IV）──────────────────────
+function updateImpactStats(): void {
+  const s = getState();
+  const el = {
+    sea: document.getElementById('stat-sea'),
+    epsd: document.getElementById('stat-epsd'),
+    f1: document.getElementById('stat-f1'),
+  };
+  try {
+    const sigmaYs = BASE_YIELD_STRENGTH[s.material] ?? BASE_YIELD_STRENGTH.tc4;
+    const rho = 1 - s.porosity / 100;
+    const cr = computeCrush(rho, s.type, sigmaYs);
+    const md = computeModal(rho, s.type, s.cellSize);
+    if (el.sea) el.sea.textContent = `${cr.seaJPerG.toFixed(1)} J/g`;
+    if (el.epsd) el.epsd.textContent = `${(cr.epsilonD * 100).toFixed(0)}%`;
+    if (el.f1) el.f1.textContent = `${md.f1.toFixed(0)} Hz`;
+  } catch {
+    if (el.sea) el.sea.textContent = '—';
+  }
+}
 
 // ── 重建调度 ─────────────────────────────────────────────
 /** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
@@ -894,6 +916,7 @@ function showEmpty(show: boolean): void {
 
 // ── 统计更新 ─────────────────────────────────────────────
 function updateStats(): void {
+  try { updateImpactStats(); } catch { /* 统计失败不阻塞 */ }
   const porosityEl = document.getElementById('stat-porosity');
   const materialEl = document.getElementById('stat-material');
   const vertEl = document.getElementById('stat-verts');
