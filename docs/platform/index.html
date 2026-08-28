@@ -674,7 +674,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-D4mxMS-e.js"></script>
+  <script type="module" crossorigin src="./assets/index-DBc5EQ4m.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-DekO_kuB.js">
 </head>
 <body>
@@ -717,7 +717,7 @@ window.addEventListener('error', function(e) {
         <div class="loading" id="loading"><span class="sp"></span>重建曲面中…</div>
         <div class="stat-overlay" id="statbox">
           <button class="stat-summary" id="stat-toggle" title="展开 / 收起工程指标"><span id="stat-mini">孔隙率 <b id="stat-porosity">—</b> · 材料 <b id="stat-material">—</b></span><span class="stat-caret">▸</span></button>
-          <div class="stat-full" id="stats">顶点 <b id="stat-verts">—</b>　三角面 <b id="stat-tris">—</b><br>比表面积 <b id="stat-sv">—</b>　等效模量 <b id="stat-young">—</b><br>屈服强度 <b id="stat-sigma">—</b>　C1 <b id="stat-c1">—</b><br>渗透率 <b id="stat-perm">—</b>　平均孔径 <b id="stat-pore">—</b><br>迂曲度 <b id="stat-tort">—</b>　各向异性 <b id="stat-aniso">—</b><br>τ 几何 x/y/z <b id="stat-tort-xyz">—</b><br>Zener A · E(GPa) <b id="stat-zener">—</b></div>
+          <div class="stat-full" id="stats">顶点 <b id="stat-verts">—</b>　三角面 <b id="stat-tris">—</b><br>比表面积 <b id="stat-sv">—</b>　等效模量 <b id="stat-young">—</b><br>屈服强度 <b id="stat-sigma">—</b>　C1 <b id="stat-c1">—</b><br>渗透率 <b id="stat-perm">—</b>　平均孔径 <b id="stat-pore">—</b><br>迂曲度 <b id="stat-tort">—</b>　各向异性 <b id="stat-aniso">—</b><br>τ 几何 x/y/z <b id="stat-tort-xyz">—</b><br>Zener A · E(GPa) <b id="stat-zener">—</b><br>【动态 v4.0】SEA <b id="stat-sea">—</b>　εd <b id="stat-epsd">—</b>　f1 <b id="stat-f1">—</b></div>
         </div>
         <div class="v-tools">
           <button class="tbtn on" id="btn-rotate" aria-label="自动旋转" title="自动旋转 (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
@@ -743,6 +743,10 @@ window.addEventListener('error', function(e) {
           <button class="xm-item" data-export="3mf"><span class="xm-col"><span class="xm-name">3D 打印工业格式 (3MF)</span><span class="xm-desc">原生 mm 尺度 + 端板/构型元数据</span></span><span class="xm-ext">.3mf</span></button>
           <button class="xm-item" data-export="vtk"><span class="xm-col"><span class="xm-name">VTK PolyData</span><span class="xm-desc">ParaView 直接可读的三角网格</span></span><span class="xm-ext">.vtk</span></button>
           <button class="xm-item" data-export="cfdstl"><span class="xm-col"><span class="xm-name">CFD Multi-Patch STL (OpenFOAM)</span><span class="xm-desc">inlet / outlet / sides / wall 分块边界</span></span><span class="xm-ext">.stl</span></button>
+          <button class="xm-item" data-export="rvestl"><span class="xm-col"><span class="xm-name">周期性 RVE 网格 + PBC 配对表</span><span class="xm-desc">PBC-Ready 单胞，STL+JSON 双文件</span></span><span class="xm-ext">.stl+.json</span></button>
+          <button class="xm-item" data-export="inp"><span class="xm-col"><span class="xm-name">Abaqus 体网格 (C3D8 INP)</span><span class="xm-desc">六面体单元+节点集+压缩载荷步</span></span><span class="xm-ext">.inp</span></button>
+          <button class="xm-item" data-export="ofmesh"><span class="xm-col"><span class="xm-name">OpenFOAM polyMesh (CFD)</span><span class="xm-desc">流道体网格直通求解，免 snappyHexMesh</span></span><span class="xm-ext">.zip</span></button>
+          <button class="xm-item" data-export="caesuite"><span class="xm-col"><span class="xm-name">CAE 验证脚本包 (Verification)</span><span class="xm-desc">Abaqus/OpenFOAM 自动求解+理论对比矩阵</span></span><span class="xm-ext">.zip</span></button>
           <button class="xm-item" data-export="vti"><span class="xm-col"><span class="xm-name">VTI 体素场</span><span class="xm-desc">隐函数标量场，可自由 re-contour</span></span><span class="xm-ext">.vti</span></button>
           <button class="xm-item" data-export="py"><span class="xm-col"><span class="xm-name">Python 脚本</span><span class="xm-desc">PyVista / NumPy 一键复现</span></span><span class="xm-ext">.py</span></button>
           <button class="xm-item" data-export="m"><span class="xm-col"><span class="xm-name">MATLAB 脚本</span><span class="xm-desc">isosurface 重建</span></span><span class="xm-ext">.m</span></button>
@@ -893,6 +897,15 @@ window.addEventListener('error', function(e) {
         <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
       </details>
       <details class="sect">
+        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">v6.0</span></summary>
+        <div class="field">
+          <div class="field-note">全拉格朗日 StVK + J2 径向返回体素 FEM：位移加载压至 4% 应变，视口播放 von Mises 演化（蓝→红），并绘制工程 σ–ε 曲线。门禁 27 守能量漂移 ≤0.5%。</div>
+          <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
+          <canvas id="plas-curve" width="280" height="120" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="plas-result" style="display:none"></div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">空间梯度</summary>
         <div class="opt-row">
           <button class="opt active" data-gradient="z">Z 轴渐变<span class="o-sub">Z Gradient</span></button>
@@ -963,6 +976,77 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">应力场引导 (Stress-Driven)</summary>
+        <div class="field">
+          <div class="lbl"><span>力学工况</span></div>
+          <div class="opt-row" id="stress-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt active" data-stress="none">无（各向同性）<span class="o-sub">Off</span></button>
+            <button class="opt" data-stress="bending">三点弯曲梁<span class="o-sub">Bending</span></button>
+            <button class="opt" data-stress="cantilever">悬臂梁<span class="o-sub">Cantilever</span></button>
+            <button class="opt" data-stress="torsion">扭转<span class="o-sub">Torsion</span></button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>壁厚-应力耦合 β</span><span class="val" id="stress-strength-value">0.50</span></div>
+          <input type="range" id="stress-strength" min="0" max="1" value="0.5" step="0.05">
+          <div class="lbl"><span>主轴各向异性 α</span><span class="val" id="stress-anisotropy-value">1.60</span></div>
+          <input type="range" id="stress-anisotropy" min="1" max="2.5" value="1.6" step="0.05">
+          <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式高应力侧孔隙板收窄、固相致密化。配合「着色模式 → 应力云图」可视化应力分布。</div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">多级分形 TPMS (Hierarchical)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="hier-enabled">启用分级调制<span class="o-sub">F+λ·f(Nx)</span></button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>微曲面类型</span></div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <button class="opt" data-hier-micro="gyroid">Gyroid</button>
+            <button class="opt" data-hier-micro="diamond">Diamond</button>
+            <button class="opt" data-hier-micro="schwarz">Schwarz P</button>
+            <button class="opt" data-hier-micro="neovius">Neovius</button>
+          </div>
+          <div class="lbl" style="margin-top:9px"><span>微观频率倍率 N</span><span class="val" id="hier-frequency-value">4</span></div>
+          <input type="range" id="hier-frequency" min="3" max="8" value="4" step="1">
+          <div class="lbl"><span>微观调制幅值 λ</span><span class="val" id="hier-amplitude-value">0.25</span></div>
+          <input type="range" id="hier-amplitude" min="0.1" max="0.5" value="0.25" step="0.05">
+          <div class="field-note" id="hier-stats"></div>
+          <div class="model-desc">F = F_macro + λ·F_micro(N·x)：宏观骨架承载与骨长入（300~600 µm），微孔供给营养输运与超高比表面积（20~50 µm）——骨组织工程支架与高效换热器的双重孔隙架构。</div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">逆向性能求解器 (Inverse Designer)</summary>
+        <div class="field">
+          <div class="lbl"><span>目标预设</span></div>
+          <select id="inv-preset" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+            <option value="custom">自定义目标</option>
+            <option value="cortical">股骨皮质骨 (E*=15 GPa)</option>
+            <option value="trabecular">股骨近端松质骨 (E*+κ+P)</option>
+            <option value="heatsink">高通量散热沉 (κ+P)</option>
+          </select>
+          <div class="lbl" style="margin-top:9px"><span>目标弹性模量 E* (GPa)</span><span class="val" id="inv-e-value">15.0</span></div>
+          <input type="range" id="inv-e" min="1" max="250" value="150" step="5">
+          <div class="lbl"><span>目标渗透率 κ (×10⁻⁸ m²)</span><span class="val" id="inv-k-value">10</span></div>
+          <input type="range" id="inv-k" min="0" max="300" value="10" step="1">
+          <div class="lbl"><span>目标孔隙率 P (%)</span><span class="val" id="inv-p-value">25</span></div>
+          <input type="range" id="inv-p" min="2" max="98" value="25" step="1">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:9px">
+            <button class="opt" id="btn-inv-solve">一键反演寻优<span class="o-sub">NM+LM</span></button>
+            <button class="opt" id="btn-inv-apply">应用最优解<span class="o-sub">Apply</span></button>
+          </div>
+          <div class="field-note" id="inverse-result">输入目标指标后点击「一键反演寻优」——Nelder-Mead 全局探索 + Levenberg-Marquardt 精化，8 类曲面枚举反解最优构型。</div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">CT 重构与制造偏差 (Micro-CT)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:4px">
+            <button class="opt" id="btn-ct-demo">生成演示 CT + 偏差分析<span class="o-sub">Otsu+EDT</span></button>
+            <button class="opt" id="btn-ct-clear">清除偏差着色<span class="o-sub">Reset</span></button>
+          </div>
+          <div class="field-note" id="ct-result">生成演示 CT 数据集（名义 TPMS + 过充偏置 + 表面粗糙噪声 + 层间漂移），Otsu 自动阈值分割 → 精确 3D EDT 重构 SDF → 逐顶点制造偏差 Blue-White-Red 热力图（蓝=欠肉 / 红=过充）。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
           <button class="opt active" data-coloring="none">单色实体<span class="o-sub">Default</span></button>
@@ -970,6 +1054,7 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-coloring="elevation">高度分布<span class="o-sub">Z-Elevation</span></button>
           <button class="opt" data-coloring="mean_curvature">平均曲率<span class="o-sub">Mean H</span></button>
           <button class="opt" data-coloring="gauss_curvature">高斯曲率<span class="o-sub">Gauss K</span></button>
+          <button class="opt" data-coloring="stress_vm">应力云图<span class="o-sub">von Mises</span></button>
         </div>
         <div class="model-desc" id="coloring-desc">顶点热力图（蓝→白→红）：「场」显示混合权重或壁厚梯度，「高度」按 Z 轴渐变，两种「曲率」为隐函数解析曲率（红正蓝负，饱和于 98% 分位）。场口径需先开启异构混合或梯度双壳。</div>
       </details>

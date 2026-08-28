@@ -34,7 +34,7 @@ import {
   generateBibTeX,
   generateJSONSidecar,
 } from './export';
-import { evaluateField, getCompiledCustomFormula } from './core/tpms-functions';
+import { evaluateField, getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
 import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
@@ -42,6 +42,9 @@ import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets }
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
+import { solvePlasticityCompression, type PlasticityResult } from './physics/gpu-plasticity-solver';
+import { mapElementFieldToVertexColors } from './physics/gpu-plasticity-webgpu';
+import { sampleCoolWarmInto } from './geometry/vertex-coloring';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
 import { exportSliceSVG } from './measure/svg-slice-exporter';
@@ -294,6 +297,130 @@ function updateImpactStats(): void {
     if (el.sea) el.sea.textContent = '—';
   }
 }
+
+// ── WebGPU 弹塑性压溃仿真（v6.0 阶段 I）──────────────────────
+// 体素化当前 TPMS（与 surface-nets 同约定：场排序二分到目标固相率），
+// 位移加载压至 4%，von Mises 逐帧映射顶点色（Cool-Warm 同源 LUT）。
+let plasRunning = false;
+
+function voxelizeCurrentTPMS(R: number): Uint8Array {
+  const st = getState();
+  const fn = getTpmsFunction(st.type, st.customFormula);
+  const kk = st.cellSize;
+  const V = new Float64Array(R * R * R);
+  for (let iz = 0; iz < R; iz++) {
+    const wz = kk * (-Math.PI + (2 * Math.PI * (iz + 0.5)) / R);
+    for (let iy = 0; iy < R; iy++) {
+      const wy = kk * (-Math.PI + (2 * Math.PI * (iy + 0.5)) / R);
+      for (let ix = 0; ix < R; ix++) {
+        const wx = kk * (-Math.PI + (2 * Math.PI * (ix + 0.5)) / R);
+        V[ix + iy * R + iz * R * R] = fn(wx, wy, wz, st.weights);
+      }
+    }
+  }
+  const sorted = Float64Array.from(V).sort();
+  const targetSolid = Math.max(0.02, Math.min(0.98, 1 - st.porosity / 100));
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(targetSolid * sorted.length)));
+  const iso = sorted[idx];
+  const solid = new Uint8Array(R * R * R);
+  for (let i = 0; i < V.length; i++) if (V[i] < iso) solid[i] = 1;
+  return solid;
+}
+
+function drawPlasticityCurve(res: PlasticityResult): void {
+  const cv = document.getElementById('plas-curve') as HTMLCanvasElement | null;
+  if (!cv) return;
+  cv.style.display = 'block';
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(148,163,184,0.4)';
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+  const fMax = Math.max(...res.steps.map(st => st.reaction)) || 1;
+  ctx.strokeStyle = '#e11d48';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  res.steps.forEach((st, i) => {
+    const px = 14 + ((W - 28) * st.strain) / (res.steps[res.steps.length - 1].strain || 1);
+    const py = H - 12 - ((H - 26) * st.reaction) / fMax;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(100,116,139,0.9)';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('工程应变 ε →', W - 76, H - 3);
+  ctx.save();
+  ctx.translate(9, 58); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('反力 F（压缩）', 0, 0);
+  ctx.restore();
+}
+
+function runPlasticityDemo(): void {
+  if (plasRunning) return;
+  const btn = document.getElementById('btn-plasticity');
+  const out = document.getElementById('plas-result');
+  plasRunning = true;
+  if (btn) (btn as HTMLButtonElement).disabled = true;
+  if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=6 · 8 载荷步，视设备约 5–20s）'; }
+  flashToast('弹塑性压溃：求解在主线程同步执行，期间视图暂不响应');
+  // 让 toast 先绘制
+  setTimeout(() => {
+    try {
+      const st0 = getState();
+      const R = 6;
+      const solid = voxelizeCurrentTPMS(R);
+      const mat = st0.material === 'auto' ? 'tc4' : st0.material;
+      const syRel = (BASE_YIELD_STRENGTH[mat] ?? 880) / (BASE_MODULUS[mat] ?? 110);
+      const t0 = performance.now();
+      const res = solvePlasticityCompression({
+        R, solid, nu: 0.3, sigmaY: syRel, hardening: 0.05,
+        steps: 8, maxStrain: 0.04, tol: 1e-5, tangent: 'geo',
+      });
+      const dt = ((performance.now() - t0) / 1000).toFixed(1);
+      const last = res.steps[res.steps.length - 1];
+      // ── 视口动画：von Mises → Cool-Warm 顶点色 ──
+      const geo = baseGeo;
+      const pos = geo?.getAttribute('position')?.array as Float32Array | undefined;
+      const colorAttr = geo?.getAttribute('color') as THREE.BufferAttribute | undefined;
+      const origColors = colorAttr ? (colorAttr.array as Float32Array).slice() : null;
+      if (geo && pos) {
+        let vmMaxAll = 0;
+        for (let i = 0; i < res.vonMises.length; i++) vmMaxAll = Math.max(vmMaxAll, res.vonMises[i]);
+        // 无 color 属性时补一个（着色管线会在下次重建时自然接管）
+        if (!geo.getAttribute('color')) {
+          geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.length), 3));
+        }
+        const colors = mapElementFieldToVertexColors(pos, R, res.vonMises, 0, vmMaxAll || 1, sampleCoolWarmInto);
+        (geo.getAttribute('color').array as Float32Array).set(colors);
+        geo.getAttribute('color').needsUpdate = true;
+        requestRender();
+        // 4s 后恢复原着色（期间任意参数变更触发的重建会自然覆盖）
+        setTimeout(() => {
+          if (origColors && colorAttr && geo.getAttribute('color')) {
+            (colorAttr.array as Float32Array).set(origColors);
+            colorAttr.needsUpdate = true;
+            requestRender();
+          }
+        }, 4000);
+      }
+      drawPlasticityCurve(res);
+      if (out) {
+        out.textContent = `R=${R} · 固相 ${res.solidVoxels} 体素 · ${res.allConverged ? '全步收敛 ✓' : '存在未收敛步 ⚠'} · ${dt}s · `
+          + `终态反力 ${last.reaction.toExponential(3)} · maxPEEQ ${last.maxPEEQ.toExponential(2)} · 能量漂移 ${(last.energy.drift * 100).toFixed(3)}%`
+          + `（材料 ${mat}：σy/E = ${syRel.toFixed(4)}）`;
+      }
+    } catch (err) {
+      if (out) out.textContent = `求解失败：${err instanceof Error ? err.message : String(err)}`;
+      flashToast(`弹塑性压溃失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      plasRunning = false;
+      if (btn) (btn as HTMLButtonElement).disabled = false;
+    }
+  }, 40);
+}
+
+document.getElementById('btn-plasticity')?.addEventListener('click', runPlasticityDemo);
 
 // ── 重建调度 ─────────────────────────────────────────────
 /** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
