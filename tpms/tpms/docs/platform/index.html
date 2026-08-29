@@ -682,7 +682,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-BN-Uf17E.js"></script>
+  <script type="module" crossorigin src="./assets/index-BvIdPXQ9.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -955,6 +955,17 @@ window.addEventListener('error', function(e) {
           <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
           <canvas id="phonon-canvas" width="280" height="170" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="phonon-result" style="display:none"></div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">组织长入 0~28 天 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
+          <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
+          <div class="lbl" style="margin-top:8px;display:none" id="tissue-day-row"><span>时间轴</span><span class="val" id="tissue-day-value">0 天</span></div>
+          <input type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
+          <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="tissue-result" style="display:none"></div>
         </div>
       </details>
       <details class="sect">

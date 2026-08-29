@@ -56,6 +56,7 @@ import {
 import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
 import { solvePhononicBands, type PhononicResult } from './physics/phononic-bandgap';
 import { isSolidAt, type SectionAnalysisParams } from './physics/percolation-analysis';
+import { simulateTissueGrowth, type TissueResult } from './physics/tissue-growth';
 import {
   expertName,
   expertCount,
@@ -742,6 +743,118 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
   } catch (err) {
     if (out) { out.style.display = 'block'; out.textContent = `能带计算失败：${err instanceof Error ? err.message : String(err)}`; }
   }
+});
+
+// ── 【v7.0 Stage IV】组织长入 0~28 天：模拟 + 时序云图播放 ──
+let tissueResult: TissueResult | null = null;
+let tissueDayIdx = 0;
+
+function tissueApplyFrame(): void {
+  if (!tissueResult || !baseGeo) return;
+  const fr = Math.min(tissueDayIdx, tissueResult.o2Frames.length - 1);
+  const field = tissueResult.o2Frames[fr];
+  const pos = baseGeo.attributes.position.array as Float32Array;
+  const colored = mapElementFieldToVertexColors(pos, tissueResult.R, field, 0, 1, sampleCoolWarmInto);
+  baseGeo.setAttribute('color', new THREE.BufferAttribute(colored, 3));
+  const mat = getMaterial(getState().material, getState().model);
+  mat.vertexColors = true;
+  mat.needsUpdate = true;
+  requestRender();
+}
+
+function tissueShowStat(): void {
+  if (!tissueResult) return;
+  const dayOf = tissueResult.frameDays[Math.min(tissueDayIdx, tissueResult.frameDays.length - 1)];
+  const st = tissueResult.stats[Math.min(dayOf, tissueResult.stats.length - 1)];
+  const out = document.getElementById('tissue-result');
+  if (out) {
+    out.style.display = 'block';
+    out.textContent = `第 ${st.day} 天：平均氧 ${st.meanO2.toFixed(3)} · 存活率 ${(st.viability * 100).toFixed(1)}% · 低氧区 ${st.necrosisPct.toFixed(1)}% · 矿化 ${st.mineralPct.toFixed(1)}%`;
+  }
+}
+
+document.getElementById('btn-tissue')?.addEventListener('click', () => {
+  const out = document.getElementById('tissue-result');
+  const s = getState();
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled;
+  if (unsupported) {
+    if (out) { out.style.display = 'block'; out.textContent = '组织长入暂不支持 custom/lidinoid/splitp/混合场（固相判定语义源限制）'; }
+    return;
+  }
+  try {
+    const R = 24;
+    const params: SectionAnalysisParams = {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: 'cube', isoUsed: lastIsoUsed, endplateMm: 0,
+    };
+    const solid = new Uint8Array(R * R * R);
+    for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
+      const x = ((ix + 0.5) / R) * 2 - 1, y = ((iy + 0.5) / R) * 2 - 1, z = ((iz + 0.5) / R) * 2 - 1;
+      solid[ix + iy * R + iz * R * R] = isSolidAt(params, x, y, z) ? 1 : 0;
+    }
+    const res = simulateTissueGrowth({ R, solid, days: 28 });
+    tissueResult = res;
+    tissueDayIdx = res.o2Frames.length - 1;
+    // 时间轴
+    const slider = document.getElementById('tissue-day') as HTMLInputElement | null;
+    const row = document.getElementById('tissue-day-row');
+    if (slider) {
+      slider.max = String(res.o2Frames.length - 1);
+      slider.value = String(tissueDayIdx);
+      slider.style.display = 'block';
+    }
+    if (row) row.style.display = 'flex';
+    tissueApplyFrame();
+    // 统计曲线（平均氧 + 存活率 vs 天）
+    const canvas = document.getElementById('tissue-canvas') as HTMLCanvasElement | null;
+    if (canvas) {
+      canvas.style.display = 'block';
+      const g = canvas.getContext('2d');
+      if (g) {
+        const W = canvas.width, H = canvas.height;
+        g.clearRect(0, 0, W, H);
+        g.strokeStyle = '#38bdf8';
+        g.beginPath();
+        res.stats.forEach((st, i) => {
+          const x = 8 + (i / (res.stats.length - 1)) * (W - 16);
+          const y = H - 8 - st.meanO2 * (H - 16);
+          i === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+        });
+        g.stroke();
+        g.strokeStyle = '#f59e0b';
+        g.beginPath();
+        res.stats.forEach((st, i) => {
+          const x = 8 + (i / (res.stats.length - 1)) * (W - 16);
+          const y = H - 8 - st.viability * (H - 16);
+          i === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+        });
+        g.stroke();
+        g.fillStyle = 'rgba(148,163,184,0.9)';
+        g.font = '9px sans-serif';
+        g.fillText('蓝=平均氧 · 橙=存活率', 8, 10);
+      }
+    }
+    const last = res.stats[res.stats.length - 1];
+    if (out) {
+      out.style.display = 'block';
+      out.textContent = `28 天终态：平均氧 ${last.meanO2.toFixed(3)} · 存活率 ${(last.viability * 100).toFixed(1)}% · 低氧区 ${last.necrosisPct.toFixed(1)}% · 矿化 ${last.mineralPct.toFixed(1)}% · 质量守恒残差 ${(res.massBalance * 100).toFixed(2)}% · 核心/表层氧比 ${(res.meanO2Core / Math.max(res.meanO2Shell, 1e-9)).toFixed(2)} · ${res.elapsedMs}ms`;
+    }
+    tissueShowStat();
+  } catch (err) {
+    if (out) { out.style.display = 'block'; out.textContent = `组织长入模拟失败：${err instanceof Error ? err.message : String(err)}`; }
+  }
+});
+
+document.getElementById('tissue-day')?.addEventListener('input', (e) => {
+  tissueDayIdx = Number((e.target as HTMLInputElement).value);
+  const v = document.getElementById('tissue-day-value');
+  if (v && tissueResult) {
+    const day = tissueResult.frameDays[Math.min(tissueDayIdx, tissueResult.frameDays.length - 1)];
+    v.textContent = `${day} 天`;
+  }
+  tissueApplyFrame();
+  tissueShowStat();
 });
 
 /** 能带图高对称点刻度（Γ-X-M-R-Γ，坐标 = 实际累计路径比） */
