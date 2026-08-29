@@ -110,6 +110,17 @@ export function parseURLParams(search: string): Partial<AppState> {
     };
   }
 
+  // 【v7.0 Stage I】隐式神经拓扑恢复（nz 打包 CSV：仅数字/逗号进入，逐值 clamp ±3）
+  if (q.get('ne') === '1' && q.has('nz')) {
+    const parts = (q.get('nz') ?? '').split(',');
+    if (parts.length === 8 && parts.every((p) => /^-?\d+(\.\d+)?$/.test(p.trim()))) {
+      state.neural = {
+        enabled: true,
+        z: parts.map((p) => Math.min(3, Math.max(-3, Number(p.trim())))),
+      };
+    }
+  }
+
   // 剖切轴向 / 反向
   const sa = q.get('sa');
   if (sa === 'x' || sa === 'y' || sa === 'z') state.sliceAxis = sa;

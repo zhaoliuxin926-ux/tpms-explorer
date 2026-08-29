@@ -29,6 +29,7 @@ import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
 import { createHierarchicalField } from '../core/hierarchical-functions';
+import { createNeuralField } from '../core/neural-implicit-field';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
 import { wcToMmFactor } from '../core/units';
 import { computeVertexColors } from './vertex-coloring';
@@ -133,7 +134,14 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const stressCfg = params.stress && params.stress.preset !== 'none' ? params.stress : null;
   const stressOn = stressCfg !== null;
   const hierCfg = params.hierarchical?.enabled ? params.hierarchical : null;
-  const useLookup = !hybridEnabled && !stressOn && !hierCfg && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
+  // 【v7.0 Stage I】隐式神经场：enabled 时覆盖代数场（SIREN Fourier 特征精确周期，
+  // 输入口径 = 弧度/周期数；非法潜在码显式抛错走 error 通道，不静默回退）
+  let neuralFn: ((mx: number, my: number, mz: number) => number) | null = null;
+  if (params.neural?.enabled && params.neural.z) {
+    neuralFn = createNeuralField(params.neural.z);   // 内部 sanitize（长度/有限性/clamp）
+  }
+  const neuralOn = neuralFn !== null;
+  const useLookup = !hybridEnabled && !stressOn && !hierCfg && !neuralOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
@@ -141,6 +149,10 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   if (hybridEnabled) {
     hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
   } else if (!useLookup) {
+    if (neuralOn) {
+      const nf = neuralFn!;
+      tpmFn = (mx, my, mz) => nf(mx / k, my / k, mz / k);
+    } else {
     const baseFn = getTpmsFunction(type, customFormula, eqDyn);
     // 【阶段 V】分级调制叠加在最外层（宏观侧可再含应力变换）
     const hierFn = hierCfg ? createHierarchicalField(type, hierCfg, customFormula, eqDyn) : null;
@@ -151,6 +163,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           return core(qx, qy, qz, w);
         }
       : core;
+    }
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -1084,7 +1097,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       //    历史 bug：custom 回退到 diamond 梯度、hybrid 用纯 A 侧梯度——法线近反向）
       if (isNaN(gx)) {
         // 【阶段 IV】stress 变换是逐点非线性 warp，解析查表法线不感知 ⇒ 强制数值梯度
-        const needNumericGrad = hybridEnabled || stressOn || mode !== 'solid_network' || type === 'custom';
+        // 【v7.0 Stage I】neural 场同理：解析查表法线与神经场无关 ⇒ 强制数值梯度
+        const needNumericGrad = hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom';
         if (needNumericGrad) {
           // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
           const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));

@@ -116,6 +116,7 @@ try {
   results.push(['wasm_navier_stokes_audit Navier-Stokes微流体（门29）', await runStep('微流体审计', 'wasm_navier_stokes_audit.mjs')]);
   results.push(['lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）', await runStep('LPBF审计', 'lpbf_thermo_mechanical_audit.mjs')]);
   results.push(['nl_agent_audit 自然语言CAD代理（门31）', await runStep('NL代理审计', 'nl_agent_audit.mjs')]);
+  results.push(['neural_implicit_audit 隐式神经场SIREN（门32）', await runStep('神经场审计', 'neural_implicit_audit.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务

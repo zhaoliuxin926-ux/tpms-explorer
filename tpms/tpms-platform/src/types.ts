@@ -58,6 +58,13 @@ export interface HierarchicalConfig {
   amplitude: number;
 }
 
+/** 【v7.0 Stage I】隐式神经场（SIREN/INR）配置：8 维潜在码驱动拓扑流形插值 */
+export interface NeuralConfig {
+  enabled: boolean;
+  /** 潜在码 z ∈ R^8（锚点幅值 ±3；clamp 于 sanitizeLatent） */
+  z: number[];
+}
+
 /** 【v3.0 阶段 IV】应力场引导工况（解析应力张量预设） */
 export type StressPreset = 'none' | 'bending' | 'cantilever' | 'torsion';
 
@@ -106,6 +113,8 @@ export interface AppState {
   stress: StressConfig;
   /** 【v3.0 阶段 V】多级分形分级 TPMS（enabled = 关闭） */
   hierarchical: HierarchicalConfig;
+  /** 【v7.0 Stage I】隐式神经拓扑（SIREN，enabled = 关闭） */
+  neural: NeuralConfig;
   customFormula: string;
 }
 
@@ -139,6 +148,7 @@ export const DEFAULT_STATE: AppState = {
   gpuAccelerate: true,
   stress: { preset: 'none', strength: 0.5, anisotropy: 1.6 },
   hierarchical: { enabled: false, microType: 'diamond', frequency: 4, amplitude: 0.25 },
+  neural: { enabled: false, z: [3, 3, 3, 3, 3, 3, 3, 3] },
   customFormula: '',
 };
 
@@ -222,6 +232,8 @@ export interface BuildParams {
   stress?: StressConfig;
   /** 【v3.0 阶段 V】多级分形分级调制（F = F_macro + λ·F_micro(N·x)） */
   hierarchical?: HierarchicalConfig;
+  /** 【v7.0 Stage I】隐式神经场调制（SIREN 专家混合，enabled 时覆盖代数场） */
+  neural?: NeuralConfig;
 }
 
 /** 导出格式（svg 由截面测量模块的独立按钮触发，不经过统一 handleExport） */
