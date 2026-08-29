@@ -40,15 +40,15 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/diamond|金刚石|钻石/i, 'diamond', 'Diamond'],
   [/schwarz\s*p|施瓦兹|p曲面|schwarzp/i, 'schwarz', 'Schwarz P'],
   [/neovius|新ovius|诺沃厄斯/i, 'neovius', 'Neovius'],
-  [/i-?wp|iw plast| iwp/i, 'iwp', 'I-WP'],
+  [/i-?wp/i, 'iwp', 'I-WP'],
   [/f-?rd|frd/i, 'frd', 'F-RD'],
   [/lidinoid|利迪诺/i, 'lidinoid', 'Lidinoid'],
   [/split-?p|分裂p/i, 'splitp', 'Split-P'],
 ];
 
 const MATERIAL_WORDS: Array<[RegExp, string, string]> = [
-  [/ti-?6-?4|tc4|钛合金|钛\b|titanium/i, 'tc4', 'Ti-6Al-4V'],
-  [/pla|聚合物|聚合物支架|polymer|高分子/i, 'polymer', 'PLA/聚合物'],
+  [/ti-?6-?4|tc4|钛合金|钛|titanium/i, 'tc4', 'Ti-6Al-4V'],   // 注意：CJK 无 \b 词边界（曾用 钛\b 成死正则）
+  [/\bpla\b|聚合物|polymer|高分子/i, 'polymer', 'PLA/聚合物'],   // \b 防 endplate/plate 子串误配
   [/散热|导热|thermal|heat.?sink/i, 'thermal', '高导热'],
 ];
 
@@ -57,10 +57,11 @@ const MODE_WORDS: Array<[RegExp, string, string]> = [
   [/梯度壳|gradient.?shell/i, 'gradient_shell', '梯度壳'],
 ];
 
+// 平台 ContainerShape 只有 cube | cylinder（surface-nets boundAt 同域）——
+// 不得产出 sphere 等非法值（曾致静默回退立方口径，2026-08-29 对抗审查定案）
 const CONTAINER_WORDS: Array<[RegExp, string, string]> = [
   [/圆柱|cylinder/i, 'cylinder', '圆柱'],
   [/立方|cube|方块/i, 'cube', '立方'],
-  [/球|sphere/i, 'sphere', '球'],
 ];
 
 function firstNum(input: string, patterns: RegExp[]): number | null {
@@ -112,7 +113,9 @@ export function parseNL(input: string): NLIntent {
     /孔隙率?\s*([0-9.]+)\s*%?/i, /porosity\s*[:：]?\s*([0-9.]+)/i, /孔隙\s*([0-9.]+)\s*%?/i,
   ]);
   if (poro !== null) {
-    patches.porosity = Math.max(5, Math.min(95, poro));
+    // 分数/百分数歧义：0<v<1 视为分数（"porosity 0.75"=75%）；曾直接钳制把 0.75 压成 5%
+    const frac = poro > 0 && poro < 1 ? poro * 100 : poro;
+    patches.porosity = Math.max(5, Math.min(95, frac));
     log.push({ field: '孔隙率', to: `${patches.porosity}%` });
   }
   // 端板

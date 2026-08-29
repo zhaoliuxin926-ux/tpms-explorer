@@ -13,9 +13,10 @@
  *   · 能量台账：ΔW_ext = R·Δuz（收敛步离散虚功恒等式），ΔW_int = Σ S_i:ΔE dV
  *     （步末应力），ΔW_pl = σ̄y·Δε̄p，W_el := W_int − W_pl；门禁 27 守 |W_ext−W_int|/W_ext ≤ 0.5%。
  *
- * GPU 分工：本文件是 CPU 权威路径；WebGPU 计算着色器（shaders/plasticity.wgsl，
- * 由 gpu-plasticity-webgpu.ts 内联模板逐字同步 + 门禁锚定）并行执行逐 GP 本构更新
- * 与应力场输出；稀疏平衡方程求解保持 CPU PCG（混合管线口径，详见 §26）。
+ * GPU 分工（诚实口径）：本文件是 CPU 权威路径（当前 UI 主流程的全流程执行者，
+ * 含本构更新与平衡求解）。WebGPU 计算着色器（shaders/plasticity.wgsl，内联模板
+ * 逐字同步 + 门禁锚定 + 算法转译对拍 ≤1e-14）作为可选并行内核交付，尚未接入 UI
+ * 主路径——见 §26（2026-08-29 对抗审查修订）。
  *
  * 单位约定：E0 = 1、单元边长 h = 1（无量纲）。sigmaY/hardening 以 E0 为单位
  * （金属典型 σy/E ≈ 0.01）。结果乘真实 E0 即得物理量纲。

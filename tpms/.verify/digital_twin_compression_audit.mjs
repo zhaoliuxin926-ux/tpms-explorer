@@ -126,7 +126,33 @@ console.log('\n[D] 渐进压溃失效（failureStrain=0.02）');
   const fMax = Math.max(...res.curve.map((c) => c.reaction));
   const fLast = res.curve[res.curve.length - 1].reaction;
   check('载荷全程有界（截断后无垃圾）', fMax < 3 * Math.max(fLast, 1e-6) && isFinite(fMax) && fLast > 0, `max=${fMax.toExponential(3)} last=${fLast.toExponential(3)}`);
-  check('活性单元数随死亡递减', res.curve[res.curve.length - 1].activeElems < res.curve[0].activeElems || res.totalDead === 0);
+  check('活性单元数随死亡递减（或坍塌截断于死亡步）', (() => {
+    if (res.totalDead === 0) return true;
+    const post = res.curve.filter((c) => res.deathTimeline.some((d) => c.strain > d.strain + 1e-12));
+    return post.length === 0 || post[post.length - 1].activeElems < res.curve[0].activeElems;
+  })());
+}
+
+
+// ══ E. 主应变不变量模糊测试 ×3000 ══
+console.log('\n[E] 主应变不变量 fuzz');
+{
+  let seedE = 246813579;
+  const rndE = () => { seedE = (seedE * 1664525 + 1013904223) >>> 0; return seedE / 4294967296; };
+  let maxTr = 0, maxDet = 0, ordViol = 0;
+  for (let i = 0; i < 3000; i++) {
+    const v = Array.from({ length: 6 }, () => (rndE() - 0.5) * 0.1);
+    const [e1, e2, e3] = dt.principalStrains(v);
+    const tr = v[0] + v[1] + v[2];
+    maxTr = Math.max(maxTr, Math.abs(e1 + e2 + e3 - tr) / Math.max(Math.abs(tr), 1e-6));
+    const t = [v[0], v[3] / 2, v[5] / 2, v[3] / 2, v[1], v[4] / 2, v[5] / 2, v[4] / 2, v[2]];
+    const det = t[0] * (t[4] * t[8] - t[5] * t[7]) - t[1] * (t[3] * t[8] - t[5] * t[6]) + t[2] * (t[3] * t[7] - t[4] * t[6]);
+    maxDet = Math.max(maxDet, Math.abs(e1 * e2 * e3 - det) / Math.max(Math.abs(det), 1e-6));
+    if (!(e1 >= e2 && e2 >= e3 - 1e-14)) ordViol++;
+  }
+  check(`E1 迹不变量 ≤1e-9（实测 ${maxTr.toExponential(2)}）`, maxTr <= 1e-9);
+  check(`E2 行列式不变量 ≤1e-7（实测 ${maxDet.toExponential(2)}）`, maxDet <= 1e-7);
+  check('E3 主值降序', ordViol === 0, String(ordViol));
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);

@@ -13,7 +13,7 @@ v6.0 将平台从「几何 + 线性物理代理」推进到「**非线性多物�
 - 全拉格朗日体素 FEM（C3D8 + 2×2×2 Gauss）：Green-Lagrange 应变 + StVK 超弹性 + J2 径向返回塑性（张量空间 Prandtl-Reuss 口径）；
 - 含几何内力项的完整平衡方程 + 修正牛顿（弹性切线）+ Jacobi-PCG + 回溯线搜索 + 手风琴子步回滚 + 位移增量限幅；
 - 能量台账守恒恒等式（实测 gyroid R=8 全程漂移 0.32% ≤ 0.5%）+ 静水 KUBC 解析锚点（漂移 1.9e-9）；
-- WebGPU 计算着色器（`plasticity.wgsl`）并行本构内核，与 TS 权威路径逐字同步锚定；
+- WebGPU 计算着色器（`plasticity.wgsl`）并行本构内核，与 TS 权威路径逐字同步锚定（可选路径，UI 主流程以 CPU 执行）；
 - 视口「弹塑性压溃仿真」：von Mises 顶点色热图 + σ–ε 曲线。
 
 ### Stage II — 数字孪生单轴压溃与断裂失效预测（门禁 28，21 断言）
@@ -50,7 +50,7 @@ v6.0 将平台从「几何 + 线性物理代理」推进到「**非线性多物�
 
 v6.0 advances the platform from "geometry + linear physics surrogates" to a **nonlinear multi-physics digital-twin loop**: elastoplastic large deformation, fracture failure prediction, real Navier-Stokes microfluidics, LPBF thermo-mechanical coupling, and a natural-language CAD agent.
 
-- **Stage I — WebGPU elastoplastic solver** (gate 27, 42 assertions): Total-Lagrangian voxel FEM, Green-Lagrange strain, StVK + J2 radial return (tensor-space Prandtl-Reuss), modified Newton + Jacobi-PCG, accordion sub-stepping with rollback, displacement increment clamping; energy-balance identity drift 0.32% on gyroid lattices (hydrostatic KUBC anchor at 1.9e-9); WGSL constitutive kernel byte-synced with the TS authority path; viewport von-Mises heat-map animation.
+- **Stage I — WebGPU elastoplastic solver** (gate 27, 42 assertions): Total-Lagrangian voxel FEM, Green-Lagrange strain, StVK + J2 radial return (tensor-space Prandtl-Reuss), modified Newton + Jacobi-PCG, accordion sub-stepping with rollback, displacement increment clamping; energy-balance identity drift 0.32% on gyroid lattices (hydrostatic KUBC anchor at 1.9e-9); WGSL constitutive kernel byte-synced with the TS authority path (optional path; UI runs on CPU); viewport von-Mises heat-map animation.
 - **Stage II — digital-twin compression & fracture** (gate 28, 21): max-principal-strain failure with progressive element deactivation (per-step cap + activity floor), collapse detection reporting the collapse strain (gyroid @ ε=0.018), Gibson-Ashby plateau comparison with disclosed calibration ratio (~1.7).
 - **Stage III — Navier-Stokes microfluidics** (gate 29, 15): fused explicit relaxation Stokes + Uzawa pressure correction, Brinkman no-slip voxels; Poiseuille profile error 0.002%; gyroid permeability cross-checked against FD-Darcy; WASM acceleration honestly downgraded to TS hot loops (wabt.js/V8 encoding divergence; hand assembler + WAT kept as experimental artifacts).
 - **Stage IV — LPBF thermo-mechanics** (gate 30, 18): Gaussian volumetric heat source serpentine scan, explicit transient conduction with Jacobi double buffering (energy ledger 0.0000%), melt-pool metrics within literature bands (R=5.9e7 K/s, G×R=3.65e15 K²/s), inherent-strain residual stress capped at yield (880 MPa), distortion estimate, three-state process window; sidebar UI card.

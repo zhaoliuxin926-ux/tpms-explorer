@@ -90,6 +90,26 @@ console.log('\n[D] 帮助/重置/仿真/预设');
   check('骨支架口径', bone.actions.includes('preset-bone') && bone.patches.material === 'tc4');
 }
 
+
+// ══ E. 毒化输入回归（对抗审查定案：endplate 误配材料/分数孔隙率/非法容器/裸钛）══
+console.log('\n[E] 毒化回归');
+{
+  const e1 = parseNL('porosity 60 with 2mm endplate export stl');
+  check('E1 endplate 不误配材料（pla 子串缺陷回归）', e1.patches.material === undefined, String(e1.patches.material));
+  const e2 = parseNL('porosity 0.75 gyroid');
+  check('E2 分数孔隙率 0.75 → 75%', e2.patches.porosity === 75, String(e2.patches.porosity));
+  const e3 = parseNL('球形容器 gyroid');
+  check('E3 非法容器 sphere 不产出 patch', e3.patches.containerShape === undefined, String(e3.patches.containerShape));
+  const e4 = parseNL('钛 支架');
+  check('E4 裸"钛"识别为 tc4', e4.patches.material === 'tc4', String(e4.patches.material));
+  const e5 = parseNL('PLA 支架孔隙率 50');
+  check('E5 真 PLA 仍识别', e5.patches.material === 'polymer' && e5.patches.porosity === 50);
+  const e6 = parseNL('I-WP structure export stl');
+  check('E6 I-WP 连字符识别', e6.patches.type === 'iwp', String(e6.patches.type));
+  const e7 = parseNL('constructor eval process');
+  check('E7 原型链载荷 unknown', e7.kind === 'unknown');
+}
+
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
 if (failCount > 0) {
   console.log('失败项:');

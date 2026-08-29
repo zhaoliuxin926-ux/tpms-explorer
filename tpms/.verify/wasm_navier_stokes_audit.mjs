@@ -121,6 +121,39 @@ console.log('\n[D] WASM 加速档实验件');
   check('降级口径已在源码披露', solverSrc.includes('降级为 TS 热循环'));
 }
 
+
+// ══ E. 网格收敛与通道数不变性（对抗审查转正）══
+console.log('\n[E] 网格收敛 + 通道不变性');
+{
+  const errs = [];
+  for (const nyE of [10, 18]) {
+    const nxE = 24, nzE = 8;
+    const fluidE = new Uint8Array(nxE * nyE * nzE);
+    for (let k = 0; k < nzE; k++) for (let j = 0; j < nyE; j++) for (let i = 0; i < nxE; i++)
+      fluidE[i + j * nxE + k * nxE * nyE] = (j === 0 || j === nyE - 1) ? 0 : 1;
+    const resE = ns.solveNavierStokes({ nx: nxE, ny: nyE, nz: nzE, fluid: fluidE, mode: 'channel', nu: 1, bodyForce: 0.01, dt: 0.04, beta: 0.15, maxIter: 60000, tol: 1e-8 });
+    const HE = nyE - 1;
+    let maxEE = 0;
+    for (let j = 1; j < nyE - 1; j++) {
+      const idxE = 0 + j * nxE + (nzE >> 1) * nxE * nyE;
+      maxEE = Math.max(maxEE, Math.abs(resE.u[idxE * 3] - 0.01 * j * (HE - j) / 2) / (0.01 * j * (HE - j) / 2));
+    }
+    errs.push(maxEE);
+  }
+  check(`E1 剖面误差 ny=10/18 均 ≤1.5%（${errs.map(e => (e * 100).toFixed(3) + '%').join('/')}）`, errs.every(e => e <= 0.015));
+  const ks = [];
+  for (const nzK of [6, 12]) {
+    const nxK = 24, nyK = 14;
+    const fluidK = new Uint8Array(nxK * nyK * nzK);
+    for (let k = 0; k < nzK; k++) for (let j = 0; j < nyK; j++) for (let i = 0; i < nxK; i++)
+      fluidK[i + j * nxK + k * nxK * nyK] = (j === 0 || j === nyK - 1) ? 0 : 1;
+    const resK = ns.solveNavierStokes({ nx: nxK, ny: nyK, nz: nzK, fluid: fluidK, mode: 'channel', nu: 1, bodyForce: 0.01, dt: 0.04, beta: 0.15, maxIter: 60000, tol: 1e-8 });
+    ks.push(resK.permeability);
+  }
+  const dK = Math.abs(ks[0] - ks[1]) / ks[1];
+  check(`E2 κ 通道数不变 ≤2%（实测 ${(dK * 100).toFixed(4)}%）`, dK <= 0.02);
+}
+
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
 if (failCount > 0) {
   console.log('失败项:');

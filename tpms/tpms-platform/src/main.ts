@@ -325,8 +325,25 @@ function voxelizeCurrentTPMS(R: number): Uint8Array {
   const targetSolid = Math.max(0.02, Math.min(0.98, 1 - st.porosity / 100));
   const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(targetSolid * sorted.length)));
   const iso = sorted[idx];
+  // 容器裁剪（与 surface-nets boundAt 同域：cylinder px²+py²<1 且 |pz|<1）
+  // 端板融合（mm→wc 域换算，镜像 surface-nets 端板语义）——曾缺失导致圆柱/端板模型被按立方无端板模拟
+  const epWc = st.endplateMm > 0 ? st.endplateMm / wcToMmFactor(st.cellSize) : 0;
   const solid = new Uint8Array(R * R * R);
-  for (let i = 0; i < V.length; i++) if (V[i] < iso) solid[i] = 1;
+  for (let iz = 0; iz < R; iz++) {
+    const pz = -1 + (2 * (iz + 0.5)) / R;
+    for (let iy = 0; iy < R; iy++) {
+      const py = -1 + (2 * (iy + 0.5)) / R;
+      for (let ix = 0; ix < R; ix++) {
+        const px = -1 + (2 * (ix + 0.5)) / R;
+        const i = ix + iy * R + iz * R * R;
+        const inside = st.containerShape === 'cylinder'
+          ? (px * px + py * py < 1 && Math.abs(pz) < 1)
+          : (Math.abs(px) < 1 && Math.abs(py) < 1 && Math.abs(pz) < 1);
+        const ep = epWc > 0 && (pz >= 1 - epWc || pz <= -1 + epWc);
+        solid[i] = inside && (V[i] < iso || ep) ? 1 : 0;
+      }
+    }
+  }
   return solid;
 }
 
@@ -360,14 +377,21 @@ function drawPlasticityCurve(res: ReturnType<typeof runCompressionDigitalTwin>):
   ctx.restore();
 }
 
-function runPlasticityDemo(): void {
-  if (plasRunning) return;
+function runPlasticityDemo(): boolean {
+  if (plasRunning) return false;
   const btn = document.getElementById('btn-plasticity');
   const out = document.getElementById('plas-result');
   plasRunning = true;
   if (btn) (btn as HTMLButtonElement).disabled = true;
-  if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=6 · 8 载荷步，视设备约 5–20s）'; }
-  flashToast('弹塑性压溃：求解在主线程同步执行，期间视图暂不响应');
+  const st0 = getState();
+  if (st0.structureMode !== 'solid_network') {
+    // 诚实守卫：壳类模式的固相定义是 |V−bias|<t/2（双壁），体素化口径仅支持 solid_network——
+    // 曾静默按错误几何求解（2026-08-29 对抗审查定案）
+    flashToast('弹塑性压溃目前仅支持实体网络模式（当前为 ' + st0.structureMode + '），已跳过');
+    return false;
+  }
+  if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=6 · 8 载荷步 · 主线程同步求解约 1–2 分钟，期间视图无响应）'; }
+  flashToast('弹塑性压溃：主线程同步求解约 1–2 分钟（R=6·8 步），期间视图暂不响应');
   // 让 toast 先绘制
   setTimeout(() => {
     try {
@@ -422,21 +446,45 @@ function runPlasticityDemo(): void {
       if (btn) (btn as HTMLButtonElement).disabled = false;
     }
   }, 40);
+  return true;
 }
 
 document.getElementById('btn-plasticity')?.addEventListener('click', runPlasticityDemo);
 
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
-function applyNLIntent(intent: NLIntent): void {
+let nlPendingExport: 'stl' | '3mf' | null = null;
+
+function nlAppend(text: string): void {
   const log = document.getElementById('nl-log');
-  const append = (text: string) => {
-    if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; }
-  };
-  append('你：' + (document.getElementById('nl-input') as HTMLInputElement).value);
-  if (intent.kind === 'help' || intent.kind === 'unknown') { append('助手：' + intent.reply); return; }
-  const patches: Partial<AppState> = {};
+  if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; }
+}
+
+function nlDoExport(fmt: 'stl' | '3mf'): void {
+  const sNow = getState();
+  const base = `tpms-${sNow.type}-p${sNow.porosity}`;
+  if (!baseGeo) throw new Error('几何尚未就绪');
+  const pos = baseGeo.attributes.position.array as Float32Array;
+  const idx = baseGeo.index!.array as Uint32Array;
+  const scale = wcToMmFactor(sNow.cellSize);
+  if (fmt === 'stl') exportBinarySTL(pos, idx, `${base}.stl`, scale);
+  else export3MF(pos, idx, `${base}.3mf`, scale, { configName: base, porosity: sNow.porosity, endplateMm: sNow.endplateMm, structureMode: sNow.structureMode });
+  nlAppend(`助手：已导出 ${base}.${fmt} ✓`);
+}
+
+/** 重建完成后若挂起 NL 导出则执行（缓存路径与 worker 路径都会调用） */
+function runPendingNLExport(): void {
+  if (!nlPendingExport) return;
+  const fmt = nlPendingExport;
+  nlPendingExport = null;
+  try { nlDoExport(fmt); } catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
+}
+
+function applyNLIntent(intent: NLIntent): void {
+  nlAppend('你：' + (document.getElementById('nl-input') as HTMLInputElement).value);
+  if (intent.kind === 'help' || intent.kind === 'unknown') { nlAppend('助手：' + intent.reply); return; }
   const p = intent.patches;
+  const patches: Partial<AppState> = {};
   if (p.type) patches.type = p.type as AppState['type'];
   if (p.porosity !== undefined) patches.porosity = p.porosity;
   if (p.cellSize !== undefined) patches.cellSize = p.cellSize;
@@ -445,39 +493,41 @@ function applyNLIntent(intent: NLIntent): void {
   if (p.structureMode) patches.structureMode = p.structureMode as AppState['structureMode'];
   if (p.endplateMm !== undefined) patches.endplateMm = p.endplateMm;
   if (p.containerShape) patches.containerShape = p.containerShape as AppState['containerShape'];
-  if (Object.keys(patches).length > 0) {
-    pushHistory();
+  // 骨支架预设只补缺省项，不覆盖用户显式指定的参数（曾强制 tc4 覆盖显式 polymer，2026-08-29 定案）
+  const bonePreset = intent.actions.includes('preset-bone');
+  if (bonePreset) {
+    if (patches.material === undefined) patches.material = 'tc4';
+    if (patches.structureMode === undefined) patches.structureMode = 'solid_network';
+  }
+  const stateChanged = intent.actions.includes('reset') || Object.keys(patches).length > 0;
+  if (intent.actions.includes('reset')) {
+    setState({ ...DEFAULT_STATE });
+    scheduleRebuild(false);
+    nlAppend('助手：已恢复默认参数 ✓');
+  } else if (Object.keys(patches).length > 0) {
     setState(patches);
-    append(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
+    scheduleRebuild(false);   // 关键：NL 改参必须触发重建（曾缺失 → 视图不更新、导出旧几何）
+    nlAppend(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
   } else {
-    append('助手：' + intent.reply);
+    nlAppend('助手：' + intent.reply);
   }
   for (const a of intent.actions) {
     if (a === 'export-stl' || a === 'export-3mf') {
-      try {
-        const sNow = getState();
-        const base = `tpms-${sNow.type}-p${sNow.porosity}`;
-        if (!baseGeo) throw new Error('几何尚未就绪');
-        const pos = baseGeo.attributes.position.array as Float32Array;
-        const idx = baseGeo.index!.array as Uint32Array;
-        const scale = wcToMmFactor(sNow.cellSize);
-        if (a === 'export-stl') exportBinarySTL(pos, idx, `${base}.stl`, scale);
-        else export3MF(pos, idx, `${base}.3mf`, scale, { configName: base, porosity: sNow.porosity, endplateMm: sNow.endplateMm, structureMode: sNow.structureMode });
-        append(`助手：已导出 ${base}.${a === 'export-stl' ? 'stl' : '3mf'} ✓`);
-      } catch (err) {
-        append(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`);
+      if (stateChanged) {
+        // 参数变了 → 几何是旧的（worker 异步重建），挂起到重建完成自动导出
+        nlPendingExport = a === 'export-stl' ? 'stl' : '3mf';
+        nlAppend('助手：参数已应用，几何重建完成后自动导出 ' + (a === 'export-stl' ? 'STL' : '3MF') + '…');
+      } else {
+        try { nlDoExport(a === 'export-stl' ? 'stl' : '3mf'); }
+        catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
       }
     } else if (a === 'run-simulation') {
-      runPlasticityDemo();
-      append('助手：已触发数字孪生压溃仿真（见视口面板）');
-    } else if (a === 'reset') {
-      pushHistory();
-      setState({ ...DEFAULT_STATE });
-      append('助手：已恢复默认参数 ✓');
-    } else if (a === 'preset-bone') {
-      pushHistory();
-      setState({ material: 'tc4', structureMode: 'solid_network' });
-      append('助手：已套用骨支架口径（Ti-6Al-4V · 实体网络）');
+      const started = runPlasticityDemo();
+      nlAppend(started
+        ? '助手：已触发数字孪生压溃仿真（主线程求解约 1–2 分钟，期间界面无响应）'
+        : '助手：仿真未启动（需实体网络模式，或已有仿真在运行）');
+    } else if (bonePreset && a === 'preset-bone') {
+      nlAppend('助手：已套用骨支架口径（Ti-6Al-4V · 实体网络，仅补缺省项）');
     }
   }
 }
@@ -544,6 +594,7 @@ function rebuild(preview: boolean): boolean {
     // 缓存命中：瞬间恢复（注意：此路径不派发 worker 结果——调用方若在等待结果需以此返回值区分）
     // 颜色不入缓存：由 applyGeometry 内部按当前着色状态现场补算
     applyGeometry(cached.positions, cached.normals, cached.indices, cached.vertCount, cached.faceCount);
+    runPendingNLExport();
     return true;
   }
 
@@ -803,6 +854,7 @@ function onWorkerResult(res: WorkerResponse): void {
 
   // 应用几何
   applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);
+  runPendingNLExport();
 
   // 缓存结果
   const cKey = cacheKey(getState(), res.resolution);
