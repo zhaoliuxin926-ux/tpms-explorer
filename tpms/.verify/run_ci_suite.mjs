@@ -121,6 +121,7 @@ try {
   results.push(['phononic_bandgap_audit 声子能带与禁带（门34）', await runStep('声子能带审计', 'phononic_bandgap_audit.mjs')]);
   results.push(['tissue_growth_audit 组织长入反应扩散（门35）', await runStep('组织长入审计', 'tissue_growth_audit.mjs')]);
   results.push(['levelset_optimizer_audit 水平集拓扑优化（门36）', await runStep('水平集审计', 'levelset_optimizer_audit.mjs')]);
+  results.push(['ui_jump_check 控制台分组导航（UI 重组回归）', await runStep('分组导航快检', 'ui_jump_check.mjs')]);
   results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
 } finally {
   sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
