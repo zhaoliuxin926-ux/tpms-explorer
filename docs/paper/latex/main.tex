@@ -1,0 +1,167 @@
+% main.tex — TPMS Explorer v7.0 SoftwareX-style manuscript (self-contained, pdflatex)
+% 编译：pdflatex main && bibtex main && pdflatex main && pdflatex main
+\documentclass[5p,times,authoryear]{elsarticle}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\journal{SoftwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{TPMS Explorer: an interactive, gate-verified open ecosystem for triply periodic
+minimal surface design, generative implicit fields, multifunctional physics simulation,
+and biophysical tissue-ingrowth dynamics}
+
+\author[a]{Anonymous Author}
+\address[a]{Independent Open-Source Project}
+
+\begin{abstract}
+We present TPMS Explorer v7.0, a browser-based, zero-backend ecosystem for parametric design,
+physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
+(TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
+with thirty-six continuously executed CI gates ($>$1300 assertions) that verify every mathematical
+claim shipped to the user. Version 7.0 adds five research-grade modules: (i) a sinusoidal-activation
+implicit neural field (SIREN) with an exactly periodic Fourier-feature input and an 8-dimensional
+latent space over five distilled TPMS experts; (ii) multiaxial anisotropic yield envelopes
+(Hill-48, Tsai-Wu, Gurson, Drucker--Prager) with a unified star-convex ray-distance formulation
+and an interactive 3D viewer; (iii) a Bloch--Floquet phononic band-structure solver built on
+Born--von K\'arm\'an lattice dynamics with realified two-pass deflate-Lanczos eigensolution and
+long-wave dynamical-matrix calibration; (iv) a reaction--diffusion tissue-ingrowth engine coupling
+quasi-steady oxygen transport, hypoxia-gated osteoblast proliferation, and mineral deposition over
+a 28-day horizon; and (v) a level-set topology-optimization loop with Hamilton--Jacobi Godunov
+evolution driven by elastic and flow sensitivities under a volume constraint. All modules execute
+client-side with zero dependencies beyond Three.js, export to industrial formats (STL, 3MF, GLB,
+Abaqus INP, OpenFOAM polyMesh, G-code), and are guarded by behavior-level audit gates whose
+calibration traps are documented.
+\end{abstract}
+
+\begin{keyword}
+TPMS \sep implicit neural representation \sep SIREN \sep yield surface \sep phononic bandgap \sep
+tissue engineering \sep level-set topology optimization \sep continuous integration
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Impact overview}
+TPMS Explorer turns a browser tab into a research bench for architected materials. The five v7.0
+modules extend the platform from ``geometry plus linear physics surrogates'' to generative design,
+structural-failure envelopes, wave dynamics, biophysical growth, and closed-loop shape optimization
+--- each guarded by an audit gate that executes the same code paths the user sees
+(Table~\ref{tab:gates}).
+
+\begin{table}[h]
+\centering
+\caption{v7.0 modules and their CI gates.}
+\label{tab:gates}
+\begin{tabular}{@{}llp{5.2cm}l@{}}
+\toprule
+Stage & Module & Verified invariants & Assertions \\
+\midrule
+I & SIREN implicit field & exact $2\pi$ periodicity ($2.2\times10^{-15}$); distillation RMSE per
+expert; Lipschitz product bound vs.\ sampled gradients; latent-path Lipschitz; water-tight meshes
+at anchors and manifold midpoints & 43 \\
+II & Yield envelopes & uniaxial analytic anchors; midpoint convexity ($\times200$ per criterion);
+isotropic permutation symmetry; Gurson hydrostatic pole; closed-mesh volume by divergence
+theorem; safety factor of a half-scaled stress $=2$ & 35 \\
+III & Phononic bands & $\Gamma$-point triple translational zero modes; sound-speed self-consistency
+(gyroid 2.2\%); per-$k$ branch ordering; time-reversal symmetry $\omega(\mathbf{k})=\omega(-\mathbf{k})$;
+diatomic-chain analytic gap; island-count guard & 18 \\
+IV & Tissue ingrowth & mass balance $=$ boundary-layer flux $-$ interior consumption (0.000\%);
+core-oxygen transport differentiation; $\rho\le\rho_{\max}$; hypoxia gating; mineral monotonicity;
+bitwise determinism & 11 \\
+V & Level-set optimization & unit-load compliance $\propto 1/\text{reaction}$ monotone under 0.5\%
+tolerance; volume Lagrange constraint $\pm$10\%; permeability gain $\times1.50$; water-tight
+extraction (open edges $=0$); reinitialization $|\nabla\Phi|\approx1$ & 8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Necessary resources}
+\subsection{Hardware}
+Any 2020-class laptop. WebGPU is optional (acceleration only); all v7.0 modules run on the CPU path.
+
+\subsection{Software}
+Modern Chromium/Firefox/Safari; Node.js $\ge$ 20 for the CI suite; TypeScript 6, Vite 8,
+Three.js 0.185 (only runtime dependency).
+
+\section{Method design}
+\subsection{SIREN implicit field with exact periodicity}
+A 4-layer sinusoidal network $F_\theta(\mathbf{x})=W_3\sin(W_2\sin(W_1\sin(W_0\,\mathbf{u})))
++\mathbf{b}_3$ consumes the Fourier feature $\mathbf{u}=[\sin x,\cos x,\sin y,\cos y,\sin z,\cos z]$.
+Because every coordinate enters only through $\sin/\cos$, $F_\theta$ is \emph{exactly} $2\pi$-periodic
+(measured deviation $2.2\times10^{-15}$), which makes cross-period water-tightness a property of the
+architecture rather than of the fit. Five experts (Gyroid, Diamond, Lidinoid, Schwarz~P, fractal
+trabecular) are distilled offline from the platform's single semantic source of TPMS fields with
+Adam (RMSE $0.69\%$--$8.04\%$ at $16^3$, hardest for the multi-scale teacher). A latent code
+$\mathbf{z}\in\mathbb{R}^8$ selects experts through
+$m=\mathrm{softmax}(-\|\mathbf{z}-\mathbf{A}_i\|^2/2\sigma^2)$ with $\pm3$ Walsh anchor codes
+(pairwise Hamming distance 4, cross weight $e^{-72}$). Lipschitz continuity is bounded by
+$\prod_i\|W_i\|_2$ (power iteration) and cross-checked against sampled gradient suprema.
+
+\subsection{Multiaxial yield envelopes}
+All four criteria are expressed in a unified \emph{ray-distance} form: the distance $r(\hat{\mathbf{n}})$
+from the origin to the envelope along a unit direction of principal-stress space. Hill-48 (with a
+hydrostatic cap), capped Drucker--Prager, and Gurson close to star-convex bodies containing the
+origin, hence $r$ is single-valued and the safety factor is exactly $r(\hat{\mathbf{n}})/\|\boldsymbol{\sigma}_0\|$.
+Tsai-Wu admits a closed-form quadratic root. Gurson's hydrostatic pole
+$(2\sigma_0/3)\,\mathrm{arccosh}((1+q^2)/2q)$ with $q$ equal to the porosity provides a strong
+analytic anchor. Scaffold-level parameters are derived from the same Gibson--Ashby constants used
+by the platform's energy-absorption module.
+
+\subsection{Bloch--Floquet phononic bands}
+The unit cell is discretized into voxel masses connected by 26-neighbourhood axial springs.
+Bloch phases assemble a complex Hermitian $K(\mathbf{k})$, realified as
+$\begin{psmallmatrix}A&-B\\B&A\end{psmallmatrix}$ so that all eigensolution machinery is real.
+Two-pass \emph{deflate-Lanczos} (full reorthogonalization; the second run is deflated against the
+first run's Ritz vectors) recovers both copies of every complex eigenvalue, preserving degeneracies.
+Spring stiffness $\kappa$ is calibrated by exact inversion of the long-wave dynamical matrix
+$\omega^2_{\mathrm{LA}}=\kappa h^2 k^2 S_x/(mN^3)$, $S_x=\sum \mathrm{d}x^4/\mathrm{d}^2$ --- affine
+homogenization is explicitly \emph{not} the long-wave modulus of a central-force network (measured
+ratio $0.53$, matching the analytic $0.54$). Under periodic boundary conditions rotations are not
+admissible Bloch modes, so the $\Gamma$ point carries exactly three translational zero modes.
+
+\subsection{Tissue ingrowth reaction--diffusion}
+Oxygen obeys a quasi-steady diffusion--Michaelis--Menten balance solved by 7-point Jacobi iteration
+with no-flux mirrors at solid interfaces and Dirichlet $C_0$ on the perfused boundary layer;
+osteoblasts follow hypoxia-gated logistic growth with explicit daily updates; mineral accumulates
+where oxygen exceeds a threshold. Operator splitting is justified by $\tau_{O_2}=L^2/D\approx0.05$
+days versus a 28-day proliferation horizon. $V_{\max}$ is calibrated to a literature oxygen
+penetration depth $L_{\mathrm{pen}}=\sqrt{2DC_0/V_{\max}}\approx0.4$\,mm. The gate verifies the
+discrete mass balance (boundary-layer flux $=$ interior consumption, residual $0.000\%$) and
+hypoxia gating on a dense-versus-porous pair.
+
+\subsection{Level-set topology optimization}
+The TPMS signed field evolves under $\partial\Phi/\partial t+V_n|\nabla\Phi|=0$ (Godunov upwinding)
+with $V_n$ assembled from elastic von-Mises sensitivities (fully-stressed) and Darcy pressure-gradient
+sensitivities, zero-meaned over \emph{interface} voxels, normalized, and constrained by a volume
+Lagrange bias. Classical compliance under a unit service load is proportional to $1/\text{reaction}$
+of the displacement-controlled solve --- the $\tfrac12 F\delta$ reading is a softening artefact under
+displacement control. Islands are removed by largest-component BFS, $\Phi$ is reinitialized by an
+exact 3D Euclidean distance transform, and the final field re-enters the platform's Surface Nets
+pipeline through the precomputed-field injection contract, guaranteeing water-tight extraction.
+
+\section{Quality control}
+Thirty-six gates run via \texttt{npm run test:all} on three platforms. Every gate loads the shipped
+TypeScript through a bundler and asserts behavior-level invariants (no mocked math). Gate
+calibration itself is treated as a first-class activity: two documented false-red episodes
+(a $\sqrt2$ scaling slip in the auditor's von-Mises conversion; a Gram--Schmidt normalization
+threshold that silently skipped $10^{-10}$-scale columns) are recorded and their fixes covered by
+regression assertions.
+
+\section{Availability}
+\subsection{Current code version}
+v7.0.0-generative-biophysics.
+
+\subsection{Operating requirements}
+See \S\ref{}Necessary resources; no backend, no telemetry, no build-time secrets.
+
+\subsection{Installation}
+Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm run dev} in
+\texttt{tpms/tpms-platform}. CI: \texttt{npm run test:all}.
+
+\end{document}

@@ -16,6 +16,8 @@
 export interface DarcyParams {
   R: number;                 // 体素分辨率/轴
   solid: Uint8Array;         // R³，1 = 固相（不透流）
+  /** 【v7.0 Stage V】返回压力场 p（R³，供水平集流阻敏感度 |∇p| 使用） */
+  returnPressure?: boolean;
   tol?: number;              // SOR 相对残差阈（默认 1e-8）
   maxIter?: number;          // SOR 最大扫掠次数（默认 4000）
   omega?: number;            // SOR 松弛因子（默认 1.9）
@@ -23,6 +25,8 @@ export interface DarcyParams {
 
 export interface DarcyResult {
   kappaLU: number;           // 归一化渗透率（格子单位：L=h=1）
+  /** 压力场 R³（returnPressure 时返回；固相 0） */
+  p?: Float32Array;
   kappaPhys: number;         // 同 kappaLU（相对口径）
   meanPressureDrop: number;
   fluxQ: number;             // 出口无量纲流量
@@ -48,6 +52,7 @@ export function solveDarcyPermeability(params: DarcyParams): DarcyResult {
 
   // 压力场：z=0 面 p=1，z=R−1 面 p=0（Dirichlet）；其余自由（初值线性插值）
   const p = new Float64Array(size);
+  const pFloat = params.returnPressure ? new Float32Array(size) : null;
   for (let iz = 0; iz < R; iz++) {
     const pz = 1 - iz / (R - 1);
     for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
@@ -96,6 +101,8 @@ export function solveDarcyPermeability(params: DarcyParams): DarcyResult {
   const A = R * R;
   const kappaLU = (fluxQ * L) / (A * 1);
 
+  if (pFloat) for (let i = 0; i < size; i++) pFloat[i] = p[i];
+
   return {
     kappaLU,
     kappaPhys: kappaLU,
@@ -105,5 +112,6 @@ export function solveDarcyPermeability(params: DarcyParams): DarcyResult {
     converged,
     elapsedMs: performance.now() - t0,
     porosity,
+    p: pFloat ?? undefined,
   };
 }
