@@ -157,6 +157,30 @@
   .controls::-webkit-scrollbar-track{background:transparent}
   .controls::-webkit-scrollbar-thumb{background:rgba(15,23,42,0.12);border-radius:3px}
   .controls::-webkit-scrollbar-thumb:hover{background:rgba(15,23,42,0.25)}
+
+  /* ═══ v7.1 控制台信息架构：分组 + 跳转 + 密度收紧 ═══ */
+  .ls-jump{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:2px 0 10px;padding:4px;
+    background:rgba(79,195,247,0.05);border:1px solid rgba(79,195,247,0.12);border-radius:8px;
+    position:sticky;top:-18px;z-index:4;backdrop-filter:blur(12px)}
+  .ls-jump button{border:0;background:transparent;color:#8fa3b8;font-size:.66rem;font-weight:700;
+    letter-spacing:1.5px;padding:5px 0;border-radius:5px;cursor:pointer;transition:all .18s}
+  .ls-jump button:hover{color:#4fc3f7;background:rgba(79,195,247,0.08)}
+  .ls-jump button.on{color:#0a0e17;background:#4fc3f7}
+  :root[data-theme="light"] .ls-jump{background:rgba(15,23,42,0.04);border-color:rgba(15,23,42,0.08)}
+  :root[data-theme="light"] .ls-jump button{color:#64748b}
+  :root[data-theme="light"] .ls-jump button.on{color:#fff;background:#0369a1}
+  .sgroup{margin-bottom:2px}
+  .sgroup-h{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px;
+    padding:6px 2px 5px;border-top:1px solid rgba(79,195,247,0.16);cursor:pointer;user-select:none}
+  .sgroup-h:hover .t{color:#4fc3f7}
+  .sgroup-h .t{color:#5d7a94}
+  .sgroup-h:hover .t{color:#4fc3f7}
+  .sgroup-h .n{font-size:.58rem;color:rgba(148,163,184,0.5);font-variant-numeric:tabular-nums}
+  :root[data-theme="light"] .sgroup-h{border-top-color:rgba(15,23,42,0.10)}
+  :root[data-theme="light"] .sgroup-h .t{color:#94a3b8}
+  /* 密度收紧：25 节面板的呼吸感来自节奏而非大间距 */
+  .controls .sect{padding-bottom:11px;margin-bottom:11px}
+  .controls .sect > summary.sect-h{margin-bottom:9px;letter-spacing:1px}
   .sect{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--panel-border)}
   .sect:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
   .sect h3{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
@@ -795,15 +819,14 @@ window.addEventListener('error', function(e) {
     </div>
 
     <div class="panel controls">
-      <div class="sheet-handle" id="sheet-handle"></div>
-      <details class="sect">
-        <summary class="sect-h">各向异性模量曲面 (RVE 均质化)</summary>
-        <div class="field">
-          <button class="opt" id="btn-rve" style="width:100%">计算方向模量曲面 E(n)</button>
-          <canvas id="rve-canvas" width="252" height="126" style="width:100%;margin-top:8px;border-radius:8px;display:none" title="方向杨氏模量 E(n) 球面展开热力图（横轴 φ∈[0,2π] 方位角，纵轴 θ∈[0,π] 极角）"></canvas>
-          <div class="field-note" id="rve-readout">以当前曲面几何的迂曲度调制方向刚度张量，计算任意方向 n 的杨氏模量 E(n) = 1/(nᵢnⱼnₖnℓSᵢⱼₖₗ) 并绘制球面热力图。</div>
-        </div>
-      </details>
+      <div class="sheet-handle" id="sheet-handle"></div><nav class="ls-jump" id="ls-jump" aria-label="面板分组跳转">
+        <button data-jump="grp-geometry" class="on">构型</button>
+        <button data-jump="grp-sim">仿真</button>
+        <button data-jump="grp-optimize">优化</button>
+        <button data-jump="grp-view">视图</button>
+      </nav>
+      <section class="sgroup" id="grp-geometry"><div class="sgroup-h" data-target="grp-geometry" title="跳转到该组"><span class="t">构型设计</span><span class="n">11</span></div>
+
       <details class="sect" open>
         <summary class="sect-h">TPMS 曲面类型</summary>
         <div class="opt-row">
@@ -817,6 +840,7 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-type="splitp" data-color="splitp">Split-P<span class="o-sub">分裂 P</span></button>
         </div>
       </details>
+
       <details class="sect" open>
         <summary class="sect-h">结构参数</summary>
         <div class="field">
@@ -837,6 +861,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">上下两端生成致密实心板，防止压缩试验压盘接触处支柱早溃。孔原率目标不变时材料占比会随端板增厚上升（以实测口径为准）。厚度超过 0.4×单元总宽时自动收窄。</div>
         </div>
       </details>
+
       <details class="sect" open>
         <summary class="sect-h">应用场景预设</summary>
         <div class="scenes">
@@ -848,6 +873,7 @@ window.addEventListener('error', function(e) {
           <button class="scene" data-preset="electrode"><span class="ic">🔋</span><span><span class="nm">电池电极</span><br><span class="ds">Neovius · 宽通道强节点</span></span></button>
         </div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">结构拓扑</summary>
         <div class="opt-row">
@@ -858,6 +884,7 @@ window.addEventListener('error', function(e) {
         <div class="model-desc" id="structure-desc">实体网络：把等值面一侧填成实体（截断 TPMS 的 solid 表示；严格 TPMS 是 C=0 的零厚度曲面）。</div>
         <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="gradient">什么是梯度双壳？</span>　·　<span class="gloss-term" data-term="structure-vs-model">结构拓扑 vs 表现形式</span></div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">表现形式</summary>
         <div class="opt-row">
@@ -873,111 +900,7 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="model-desc" id="model-desc"></div>
       </details>
-      <details class="sect">
-        <summary class="sect-h">工程观察</summary>
-        <div class="opt-row two">
-          <button class="opt active" data-container="cube">立方体容器<span class="o-sub">Cube</span></button>
-          <button class="opt" data-container="cylinder">圆柱体容器<span class="o-sub">Cylinder</span></button>
-        </div>
-        <div class="field">
-          <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
-          <div class="opt-row" style="margin-bottom:6px">
-            <button class="opt active" data-slice-axis="z">Z 轴<span class="o-sub">Z</span></button>
-            <button class="opt" data-slice-axis="x">X 轴<span class="o-sub">X</span></button>
-            <button class="opt" data-slice-axis="y">Y 轴<span class="o-sub">Y</span></button>
-            <button class="opt" data-slice-axis="invert" id="btn-slice-invert" title="反向剖切：保留另一半">反向 ⇄</button>
-          </div>
-          <input type="range" id="slice" min="-100" max="100" value="100" step="1">
-          <div class="field-note">拖动滑块透视内部孔道拓扑；松手后自动进行截面连通性预检。</div>
-        </div>
-        <div class="field" id="percolation-card" style="display:none">
-          <div class="lbl"><span>截面连通性预检</span></div>
-          <div class="opt-row two" style="gap:4px">
-            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-through">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">贯通通道</div></div>
-            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-cavity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">封闭死腔</div></div>
-            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-island">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">悬空孤岛</div></div>
-            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-porosity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">截面孔隙率</div></div>
-          </div>
-          <div class="field-note" id="pc-note">拖动剖切滑块后自动分析。</div>
-        </div>
-        <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">v6.0</span></summary>
-        <div class="field">
-          <div class="field-note">全拉格朗日 StVK + J2 径向返回体素 FEM：位移加载压至 4% 应变，视口播放 von Mises 演化（蓝→红），并绘制工程 σ–ε 曲线。门禁 27 守能量漂移 ≤0.5%。</div>
-          <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
-          <canvas id="plas-curve" width="280" height="120" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
-          <div class="field-note" id="plas-result" style="display:none"></div>
-        </div>
-                <div class="field-note" id="plas-result" style="display:none"></div>
-        </div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">LPBF 打印工艺与残余应力 <span class="sect-tag">v6.0</span></summary>
-        <div class="field">
-          <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
-          <div class="opt-row two" style="gap:6px">
-            <label style="font-size:.7rem">功率 W<input id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
-            <label style="font-size:.7rem">速度 m/s<input id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
-          </div>
-          <button class="opt" id="btn-lpbf" style="width:100%;justify-content:center;margin-top:4px">▶ 模拟熔池与残余应力</button>
-          <div class="field-note" id="lpbf-result" style="display:none"></div>
-        </div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">多轴屈服包络面 (v7.0)</summary>
-        <div class="field">
-          <div class="field-note">主应力空间 (σ₁,σ₂,σ₃) 封闭凸失效包络：Hill-48 各向异性 / Tsai-Wu 拉压不对称 / Gurson 多孔压溃（q=孔隙率）/ Drucker-Prager 圆锥。强度参数由当前结构（相对密度+材料+方向模量）自动推导。</div>
-          <select id="yield-criterion" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
-            <option value="hill48">Hill-48 各向异性（+静水帽）</option>
-            <option value="tsaiwu">Tsai-Wu 拉压不对称</option>
-            <option value="gurson">Gurson 多孔压溃</option>
-            <option value="drucker-prager">Drucker-Prager 圆锥（+压帽）</option>
-          </select>
-          <div class="lbl" style="margin-top:8px"><span>工作应力状态 σ₀（主应力，MPa）</span></div>
-          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
-            <label style="font-size:.7rem">σ₁<input id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₂<input id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₃<input id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
-          </div>
-          <button class="opt" id="btn-yield" style="width:100%;justify-content:center;margin-top:6px">▶ 渲染屈服面 + 安全系数</button>
-          <canvas id="yield-canvas" width="280" height="220" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px;cursor:grab"></canvas>
-          <div class="field-note" id="yield-result" style="display:none"></div>
-        </div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">声子能带与振动禁带 (v7.0)</summary>
-        <div class="field">
-          <div class="field-note">Bloch-Floquet 点阵动力学：单胞体素质点 + 26 邻域弹簧（κ 由长波动力矩阵精确标定），沿 Γ-X-M-R-Γ 求解能带色散，识别路径禁带与相对禁带宽度 BG%。</div>
-          <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
-          <canvas id="phonon-canvas" width="280" height="170" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
-          <div class="field-note" id="phonon-result" style="display:none"></div>
-        </div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">组织长入 0~28 天 (v7.0)</summary>
-        <div class="field">
-          <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
-          <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
-          <div class="lbl" style="margin-top:8px;display:none" id="tissue-day-row"><span>时间轴</span><span class="val" id="tissue-day-value">0 天</span></div>
-          <input type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
-          <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
-          <div class="field-note" id="tissue-result" style="display:none"></div>
-        </div>
-      </details>
-      <details class="sect">
-        <summary class="sect-h">水平集主动拓扑优化 (v7.0)</summary>
-        <div class="field">
-          <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
-          <div class="opt-row two" style="gap:6px">
-            <button class="opt" id="btn-ls-evolve" style="justify-content:center">▶ 演化 10 步</button>
-            <label style="font-size:.7rem">流阻权重<input id="ls-wflow" type="number" value="0" min="0" max="1" step="0.1" style="width:100%"></label>
-          </div>
-          <div class="field-note" id="ls-result" style="display:none"></div>
-          <button class="opt" id="btn-ls-apply" style="width:100%;justify-content:center;margin-top:6px;display:none">✔ 应用演化结果到视口</button>
-        </div>
-      </details>
+
       <details class="sect">
         <summary class="sect-h">空间梯度</summary>
         <div class="opt-row">
@@ -987,6 +910,7 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="model-desc" id="gradient-desc">Z 轴梯度：沿 Z 轴方向厚度连续变化，底部致密顶部疏松，适合骨支架承重设计。</div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">多相混合拓扑 (Hybrid TPMS)</summary>
         <div class="field">
@@ -1025,6 +949,7 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="model-desc" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上选择）。开启后自动推荐「场权重」着色直观呈现过渡带。</div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">空间映射 (Manifold)</summary>
         <div class="field">
@@ -1038,16 +963,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">非欧度规空间映射：对生成的封闭网格做顶点级连续弯曲（圆柱 / 环面 / 双曲径向 / 应力线各向异性）。水密性与流形性质由映射的单射性构造保证；圆柱需 R 大于域半宽，环面需满足双半径约束。</div>
         </div>
       </details>
-      <details class="sect">
-        <summary class="sect-h">GPU 加速 (WebGPU)</summary>
-        <div class="field">
-          <div class="opt-row" style="grid-template-columns:1fr 1fr">
-            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">v3.0 Compute</span></button>
-          </div>
-          <div class="field-note" id="gpu-status">探测中…</div>
-          <div class="model-desc">WebGPU Compute Shader 并行填充体素场，网格化仍由 Worker CPU 管线完成；不支持的浏览器自动无感回退，GPU 与 CPU 场数学同源（webgpu_parity_audit ≤1e-6 门禁守护）。</div>
-        </div>
-      </details>
+
       <details class="sect">
         <summary class="sect-h">应力场引导 (Stress-Driven)</summary>
         <div class="field">
@@ -1065,6 +981,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式高应力侧孔隙板收窄、固相致密化。配合「着色模式 → 应力云图」可视化应力分布。</div>
         </div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">多级分形 TPMS (Hierarchical)</summary>
         <div class="field">
@@ -1086,6 +1003,7 @@ window.addEventListener('error', function(e) {
           <div class="model-desc">F = F_macro + λ·F_micro(N·x)：宏观骨架承载与骨长入（300~600 µm），微孔供给营养输运与超高比表面积（20~50 µm）——骨组织工程支架与高效换热器的双重孔隙架构。</div>
         </div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">隐式神经拓扑 (Generative INR) <span class="sect-tag">v7.0</span></summary>
         <div class="field">
@@ -1117,6 +1035,85 @@ window.addEventListener('error', function(e) {
           <div class="model-desc">正弦激活隐式神经场（SIREN）：4 层 MLP 蒸馏自 Gyroid / Diamond / Lidinoid / Schwarz P / 分形骨小梁五拓扑教师场，8 维潜在码连续插值生成非标多孔构型。神经场覆盖代数公式（WebGPU 自动回退 CPU）。</div>
         </div>
       </details>
+      </section>
+      <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">8</span></div>
+
+      <details class="sect">
+        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">v6.0</span></summary>
+        <div class="field">
+          <div class="field-note">全拉格朗日 StVK + J2 径向返回体素 FEM：位移加载压至 4% 应变，视口播放 von Mises 演化（蓝→红），并绘制工程 σ–ε 曲线。门禁 27 守能量漂移 ≤0.5%。</div>
+          <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
+          <canvas id="plas-curve" width="280" height="120" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="plas-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">LPBF 打印工艺与残余应力 <span class="sect-tag">v6.0</span></summary>
+        <div class="field">
+          <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
+          <div class="opt-row two" style="gap:6px">
+            <label style="font-size:.7rem">功率 W<input id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
+            <label style="font-size:.7rem">速度 m/s<input id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
+          </div>
+          <button class="opt" id="btn-lpbf" style="width:100%;justify-content:center;margin-top:4px">▶ 模拟熔池与残余应力</button>
+          <div class="field-note" id="lpbf-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">多轴屈服包络面 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">主应力空间 (σ₁,σ₂,σ₃) 封闭凸失效包络：Hill-48 各向异性 / Tsai-Wu 拉压不对称 / Gurson 多孔压溃（q=孔隙率）/ Drucker-Prager 圆锥。强度参数由当前结构（相对密度+材料+方向模量）自动推导。</div>
+          <select id="yield-criterion" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+            <option value="hill48">Hill-48 各向异性（+静水帽）</option>
+            <option value="tsaiwu">Tsai-Wu 拉压不对称</option>
+            <option value="gurson">Gurson 多孔压溃</option>
+            <option value="drucker-prager">Drucker-Prager 圆锥（+压帽）</option>
+          </select>
+          <div class="lbl" style="margin-top:8px"><span>工作应力状态 σ₀（主应力，MPa）</span></div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <label style="font-size:.7rem">σ₁<input id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₂<input id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₃<input id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
+          </div>
+          <button class="opt" id="btn-yield" style="width:100%;justify-content:center;margin-top:6px">▶ 渲染屈服面 + 安全系数</button>
+          <canvas id="yield-canvas" width="280" height="220" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px;cursor:grab"></canvas>
+          <div class="field-note" id="yield-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">声子能带与振动禁带 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">Bloch-Floquet 点阵动力学：单胞体素质点 + 26 邻域弹簧（κ 由长波动力矩阵精确标定），沿 Γ-X-M-R-Γ 求解能带色散，识别路径禁带与相对禁带宽度 BG%。</div>
+          <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
+          <canvas id="phonon-canvas" width="280" height="170" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="phonon-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">组织长入 0~28 天 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
+          <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
+          <div class="lbl" style="margin-top:8px;display:none" id="tissue-day-row"><span>时间轴</span><span class="val" id="tissue-day-value">0 天</span></div>
+          <input type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
+          <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="tissue-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">各向异性模量曲面 (RVE 均质化)</summary>
+        <div class="field">
+          <button class="opt" id="btn-rve" style="width:100%">计算方向模量曲面 E(n)</button>
+          <canvas id="rve-canvas" width="252" height="126" style="width:100%;margin-top:8px;border-radius:8px;display:none" title="方向杨氏模量 E(n) 球面展开热力图（横轴 φ∈[0,2π] 方位角，纵轴 θ∈[0,π] 极角）"></canvas>
+          <div class="field-note" id="rve-readout">以当前曲面几何的迂曲度调制方向刚度张量，计算任意方向 n 的杨氏模量 E(n) = 1/(nᵢnⱼnₖnℓSᵢⱼₖₗ) 并绘制球面热力图。</div>
+        </div>
+      </details>
+
       <details class="sect">
         <summary class="sect-h">逆向性能求解器 (Inverse Designer)</summary>
         <div class="field">
@@ -1140,6 +1137,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note" id="inverse-result">输入目标指标后点击「一键反演寻优」——Nelder-Mead 全局探索 + Levenberg-Marquardt 精化，8 类曲面枚举反解最优构型。</div>
         </div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">CT 重构与制造偏差 (Micro-CT)</summary>
         <div class="field">
@@ -1150,6 +1148,65 @@ window.addEventListener('error', function(e) {
           <div class="field-note" id="ct-result">生成演示 CT 数据集（名义 TPMS + 过充偏置 + 表面粗糙噪声 + 层间漂移），Otsu 自动阈值分割 → 精确 3D EDT 重构 SDF → 逐顶点制造偏差 Blue-White-Red 热力图（蓝=欠肉 / 红=过充）。</div>
         </div>
       </details>
+      </section>
+      <section class="sgroup" id="grp-optimize"><div class="sgroup-h" data-target="grp-optimize" title="跳转到该组"><span class="t">主动优化</span><span class="n">1</span></div>
+
+      <details class="sect">
+        <summary class="sect-h">水平集主动拓扑优化 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
+          <div class="opt-row two" style="gap:6px">
+            <button class="opt" id="btn-ls-evolve" style="justify-content:center">▶ 演化 10 步</button>
+            <label style="font-size:.7rem">流阻权重<input id="ls-wflow" type="number" value="0" min="0" max="1" step="0.1" style="width:100%"></label>
+          </div>
+          <div class="field-note" id="ls-result" style="display:none"></div>
+          <button class="opt" id="btn-ls-apply" style="width:100%;justify-content:center;margin-top:6px;display:none">✔ 应用演化结果到视口</button>
+        </div>
+      </details>
+      </section>
+      <section class="sgroup" id="grp-view"><div class="sgroup-h" data-target="grp-view" title="跳转到该组"><span class="t">视图与工具</span><span class="n">5</span></div>
+
+      <details class="sect">
+        <summary class="sect-h">工程观察</summary>
+        <div class="opt-row two">
+          <button class="opt active" data-container="cube">立方体容器<span class="o-sub">Cube</span></button>
+          <button class="opt" data-container="cylinder">圆柱体容器<span class="o-sub">Cylinder</span></button>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
+          <div class="opt-row" style="margin-bottom:6px">
+            <button class="opt active" data-slice-axis="z">Z 轴<span class="o-sub">Z</span></button>
+            <button class="opt" data-slice-axis="x">X 轴<span class="o-sub">X</span></button>
+            <button class="opt" data-slice-axis="y">Y 轴<span class="o-sub">Y</span></button>
+            <button class="opt" data-slice-axis="invert" id="btn-slice-invert" title="反向剖切：保留另一半">反向 ⇄</button>
+          </div>
+          <input type="range" id="slice" min="-100" max="100" value="100" step="1">
+          <div class="field-note">拖动滑块透视内部孔道拓扑；松手后自动进行截面连通性预检。</div>
+        </div>
+        <div class="field" id="percolation-card" style="display:none">
+          <div class="lbl"><span>截面连通性预检</span></div>
+          <div class="opt-row two" style="gap:4px">
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-through">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">贯通通道</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-cavity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">封闭死腔</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-island">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">悬空孤岛</div></div>
+            <div style="text-align:center;padding:4px 2px"><div style="font-size:1.05rem;font-weight:700" id="pc-porosity">—</div><div style="font-size:.62rem;color:var(--ink-3,#94a3b8)">截面孔隙率</div></div>
+          </div>
+          <div class="field-note" id="pc-note">拖动剖切滑块后自动分析。</div>
+        </div>
+        <div class="model-desc" id="engineering-desc">均质模式：整个结构使用同一等值面参数，适合观察标准 TPMS 单元。</div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">GPU 加速 (WebGPU)</summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">v3.0 Compute</span></button>
+          </div>
+          <div class="field-note" id="gpu-status">探测中…</div>
+          <div class="model-desc">WebGPU Compute Shader 并行填充体素场，网格化仍由 Worker CPU 管线完成；不支持的浏览器自动无感回退，GPU 与 CPU 场数学同源（webgpu_parity_audit ≤1e-6 门禁守护）。</div>
+        </div>
+      </details>
+
       <details class="sect">
         <summary class="sect-h">着色模式</summary>
         <div class="opt-row" id="coloring-row">
@@ -1162,6 +1219,7 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="model-desc" id="coloring-desc">顶点热力图（蓝→白→红）：「场」显示混合权重或壁厚梯度，「高度」按 Z 轴渐变，两种「曲率」为隐函数解析曲率（红正蓝负，饱和于 98% 分位）。场口径需先开启异构混合或梯度双壳。</div>
       </details>
+
       <details class="sect">
         <summary class="sect-h">自定义隐函数</summary>
         <div class="field">
@@ -1175,6 +1233,7 @@ window.addEventListener('error', function(e) {
           <div class="opt-row custom-presets" id="custom-presets"></div>
         </div>
       </details>
+
       <details class="sect" open>
         <summary class="sect-h">当前曲面隐函数</summary>
         <div class="formula">
@@ -1186,6 +1245,8 @@ window.addEventListener('error', function(e) {
           <div class="fw-hint" style="margin-top:6px"><span class="gloss-term" data-term="weight">抽动权重</span>，观察公式项如何驱动曲面变形</div>
         </div>
       </details>
+      </section>
+
     </div>
   </div>
 </div>

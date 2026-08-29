@@ -596,6 +596,39 @@ function wireNLChat(): void {
 }
 wireNLChat();
 
+// ── 【v7.1 UI】控制台分组跳转导航 ──
+{
+  const rail = document.querySelector('.panel.controls');
+  const jumpBtns = [...document.querySelectorAll<HTMLButtonElement>('.ls-jump [data-jump]')];
+  const groups = jumpBtns.map((b) => document.getElementById(b.dataset.jump ?? ''));
+  const activate = (idx: number): void => {
+    jumpBtns.forEach((b, i) => b.classList.toggle('on', i === idx));
+  };
+  jumpBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      const g = groups[idx];
+      if (g && rail) rail.scrollTo({ top: g.offsetTop - 6, behavior: 'smooth' });
+      activate(idx);
+    });
+  });
+  // 滚动联动高亮（IntersectionObserver 阈值口径，轻量）
+  if (rail && groups.every(Boolean)) {
+    const io = new IntersectionObserver((entries) => {
+      const vis = groups.map((g) => entries.find((e) => e.target === g)?.isIntersecting ?? false);
+      const first = vis.indexOf(true);
+      if (first >= 0) activate(first);
+    }, { root: rail, threshold: 0.05 });
+    groups.forEach((g) => { if (g) io.observe(g); });
+  }
+  // 分组头点击 = 同跳转
+  document.querySelectorAll<HTMLElement>('.sgroup-h[data-target]').forEach((h) => {
+    h.addEventListener('click', () => {
+      const idx = groups.findIndex((g) => g?.id === h.dataset.target);
+      if (idx >= 0) jumpBtns[idx]?.click();
+    });
+  });
+}
+
 document.getElementById('btn-lpbf')?.addEventListener('click', () => {
   const out = document.getElementById('lpbf-result');
   const power = Number((document.getElementById('lpbf-power') as HTMLInputElement)?.value ?? 200);
