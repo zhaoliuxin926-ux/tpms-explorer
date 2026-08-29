@@ -947,6 +947,15 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">声子能带与振动禁带 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">Bloch-Floquet 点阵动力学：单胞体素质点 + 26 邻域弹簧（κ 由长波动力矩阵精确标定），沿 Γ-X-M-R-Γ 求解能带色散，识别路径禁带与相对禁带宽度 BG%。</div>
+          <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
+          <canvas id="phonon-canvas" width="280" height="170" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="phonon-result" style="display:none"></div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">空间梯度</summary>
         <div class="opt-row">
           <button class="opt active" data-gradient="z">Z 轴渐变<span class="o-sub">Z Gradient</span></button>
