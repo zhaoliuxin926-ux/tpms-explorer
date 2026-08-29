@@ -1034,6 +1034,37 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">隐式神经拓扑 (Generative INR) <span class="sect-tag">v7.0</span></summary>
+        <div class="field">
+          <div class="opt-row" style="grid-template-columns:1fr 1fr">
+            <button class="opt" id="neural-enabled">启用神经场<span class="o-sub">SIREN</span></button>
+          </div>
+          <div id="neural-options" style="display:none">
+            <div class="lbl" style="margin-top:9px"><span>拓扑专家锚点（点击跳转）</span></div>
+            <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr">
+              <button class="opt" data-neural-anchor="0">Gyroid</button>
+              <button class="opt" data-neural-anchor="1">Diamond</button>
+              <button class="opt" data-neural-anchor="2">Lidinoid</button>
+              <button class="opt" data-neural-anchor="3">Schwarz P</button>
+              <button class="opt" data-neural-anchor="4">骨小梁</button>
+            </div>
+            <div class="lbl" style="margin-top:9px"><span>潜在码 z ∈ R⁸（拖动 = 拓扑流形插值）</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px">
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₀</span><span class="val" style="font-size:.62rem" id="neural-z-0-value">3.0</span></div><input type="range" id="neural-z-0" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₁</span><span class="val" style="font-size:.62rem" id="neural-z-1-value">3.0</span></div><input type="range" id="neural-z-1" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₂</span><span class="val" style="font-size:.62rem" id="neural-z-2-value">3.0</span></div><input type="range" id="neural-z-2" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₃</span><span class="val" style="font-size:.62rem" id="neural-z-3-value">3.0</span></div><input type="range" id="neural-z-3" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₄</span><span class="val" style="font-size:.62rem" id="neural-z-4-value">3.0</span></div><input type="range" id="neural-z-4" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₅</span><span class="val" style="font-size:.62rem" id="neural-z-5-value">3.0</span></div><input type="range" id="neural-z-5" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₆</span><span class="val" style="font-size:.62rem" id="neural-z-6-value">3.0</span></div><input type="range" id="neural-z-6" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₇</span><span class="val" style="font-size:.62rem" id="neural-z-7-value">3.0</span></div><input type="range" id="neural-z-7" min="-3" max="3" value="3" step="0.1"></div>
+            </div>
+          </div>
+          <div class="field-note" id="neural-status"></div>
+          <div class="model-desc">正弦激活隐式神经场（SIREN）：4 层 MLP 蒸馏自 Gyroid / Diamond / Lidinoid / Schwarz P / 分形骨小梁五拓扑教师场，8 维潜在码连续插值生成非标多孔构型。神经场覆盖代数公式（WebGPU 自动回退 CPU）。</div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">逆向性能求解器 (Inverse Designer)</summary>
         <div class="field">
           <div class="lbl"><span>目标预设</span></div>

@@ -108,6 +108,11 @@ export function buildShareURL(): string {
     params.set('hn', String(s.hierarchical.frequency));
     params.set('hl', String(s.hierarchical.amplitude));
   }
+  // 【v7.0 Stage I】隐式神经拓扑（关闭时不写入；z 打包 CSV）
+  if (s.neural.enabled) {
+    params.set('ne', '1');
+    params.set('nz', s.neural.z.map((v) => v.toFixed(2)).join(','));
+  }
   if (s.hybrid.enabled) {
     params.set('hybrid', '1');
     params.set('hybridType', s.hybrid.typeB);

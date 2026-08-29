@@ -45,6 +45,14 @@ import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
 import { parseNL, type NLIntent } from './core/nl-agent';
+import {
+  expertName,
+  expertCount,
+  mixtureWeights,
+  nearestExpertIndex,
+  neuralAnchor,
+  sanitizeLatent,
+} from './core/neural-implicit-field';
 import { DEFAULT_STATE } from './types';
 import { mapElementFieldToVertexColors } from './physics/gpu-plasticity-webgpu';
 import { sampleCoolWarmInto } from './geometry/vertex-coloring';
@@ -92,11 +100,31 @@ const geoCache = new Map<string, { positions: Float32Array; normals: Float32Arra
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
 }
 
 // ── 多级分形统计（v3.0 阶段 V）：双重比表面积 + 微孔连通率 ──
 let hierStatsTimer: ReturnType<typeof setTimeout> | null = null;
+
+// ── 神经拓扑状态行（v7.0 Stage I）：最近锚点 + 混合熵 ──
+function updateNeuralStatus(): void {
+  const el = document.getElementById('neural-status');
+  if (!el) return;
+  const s = getState();
+  if (!s.neural.enabled) { el.textContent = ''; return; }
+  try {
+    const z = sanitizeLatent(s.neural.z);
+    const mix = mixtureWeights(z);
+    const near = nearestExpertIndex(z);
+    const entropy = -mix.reduce((a, p) => a + (p > 1e-9 ? p * Math.log(p) : 0), 0);
+    const atAnchor = mix[near] > 0.999;
+    el.textContent = atAnchor
+      ? `锚点态：${expertName(near)}（单专家快路径 · 熵 0.00）`
+      : `流形插值：近 ${expertName(near)} · 混合熵 ${entropy.toFixed(2)} / ${Math.log(expertCount()).toFixed(2)}`;
+  } catch {
+    el.textContent = '潜在码非法（已钳制）';
+  }
+}
 function scheduleHierarchicalStats(): void {
   if (hierStatsTimer) clearTimeout(hierStatsTimer);
   hierStatsTimer = setTimeout(() => {
@@ -143,7 +171,8 @@ function setGpuStatusText(text: string): void {
 /** 完整重建派发（rebuild 非 preview 路径与 HD 升级共用）：GPU 可用则预计算场后入队 */
 function dispatchFullBuild(params: BuildParams, stateKey: string): void {
   const s = getState();
-  if (!s.gpuAccelerate || gpuUsable === false || params.resolution < 48) {
+  // 神经场走 SIREN 前向（WebGPU 指令 IR 不感知）——enabled 时强制 CPU 管线
+  if (!s.gpuAccelerate || gpuUsable === false || params.resolution < 48 || params.neural?.enabled) {
     bridge.build(params);
     return;
   }
@@ -616,6 +645,7 @@ function rebuild(preview: boolean): boolean {
     endplateMm: s.endplateMm,
     stress: s.stress,
     hierarchical: s.hierarchical,
+    neural: s.neural,
   };
 
   dispatchFullBuild(params, key);
@@ -653,6 +683,7 @@ function scheduleHdUpgrade(): void {
       endplateMm: s.endplateMm,
       stress: s.stress,
       hierarchical: s.hierarchical,
+      neural: s.neural,
     };
     dispatchFullBuild(params, cacheKey(s, fullR));
     if (s.hierarchical.enabled) scheduleHierarchicalStats();
@@ -1779,6 +1810,40 @@ function bindUIEvents(): void {
   });
   document.getElementById('stress-anisotropy')?.addEventListener('change', () => scheduleRebuild(false));
 
+  // 【v7.0 Stage I】隐式神经拓扑（SIREN）：启用 + 专家锚点 + 8 维潜在滑块
+  document.getElementById('neural-enabled')?.addEventListener('click', () => {
+    const s = getState();
+    setState({ neural: { ...s.neural, enabled: !s.neural.enabled } });
+    syncUI(getState());
+    scheduleRebuild(false);
+  });
+  document.querySelectorAll('[data-neural-anchor]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.getAttribute('data-neural-anchor'));
+      try {
+        setState({ neural: { enabled: true, z: neuralAnchor(idx) } });
+        flashToast(`神经拓扑锚点：${expertName(idx)}（潜在空间 ${expertCount()} 专家流形）`);
+      } catch { /* 锚点越界不可能触达 */ }
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  });
+  for (let zi = 0; zi < 8; zi++) {
+    const el = document.getElementById(`neural-z-${zi}`) as HTMLInputElement | null;
+    if (!el) continue;
+    el.addEventListener('input', () => {
+      const s = getState();
+      const z = [...s.neural.z];
+      z[zi] = Number(el.value);
+      setState({ neural: { ...s.neural, z } });
+      const vEl = document.getElementById(`neural-z-${zi}-value`);
+      if (vEl) vEl.textContent = Number(el.value).toFixed(1);
+      updateNeuralStatus();
+      scheduleRebuild(true);
+    });
+    el.addEventListener('change', () => scheduleRebuild(false));
+  }
+
   document.querySelectorAll('[data-gradient]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ gradientDir: btn.getAttribute('data-gradient') as AppState['gradientDir'] });
@@ -2284,6 +2349,20 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-stress]').forEach(el => {
     el.classList.toggle('active', (s as any).stress.preset === el.getAttribute('data-stress'));
   });
+  // 【v7.0 Stage I】神经拓扑 UI 同步
+  {
+    const ne = document.getElementById('neural-enabled');
+    if (ne) ne.classList.toggle('on', s.neural.enabled);
+    const no = document.getElementById('neural-options');
+    if (no) no.style.display = s.neural.enabled ? 'block' : 'none';
+    for (let zi = 0; zi < 8; zi++) {
+      const el = document.getElementById(`neural-z-${zi}`) as HTMLInputElement | null;
+      if (el) el.value = String(s.neural.z[zi] ?? 3);
+      const vEl = document.getElementById(`neural-z-${zi}-value`);
+      if (vEl) vEl.textContent = (s.neural.z[zi] ?? 3).toFixed(1);
+    }
+    updateNeuralStatus();
+  }
   {
     const ss = document.getElementById('stress-strength') as HTMLInputElement | null;
     if (ss) ss.value = String((s as any).stress.strength);
