@@ -54,6 +54,8 @@ import {
   type YieldCriterionKind,
 } from './physics/yield-surface';
 import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
+import { solvePhononicBands, type PhononicResult } from './physics/phononic-bandgap';
+import { isSolidAt, type SectionAnalysisParams } from './physics/percolation-analysis';
 import {
   expertName,
   expertCount,
@@ -655,6 +657,98 @@ document.getElementById('btn-yield')?.addEventListener('click', () => {
     if (out) { out.style.display = 'block'; out.textContent = `屈服面评估失败：${err instanceof Error ? err.message : String(err)}`; }
   }
 });
+
+// ── 【v7.0 Stage III】声子能带色散图 + 禁带识别 ──
+document.getElementById('btn-phonon')?.addEventListener('click', () => {
+  const out = document.getElementById('phonon-result');
+  const canvas = document.getElementById('phonon-canvas') as HTMLCanvasElement | null;
+  const s = getState();
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled;
+  if (unsupported) {
+    if (out) { out.style.display = 'block'; out.textContent = '声子能带暂不支持 custom/lidinoid/splitp/混合场（固相判定语义源限制）'; }
+    return;
+  }
+  try {
+    // 体素化固相掩码（与平台最终场同语义：percolation isSolidAt 单一语义源）
+    const N = 6;
+    const params: SectionAnalysisParams = {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: 'cube', isoUsed: lastIsoUsed, endplateMm: 0,
+    };
+    const solid = new Uint8Array(N * N * N);
+    for (let iz = 0; iz < N; iz++) for (let iy = 0; iy < N; iy++) for (let ix = 0; ix < N; ix++) {
+      const x = ((ix + 0.5) / N) * 2 - 1, y = ((iy + 0.5) / N) * 2 - 1, z = ((iz + 0.5) / N) * 2 - 1;
+      solid[ix + iy * N + iz * N * N] = isSolidAt(params, x, y, z) ? 1 : 0;
+    }
+    const matKey = s.material === 'auto' ? 'tc4' : s.material;
+    const rhoS = matKey === 'polymer' ? 1200 : matKey === 'thermal' ? 3000 : 4430;
+    const E0 = (matKey === 'polymer' ? 3.5 : matKey === 'thermal' ? 70 : 110) * 1e9;
+    const res = solvePhononicBands({ N, solid, rhoS, matrixEPa: E0, cellSizeM: (s.cellSize) * 1e-3, numBands: 10, kPointsPerSeg: 4, maxIter: 120 });
+
+    // 绘制能带图
+    if (canvas) {
+      canvas.style.display = 'block';
+      const ctx2 = canvas.getContext('2d');
+      if (ctx2) {
+        const W = canvas.width, H = canvas.height;
+        ctx2.clearRect(0, 0, W, H);
+        const mL = 34, mR = 8, mT = 10, mB = 20;
+        const pw = W - mL - mR, ph = H - mT - mB;
+        let fMax = 0;
+        for (const b of res.bands) for (const w of b) fMax = Math.max(fMax, w);
+        fMax = fMax || 1;
+        const yOf = (w: number) => mT + ph * (1 - w / fMax);
+        // 禁带底纹
+        for (const g of res.bandgaps) {
+          ctx2.fillStyle = 'rgba(250,204,21,0.25)';
+          ctx2.fillRect(mL, yOf(g.upper), pw, yOf(g.lower) - yOf(g.upper));
+        }
+        // 网格与高对称点
+        ctx2.strokeStyle = 'rgba(148,163,184,0.3)';
+        ctx2.beginPath();
+        for (let i = 0; i < pathTicks(res).length; i++) {
+          const x = mL + pathTicks(res)[i].x * pw;
+          ctx2.moveTo(x, mT); ctx2.lineTo(x, mT + ph);
+        }
+        ctx2.stroke();
+        // 能带线
+        const colors = ['#38bdf8', '#38bdf8', '#f59e0b', '#a78bfa', '#a78bfa', '#a78bfa', '#34d399', '#34d399', '#f87171', '#f87171'];
+        for (let b = 0; b < res.bands.length; b++) {
+          ctx2.strokeStyle = colors[b % colors.length];
+          ctx2.lineWidth = b < 3 ? 1.6 : 1;
+          ctx2.beginPath();
+          for (let kk = 0; kk < res.bands[b].length; kk++) {
+            const x = mL + (res.pathX[kk] / (res.pathX[res.pathX.length - 1] || 1)) * pw;
+            const y = yOf(res.bands[b][kk]);
+            if (kk === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+          }
+          ctx2.stroke();
+        }
+        // 轴标签
+        ctx2.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx2.font = '10px sans-serif';
+        for (const t of pathTicks(res)) ctx2.fillText(t.label, mL + t.x * pw - 4, H - 6);
+        ctx2.fillText(`${(fMax / 2 / Math.PI / 1e6).toFixed(1)} MHz`, 2, mT + 8);
+      }
+    }
+    if (out) {
+      out.style.display = 'block';
+      const bg = res.bandgaps.length
+        ? `禁带 ${res.bandgaps.map((g) => `${(g.lower / 2 / Math.PI / 1e3).toFixed(0)}~${(g.upper / 2 / Math.PI / 1e3).toFixed(0)}kHz(BG ${g.bgPct.toFixed(1)}%)`).join(' · ')}`
+        : '路径禁带：无';
+      out.textContent = `零模态 ${res.zeroModesAtGamma}（平动声学）· 声速比 ${(res.cMeasuredMs / res.cTargetMs).toFixed(3)} · ρ̄=${res.relativeDensity.toFixed(2)} · ${bg} · ${res.elapsedMs}ms`;
+    }
+  } catch (err) {
+    if (out) { out.style.display = 'block'; out.textContent = `能带计算失败：${err instanceof Error ? err.message : String(err)}`; }
+  }
+});
+
+/** 能带图高对称点刻度（Γ-X-M-R-Γ，坐标 = 实际累计路径比） */
+function pathTicks(res: PhononicResult): { label: string; x: number }[] {
+  const xMax = res.pathX[res.pathX.length - 1] || 1;
+  return res.ticks.map((t) => ({ label: t.label, x: t.x / xMax }));
+}
 
 // ── 重建调度 ─────────────────────────────────────────────
 /** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
