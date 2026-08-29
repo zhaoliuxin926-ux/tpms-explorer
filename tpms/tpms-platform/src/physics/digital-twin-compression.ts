@@ -170,7 +170,7 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
     let active = plas.solidVoxels;
     let di = 0;
     for (const c of curve) {
-      while (di < deathTimeline.length && deathTimeline[di].strain <= c.strain + 1e-12) {
+      while (di < deathTimeline.length && deathTimeline[di].strain < c.strain - 1e-12) {
         active -= deathTimeline[di].killed;
         di++;
       }

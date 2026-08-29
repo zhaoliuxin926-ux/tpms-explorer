@@ -219,6 +219,88 @@ console.log('\n[G] WGSL 同步锚定');
   check('GPU 运行时暴露顶点色映射', wrapSrc.includes('export function mapElementFieldToVertexColors'));
 }
 
+
+// ══ H. WGSL 静态健全性（对抗审查转正：内核此前零静态校验）══
+console.log('\n[H] WGSL 静态健全性');
+{
+  const wgslSrc = readFileSync(wgslPath, 'utf-8');
+  check('H1 括号配平', (() => { let d = 0; for (const ch of wgslSrc) { if (ch === '{') d++; if (ch === '}') d--; } return d === 0; })());
+  check('H2 六个 binding 齐备', [0, 1, 2, 3, 4, 5].every(n => wgslSrc.includes('@binding(' + n + ')')));
+  check('H3 compute 入口 + workgroup', wgslSrc.includes('@compute') && wgslSrc.includes('workgroup_size(64)'));
+      check('H4 无 JS/TS 残留语法', ['function', '=>', 'console.', 'undefined', '.length'].every(k => !wgslSrc.includes(k)));
+  check('H5 张量空间口径锚（应力剪切不减半）', wgslSrc.includes('let t1 = s3;') && wgslSrc.includes('let t4 = s1;'));
+  check('H6 径向返回核心算子', wgslSrc.includes('kFac = -3.0 * P.mu * dGamma / vmTrial') && wgslSrc.includes('epFac = 1.5 * dGamma / vmTrial'));
+}
+
+// ══ I. 径向返回模糊测试 ×5000（对抗审查修正口径）══
+console.log('\n[I] 径向返回模糊测试');
+{
+  let seedI = 987654321;
+  const rndI = () => { seedI = (seedI * 1664525 + 1013904223) >>> 0; return seedI / 4294967296; };
+  let maxFY = 0, violInside = 0, maxIncTr = 0, maxRe = 0, nY = 0, nE = 0;
+  for (let i = 0; i < 5000; i++) {
+    const nu = 0.2 + rndI() * 0.25, sy = 0.005 + rndI() * 0.045, H = rndI() * 0.2;
+    const cc = sol.lameFromNu(nu);
+    const eT = Array.from({ length: 6 }, () => (rndI() - 0.5) * 0.06);
+    const epO = Array.from({ length: 6 }, () => (rndI() - 0.5) * 0.02);
+    const peeqO = rndI() * 0.05;
+    const rr = sol.radialReturn(eT, epO, peeqO, cc, sy, H);
+    const fNew = sol.vonMisesVoigt(rr.stress) - rr.yieldStress;
+    if (rr.dPeek > 0) {
+      nY++;
+      maxFY = Math.max(maxFY, Math.abs(fNew) / rr.yieldStress);
+      maxIncTr = Math.max(maxIncTr, Math.abs((rr.epPlastic[0] - epO[0]) + (rr.epPlastic[1] - epO[1]) + (rr.epPlastic[2] - epO[2])) / Math.max(rr.dPeek, 1e-9));
+      const re = sol.radialReturn(eT, rr.epPlastic, rr.peeq, cc, sy, H);
+      maxRe = Math.max(maxRe, re.dPeek);
+    } else { nE++; if (fNew > 0) violInside++; }
+  }
+  check(`I1 屈服态归面 ≤1e-11·σy（${nY} 态）`, maxFY <= 1e-11, maxFY.toExponential(2));
+  check(`I2 弹性态留在面内（${nE} 态）`, violInside === 0, String(violInside));
+  check('I3 塑性增量无迹 ≤1e-12', maxIncTr <= 1e-12, maxIncTr.toExponential(2));
+  check('I4 重入幂等 ≤1e-15', maxRe <= 1e-15, maxRe.toExponential(2));
+}
+
+// ══ J. Ke 刚体零空间（6 模，正确角点坐标）══
+console.log('\n[J] Ke 刚体零空间');
+{
+  const KeJ = sol.buildElasticKe(0.3);
+  let kmax = 0;
+  for (let i = 0; i < 576; i++) kmax = Math.max(kmax, Math.abs(KeJ[i]));
+  // NODE_XI 序：x+:{1,2,5,6} y+:{2,3,6,7} z+:{4..7}（曾用二进制序致探针误报）
+  const coordsJ = [];
+  for (let a = 0; a < 8; a++) coordsJ.push([(a === 1 || a === 2 || a === 5 || a === 6) ? 1 : 0, (a === 2 || a === 3 || a === 6 || a === 7) ? 1 : 0, a >= 4 ? 1 : 0]);
+  const modes = [];
+  for (let d = 0; d < 3; d++) { const v = new Array(24).fill(0); for (let a = 0; a < 8; a++) v[a * 3 + d] = 1; modes.push(v); }
+  for (const ax of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+    const v = new Array(24).fill(0);
+    for (let a = 0; a < 8; a++) {
+      const rx = coordsJ[a][0] - 0.5, ry = coordsJ[a][1] - 0.5, rz = coordsJ[a][2] - 0.5;
+      if (ax[0]) { v[a * 3 + 1] = -rz; v[a * 3 + 2] = ry; }
+      if (ax[1]) { v[a * 3] = rz; v[a * 3 + 2] = -rx; }
+      if (ax[2]) { v[a * 3] = -ry; v[a * 3 + 1] = rx; }
+    }
+    modes.push(v);
+  }
+  let maxRigid = 0;
+  for (const v of modes) for (let i = 0; i < 24; i++) {
+    let ssum = 0;
+    for (let j = 0; j < 24; j++) ssum += KeJ[i * 24 + j] * v[j];
+    maxRigid = Math.max(maxRigid, Math.abs(ssum) / kmax);
+  }
+  check(`J1 六刚体模零力 ≤1e-12（实测 ${maxRigid.toExponential(2)}）`, maxRigid <= 1e-12);
+}
+
+// ══ K. 静水 KUBC × gyroid 格构（此前只测过全实心块）══
+console.log('\n[K] 静水 KUBC 格构');
+{
+  const { solid: sK } = voxelizeGyroid(6, 0.4);
+  const rK = sol.solvePlasticityCompression({ R: 6, solid: sK, nu: 0.3, sigmaY: 1e9, steps: 3, maxStrain: 0.001, tol: 1e-7, loadMode: 'hydrostatic' });
+  const lastK = rK.steps[rK.steps.length - 1];
+  check('K1 格构静水全收敛', rK.allConverged);
+  check(`K2 格构静水台账 ≤0.5%（实测 ${(lastK.energy.drift * 100).toFixed(4)}%）`, lastK.energy.drift <= 0.005);
+  check('K3 格构静水无塑性', lastK.maxPEEQ === 0);
+}
+
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
 if (failCount > 0) {
   console.log('失败项:');
