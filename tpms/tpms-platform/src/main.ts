@@ -46,6 +46,15 @@ import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
 import { parseNL, type NLIntent } from './core/nl-agent';
 import {
+  deriveScaffoldYieldConfigs,
+  buildEnvelopeMesh,
+  safetyFactor,
+  criticalMode,
+  YIELD_CRITERIA_LABEL,
+  type YieldCriterionKind,
+} from './physics/yield-surface';
+import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
+import {
   expertName,
   expertCount,
   mixtureWeights,
@@ -598,6 +607,52 @@ document.getElementById('btn-lpbf')?.addEventListener('click', () => {
     }
   } catch (err) {
     if (out) out.textContent = `模拟失败：${err instanceof Error ? err.message : String(err)}`;
+  }
+});
+
+// ── 【v7.0 Stage II】多轴屈服包络面：参数推导 + 3D 预览 + 安全系数 ──
+let yieldViewer: YieldViewer | null = null;
+document.getElementById('btn-yield')?.addEventListener('click', () => {
+  const out = document.getElementById('yield-result');
+  const canvas = document.getElementById('yield-canvas') as HTMLCanvasElement | null;
+  try {
+    const s = getState();
+    const rho = lastMeshSolidFraction ?? (1 - s.porosity / 100);
+    const matKey = s.material === 'auto' ? 'tc4' : s.material;
+    const d = deriveScaffoldYieldConfigs(rho, s.type, s.porosity / 100, matKey);
+    const kind = (document.getElementById('yield-criterion') as HTMLSelectElement).value as YieldCriterionKind;
+    const cfg = kind === 'hill48' ? d.hill : kind === 'tsaiwu' ? d.tsaiwu : kind === 'gurson' ? d.gurson : d.dp;
+    const sigma0: [number, number, number] = [
+      Number((document.getElementById('yield-s1') as HTMLInputElement).value) || 0,
+      Number((document.getElementById('yield-s2') as HTMLInputElement).value) || 0,
+      Number((document.getElementById('yield-s3') as HTMLInputElement).value) || 0,
+    ];
+    const mesh = buildEnvelopeMesh(kind, cfg);
+    const sfRes = safetyFactor(kind, cfg, sigma0);
+    const crit = criticalMode([
+      { kind: 'hill48', config: d.hill },
+      { kind: 'tsaiwu', config: d.tsaiwu },
+      { kind: 'gurson', config: d.gurson },
+      { kind: 'drucker-prager', config: d.dp },
+    ], sigma0);
+    // 3D 预览（惰性创建渲染器；重复点击复用并更新几何）
+    if (canvas) {
+      canvas.style.display = 'block';
+      if (!yieldViewer || yieldViewer.disposed) yieldViewer = createYieldViewer(canvas);
+      yieldViewer.update(mesh.positions, mesh.indices, sigma0);
+    }
+    if (out) {
+      out.style.display = 'block';
+      const sfTxt = sfRes.sf >= 100 ? '≥100' : sfRes.sf.toFixed(2);
+      const critTxt = crit ? `${YIELD_CRITERIA_LABEL[crit.kind]}（SF ${crit.result.sf >= 100 ? '≥100' : crit.result.sf.toFixed(2)}）` : '—';
+      out.textContent = `${YIELD_CRITERIA_LABEL[kind]}：包络半径带 ${mesh.rMin.toFixed(2)}~${mesh.rMax.toFixed(2)} MPa · `
+        + `安全系数 SF=${sfTxt}（应力模长 ${sfRes.stressNorm.toFixed(2)} MPa）· 临界失效模式：${critTxt}`;
+      const sfVal = crit ? crit.result.sf : sfRes.sf;
+      out.textContent += sfVal < 1 ? ' ⚠ 应力状态已在包络外（失效）' : sfVal < 1.5 ? ' ⚠ 裕度偏低' : '';
+      out.textContent += ` · 推导口径：ρ̄=${rho.toFixed(2)} σ_pl=${d.sigmaPl.toFixed(1)} MPa`;
+    }
+  } catch (err) {
+    if (out) { out.style.display = 'block'; out.textContent = `屈服面评估失败：${err instanceof Error ? err.message : String(err)}`; }
   }
 });
 

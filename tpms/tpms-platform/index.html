@@ -926,6 +926,27 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       <details class="sect">
+        <summary class="sect-h">多轴屈服包络面 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">主应力空间 (σ₁,σ₂,σ₃) 封闭凸失效包络：Hill-48 各向异性 / Tsai-Wu 拉压不对称 / Gurson 多孔压溃（q=孔隙率）/ Drucker-Prager 圆锥。强度参数由当前结构（相对密度+材料+方向模量）自动推导。</div>
+          <select id="yield-criterion" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+            <option value="hill48">Hill-48 各向异性（+静水帽）</option>
+            <option value="tsaiwu">Tsai-Wu 拉压不对称</option>
+            <option value="gurson">Gurson 多孔压溃</option>
+            <option value="drucker-prager">Drucker-Prager 圆锥（+压帽）</option>
+          </select>
+          <div class="lbl" style="margin-top:8px"><span>工作应力状态 σ₀（主应力，MPa）</span></div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <label style="font-size:.7rem">σ₁<input id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₂<input id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₃<input id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
+          </div>
+          <button class="opt" id="btn-yield" style="width:100%;justify-content:center;margin-top:6px">▶ 渲染屈服面 + 安全系数</button>
+          <canvas id="yield-canvas" width="280" height="220" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px;cursor:grab"></canvas>
+          <div class="field-note" id="yield-result" style="display:none"></div>
+        </div>
+      </details>
+      <details class="sect">
         <summary class="sect-h">空间梯度</summary>
         <div class="opt-row">
           <button class="opt active" data-gradient="z">Z 轴渐变<span class="o-sub">Z Gradient</span></button>
