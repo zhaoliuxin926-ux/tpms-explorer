@@ -360,9 +360,13 @@
   @media(max-width:980px){
     .grid{grid-template-columns:1fr;padding:0;gap:0}
     .viewer{height:calc(100vh - 56px);min-height:0}
-    .controls{position:fixed;bottom:0;left:0;right:0;max-height:78vh;transform:translateY(calc(100% - 54px));transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:50;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(10,13,20,.18);padding:0 16px 16px}
-    .controls.sheet-open{transform:translateY(0)}
-    .controls .sect:first-of-type{margin-top:4px}
+    /* 特性定案：用 .panel.controls 提高特异性——P4-1 仪器化重设计的
+       .panel.controls{position:relative} 会压过 .controls 单类选择器，
+       使移动端抽屉永远钉在流内（v7.1 UI 轮实测修复） */
+    /* 特异性定案：.grid .panel.controls（0,3,0）压过 P4-1 的 .panel.controls{position:relative}（0,2,0 且源顺序更靠后） */
+    .grid .panel.controls{position:fixed;bottom:0;left:0;right:0;max-height:78vh;transform:translateY(calc(100% - 54px));transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:50;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(10,13,20,.18);padding:0 16px 16px;overflow-y:auto}
+    .grid .panel.controls.sheet-open{transform:translateY(0)}
+    .grid .panel.controls .sect:first-of-type{margin-top:4px}
     .v-foot{display:none}
   }
   @media(max-width:560px){
@@ -706,7 +710,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-CbzfrGno.js"></script>
+  <script type="module" crossorigin src="./assets/index-D3nqiTyV.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>

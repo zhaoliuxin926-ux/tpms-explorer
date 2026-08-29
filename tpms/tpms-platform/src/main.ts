@@ -596,6 +596,15 @@ function wireNLChat(): void {
 }
 wireNLChat();
 
+// ── 【v7.1 UI】移动端底部抽屉开关（存量缺口：handle 无任何接线，sheet 永远无法展开）──
+{
+  const handle = document.getElementById('sheet-handle');
+  const controls = document.querySelector('.panel.controls');
+  handle?.addEventListener('click', () => {
+    controls?.classList.toggle('sheet-open');
+  });
+}
+
 // ── 【v7.1 UI】控制台分组跳转导航 ──
 {
   const rail = document.querySelector('.panel.controls');

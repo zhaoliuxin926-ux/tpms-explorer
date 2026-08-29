@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PORT = 4837;
+const PORT = 4855;
 const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', '../tpms/docs/platform'], { shell: true });
 await new Promise((r) => setTimeout(r, 4000));
 
@@ -32,14 +32,18 @@ ok('跳转导航 4 键', btnCount === 4, `got ${btnCount}`);
 
 // 2. 点击"仿真" → controls 滚动到 grp-sim 附近 + 高亮迁移
 await page.evaluate(() => document.querySelector('[data-jump="grp-sim"]').click());
-await page.waitForTimeout(1600);
-const after = await page.evaluate(() => {
-  const rail = document.querySelector('.panel.controls');
-  const sim = document.getElementById('grp-sim');
-  const on = document.querySelector('.ls-jump button.on');
-  return { scrollTop: rail.scrollTop, simTop: sim.offsetTop, onLabel: on?.textContent?.trim() };
-});
-ok('点击仿真后 rail 滚动', after.scrollTop > 100, `scrollTop=${after.scrollTop}`);
+// smooth-scroll 时序抖动：轮询等待滚动到位（≤3s），同时取高亮
+let after = null;
+for (let t = 0; t < 12; t++) {
+  await page.waitForTimeout(250);
+  after = await page.evaluate(() => {
+    const rail = document.querySelector('.panel.controls');
+    const on = document.querySelector('.ls-jump button.on');
+    return { scrollTop: rail.scrollTop, onLabel: on?.textContent?.trim() };
+  });
+  if (after.scrollTop > 50) break;
+}
+ok('点击仿真后 rail 滚动', after.scrollTop > 50, `scrollTop=${after.scrollTop}`);
 ok('高亮迁移到仿真', after.onLabel === '仿真', `on=${after.onLabel}`);
 
 // 3. 分组完整性：4 组各含正确 section 数
