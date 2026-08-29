@@ -57,6 +57,7 @@ import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
 import { solvePhononicBands, type PhononicResult } from './physics/phononic-bandgap';
 import { isSolidAt, type SectionAnalysisParams } from './physics/percolation-analysis';
 import { simulateTissueGrowth, type TissueResult } from './physics/tissue-growth';
+import { evolveLevelSet, phiToVField } from './core/levelset-optimizer';
 import {
   expertName,
   expertCount,
@@ -855,6 +856,76 @@ document.getElementById('tissue-day')?.addEventListener('input', (e) => {
   }
   tissueApplyFrame();
   tissueShowStat();
+});
+
+// ── 【v7.0 Stage V】水平集主动拓扑优化 ──
+let lsPhi: Float64Array | null = null;
+let lsR = 0;
+let lsIso = 0;
+let lsAccumSteps = 0;
+document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
+  const out = document.getElementById('ls-result');
+  const btnApply = document.getElementById('btn-ls-apply');
+  const s = getState();
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled || s.structureMode !== 'solid_network';
+  if (unsupported && !lsPhi) {
+    if (out) { out.style.display = 'block'; out.textContent = '水平集演化需 solid_network + 内置曲面类型（custom/lidinoid/splitp/混合/壳模式不支持的语义源限制）'; }
+    return;
+  }
+  try {
+    const R = 16;
+    const wFlow = Math.min(1, Math.max(0, Number((document.getElementById('ls-wflow') as HTMLInputElement).value) || 0));
+    if (!lsPhi) {
+      // 初始 Φ：当前结构体素场（solid = V < isoUsed）
+      const params: SectionAnalysisParams = {
+        type: s.type, customFormula: s.customFormula, weights: s.weights,
+        periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+        container: 'cube', isoUsed: lastIsoUsed, endplateMm: 0,
+      };
+      lsR = R;
+      lsIso = lastIsoUsed;
+      lsPhi = new Float64Array(R * R * R);
+      for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
+        const i = ix + iy * R + iz * R * R;
+        const x = ((ix + 0.5) / R) * 2 - 1, y = ((iy + 0.5) / R) * 2 - 1, z = ((iz + 0.5) / R) * 2 - 1;
+        lsPhi[i] = isSolidAt(params, x, y, z) ? 0.05 : -0.05;
+      }
+      lsAccumSteps = 0;
+    }
+    const res = evolveLevelSet({ R: lsR, phi0: lsPhi, steps: 10, wStiff: 1, wFlow, reinitEvery: 10 });
+    lsPhi = res.phi;
+    lsAccumSteps += 10;
+    const drop = res.compliance.length > 1
+      ? (1 - res.compliance[res.compliance.length - 1] / res.compliance[0]) * 100 : 0;
+    if (out) {
+      out.style.display = 'block';
+      out.textContent = `累计演化 ${lsAccumSteps} 步：单位载荷柔度 ${(res.compliance[res.compliance.length - 1]).toExponential(3)}（本批 ${drop >= 0 ? '↓' : '↑'}${Math.abs(drop).toFixed(2)}%）· 固相 ${((res.solidFraction[res.solidFraction.length - 1]) * 100).toFixed(1)}%${wFlow > 0 ? ` · 界面|∇p| ${res.flowProxy[res.flowProxy.length - 1].toFixed(3)}` : ''} · ${res.elapsedMs}ms`;
+    }
+    if (btnApply) btnApply.style.display = 'block';
+  } catch (err) {
+    if (out) { out.style.display = 'block'; out.textContent = `水平集演化失败：${err instanceof Error ? err.message : String(err)}`; }
+  }
+});
+document.getElementById('btn-ls-apply')?.addEventListener('click', () => {
+  if (!lsPhi) return;
+  try {
+    const vField = phiToVField(lsPhi, lsR, lsIso);
+    // 经 gpuVField 注入既有 Surface Nets 管线（水密提取，分辨率 = lsR）
+    const params: BuildParams = {
+      type: getState().type, iso: lsIso, periods: getState().cellSize,
+      resolution: lsR, targetPorosity: undefined as unknown as number,
+      weights: getState().weights, structureMode: 'solid_network',
+      containerShape: 'cube', thickness: getState().thickness,
+      gradientDir: getState().gradientDir, hybrid: getState().hybrid,
+      customFormula: '', preview: false,
+      gpuVField: vField,
+    };
+    const res = buildSurface(params);
+    applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount);
+    flashToast(`已应用 ${lsAccumSteps} 步演化结果（${res.vertCount} 顶点）`);
+  } catch (err) {
+    flashToast('应用失败：' + (err instanceof Error ? err.message : String(err)));
+  }
 });
 
 /** 能带图高对称点刻度（Γ-X-M-R-Γ，坐标 = 实际累计路径比） */

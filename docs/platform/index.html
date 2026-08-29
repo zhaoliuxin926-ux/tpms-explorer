@@ -682,7 +682,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-BvIdPXQ9.js"></script>
+  <script type="module" crossorigin src="./assets/index-DIy1LLJT.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -966,6 +966,18 @@ window.addEventListener('error', function(e) {
           <input type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
           <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="tissue-result" style="display:none"></div>
+        </div>
+      </details>
+      <details class="sect">
+        <summary class="sect-h">水平集主动拓扑优化 (v7.0)</summary>
+        <div class="field">
+          <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
+          <div class="opt-row two" style="gap:6px">
+            <button class="opt" id="btn-ls-evolve" style="justify-content:center">▶ 演化 10 步</button>
+            <label style="font-size:.7rem">流阻权重<input id="ls-wflow" type="number" value="0" min="0" max="1" step="0.1" style="width:100%"></label>
+          </div>
+          <div class="field-note" id="ls-result" style="display:none"></div>
+          <button class="opt" id="btn-ls-apply" style="width:100%;justify-content:center;margin-top:6px;display:none">✔ 应用演化结果到视口</button>
         </div>
       </details>
       <details class="sect">
