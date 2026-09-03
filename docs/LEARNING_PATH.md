@@ -61,7 +61,7 @@ F(x, y, z) = sin x·cos z + sin y·cos x + sin z·cos y
 
 | 工程量 | 一句话理解 | 骨支架文献带 |
 |---|---|---|
-| 孔隙率 p | 留给组织长入的空间 | ~50–80% |
+| 孔隙率 p | 留给组织长入的空间 | ~50–80%（平台教学词条采用 70–85% 常用子带） |
 | 孔径 | 细胞能住多大的房子 | ~300–800 µm |
 | 等效模量 E* | 多孔后还剩多少刚度 | 由 Gibson-Ashby 标度 E*/Es ≈ C1·ρ̄² 决定（ρ̄ = 1−p） |
 
@@ -74,7 +74,7 @@ F(x, y, z) = sin x·cos z + sin y·cos x + sin z·cos y
 - 给你"65% 孔隙率的 TC4 gyroid"，能口算 E* ≈ 0.38 × 0.35² × 110 ≈ 5.1 GPa；
 - 能说出骨支架为什么要这个孔隙率窗口（营养输送 vs 承载的折中）。
 
-> 专业旁路：命令行一条命令也能算——`node tpms/agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4`。
+> 专业旁路：命令行一条命令也能算——`node tpms/agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4`（前置：`cd tpms/tpms-platform && npm install`，CLI 依赖工程版的本地依赖树）。
 
 ---
 
