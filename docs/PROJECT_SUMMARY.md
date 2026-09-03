@@ -20,16 +20,15 @@
 │   ├── index.html             ← 落地页（特性卡片 + 应用场景 + 展示图）
 │   ├── app.html               ← 单文件版应用（双击即开，无构建）
 │   ├── platform/              ← 工程版构建产物（Vite dist 同步，CI 服务目录）
-│   ├── WORKFLOW_GUIDE.md      ← 实战指南（30 章，767 行）
-│   ├── RELEASE_NOTES_v2.4~v6.0.md ×5  ← 双语版本发布说明
+│   ├── WORKFLOW_GUIDE.md      ← 实战指南（35 章）
+│   ├── RELEASE_NOTES_v2.4~v7.0.md ×6  ← 双语版本发布说明
 │   ├── paper/MANUSCRIPT.md    ← SoftwareX/JOSS 论文手稿
 │   ├── shots/ + vendor/       ← 展示截图 / Three.js 本地包
 ├── tpms/                      ← 工程工作区
 │   ├── tpms-platform/         ← 平台源码（TS + Vite + Three.js，零运行时依赖）
 │   │   └── src/{core,geometry,physics,export,measure,worker}/ + main.ts + index.html
-│   ├── .verify/               ← 31 道 CI 门禁 + UI 回归套件 + 实验件
+│   ├── .verify/               ← 38 道正式 CI 门禁（+ui_jump_check 快检，汇总 39）+ UI 回归套件
 │   ├── agent_memory/          ← context / progress / bugs 三件套（AI 协作记忆）
-│   ├── docs/platform/         ← 工程部署镜像（CI 服务目录）
 │   ├── prototypes/            ← MATLAB 原型
 │   └── gen_gpu_wrapper.py     ← WGSL↔TS 模板同步生成器
 └── .github/workflows/         ← CI
@@ -40,7 +39,7 @@
 ### 入口与状态
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| main.ts | 2762 | 全部 UI 接线、重建调度（三级 LOD）、颜色管线、导出/仿真面板、💬 AI 助手 |
+| main.ts | 3653 | 全部 UI 接线、重建调度（三级 LOD）、颜色管线、导出/仿真面板、💬 AI 助手 |
 | state.ts / types.ts / url-params.ts | 123/335/145 | 状态机 + URL 全量分享恢复 + Undo/Redo |
 | three-setup.ts | 381 | Three.js 场景/相机/后处理 |
 | ui-helpers.ts | 648 | 公式栏/术语/侧栏渲染 |
@@ -118,7 +117,7 @@ shaders/navier-stokes.wat——wabt.js/V8 编码分歧降级披露）。
 ## 五、文档体系
 
 - **README.md**：定位 + 快速开始 + 特性矩阵（v6.0 徽章 31 门 1000+）
-- **WORKFLOW_GUIDE.md**：30 章实战指南——几何/着色/混合/映射（早期）→ 分形/逆向/CT/冲击（v3-v4）→ FEA/BC 拾取/DICOM/G-code/ML（v5）→ 弹塑性/压溃孪生/微流体/LPBF/NL 代理（v6 §26-30）
+- **WORKFLOW_GUIDE.md**：35 章实战指南——几何/着色/混合/映射（早期）→ 分形/逆向/CT/冲击（v3-v4）→ FEA/BC 拾取/DICOM/G-code/ML（v5）→ 弹塑性/压溃孪生/微流体/LPBF/NL 代理（v6 §26-30）
 - **RELEASE_NOTES_v2.4~v6.0**：五份双语发布说明
 - **paper/MANUSCRIPT.md**：期刊手稿
 - **agent_memory/**：context（项目级上下文）/ progress（逐阶段进度）/ bugs（11 条 v6.0 定案教训）/ archive
@@ -147,5 +146,5 @@ shaders/navier-stokes.wat——wabt.js/V8 编码分歧降级披露）。
 cd tpms/tpms-platform
 npm run dev          # 开发
 npm run build        # 构建（dist → docs/platform 同步）
-npm run test:all     # 31 门 CI（约 12-15 分钟）
+npm run test:all     # 39 门 CI（本机约 6 分钟）
 ```
