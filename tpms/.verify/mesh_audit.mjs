@@ -252,5 +252,6 @@ if (process.argv.includes('--json')) {
   const idx = process.argv.indexOf('--json');
   writeFileSync(process.argv[idx + 1], JSON.stringify(results, null, 2));
 }
+if (results.length < 28) { console.error('GUARD FAIL: 案例执行数 ' + results.length + ' < 基线 28（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 console.log(pass ? '\n=== 全部通过 ===' : '\n=== 存在 FAIL ===');
 process.exit(pass ? 0 : 1);

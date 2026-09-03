@@ -223,6 +223,7 @@ for (const [type, poro] of [['gyroid', 0.75], ['diamond', 0.5], ['schwarz', 0.8]
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
+  if (passCount < 88) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 88（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

@@ -173,4 +173,5 @@ try {
 check('Worker messageerror 立即 reject', messageRejected);
 
 console.log(`\nRESULT: ${pass} PASS / ${fail} FAIL`);
+  if (pass < 11) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 11（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (fail) process.exit(1);

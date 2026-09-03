@@ -74,6 +74,7 @@ ok('分组头点击 → 视图高亮', onView === '视图', `on=${onView}`);
 
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
+  if (pass < 7) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 7（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 await browser.close();
 server.kill();
 process.exit(fail ? 1 : 0);

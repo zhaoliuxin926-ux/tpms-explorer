@@ -161,10 +161,12 @@ console.log('\n[D] FOAM boundary 注入');
     { spec: { name: 'BC_LOAD', kind: 'PRESSURE', faces: [] }, faceRange: [100, 130] },
   ]);
   check('BC_LOAD 条目注入', out.includes('BC_LOAD'));
-  check('类型 patch', out.includes('type            patch;'));
+  const typeLines = (s) => (s.match(/type\s+\w+;/g) || []).length;
+  check('类型条目随注入增加（base +1）', typeLines(out) === typeLines(base) + 1, `base=${typeLines(base)} out=${typeLines(out)}`);
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
+  if (passCount < 14) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 14（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

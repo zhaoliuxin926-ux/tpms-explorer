@@ -106,4 +106,5 @@ check('分享链接恢复 manifold 全参数', parsed.manifold?.kind === 'metric
   && parsed.manifold.radius === 18 && parsed.manifold.scale === 2.2 && parsed.manifold.axis === 'x');
 
 console.log(`\nRESULT: ${pass} PASS / ${fail} FAIL`);
+  if (pass < 12) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (fail) process.exit(1);

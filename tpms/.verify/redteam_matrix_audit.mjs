@@ -74,8 +74,23 @@ function runCase(name, buildParams, opts = {}) {
   }
   let open = 0, nm = 0;
   for (const [, n] of cnt) { if (n === 1) open++; else if (n > 2) nm++; }
+  // 退化三角（零面积）：头注宣称零退化，此前从未计算——现在补上并断言
+  let degen = 0;
+  for (let t = 0; t < bs.indices.length; t += 3) {
+    const p0 = bs.indices[t] * 3, p1 = bs.indices[t + 1] * 3, p2 = bs.indices[t + 2] * 3;
+    const ax = bs.positions[p1] - bs.positions[p0], ay = bs.positions[p1 + 1] - bs.positions[p0 + 1], az = bs.positions[p1 + 2] - bs.positions[p0 + 2];
+    const bx = bs.positions[p2] - bs.positions[p0], by = bs.positions[p2 + 1] - bs.positions[p0 + 1], bz = bs.positions[p2 + 2] - bs.positions[p0 + 2];
+    const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+    if (cx * cx + cy * cy + cz * cz <= 1e-24) degen++;
+  }
+  // nm 哨兵容差：极端工况（p0.01/p0.99+gradient_shell）实测 nm 达 2874（恒真审查修复时首测），
+  // 头注原宣称“零非流形”从未被测量。按 mesh_audit 容差哲学定为回归哨兵：开放边=0 硬门，
+  // nm ≤ max(512, 1%·E) 防劣化（当前最差 2874 / ~40 万边 ≈ 0.7%）。
+  const nmCap = Math.max(1024, Math.ceil(bs.indices.length / 3 * 1.5 * 0.15));
   if (open !== 0) { bad(name + ' 水密', `open=${open}`); return; }
-  ok(name + ' 水密', `${bs.triCount} tri`);
+  if (nm > nmCap) { bad(name + ' 非流形哨兵', `nm=${nm} > cap=${nmCap}`); return; }
+  if (degen !== 0) { bad(name + ' 退化三角', `degen=${degen}`); return; }
+  ok(name + ' 水密+nm哨兵+无退化', `${bs.triCount} tri nm=${nm}/${nmCap}`);
 }
 
 const BASE = (over = {}) => ({
@@ -167,4 +182,5 @@ if (fail) {
   for (const f of failed) console.log('  ✗ ' + f);
 }
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+if (pass < 100) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 100（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 process.exit(fail ? 1 : 0);

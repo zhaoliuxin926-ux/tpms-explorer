@@ -466,4 +466,5 @@ console.log('\n[G] 适配层与缓存');
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 73) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 73（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 process.exit(fail ? 1 : 0);

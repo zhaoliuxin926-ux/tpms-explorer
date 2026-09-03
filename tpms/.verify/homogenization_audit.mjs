@@ -118,7 +118,6 @@ console.log('\n[C] E(n) 球面采样');
     ? ok('各向同性采样极值恒定')
     : bad('各向同性采样极值', `${gridIso.emin} ${gridIso.emax}`);
   // 正交各向异性：极值应达到主轴值（采样网格含极角 0/π → (001) 方向）
-  Math.abs(gridIso.emax - gridIso.emin) < 1e-12;
   const hasE1 = grid.E.some((v) => Math.abs(v - 1.0) < 1e-5);   // Float32 精度容差
   const hasE3 = grid.E.some((v) => Math.abs(v - 0.9) < 1e-5);
   hasE1 && hasE3 ? ok('采样网格覆盖主轴值（E1、E3 极点）') : bad('主轴值覆盖');
@@ -143,4 +142,5 @@ console.log('\n[D] UI 数据源一致性（estimateAnisotropicStiffness → E(n)
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 13) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 13（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 process.exit(fail ? 1 : 0);

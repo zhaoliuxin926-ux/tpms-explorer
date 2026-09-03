@@ -120,4 +120,5 @@ try { getTpmsFunction('custom', ''); } catch { threw = true; }
 threw ? ok('E3 custom 无公式拒绝') : bad('E3 custom 空公式被接受');
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 37) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 37（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 process.exit(fail > 0 ? 1 : 0);

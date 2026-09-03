@@ -165,6 +165,7 @@ console.log('\n[D] FD-Darcy 单管解析锚点');
 
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
+  if (passCount < 17) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 17（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
