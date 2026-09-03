@@ -15,14 +15,23 @@ const MATERIAL_LABELS = { tc4: 'Ti-6Al-4V', polymer: 'PLLA/PLA', thermal: '高�
 
 const core = await loadCore();
 
+const BOOL_FLAGS = new Set(['json', 'help']);
+
 function parseArgs(argv) {
   const a = { _: [] };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith('--')) {
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--')) a[argv[i].slice(2)] = true;
-      else { a[argv[i].slice(2)] = next; i++; }
-    } else a._.push(argv[i]);
+    const t = argv[i];
+    if (!t.startsWith('--')) { a._.push(t); continue; }
+    if (t.includes('=')) { // --key=value 形式
+      const eq = t.indexOf('=');
+      a[t.slice(2, eq)] = t.slice(eq + 1);
+      continue;
+    }
+    const key = t.slice(2);
+    if (BOOL_FLAGS.has(key)) { a[key] = true; continue; } // 布尔开关不吞值
+    const next = argv[i + 1];
+    if (next === undefined || next.startsWith('--')) a[key] = true;
+    else { a[key] = next; i++; }
   }
   return a;
 }
@@ -56,6 +65,7 @@ function cmdList(json) {
 
 function cmdEstimate(a, json) {
   const usage = '用法: node tpms.mjs estimate --type <曲面> --porosity <0~1 或百分数> [--material tc4|polymer|thermal] [--json]';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"（选项请用 --key value 或 --key=value）`, usage);
   const type = String(a.type ?? '');
   if (!BUILTIN_TYPES.includes(type)) {
     die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}（custom 公式沙箱属后续里程碑）`, usage);
@@ -108,6 +118,7 @@ function cmdEstimate(a, json) {
 const a = parseArgs(process.argv.slice(2));
 const json = a.json === true;
 const cmd = a._[0];
+a._ = a._.slice(1); // 命令字出栈，其余位置参数供子命令校验
 if (cmd === 'list') cmdList(json);
 else if (cmd === 'estimate') cmdEstimate(a, json);
 else {

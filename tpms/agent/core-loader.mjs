@@ -19,14 +19,18 @@ const CORE_EXPORTS = [
 ].join('\n');
 
 export async function loadCore() {
-  const BUNDLE = tmpdir() + '/tpms_agent_core.mjs';
+  const BUNDLE = tmpdir() + `/tpms_agent_core_${process.pid}.mjs`;
   const entry = tmpdir() + `/tpms_agent_core_entry_${process.pid}.ts`;
   writeFileSync(entry, CORE_EXPORTS);
-  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
-  const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
-  if (r.status !== 0) {
-    throw new Error('rolldown 打包失败:\n' + (r.stdout || '') + (r.stderr || ''));
-  }
+  // rolldown 是 vite 8 的传递依赖（npm 提升至 tpms-platform/node_modules/.bin）；
+  // Windows 下是 .cmd shim，其余平台是无扩展名可执行 shim
+  const bin = join(PLATFORM, `node_modules/.bin/rolldown${process.platform === 'win32' ? '.cmd' : ''}`);
+  const r = spawnSync(`"${bin}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   try { rmSync(entry, { force: true }); } catch { /* 忽略 */ }
+  if (r.status !== 0) {
+    throw new Error(
+      'rolldown 打包失败（先确认已执行: cd tpms/tpms-platform && npm install）:\n' + (r.stdout || '') + (r.stderr || '')
+    );
+  }
   return import(pathToFileURL(BUNDLE));
 }

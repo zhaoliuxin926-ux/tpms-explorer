@@ -40,7 +40,7 @@
 | 文件 | 行数 | 职责 |
 |---|---|---|
 | main.ts | 3653 | 全部 UI 接线、重建调度（三级 LOD）、颜色管线、导出/仿真面板、💬 AI 助手 |
-| state.ts / types.ts / url-params.ts | 123/335/145 | 状态机 + URL 全量分享恢复 + Undo/Redo |
+| state.ts / types.ts / url-params.ts | 203/347/166 | 状态机 + URL 全量分享恢复 + Undo/Redo |
 | three-setup.ts | 381 | Three.js 场景/相机/后处理 |
 | ui-helpers.ts | 648 | 公式栏/术语/侧栏渲染 |
 

@@ -64,5 +64,12 @@ run('estimate', '--type', 'gyroid', '--porosity', '-5').status !== 0 ? ok('负�
 run('estimate', '--type', 'gyroid', '--porosity', 'abc').status !== 0 ? ok('非数字孔隙率被拒绝') : bad('非数字未拒绝');
 run('estimate', '--type', 'gyroid', '--porosity', '0.5', '--material', 'unobtainium').status !== 0 ? ok('非法材料被拒绝') : bad('非法材料未拒绝');
 
+// ── 8. 参数解析边角（对抗审查 D 节修复回归）──
+const req = JSON.parse(run('estimate', '--type=gyroid', '--porosity=0.65', '--json').stdout);
+near(req.E_over_Es, j.E_over_Es) ? ok('--key=value 形式可用') : bad('= 形式', String(req.E_over_Es));
+run('estimate', '--type=gyroid', '--porosity=-0.5').status !== 0 ? ok('= 形式负值仍被拒绝') : bad('= 形式负值未拒绝');
+run('--json', 'list').status === 0 ? ok('前置 flag 不吞命令字（--json list）') : bad('前置 flag 吞命令字');
+run('estimate', '--json', 'extra', '--type', 'gyroid', '--porosity', '0.5').status !== 0 ? ok('多余位置参数被拒绝') : bad('多余位置参数未拒绝');
+
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);
