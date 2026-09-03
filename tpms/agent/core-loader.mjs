@@ -12,10 +12,14 @@ import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLATFORM = join(HERE, '../tpms-platform');
 
-// 按需导出的核心符号清单（M0：纯数学层；M1 追加几何管线入口）
+// 按需导出的核心符号清单（M0：纯数学层；M1：几何管线）
 const CORE_EXPORTS = [
   `export { getTpmsFunction } from ${JSON.stringify(join(PLATFORM, 'src/core/tpms-functions.ts'))};`,
   `export { gibsonAshby, getAnisotropy, BASE_MODULUS, BASE_YIELD_STRENGTH } from ${JSON.stringify(join(PLATFORM, 'src/physics/gibson-ashby.ts'))};`,
+  `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
+  `export { globalBufferPool } from ${JSON.stringify(join(PLATFORM, 'src/geometry/buffer-pool.ts'))};`,
+  `export { wcToMmFactor } from ${JSON.stringify(join(PLATFORM, 'src/core/units.ts'))};`,
+  `export { buildBinarySTL } from ${JSON.stringify(join(PLATFORM, 'src/export/stl-exporter.ts'))};`,
 ].join('\n');
 
 export async function loadCore() {

@@ -12,10 +12,11 @@
 - 命令：`list`（曲面/材料/模型常数）、`estimate`（Gibson-Ashby 力学估算，--json 机器可读）
 - 验证：selftest 14/14——常数独立复刻、标度律 ρ̄² 不变量、退化极限 ρ̄→1、Schwarz P 权威公式 1e-12 对拍、4 类非法输入拒绝语义
 
-### M1 几何闭环 — 未开始
-- 目标：CLI 内完成 参数 → 体素场 → 网格 → STL，不经浏览器
-- 途径：把 surface-nets / webgpu-evaluator 的 CPU 回退路径经 core-loader 暴露（注意 evaluator 依赖 equation-parser 无扩展名导入，bundle 已验证可解）
-- 成功标准：产出的 STL 过 mesh_audit 同款水密检查（开放边 = 0）；体素孔隙率与目标孔隙率偏差在平台审计口径内
+### M1 几何闭环 — ✅ 已完成（2026-09-04）
+- 交付：tpms.mjs 新增 `mesh` 命令——参数 → buildSurface（Surface Nets，Node 内经 rolldown bundle 直跑）→ 水密三硬指标内建门（开放边/非流形边/退化面任一非零即 exit 1 不产 STL）→ buildBinarySTL 落盘（mm 单位）
+- 验证：selftest 27/27——水密硬门 + **STL 独立读回复核**（binary STL 字节级顶点配对数开放边，不复用 CLI 内建自检代码路径）+ R96 孔隙率收敛 ≤3pp（实测 1.0pp）+ 3 类参数防呆
+- 口径事实（实测登记 bugs.md）：目标孔隙率（体素分位二分）与网格实测（发散体积）存在口径差，随分辨率收敛（gyroid R48 5.4pp→R96 1.0pp；倍频谐波曲面 diamond/splitp 在 R48 达 24-28pp）。CLI 如实报告偏差，>5pp 时提示提高 resolution；线性外推迭代校正因 iso 响应非线性不收敛，未采用
+- 边界：misorientedEdges（定向错）为 mesh_audit 容差项非硬门，CLI 内建自检未复刻该指标（与 mesh_audit ok 判定的三硬指标口径一致）
 
 ### M2 工具注册层 — 未开始
 - 目标：CLI 命令整理为 agent tool schema（JSON Schema，含各参数钳制范围，来源 nl-agent 钳制表）

@@ -75,6 +75,7 @@ F(x, y, z) = sin x·cos z + sin y·cos x + sin z·cos y
 - 能说出骨支架为什么要这个孔隙率窗口（营养输送 vs 承载的折中）。
 
 > 专业旁路：命令行一条命令也能算——`node tpms/agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4`（前置：`cd tpms/tpms-platform && npm install`，CLI 依赖工程版的本地依赖树）。
+> 进阶：`node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.65 --out scaffold.stl` 直接产出**打印级水密 STL**（命令内建水密门：开放边/非流形/退化面任一非零即拒绝交货）。
 
 ---
 
