@@ -6,9 +6,9 @@
 import * as THREE from 'three';
 import { MeshPhysicalMaterial } from 'three';
 import { initThree, type ThreeContext } from './three-setup';
-import { getState, setState, applyPreset, buildShareURL, pushHistory, undo, redo } from './state';
+import { getState, setState, applyPreset, buildShareURL, pushHistory, resetHistory, undo, redo } from './state';
 import { initStateFromURL } from './url-params';
-import { WorkerBridge } from './worker/worker-bridge';
+import { WorkerBridge, WorkerRequestSupersededError } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
@@ -103,17 +103,32 @@ let animId: number;
 let bboxAnnotation: BoundingBoxAnnotation | null = null;
 let caliperTool: CaliperTool | null = null;
 let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+let hdUpgradeTimer: ReturnType<typeof setTimeout> | null = null;
 let isFirstBuild = true;
 
 // 材质缓存
 const materialCache = new Map<string, MeshPhysicalMaterial>();
 
 /** Geometry 结果 LRU 缓存：参数回退时瞬间恢复 */
-const geoCache = new Map<string, { positions: Float32Array; normals: Float32Array; indices: Uint32Array; vertCount: number; faceCount: number; }>();
+interface GeoCacheEntry {
+  positions: Float32Array;
+  normals: Float32Array;
+  indices: Uint32Array;
+  vertCount: number;
+  faceCount: number;
+  /** Worker-side observables needed to restore stats on a cache hit. */
+  porosityEstimate: number;
+  meshSolidFraction: number | null;
+  isoUsed: number;
+  surfaceArea?: number;
+  envelopeVolume?: number;
+}
+const geoCache = new Map<string, GeoCacheEntry>();
 const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${s.manifold.kind}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
+  const m = s.manifold;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
 }
 
 // ── 多级分形统计（v3.0 阶段 V）：双重比表面积 + 微孔连通率 ──
@@ -163,6 +178,13 @@ function scheduleHierarchicalStats(): void {
 // seq + cacheKey 双守卫：等待 GPU 期间状态变化 ⇒ 本次作废，防旧参数覆写新状态。
 let gpuUsable: boolean | null = null;   // null = 尚未探测
 let gpuSeq = 0;
+/** 最新一次完整构建的世代；GPU 预计算和 Worker 返回都必须匹配它。 */
+let buildGeneration = 0;
+let activeBuild: { id: number; requestKey: string; generation: number } | null = null;
+/** 请求指纹对应当前画面中的几何；用于导出前识别“同分辨率但旧状态”。 */
+let lastAppliedGeometryKey: string | null = null;
+/** 水平集“应用”是有意保留的低分辨率派生几何，需单独允许导出。 */
+let levelsetOverrideStateKey: string | null = null;
 
 function gpuConfigOf(params: BuildParams): GpuFieldConfig {
   return {
@@ -181,28 +203,95 @@ function setGpuStatusText(text: string): void {
   if (el) el.textContent = text;
 }
 
-/** 完整重建派发（rebuild 非 preview 路径与 HD 升级共用）：GPU 可用则预计算场后入队 */
-function dispatchFullBuild(params: BuildParams, stateKey: string): void {
+/**
+ * 几何缓存不包含顶点色，但 Worker 响应包含颜色，因此请求校验还要
+ * 纳入当前有效着色模式。否则用户在重建防抖窗口内切换着色时，旧响应
+ * 可能以相同几何键覆盖新视觉状态。
+ */
+function buildRequestKey(s: Readonly<AppState>, resolution: number): string {
+  return `${cacheKey(s, resolution)}|C${effectiveColoring(s)}`;
+}
+
+/** 几何本身的状态指纹：材质/着色等渲染偏好不应使派生网格失效。 */
+function geometryStateKey(s: Readonly<AppState>): string {
+  return cacheKey(s, 0);
+}
+
+const SWEEP_BUILD_TIMEOUT_MS = 60_000;
+
+/**
+ * 完整重建派发（rebuild 非 preview 路径与 HD 升级共用）：GPU 可用则预计算场后入队。
+ * `waitForResult` 仅供需要严格请求生命周期的调用方（当前为参数扫描）使用；
+ * 普通交互仍保持 fire-and-forget，避免把 UI 事件链改成 Promise。
+ */
+function dispatchFullBuild(
+  params: BuildParams,
+  stateKey: string,
+  waitForResult = false,
+): Promise<WorkerResponse> | undefined {
   const s = getState();
-  // 神经场走 SIREN 前向（WebGPU 指令 IR 不感知）——enabled 时强制 CPU 管线
-  if (!s.gpuAccelerate || gpuUsable === false || params.resolution < 48 || params.neural?.enabled) {
-    bridge.build(params);
-    return;
-  }
+  const generation = ++buildGeneration;
   const seq = ++gpuSeq;
-  void (async () => {
-    const res = await evaluateFieldGPU(gpuConfigOf(params), params.resolution);
-    if (seq !== gpuSeq || cacheKey(getState(), params.resolution) !== stateKey) return;
-    if (!res) {
-      gpuUsable = false;
-      setGpuStatusText('WebGPU 不可用 · CPU 管线回退');
-      bridge.build(params);
-      return;
+  // 先使旧 Worker id 失效，再进行可能耗时的 GPU 预计算；这样旧响应
+  // 不能在新请求尚未 postMessage 的窗口内唤醒参数扫描。
+  bridge.invalidate();
+  activeBuild = null;
+  levelsetOverrideStateKey = null;
+  const isCurrent = (): boolean =>
+    generation === buildGeneration && seq === gpuSeq
+      && buildRequestKey(getState(), params.resolution) === stateKey;
+  const submit = (buildParams: BuildParams): Promise<WorkerResponse> | undefined => {
+    if (!isCurrent()) throw new WorkerRequestSupersededError();
+    if (waitForResult) {
+      const completion = bridge.buildAndWait(buildParams, SWEEP_BUILD_TIMEOUT_MS);
+      activeBuild = { id: bridge.latestRequestId, requestKey: stateKey, generation };
+      return completion;
     }
-    gpuUsable = true;
-    setGpuStatusText(`WebGPU V 场 ${res.gpuMs.toFixed(1)} ms · ${params.resolution}³`);
-    bridge.build({ ...params, gpuVField: res.v });
+    const id = bridge.build(buildParams);
+    activeBuild = { id, requestKey: stateKey, generation };
+    return undefined;
+  };
+  // 神经场走 SIREN 前向（WebGPU 指令 IR 不感知）——enabled 时强制 CPU 管线
+  if (!s.gpuAccelerate || gpuUsable === false || params.resolution < 48 || params.neural?.enabled
+    || (params.stress?.preset !== undefined && params.stress.preset !== 'none')
+    || params.hierarchical?.enabled) {
+    return submit(params);
+  }
+
+  // GPU 预计算失败时回退到 CPU；若参数已变化，则以“被更新请求淘汰”结束
+  // 等待者，避免旧任务在扫描中悄悄挂起。
+  const task = (async (): Promise<WorkerResponse | undefined> => {
+    let gpuParams: BuildParams = params;
+    try {
+      const res = await evaluateFieldGPU(gpuConfigOf(params), params.resolution);
+      if (!isCurrent()) throw new WorkerRequestSupersededError();
+      if (!res) {
+        gpuUsable = false;
+        setGpuStatusText('WebGPU 不可用 · CPU 管线回退');
+      } else {
+        gpuUsable = true;
+        setGpuStatusText(`WebGPU V 场 ${res.gpuMs.toFixed(1)} ms · ${params.resolution}³`);
+        gpuParams = { ...params, gpuVField: res.v };
+      }
+    } catch (err) {
+      if (err instanceof WorkerRequestSupersededError) throw err;
+      if (!isCurrent()) throw new WorkerRequestSupersededError();
+      gpuUsable = false;
+      setGpuStatusText('WebGPU 计算失败 · CPU 管线回退');
+    }
+
+    return submit(gpuParams);
   })();
+
+  if (waitForResult) return task as Promise<WorkerResponse>;
+  // No Promise is exposed to ordinary UI callers. Keep the fallback catch here
+  // so a GPU adapter/runtime rejection cannot become an unhandled rejection.
+  void task.catch((err: unknown) => {
+    if (err instanceof WorkerRequestSupersededError) return;
+    if (!isCurrent()) return;
+    onWorkerError(err instanceof Error ? err.message : String(err));
+  });
+  return undefined;
 }
 
 // 启动时探测一次可用性（仅状态条展示；真实判定仍以首次 evaluateFieldGPU 结果为准）
@@ -265,6 +354,8 @@ window.addEventListener('load', () => {
   if (Object.keys(urlState).length > 0) {
     setState(urlState);
   }
+  // URL 恢复态是本次会话的起点；后续首次撤销应回到该状态，而非编译期默认值。
+  resetHistory();
 
   // 2) Three.js 场景
   const container = document.getElementById('canvas-container')!;
@@ -613,21 +704,64 @@ wireNLChat();
   const activate = (idx: number): void => {
     jumpBtns.forEach((b, i) => b.classList.toggle('on', i === idx));
   };
+  let jumpLock: number | null = null;
+  let settleTimer: number | null = null;
+  let scrollFrame: number | null = null;
+  const JUMP_LOCK_MS = 1200;
+
+  const indexAtScrollPosition = (): number => {
+    if (!rail) return 0;
+    const maxScroll = rail.scrollHeight - rail.clientHeight;
+    // The last group cannot reach the sticky jump bar when it is shorter than
+    // the viewport, so the bottom edge is its explicit activation boundary.
+    if (maxScroll > 0 && rail.scrollTop >= maxScroll - 2) return groups.length - 1;
+
+    const jumpBar = document.getElementById('ls-jump');
+    const marker = (jumpBar?.getBoundingClientRect().bottom
+      ?? rail.getBoundingClientRect().top) + 12;
+    let idx = 0;
+    groups.forEach((group, i) => {
+      if (group && group.getBoundingClientRect().top <= marker) idx = i;
+    });
+    return idx;
+  };
+
+  const syncFromScroll = (): void => activate(indexAtScrollPosition());
+  const armJumpSettle = (delay = JUMP_LOCK_MS): void => {
+    if (settleTimer != null) window.clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(() => {
+      settleTimer = null;
+      jumpLock = null;
+      syncFromScroll();
+    }, delay);
+  };
+
   jumpBtns.forEach((btn, idx) => {
     btn.addEventListener('click', () => {
       const g = groups[idx];
+      jumpLock = idx;
       if (g && rail) rail.scrollTo({ top: g.offsetTop - 6, behavior: 'smooth' });
       activate(idx);
+      // Also releases the lock when the target is already at the current
+      // position and the browser therefore emits no scroll event.
+      armJumpSettle();
     });
   });
-  // 滚动联动高亮（IntersectionObserver 阈值口径，轻量）
-  if (rail && groups.every(Boolean)) {
-    const io = new IntersectionObserver((entries) => {
-      const vis = groups.map((g) => entries.find((e) => e.target === g)?.isIntersecting ?? false);
-      const first = vis.indexOf(true);
-      if (first >= 0) activate(first);
-    }, { root: rail, threshold: 0.05 });
-    groups.forEach((g) => { if (g) io.observe(g); });
+  // 滚动联动高亮。点击平滑滚动期间锁住目标，避免中途经过的短分组
+  // 抢占高亮；滚动停止后再按 sticky 导航条下方的实际位置校准。
+  if (rail) {
+    rail.addEventListener('scroll', () => {
+      // Smooth scrolling can pause for a frame (especially under a busy
+      // renderer), so do not reset or release the click lock on each event.
+      // The fixed settle window keeps the requested group highlighted while
+      // the browser traverses intermediate groups.
+      if (jumpLock != null) return;
+      if (scrollFrame != null) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = null;
+        syncFromScroll();
+      });
+    }, { passive: true });
   }
   // 分组头点击 = 同跳转
   document.querySelectorAll<HTMLElement>('.sgroup-h[data-target]').forEach((h) => {
@@ -905,10 +1039,21 @@ let lsPhi: Float64Array | null = null;
 let lsR = 0;
 let lsIso = 0;
 let lsAccumSteps = 0;
+/** 水平集初始场对应的几何状态；防止改参后把旧 phi 当成新设计应用。 */
+let lsSourceStateKey: string | null = null;
 document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
   const out = document.getElementById('ls-result');
   const btnApply = document.getElementById('btn-ls-apply');
   const s = getState();
+  const sourceKey = geometryStateKey(s);
+  // 参数变更后旧 phi 不再有明确物理来源。清空并从当前隐函数重新开始，
+  // 同时保留按钮的正常“演化 10 步”语义，避免静默混用两套设计。
+  if (lsPhi && lsSourceStateKey !== sourceKey) {
+    lsPhi = null;
+    lsSourceStateKey = null;
+    lsAccumSteps = 0;
+    if (btnApply) btnApply.style.display = 'none';
+  }
   const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled || s.structureMode !== 'solid_network';
   if (unsupported && !lsPhi) {
     if (out) { out.style.display = 'block'; out.textContent = '水平集演化需 solid_network + 内置曲面类型（custom/lidinoid/splitp/混合/壳模式不支持的语义源限制）'; }
@@ -933,6 +1078,7 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
         lsPhi[i] = isSolidAt(params, x, y, z) ? 0.05 : -0.05;
       }
       lsAccumSteps = 0;
+      lsSourceStateKey = sourceKey;
     }
     const res = evolveLevelSet({ R: lsR, phi0: lsPhi, steps: 10, wStiff: 1, wFlow, reinitEvery: 10 });
     lsPhi = res.phi;
@@ -951,19 +1097,76 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
 document.getElementById('btn-ls-apply')?.addEventListener('click', () => {
   if (!lsPhi) return;
   try {
+    const s = getState();
+    if (!lsSourceStateKey || lsSourceStateKey !== geometryStateKey(s)) {
+      flashToast('当前参数已变化，请重新演化水平集结果');
+      return;
+    }
+    // Applying a derived field supersedes any pending normal rebuild.  Without
+    // invalidation, a late Worker/GPU result could replace the user's optimized
+    // level-set geometry immediately after it is displayed.
+    if (rebuildTimer) {
+      clearTimeout(rebuildTimer);
+      rebuildTimer = null;
+    }
+    if (hdUpgradeTimer) {
+      clearTimeout(hdUpgradeTimer);
+      hdUpgradeTimer = null;
+    }
+    bridge.invalidate();
+    activeBuild = null;
+    buildGeneration++;
+    gpuSeq++;
     const vField = phiToVField(lsPhi, lsR, lsIso);
     // 经 gpuVField 注入既有 Surface Nets 管线（水密提取，分辨率 = lsR）
     const params: BuildParams = {
-      type: getState().type, iso: lsIso, periods: getState().cellSize,
+      type: s.type, iso: lsIso, periods: s.cellSize,
       resolution: lsR, targetPorosity: undefined as unknown as number,
-      weights: getState().weights, structureMode: 'solid_network',
-      containerShape: 'cube', thickness: getState().thickness,
-      gradientDir: getState().gradientDir, hybrid: getState().hybrid,
+      weights: s.weights, structureMode: 'solid_network',
+      containerShape: 'cube', thickness: s.thickness,
+      gradientDir: s.gradientDir, hybrid: s.hybrid,
       customFormula: '', preview: false,
       gpuVField: vField,
     };
     const res = buildSurface(params);
+    if (res.type !== 'result' || !res.positions || !res.normals || !res.indices) {
+      throw new Error(res.error || '水平集结果为空');
+    }
+    if (!Number.isFinite(res.vertCount) || res.vertCount <= 0
+      || !Number.isFinite(res.triCount) || res.triCount <= 0) {
+      throw new Error('水平集结果为空网格');
+    }
+    // 先更新派生网格的完整元数据，再挂载几何；applyGeometry() 会立即刷新统计面板。
+    lastPorosityEstimate = res.porosityEstimate;
+    lastMeshSolidFraction = res.meshSolidFraction ?? null;
+    lastIsoUsed = res.isoUsed;
+    lastBuildResolution = lsR;
+    lastAppliedGeometryKey = buildRequestKey(s, lsR);
+    levelsetOverrideStateKey = geometryStateKey(s);
+    if (res.surfaceArea != null && res.envelopeVolume != null) {
+      lastPhysicsMetrics = computePhysicsMetrics(
+        s.type,
+        res.porosityEstimate,
+        res.surfaceArea,
+        res.envelopeVolume,
+        s.material,
+        s.structureMode,
+      );
+    } else {
+      lastPhysicsMetrics = null;
+    }
+    // 该结果来自离散 phi，而不是当前隐函数；清除可能属于旧网格的异步分析，
+    // 并在面板中明确标记不可用，避免把旧迂曲度/刚度误报为优化后结果。
+    if (microTimer) {
+      clearTimeout(microTimer);
+      microTimer = null;
+    }
+    lastMicroTort = '水平集派生结果暂不支持';
+    lastMicroStiff = '—';
     applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount);
+    updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
+    updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
+    if (s.slice < 100) schedulePercolation(80);
     flashToast(`已应用 ${lsAccumSteps} 步演化结果（${res.vertCount} 顶点）`);
   } catch (err) {
     flashToast('应用失败：' + (err instanceof Error ? err.message : String(err)));
@@ -977,8 +1180,15 @@ function pathTicks(res: PhononicResult): { label: string; x: number }[] {
 }
 
 // ── 重建调度 ─────────────────────────────────────────────
-/** 返回 true = LRU 命中并已同步应用（不发 worker 请求）；false = 已派发 worker 重建 */
-function rebuild(preview: boolean): boolean {
+interface RebuildOutcome {
+  /** true = 缓存命中并已同步应用（不发 worker 请求） */
+  fromCache: boolean;
+  /** waitForResult=true 时，构建结果/错误/淘汰/超时均由此 Promise 结束 */
+  completion?: Promise<WorkerResponse>;
+}
+
+/** 重建；默认保持原有 fire-and-forget 行为，参数扫描可请求可等待结果。 */
+function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
   const s = getState();
   // 三级 LOD：preview 低分辨率 → 中等过渡 → 全高清
   let R: number;
@@ -995,11 +1205,47 @@ function rebuild(preview: boolean): boolean {
   const key = cacheKey(s, R);
   const cached = geoCache.get(key);
   if (cached) {
+    // A cache hit can happen while an older GPU precompute/Worker request is
+    // still in flight (for example when the user returns to a prior slider
+    // value). Invalidate that request before applying the cached frame so its
+    // late response cannot settle a sweep or leave `activeBuild` stale.
+    bridge.invalidate();
+    activeBuild = null;
+    buildGeneration++;
+    gpuSeq++;
     // 缓存命中：瞬间恢复（注意：此路径不派发 worker 结果——调用方若在等待结果需以此返回值区分）
     // 颜色不入缓存：由 applyGeometry 内部按当前着色状态现场补算
+    // 命中后移动到队尾，避免“LRU”退化成 FIFO。
+    geoCache.delete(key);
+    geoCache.set(key, cached);
+    // Restore all result metadata together with the canonical arrays. Without
+    // this, a material-only change (which intentionally reuses geometry) keeps
+    // the previous material's modulus/yield values and stale micro-physics.
+    lastPorosityEstimate = cached.porosityEstimate;
+    lastMeshSolidFraction = cached.meshSolidFraction;
+    lastIsoUsed = cached.isoUsed;
+    lastBuildResolution = R;
+    if (cached.surfaceArea != null && cached.envelopeVolume != null) {
+      lastPhysicsMetrics = computePhysicsMetrics(
+        s.type,
+        cached.porosityEstimate,
+        cached.surfaceArea,
+        cached.envelopeVolume,
+        s.material,
+        s.structureMode,
+      );
+    } else {
+      lastPhysicsMetrics = null;
+    }
+    lastAppliedGeometryKey = buildRequestKey(s, R);
+    levelsetOverrideStateKey = null;
     applyGeometry(cached.positions, cached.normals, cached.indices, cached.vertCount, cached.faceCount);
+    if (s.slice < 100) schedulePercolation(80);
+    scheduleMicroPhysics(250);
+    updateFormulaDisplay(s.type, s.weights, cached.isoUsed);
+    updateTips(s.type, s.porosity, s.thickness, cached.porosityEstimate);
     runPendingNLExport();
-    return true;
+    return { fromCache: true };
   }
 
   const params: BuildParams = {
@@ -1023,21 +1269,28 @@ function rebuild(preview: boolean): boolean {
     neural: s.neural,
   };
 
-  dispatchFullBuild(params, key);
+  const completion = dispatchFullBuild(params, buildRequestKey(s, R), waitForResult);
   if (s.hierarchical.enabled) scheduleHierarchicalStats();
-  return false;
+  return { fromCache: false, completion };
 }
 
 function scheduleRebuild(preview: boolean, skipHistory = false): void {
+  // Any normal rebuild request supersedes a manually applied level-set result.
+  levelsetOverrideStateKey = null;
   // 仅完整重建时记录历史；undo/redo 恢复后的重建跳过（否则会把恢复态压栈、丢弃 redo 分支）
   if (!preview && !skipHistory) pushHistory();
   if (rebuildTimer) clearTimeout(rebuildTimer);
-  rebuildTimer = setTimeout(() => rebuild(preview), preview ? 16 : 150);
+  rebuildTimer = setTimeout(() => {
+    rebuildTimer = null;
+    rebuild(preview);
+  }, preview ? 16 : 150);
 }
 
 /** 松手后先渲染中等分辨率，再自动升级到全高清 */
 function scheduleHdUpgrade(): void {
-  setTimeout(() => {
+  if (hdUpgradeTimer) clearTimeout(hdUpgradeTimer);
+  hdUpgradeTimer = setTimeout(() => {
+    hdUpgradeTimer = null;
     const s = getState();
     const fullR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
     const params: BuildParams = {
@@ -1060,7 +1313,7 @@ function scheduleHdUpgrade(): void {
       hierarchical: s.hierarchical,
       neural: s.neural,
     };
-    dispatchFullBuild(params, cacheKey(s, fullR));
+    dispatchFullBuild(params, buildRequestKey(s, fullR));
     if (s.hierarchical.enabled) scheduleHierarchicalStats();
   }, 350);
 }
@@ -1120,22 +1373,27 @@ function applyGeometry(
   })();
 
   // 【阶段 IV】非欧度规空间映射：顶点级连续 warp（水密/流形性质由构造继承）。
-  // 映射改变几何 ⇒ 法线重算（THREE 路径）；恒等映射零开销跳过。
+  // Worker 返回和 LRU 缓存中的数组是未映射的规范几何，不能原地修改；
+  // 否则缓存命中时会在已映射坐标上再次映射。恒等映射仍保持零拷贝。
+  let renderPositions = positions;
+  let renderNormals = normals;
   const manifold = s0.manifold ?? { kind: 'identity', radius: 15, scale: 1.4, axis: 'z' };
   if (manifold.kind !== 'identity' && manifold.kind !== undefined) {
-    mapGeometry(manifold.kind, manifold, { half: Math.PI * s0.cellSize }, positions);
+    renderPositions = positions.slice();
+    renderNormals = normals.slice();
+    mapGeometry(manifold.kind, manifold, { half: Math.PI * s0.cellSize }, renderPositions);
     const tmpGeo = new THREE.BufferGeometry();
-    tmpGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    tmpGeo.setAttribute('position', new THREE.Float32BufferAttribute(renderPositions, 3));
     tmpGeo.setIndex(new THREE.BufferAttribute(indices.slice(), 1));
     tmpGeo.computeVertexNormals();
     const nn = tmpGeo.getAttribute('normal').array as Float32Array;
-    normals.set(nn.subarray(0, Math.min(normals.length, nn.length)));
+    renderNormals.set(nn.subarray(0, Math.min(renderNormals.length, nn.length)));
     tmpGeo.dispose();
   }
 
   baseGeo = new THREE.BufferGeometry();
-  baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  baseGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(renderPositions, 3));
+  baseGeo.setAttribute('normal', new THREE.Float32BufferAttribute(renderNormals, 3));
   if (cols) {
     baseGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   }
@@ -1219,6 +1477,25 @@ function applyGeometry(
 // ── Worker 回调 ─────────────────────────────────────────────
 function onWorkerResult(res: WorkerResponse): void {
   if (res.type !== 'result') return;
+  const active = activeBuild;
+  const current = getState();
+  // WorkerBridge 会丢弃旧 id，但状态可能已在防抖窗口内变化、尚未发出
+  // 新请求。再次校验世代和参数指纹，阻止旧几何/旧顶点色覆盖新状态。
+  if (!active
+    || res.id !== active.id
+    || active.generation !== buildGeneration
+    || buildRequestKey(current, res.resolution) !== active.requestKey) {
+    return;
+  }
+  if (!res.positions || !res.normals || !res.indices
+    || !Number.isFinite(res.vertCount) || res.vertCount <= 0
+    || !Number.isFinite(res.triCount) || res.triCount <= 0) {
+    onWorkerError(res.error || 'Worker 返回空网格');
+    return;
+  }
+  activeBuild = null;
+  lastAppliedGeometryKey = buildRequestKey(current, res.resolution);
+  levelsetOverrideStateKey = null;
   if (import.meta.env?.DEV) {
     console.debug('[Main] Worker result:', {
       vertCount: res.vertCount,
@@ -1243,33 +1520,40 @@ function onWorkerResult(res: WorkerResponse): void {
   }
   if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
   lastBuildResolution = res.resolution;
-  if (getState().slice < 100) schedulePercolation(80);   // 重建完成后刷新连通性预检
+  if (current.slice < 100) schedulePercolation(80);   // 重建完成后刷新连通性预检
   scheduleMicroPhysics(250);                              // 三向迂曲度 + 各向异性刚度（重建后自动刷新）
 
   // 物理指标
   if (res.surfaceArea != null && res.envelopeVolume != null) {
     lastPhysicsMetrics = computePhysicsMetrics(
-      getState().type,
+      current.type,
       res.porosityEstimate,
       res.surfaceArea,
       res.envelopeVolume,
-      getState().material,
-      getState().structureMode
+      current.material,
+      current.structureMode
     );
+  } else {
+    lastPhysicsMetrics = null;
   }
 
   // 应用几何
-  applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);
+  applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
   runPendingNLExport();
 
   // 缓存结果
-  const cKey = cacheKey(getState(), res.resolution);
+  const cKey = cacheKey(current, res.resolution);
   geoCache.set(cKey, {
     positions: new Float32Array(res.positions!),
     normals: new Float32Array(res.normals!),
     indices: new Uint32Array(res.indices!),
     vertCount: res.vertCount,
     faceCount: res.triCount,
+    porosityEstimate: res.porosityEstimate,
+    meshSolidFraction: res.meshSolidFraction ?? null,
+    isoUsed: res.isoUsed,
+    surfaceArea: res.surfaceArea,
+    envelopeVolume: res.envelopeVolume,
   });
   // LRU 淘汰
   if (geoCache.size > MAX_GEO_CACHE) {
@@ -1278,12 +1562,19 @@ function onWorkerResult(res: WorkerResponse): void {
   }
 
   // 同步公式、提示栏
-  const st = getState();
+  const st = current;
   updateFormulaDisplay(st.type, st.weights, res.isoUsed ?? 0);
   updateTips(st.type, st.porosity, st.thickness, res.porosityEstimate ?? null);
 }
 
 function onWorkerError(err: string): void {
+  // A protocol/runtime error invalidates the active frame. Even if a broken
+  // worker emits a late result with the same id, it must not overwrite the
+  // last known-good geometry or resolve a newer asynchronous build.
+  activeBuild = null;
+  levelsetOverrideStateKey = null;
+  buildGeneration++;
+  gpuSeq++;
   console.error('[Main] Worker error:', err);
   // 红队 V-2：静默失败通道——公式 NaN/退化权重/超容量等构建错误必须让用户看见
   flashToast(`构建失败：${err}`);
@@ -1503,6 +1794,11 @@ function runPercolation(): void {
   if (s.hybrid.enabled) {
     setVals('—', '—', '—', '—');
     if (note) note.textContent = '混合（Hybrid）场暂不支持连通性预检。';
+    return;
+  }
+  if (levelsetOverrideStateKey === geometryStateKey(s)) {
+    setVals('—', '—', '—', '—');
+    if (note) note.textContent = '水平集派生场已应用；当前预检仅支持标准隐函数场。';
     return;
   }
   if (lastIsoUsed === 0) {
@@ -1844,7 +2140,8 @@ function bindUIEvents(): void {
       const s = getState();
       syncUI(s);
       updateBadges(s.type, s.model, s.material, s.structureMode);
-      rebuild(false);
+      // 统一走调度路径：完整重建会记录一次 Undo 历史，并与其它参数变更保持一致。
+      scheduleRebuild(false);
     });
   });
 
@@ -1870,6 +2167,8 @@ function bindUIEvents(): void {
     setState({ autoRotate: !s.autoRotate });
     ctx.controls.autoRotate = !s.autoRotate;
     document.getElementById('btn-rotate')?.classList.toggle('on', !s.autoRotate);
+    // 按需渲染在自动旋转关闭后会停帧；重新开启时主动续上 RAF。
+    requestRender();
   });
 
   document.getElementById('btn-reset')?.addEventListener('click', () => {
@@ -2466,16 +2765,17 @@ function bindUIEvents(): void {
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     // 新手引导打开时不响应快捷键（Esc/方向键由引导自身处理）
     if (document.getElementById('ob-card')?.classList.contains('show')) return;
+    const key = e.key.toLowerCase();
 
     // Ctrl+Z 撤销（重建跳过 pushHistory，保住 redo 分支）
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) {
       e.preventDefault();
       const prev = undo();
       if (prev) { syncUI(prev); updateBadges(prev.type, prev.model, prev.material, prev.structureMode); updateStructureDesc(prev.structureMode); scheduleRebuild(false, true); flashToast('已撤销'); }
       return;
     }
     // Ctrl+Shift+Z / Ctrl+Y 重做
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+    if ((e.ctrlKey || e.metaKey) && (key === 'y' || (key === 'z' && e.shiftKey))) {
       e.preventDefault();
       const next = redo();
       if (next) { syncUI(next); updateBadges(next.type, next.model, next.material, next.structureMode); updateStructureDesc(next.structureMode); scheduleRebuild(false, true); flashToast('已重做'); }
@@ -2503,6 +2803,7 @@ function bindUIEvents(): void {
       setState({ autoRotate: !s.autoRotate });
       ctx.controls.autoRotate = !s.autoRotate;
       document.getElementById('btn-rotate')?.classList.toggle('on', !s.autoRotate);
+      requestRender();
       flashToast(s.autoRotate ? '已停止旋转' : '已开启旋转');
       return;
     }
@@ -2579,6 +2880,7 @@ function bindUIEvents(): void {
       setState({ autoRotate: !s.autoRotate });
       ctx.controls.autoRotate = !s.autoRotate;
       document.getElementById('btn-rotate')?.classList.toggle('on', !s.autoRotate);
+      requestRender();
       return;
     }
   });
@@ -2817,7 +3119,7 @@ function refreshWeightsUI(): void {
 let sweepAbort = false;
 
 async function runSweep(): Promise<void> {
-  const s = getState();
+  const initialState = getState();
   const overlay = document.getElementById('sweep-overlay')!;
   const bar = document.getElementById('sweep-bar')!;
   const status = document.getElementById('sweep-status')!;
@@ -2833,61 +3135,89 @@ async function runSweep(): Promise<void> {
   const step = 5;
   const frames: string[] = [];
   const configs: unknown[] = [];
+  const frameRows: Array<{
+    frame: number;
+    porosity: number;
+    type: AppState['type'];
+    cellSize: number;
+    thickness: number;
+    structureMode: AppState['structureMode'];
+    containerShape: AppState['containerShape'];
+    material: AppState['material'];
+  }> = [];
+  let sweepError: string | null = null;
 
-  for (let p = startPorosity; p <= endPorosity && !sweepAbort; p += step) {
-    const progress = ((p - startPorosity) / (endPorosity - startPorosity)) * 100;
-    bar.style.width = `${progress}%`;
-    status.textContent = `孔隙率 ${p}% (${Math.round(progress)}%)`;
+  try {
+    for (let p = startPorosity; p <= endPorosity && !sweepAbort; p += step) {
+      const progress = ((p - startPorosity) / (endPorosity - startPorosity)) * 100;
+      bar.style.width = `${progress}%`;
+      status.textContent = `孔隙率 ${p}% (${Math.round(progress)}%)`;
 
-    // 更新状态并重建（直接调 rebuild 绕过 150ms 防抖；LRU 命中时无 worker 结果，不可等待）
-    setState({ porosity: p });
-    syncUI(getState());
-    if (rebuildTimer) clearTimeout(rebuildTimer);
-    const fromCache = rebuild(false);
-    if (!fromCache) {
-      await new Promise<void>(resolve => {
-        const handler = () => { resolve(); bridge.removeResultListener(handler); };
-        bridge.addResultListener(handler);
+      // 更新状态并重建（直接调 rebuild 绕过 150ms 防抖）。
+      // 等待与本次请求绑定的 Promise，Worker 错误、被新请求淘汰或超时
+      // 都会结束等待并走统一的中止/恢复路径。
+      setState({ porosity: p });
+      syncUI(getState());
+      if (rebuildTimer) clearTimeout(rebuildTimer);
+      const outcome = rebuild(false, true);
+      if (!outcome.fromCache) {
+        if (!outcome.completion) throw new Error('扫描构建请求未创建');
+        await outcome.completion;
+      }
+
+      const frameState = getState();
+
+      // 延迟一帧确保渲染完成
+      await new Promise(r => setTimeout(r, 200));
+
+      // 截取 canvas
+      ctx.composer.render();
+      const canvas = ctx.renderer.domElement;
+      const dataUrl = canvas.toDataURL('image/png');
+      frames.push(dataUrl);
+
+      // 生成参数配置（收集到数组，循环结束后合并为单个 JSON 下载，
+      // 避免逐帧连发自动下载触发浏览器多文件下载拦截）
+      const config = {
+        frame: (p - startPorosity) / step,
+        porosity: p,
+        totalFrames: Math.floor((endPorosity - startPorosity) / step) + 1,
+        parameters: {
+          type: frameState.type,
+          cellSize: frameState.cellSize,
+          thickness: frameState.thickness,
+          weights: [...frameState.weights],
+          structureMode: frameState.structureMode,
+          containerShape: frameState.containerShape,
+          material: frameState.material,
+          gradientDir: frameState.gradientDir,
+        },
+        generatedAt: new Date().toISOString(),
+        platform: 'TPMS Explorer v2.0',
+      };
+      configs.push(config);
+      frameRows.push({
+        frame: (p - startPorosity) / step,
+        porosity: p,
+        type: frameState.type,
+        cellSize: frameState.cellSize,
+        thickness: frameState.thickness,
+        structureMode: frameState.structureMode,
+        containerShape: frameState.containerShape,
+        material: frameState.material,
       });
+
+      // 添加缩略图
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      preview.appendChild(img);
     }
-
-    // 延迟一帧确保渲染完成
-    await new Promise(r => setTimeout(r, 200));
-
-    // 截取 canvas
-    ctx.composer.render();
-    const canvas = ctx.renderer.domElement;
-    const dataUrl = canvas.toDataURL('image/png');
-    frames.push(dataUrl);
-
-    // 生成参数配置（收集到数组，循环结束后合并为单个 JSON 下载，
-    // 避免逐帧连发自动下载触发浏览器多文件下载拦截）
-    const config = {
-      frame: (p - startPorosity) / step,
-      porosity: p,
-      totalFrames: Math.floor((endPorosity - startPorosity) / step) + 1,
-      parameters: {
-        type: s.type,
-        cellSize: s.cellSize,
-        thickness: s.thickness,
-        weights: s.weights,
-        structureMode: s.structureMode,
-        containerShape: s.containerShape,
-        material: s.material,
-        gradientDir: s.gradientDir,
-      },
-      generatedAt: new Date().toISOString(),
-      platform: 'TPMS Explorer v2.0',
-    };
-    configs.push(config);
-
-    // 添加缩略图
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    preview.appendChild(img);
+  } catch (err) {
+    sweepError = err instanceof Error ? err.message : String(err);
+    sweepAbort = true;
   }
 
-  if (!sweepAbort) {
+  if (!sweepAbort && !sweepError) {
     status.textContent = '扫描完成，正在下载...';
     bar.style.width = '100%';
 
@@ -2909,9 +3239,8 @@ async function runSweep(): Promise<void> {
 
     // 导出汇总 CSV
     let csv = 'frame,porosity,type,cellSize,thickness,structureMode,container,material\n';
-    for (let i = 0; i < frames.length; i++) {
-      const p = startPorosity + i * step;
-      csv += `${i},${p},${s.type},${s.cellSize},${s.thickness},${s.structureMode},${s.containerShape},${s.material}\n`;
+    for (const row of frameRows) {
+      csv += `${row.frame},${row.porosity},${row.type},${row.cellSize},${row.thickness},${row.structureMode},${row.containerShape},${row.material}\n`;
     }
     const csvBlob = new Blob([csv], { type: 'text/csv' });
     const csvA = document.createElement('a');
@@ -2922,12 +3251,13 @@ async function runSweep(): Promise<void> {
     status.textContent = `已完成！共 ${frames.length} 帧`;
     setTimeout(() => { overlay.style.display = 'none'; }, 2000);
   } else {
-    status.textContent = '已取消';
+    status.textContent = sweepError ? `扫描中止：${sweepError}` : '已取消';
+    if (sweepError) flashToast(`参数扫描失败：${sweepError}`);
     setTimeout(() => { overlay.style.display = 'none'; }, 1000);
   }
 
   // 恢复原始孔隙率（程序行为，不进 undo 历史）
-  setState({ porosity: s.porosity });
+  setState({ porosity: initialState.porosity });
   syncUI(getState());
   scheduleRebuild(false, true);
 }
@@ -3014,47 +3344,102 @@ function handleExport(fmt: string | null): void {
     // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
     // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
     const hdR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
-    if (lastBuildResolution < hdR) {
-      const res = buildSurface({
-        type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
-        targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
-        containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
-        hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
-        endplateMm: s.endplateMm,
-      });
-      if (res.type === 'result' && res.vertCount > 0) {
-        applyGeometry(res.positions!, res.normals!, res.indices!, res.vertCount, res.triCount, res.colors ?? null);
-        lastBuildResolution = hdR;
-        if (res.isoUsed != null) lastIsoUsed = res.isoUsed;
-        // 与 onWorkerResult 对齐：指标/缓存也同步更新，否则紧随的 JSON/bib 导出拿到
-        // R=28 陈旧 metrics（svRatio 偏差实测 +15%），sidecar 自相矛盾
-        lastPorosityEstimate = res.porosityEstimate;
-  lastMeshSolidFraction = res.meshSolidFraction ?? null;
-  // 红队 V-3a：混叠公式（如 sin(x*40)…）的非流形边占比可达 7%——采样定理警示
-  {
-    const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
-    if (nmRatio > 0.02 && !nmWarned) {
-      nmWarned = true;
-      flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
-    } else if (nmRatio <= 0.02) {
-      nmWarned = false;
-    }
-  }
-        if (res.surfaceArea != null && res.envelopeVolume != null) {
-          lastPhysicsMetrics = computePhysicsMetrics(
-            getState().type, res.porosityEstimate, res.surfaceArea, res.envelopeVolume,
-            getState().material, getState().structureMode
-          );
-        }
-        geoCache.set(cacheKey(getState(), hdR), {
-          positions: new Float32Array(res.positions!),
-          normals: new Float32Array(res.normals!),
-          indices: new Uint32Array(res.indices!),
-          vertCount: res.vertCount,
-          faceCount: res.triCount,
-        });
-        requestRender();
+    const levelsetOverrideValid = levelsetOverrideStateKey === geometryStateKey(s);
+    const pendingRebuild = rebuildTimer !== null || hdUpgradeTimer !== null || activeBuild !== null;
+    const expectedHdKey = buildRequestKey(s, hdR);
+    // Resolution alone is insufficient: a freshly changed type/porosity can
+    // still have an older geometry at the same resolution.  A valid level-set
+    // override is the one intentional exception (it is a user-applied result).
+    if (!levelsetOverrideValid && (lastBuildResolution < hdR
+      || lastAppliedGeometryKey !== expectedHdKey
+      || pendingRebuild)) {
+      // 导出路径会在当前调用栈内直接完成高清构建。使尚未完成的 Worker
+      // 或 WebGPU 预计算失效，避免它们在本次导出后以旧分辨率覆盖屏幕。
+      if (rebuildTimer) {
+        clearTimeout(rebuildTimer);
+        rebuildTimer = null;
       }
+      if (hdUpgradeTimer) {
+        clearTimeout(hdUpgradeTimer);
+        hdUpgradeTimer = null;
+      }
+      bridge.invalidate();
+      activeBuild = null;
+      buildGeneration++;
+      gpuSeq++;
+      let res: WorkerResponse;
+      try {
+        res = buildSurface({
+          type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
+          targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+          containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
+          hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
+          endplateMm: s.endplateMm,
+          coloring: effectiveColoring(s),
+          stress: s.stress,
+          hierarchical: s.hierarchical,
+          neural: s.neural,
+        });
+      } catch (err) {
+        onWorkerError(err instanceof Error ? err.message : String(err));
+        return;
+      }
+      if (res.type !== 'result' || !res.positions || !res.normals || !res.indices
+        || !Number.isFinite(res.vertCount) || res.vertCount <= 0
+        || !Number.isFinite(res.triCount) || res.triCount <= 0) {
+        onWorkerError(res.error || '高清构建结果为空网格');
+        return;
+      }
+
+      // Keep metadata in lockstep with the geometry. applyGeometry() refreshes
+      // the statistics panel synchronously, so these assignments must precede it.
+      lastBuildResolution = hdR;
+      lastIsoUsed = res.isoUsed ?? lastIsoUsed;
+      lastAppliedGeometryKey = expectedHdKey;
+      levelsetOverrideStateKey = null;
+      lastPorosityEstimate = res.porosityEstimate;
+      lastMeshSolidFraction = res.meshSolidFraction ?? null;
+      // 红队 V-3a：混叠公式的非流形边占比过高时给出采样定理警示。
+      {
+        const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
+        if (nmRatio > 0.02 && !nmWarned) {
+          nmWarned = true;
+          flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
+        } else if (nmRatio <= 0.02) {
+          nmWarned = false;
+        }
+      }
+      if (res.surfaceArea != null && res.envelopeVolume != null) {
+        lastPhysicsMetrics = computePhysicsMetrics(
+          s.type, res.porosityEstimate, res.surfaceArea, res.envelopeVolume,
+          s.material, s.structureMode,
+        );
+      } else {
+        lastPhysicsMetrics = null;
+      }
+      applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
+      if (s.slice < 100) schedulePercolation(80);
+      scheduleMicroPhysics(250);
+      updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
+      updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
+
+      geoCache.set(cacheKey(s, hdR), {
+        positions: new Float32Array(res.positions),
+        normals: new Float32Array(res.normals),
+        indices: new Uint32Array(res.indices),
+        vertCount: res.vertCount,
+        faceCount: res.triCount,
+        porosityEstimate: res.porosityEstimate,
+        meshSolidFraction: res.meshSolidFraction ?? null,
+        isoUsed: res.isoUsed,
+        surfaceArea: res.surfaceArea,
+        envelopeVolume: res.envelopeVolume,
+      });
+      if (geoCache.size > MAX_GEO_CACHE) {
+        const oldest = geoCache.keys().next().value;
+        if (oldest) geoCache.delete(oldest);
+      }
+      requestRender();
     }
   }
   try {

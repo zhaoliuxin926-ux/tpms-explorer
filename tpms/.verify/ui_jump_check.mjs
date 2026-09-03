@@ -1,10 +1,15 @@
 // 跳转导航功能快检：点击"仿真" → 滚动 + 高亮 + 分组可见
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 4855;
-const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', '../tpms/docs/platform'], { shell: true });
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '../..');
+const DEPLOYED = path.join(ROOT, 'docs/platform');
+const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', DEPLOYED]);
 await new Promise((r) => setTimeout(r, 4000));
 
 const browser = await chromium.launch({

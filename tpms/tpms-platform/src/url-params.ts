@@ -3,7 +3,7 @@
  * 完全兼容原系统的 URL 参数恢复机制，确保旧版链接可正常解析加载。
  */
 
-import type { AppState, TpmType, RenderModel, StructureMode, ContainerShape, MaterialPreset, GradientDirection } from './types';
+import type { AppState, TpmType, RenderModel, StructureMode, ContainerShape, MaterialPreset, GradientDirection, ColoringMode } from './types';
 import { ENDPLATE_MAX_UI_MM, type BlendAxis } from './types';
 // import { getDefaultWeights } from './core/tpms-functions'; // TODO: restore when used
 
@@ -14,6 +14,7 @@ const VALID = {
   container: ['cube','cylinder'] as ContainerShape[],
   material: ['auto','tc4','polymer','thermal'] as MaterialPreset[],
   gradient: ['z','radial','spherical'] as GradientDirection[],
+  coloring: ['none', 'field', 'elevation', 'mean_curvature', 'gauss_curvature', 'stress_vm'] as ColoringMode[],
 };
 
 function clamp(v: string | null, min: number, max: number, def: number): number {
@@ -54,6 +55,14 @@ export function parseURLParams(search: string): Partial<AppState> {
     state.material = q.get('material') as MaterialPreset;
   }
 
+  // 顶点着色模式（白名单校验，未知值按默认单色处理）
+  if (q.has('color') && VALID.coloring.includes(q.get('color') as ColoringMode)) {
+    state.coloring = q.get('color') as ColoringMode;
+  }
+
+  // WebGPU 只是可选加速路径；缺省保持默认开启，显式 gpu=0 才关闭。
+  if (q.has('gpu')) state.gpuAccelerate = q.get('gpu') !== '0';
+
   // 权重：仅 URL 显式携带 wa/wb/wc/wd 之一时覆盖。
   // 无条件覆盖会让 setState 的"类型变更重置为该类型默认权重"语义在 URL 路径永不生效
   //（当前各类型默认恰为全 1 故无害，未来默认非全 1 时会静默出错）
@@ -71,21 +80,22 @@ export function parseURLParams(search: string): Partial<AppState> {
     state.autoRotate = q.get('autoRotate') !== '0';
   }
 
-  // 梯度方向
-  state.gradientDir = 'z';  // default
+  // 梯度方向（没有键时不写入 partial，交给当前默认状态）
   if (q.has('grad') && VALID.gradient.includes(q.get('grad') as GradientDirection)) {
     state.gradientDir = q.get('grad') as GradientDirection;
   }
 
-  // 加载端板厚度（mm）；缺省 = 关闭（数值参数无注入面）
-  state.endplateMm = clamp(q.get('ep'), 0, ENDPLATE_MAX_UI_MM, 0);
+  // 加载端板厚度（mm）；缺省时不覆盖当前状态
+  if (q.has('ep')) state.endplateMm = clamp(q.get('ep'), 0, ENDPLATE_MAX_UI_MM, 0);
   // 【阶段 IV】空间映射恢复（白名单：kind 只允许已知映射族）
   if (q.has('mfd') && ['identity', 'cylinder', 'torus', 'hyperbolic', 'metric', 'poincare'].includes(q.get('mfd')!)) {
     state.manifold = {
       kind: q.get('mfd') as AppState['manifold']['kind'],
       radius: q.has('mfr') ? clamp(q.get('mfr'), 8, 30, 15) : 15,
-      scale: 1.4,
-      axis: 'z',
+      scale: clamp(q.get('mfs'), 0.25, 4, 1.4),
+      axis: (q.get('mfa') === 'x' || q.get('mfa') === 'y' || q.get('mfa') === 'z')
+        ? q.get('mfa') as AppState['manifold']['axis']
+        : 'z',
     };
   }
 
@@ -124,7 +134,7 @@ export function parseURLParams(search: string): Partial<AppState> {
   // 剖切轴向 / 反向
   const sa = q.get('sa');
   if (sa === 'x' || sa === 'y' || sa === 'z') state.sliceAxis = sa;
-  state.sliceInvert = q.get('si') === '1';
+  if (q.has('si')) state.sliceInvert = q.get('si') === '1';
 
   // 混合模式（hybridType/hybridBlend 必须过白名单：否则恶意 URL 可注入任意字符串，
   // 经导出脚本的单引号插值落地为可执行 Python/MATLAB 代码——任意代码执行）

@@ -62,7 +62,9 @@ console.log('\n[A] 求解脚本语法（python ast 解析）');
   const tmpPy = join(tmpdir(), 'cae_verif_script.py');
   for (const [name, text] of scripts) {
     writeFileSync(tmpPy, text);
-    const res = spawnSync('python', ['-c', `import ast; ast.parse(open(r'${tmpPy.replace(/\\/g, '/')}').read()); print('OK')`], { encoding: 'utf8' });
+    // Windows 中文区域默认编码可能是 GBK；生成脚本明确声明 UTF-8，
+    // 审计读取时也必须指定编码，否则只在该环境误报语法失败。
+    const res = spawnSync('python', ['-c', `import ast; ast.parse(open(r'${tmpPy.replace(/\\/g, '/')}', encoding='utf-8').read()); print('OK')`], { encoding: 'utf8' });
     check(`${name}: ast.parse 通过`, res.stdout.trim() === 'OK', res.stderr.slice(0, 120));
   }
 }

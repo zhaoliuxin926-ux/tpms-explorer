@@ -12,7 +12,7 @@
  * 运行：node manifold_audit.mjs
  */
 
-import { writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -210,6 +210,47 @@ console.log('\n[E] 映射后三角形质量（最小角分布）');
   worstMinAngle > 0.005   // ≈0.3°：无退化/翻转三角
     ? ok(`四类映射最小角 > 0.3°`, `min=${(worstMinAngle * 180 / Math.PI).toFixed(2)}°`)
     : bad('存在退化三角', `min=${(worstMinAngle * 180 / Math.PI).toFixed(3)}°`);
+}
+
+// ────────────────────────────── F. 主线程缓存不变式 ──────────────────────────────
+console.log('\n[F] 主线程缓存保持未映射规范几何');
+{
+  // 用与 applyGeometry 相同的“规范数组 + 渲染副本”流程做数值 round-trip：
+  // 若错误地复用已映射数组，第二次 mapGeometry 会产生可观的二次形变。
+  const bs = baseMesh();
+  const ctx = { half: Math.PI * 2 };
+  const cfg = { radius: 8.2 };
+  const canonical = bs.positions.slice();
+  const renderA = canonical.slice();
+  mapGeometry('cylinder', cfg, ctx, renderA);
+  const renderB = canonical.slice();
+  mapGeometry('cylinder', cfg, ctx, renderB);
+  let canonicalDrift = 0, replayDiff = 0, doubleMapDiff = 0;
+  for (let i = 0; i < canonical.length; i++) {
+    canonicalDrift = Math.max(canonicalDrift, Math.abs(canonical[i] - bs.positions[i]));
+    replayDiff = Math.max(replayDiff, Math.abs(renderA[i] - renderB[i]));
+  }
+  const doubleMapped = renderA.slice();
+  mapGeometry('cylinder', cfg, ctx, doubleMapped);
+  for (let i = 0; i < renderA.length; i++) {
+    doubleMapDiff = Math.max(doubleMapDiff, Math.abs(renderA[i] - doubleMapped[i]));
+  }
+  canonicalDrift === 0 && replayDiff < 1e-6 && doubleMapDiff > 1e-4
+    ? ok('流形缓存 round-trip 不二次映射', `replay=${replayDiff.toExponential(1)} · double=${doubleMapDiff.toExponential(1)}`)
+    : bad('流形缓存 round-trip 数值漂移', `canonical=${canonicalDrift} replay=${replayDiff} double=${doubleMapDiff}`);
+
+  const mainSrc = readFileSync(join(PLATFORM, 'src/main.ts'), 'utf8');
+  const begin = mainSrc.indexOf('function applyGeometry(');
+  const end = mainSrc.indexOf('// ── Worker 回调', begin);
+  const applySrc = begin >= 0 && end > begin ? mainSrc.slice(begin, end) : '';
+  const clonesCanonicalArrays = applySrc.includes('renderPositions = positions.slice();')
+    && applySrc.includes('renderNormals = normals.slice();')
+    && applySrc.includes('mapGeometry(manifold.kind, manifold, { half: Math.PI * s0.cellSize }, renderPositions);');
+  const bindsMappedCopies = applySrc.includes("new THREE.Float32BufferAttribute(renderPositions, 3)")
+    && applySrc.includes("new THREE.Float32BufferAttribute(renderNormals, 3)");
+  clonesCanonicalArrays && bindsMappedCopies
+    ? ok('applyGeometry 映射副本，Worker/LRU 原始数组不变')
+    : bad('applyGeometry 可能原地污染 Worker/LRU 几何');
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);

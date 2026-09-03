@@ -110,6 +110,18 @@ for (const type of TYPES) {
   const head = WGSL_FILE.slice(0, ph), tail = WGSL_FILE.slice(ph + '{{FIELD_FN}}'.length);
   check('wgsl 模板与 TS 内联模板逐字同步（头/尾锚定）',
     k.wgsl.startsWith(head) && k.wgsl.endsWith(tail) && k.wgsl.length > head.length + tail.length);
+
+  // 网格节点坐标必须与 CPU Surface Nets 同源：[-π, +π] × periods。
+  // 这里只做静态内核断言，确保真实 WebGPU 路径不会因起点常量漂移而
+  // 产生整体相位偏移（JS IR 对拍只覆盖给定坐标，无法捕获该类模板错误）。
+  const start = '-3.141592653589793';
+  const span = '6.283185307179586';
+  const axes = ['x', 'y', 'z'];
+  const gridCoordsMatch = axes.every((axis) =>
+    k.wgsl.includes(`let m${axis} = (${start} + f32(gid.${axis}) / P.res * ${span}) * P.kk;`),
+  );
+  check('WGSL 网格坐标起点与 CPU [-π,+π] 约定一致', gridCoordsMatch,
+    '期望每轴起点 -3.141592653589793（−π）');
 }
 
 function mkCfg(type) {
@@ -143,6 +155,24 @@ for (const type of TYPES) {
     maxE = Math.max(maxE, relErr(kern.jsEval(mx, my, mz, px, py, pz), cpu(mx, my, mz, w)));
   }
   check(`${type}: max 相对误差 ${maxE.toExponential(2)} ≤1e-6`, maxE <= 1e-6);
+}
+
+// 非单位权重回归：全 1 权重会掩盖「权重被重复相乘」的 IR 转录错误。
+// 重点覆盖 Neovius 的 4·w1·cosx·cosy·cosz 项，同时对所有内置族做一次对拍。
+console.log('\n[D2] 非单位权重：模拟 GPU 内核 vs CPU 权威公式');
+{
+  const weights = [0.73, 1.7, 0.41, 1.23];
+  const pts = samplePoints(2000, 2);
+  for (const type of TYPES) {
+    const cfg = { ...mkCfg(type), weights };
+    const kern = compileFieldKernel(cfg);
+    const cpu = getTpmsFunction(type);
+    let maxE = 0;
+    for (const [mx, my, mz, px, py, pz] of pts) {
+      maxE = Math.max(maxE, relErr(kern.jsEval(mx, my, mz, px, py, pz), cpu(mx, my, mz, weights)));
+    }
+    check(`${type}: 非单位权重 max 相对误差 ${maxE.toExponential(2)} ≤1e-6`, maxE <= 1e-6);
+  }
 }
 
 // ── E. AST 自定义方程对拍 ──

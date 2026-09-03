@@ -24,9 +24,9 @@ struct EvalParams {
 fn main(@builtin(global_invocation_id) gid : vec3u) {
   let n = P.n;
   if (gid.x >= n || gid.y >= n || gid.z >= n) { return; }
-  let mx = (-1.5707963267948966 + f32(gid.x) / P.res * 6.283185307179586) * P.kk;
-  let my = (-1.5707963267948966 + f32(gid.y) / P.res * 6.283185307179586) * P.kk;
-  let mz = (-1.5707963267948966 + f32(gid.z) / P.res * 6.283185307179586) * P.kk;
+  let mx = (-3.141592653589793 + f32(gid.x) / P.res * 6.283185307179586) * P.kk;
+  let my = (-3.141592653589793 + f32(gid.y) / P.res * 6.283185307179586) * P.kk;
+  let mz = (-3.141592653589793 + f32(gid.z) / P.res * 6.283185307179586) * P.kk;
   let px = (f32(gid.x) / P.res) * 2.0 - 1.0;
   let py = (f32(gid.y) / P.res) * 2.0 - 1.0;
   let pz = (f32(gid.z) / P.res) * 2.0 - 1.0;
