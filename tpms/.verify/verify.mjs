@@ -167,6 +167,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 
 await browser.close();
 
+if (results.length < 18) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 18（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 const failed = results.filter(r => !r.ok);
 console.log('\n==== SUMMARY ====');
 console.log(`PASS ${results.length - failed.length} / ${results.length}`);

@@ -110,6 +110,7 @@ console.log('\n[E] gyroid 真实网格（R=16）');
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
+  if (passCount < 13) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 13（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

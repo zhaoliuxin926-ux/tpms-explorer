@@ -169,20 +169,30 @@ function mkParams(over) {
 console.log('\n[E] 度规一致性（G⁻¹ = 1/s²，s = 2R₀²/(R₀²−r²)）');
 {
   const R0 = 10;
-  let ok = true;
+  const cfg = { kind: 'poincare', radius: R0 };
+  const ctx = { half: Math.PI };
+  const fAna = (r) => (2 * R0 * R0 * r) / (R0 * R0 - r * r);
+  const outP = [0, 0, 0];
+  // 双曲段：平台 mapPoint 输出 vs 解析 f(r)——真对拍（修复原 gInv 自乘自验恒真）
+  let okH = true, wH = 0;
   for (let i = 1; i < 40; i++) {
     const r = (i / 40) * 0.9 * R0;
-    const s = (2 * R0 * R0) / (R0 * R0 - r * r);
-    const gInv = 1 / (s * s);
-    // 度规 = s²·I（共形），逆 = 1/s²·I
-    if (Math.abs(s * s * gInv - 1) > 1e-12) ok = false;
+    mapPoint('poincare', cfg, ctx, r, 0, 0, outP);
+    if (Math.abs(outP[0] - fAna(r)) > 1e-9 * Math.max(1, fAna(r))) okH = false; else wH++;
   }
-  check('逆度规因子解析一致', ok);
-  // 截断外：度规修正退化为延拓段的解析 s
+  check('双曲段映射 = 解析 2R0²r/(R0²−r²)（平台实现对拍 39 点）', okH, wH + '/39');
+  // 延拓段：r > rC 应为线性（二阶差分 = 0）且单调（单射）
   const rC = 0.95 * R0;
-  const sC = (2 * R0 * R0) / (R0 * R0 - rC * rC);
-  const fpC = (2 * R0 * R0 * (R0 * R0 + 3 * rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
-  check('截断边界斜率连续（f(rC)+f\'(rC)·dr 覆盖域角）', fpC > 0 && sC > 0);
+  const m = (r) => { mapPoint('poincare', cfg, ctx, r, 0, 0, outP); return outP[0]; };
+  const e1 = rC * 1.001, e2 = rC * 1.002, e3 = rC * 1.003;
+  const y1 = m(e1), y2 = m(e2), y3 = m(e3);
+  const lin = Math.abs((y3 - y2) - (y2 - y1)) <= 1e-9 * Math.max(1, Math.abs(y2));
+  check('延拓段线性（二阶差分 = 0）', lin);
+  check('延拓段单调（单射）', y1 < y2 && y2 < y3);
+  // 延拓斜率与平台 fpC 公式自洽（数值差分对拍，修复原 fpC>0 恒真）
+  const sNum = (y2 - y1) / (e2 - e1);
+  const sAna = (2 * R0 * R0 * (R0 * R0 + 3 * rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
+  check('延拓斜率 = 平台 fpC 公式（数值差分对拍）', Math.abs(sNum - sAna) <= 1e-6 * sAna, 'num=' + sNum.toFixed(3) + ' ana=' + sAna.toFixed(3));
 }
 
 // ── F. 脚本同源（py 静态）──
@@ -206,6 +216,7 @@ console.log('\n[F] py 脚本同源静态断言');
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
+  if (passCount < 14) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 14（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

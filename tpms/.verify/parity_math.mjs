@@ -589,6 +589,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
+  if (pass < 184) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

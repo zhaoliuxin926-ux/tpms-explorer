@@ -93,7 +93,7 @@ console.log('\n[B] J2 径向返回');
   const rr = sol.radialReturn(eT, [0, 0, 0, 0, 0, 0], 0, c, sigmaY, H);
   const fNew = sol.vonMisesVoigt(rr.stress) - rr.yieldStress;
   check('返回后 |f| ≤ 1e-12·σy', Math.abs(fNew) <= 1e-12, fNew.toExponential(6));
-  check('dPEEQ = dγ = f/(3μ+H)', Math.abs(rr.dPeek - 0.0071208 / 1) < 1e-4 || rr.dPeek > 0, rr.dPeek.toExponential(6));
+  check('dPEEQ = dγ = f/(3μ+H)', Math.abs(rr.dPeek - 0.0071208 / 1) < 1e-4, rr.dPeek.toExponential(6));
   check('塑性应变不可压缩（tr ≈ 0）', Math.abs(rr.epPlastic[0] + rr.epPlastic[1] + rr.epPlastic[2]) < 1e-14);
   // 弹性域试探不变
   const eE = [0.001, 0, 0, 0, 0, 0];
@@ -109,7 +109,8 @@ console.log('\n[B] J2 径向返回');
   check('二次返回流动应力硬化递增', rr3.yieldStress > rr.yieldStress, `${rr.yieldStress.toExponential(4)} → ${rr3.yieldStress.toExponential(4)}`);
   const fNew3 = sol.vonMisesVoigt(rr3.stress) - rr3.yieldStress;
   check('二次返回后 |f| ≤ 1e-12·σy', Math.abs(fNew3) <= 1e-12, fNew3.toExponential(6));
-  check('单轴校验 εp11 = ε̄p（Prandtl-Reuss 口径）', Math.abs(rr3.epPlastic[0] - (rr3.peeq - rr.peeq) - rr.epPlastic[0]) < 1e-12 || true);
+  // 【恒真审查修复】原此处断言“多轴态 εp11=ε̄p”口径错误（Prandtl-Reuss 流动沿偏应力方向，
+  // 多轴下 εp11 < ε̄p 恒成立），且曾被 || true 掩盖；单轴性质由下方 rrU 块真校验。
   {
     // 纯单轴比例加载的塑性应变方向校验：eT2 主方向 11 → dεp11/dε̄p ≈ 1
     const rrU = sol.radialReturn([0.05, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], 0, c, sigmaY, H);
@@ -302,6 +303,7 @@ console.log('\n[K] 静水 KUBC 格构');
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
+  if (passCount < 55) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 55（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

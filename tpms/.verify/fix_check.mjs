@@ -192,5 +192,6 @@ if (errors.length) { bad('运行时错误', errors.slice(0, 5).join(' | ')); }
 else ok('全程 0 pageerror / 0 console.error');
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 23) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 23（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 await browser.close();
 process.exit(fail > 0 ? 1 : 0);

@@ -156,4 +156,5 @@ for (const [type, ep] of [['gyroid', 0], ['gyroid', 1.2]]) {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 12) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 process.exit(fail ? 1 : 0);

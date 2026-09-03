@@ -1,0 +1,154 @@
+{
+  "mesh_audit": {
+    "pass": 61,
+    "exit": 0
+  },
+  "parity_math": {
+    "pass": 184,
+    "exit": 0
+  },
+  "state_url_audit": {
+    "pass": 12,
+    "exit": 0
+  },
+  "worker_bridge_audit": {
+    "pass": 11,
+    "exit": 0
+  },
+  "sim_export_check": {
+    "pass": 13,
+    "exit": 0
+  },
+  "endplate_audit": {
+    "pass": 26,
+    "exit": 0
+  },
+  "micro_physics_audit": {
+    "pass": 17,
+    "exit": 0
+  },
+  "hybrid_audit": {
+    "pass": 5,
+    "exit": 0
+  },
+  "industrial_export_audit": {
+    "pass": 12,
+    "exit": 0
+  },
+  "custom_equation_audit": {
+    "pass": 73,
+    "exit": 0
+  },
+  "homogenization_audit": {
+    "pass": 13,
+    "exit": 0
+  },
+  "manifold_audit": {
+    "pass": 14,
+    "exit": 0
+  },
+  "redteam_matrix_audit": {
+    "pass": 100,
+    "exit": 0
+  },
+  "webgpu_parity_audit": {
+    "pass": 43,
+    "exit": 0
+  },
+  "periodic_rve_audit": {
+    "pass": 88,
+    "exit": 0
+  },
+  "cae_mesh_audit": {
+    "pass": 46,
+    "exit": 0
+  },
+  "hierarchical_audit": {
+    "pass": 18,
+    "exit": 0
+  },
+  "inverse_design_audit": {
+    "pass": 23,
+    "exit": 0
+  },
+  "poincare_metric_audit": {
+    "pass": 12,
+    "exit": 0
+  },
+  "cae_verification_audit": {
+    "pass": 25,
+    "exit": 0
+  },
+  "impact_modal_audit": {
+    "pass": 11,
+    "exit": 0
+  },
+  "ct_reconstruction_audit": {
+    "pass": 11,
+    "exit": 0
+  },
+  "native_cae_solver_audit": {
+    "pass": 17,
+    "exit": 0
+  },
+  "boundary_picker_audit": {
+    "pass": 14,
+    "exit": 0
+  },
+  "bone_morphometry_audit": {
+    "pass": 18,
+    "exit": 0
+  },
+  "gcode_slicer_audit": {
+    "pass": 13,
+    "exit": 0
+  },
+  "ml_pareto_audit": {
+    "pass": 5,
+    "exit": 0
+  },
+  "gpu_plasticity_audit": {
+    "pass": 56,
+    "exit": 0
+  },
+  "digital_twin_compression_audit": {
+    "pass": 24,
+    "exit": 0
+  },
+  "wasm_navier_stokes_audit": {
+    "pass": 17,
+    "exit": 0
+  },
+  "lpbf_thermo_mechanical_audit": {
+    "pass": 18,
+    "exit": 0
+  },
+  "nl_agent_audit": {
+    "pass": 32,
+    "exit": 0
+  },
+  "neural_implicit_audit": {
+    "pass": 43,
+    "exit": 0
+  },
+  "yield_surface_audit": {
+    "pass": 35,
+    "exit": 0
+  },
+  "phononic_bandgap_audit": {
+    "pass": 18,
+    "exit": 0
+  },
+  "tissue_growth_audit": {
+    "pass": 11,
+    "exit": 0
+  },
+  "levelset_optimizer_audit": {
+    "pass": 8,
+    "exit": 0
+  },
+  "evaluator_check": {
+    "pass": 37,
+    "exit": 0
+  }
+}

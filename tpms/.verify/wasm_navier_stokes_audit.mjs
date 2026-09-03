@@ -76,7 +76,7 @@ console.log('\n[A] Poiseuille 平面槽道（解析锚点）');
   const kErr = Math.abs(res.permeability - kExact) / kExact;
   check(`κ vs H²/12 ≤10%（实测 ${(kErr * 100).toFixed(2)}%）`, kErr <= 0.10);
   check('壁面无滑移（墙格速度=0）', res.u[0] === 0 && res.u[(ny - 1) * nx * 3] === 0);
-  check('横向速度为零（单向流）', res.umax > 0 && res.u[3] === 0 || true);
+  check('横向速度为零（单向流）', res.umax > 0 && res.u[3] === 0, `u[3]=${res.u[3]}`);
 }
 
 // ══ B. Gyroid 多孔周期渗流 ══
@@ -155,6 +155,7 @@ console.log('\n[E] 网格收敛 + 通道不变性');
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
+  if (passCount < 17) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 17（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

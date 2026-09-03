@@ -156,6 +156,7 @@ console.log('\n[E] 主应变不变量 fuzz');
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
+  if (passCount < 24) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 24（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

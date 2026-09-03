@@ -79,5 +79,6 @@ await checkTipbar('工程版', 'http://localhost:4814/?autoRotate=0', 'tpms_onbo
 await checkTipbar('单文件版', 'http://localhost:8125/app.html', 'tpms-onboarded');
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+  if (pass < 10) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 10（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 await browser.close();
 process.exit(fail > 0 ? 1 : 0);
