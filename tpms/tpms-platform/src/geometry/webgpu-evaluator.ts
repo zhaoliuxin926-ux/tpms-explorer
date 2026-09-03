@@ -163,8 +163,10 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const sumC = sumChain(b, [cos(mx), cos(my), cos(mz)]);
       const coefA = mulChain(b, [b.load(3), wreg(0)]);
       const termA = b.binary('mul', coefA, sumC);
+      // `termB` already contains w1; keep the numeric coefficient separate so
+      // non-unit weights do not get multiplied twice (4·w1·cosx·cosy·cosz).
       const termB = weightMul(1, cos(mx), cos(my), cos(mz));
-      const coefB = b.load(w[1] * 4);
+      const coefB = b.load(4);
       return b.binary('add', termA, b.binary('mul', coefB, termB));
     }
     case 'iwp': {
@@ -346,9 +348,9 @@ struct EvalParams {
 fn main(@builtin(global_invocation_id) gid : vec3u) {
   let n = P.n;
   if (gid.x >= n || gid.y >= n || gid.z >= n) { return; }
-  let mx = (-1.5707963267948966 + f32(gid.x) / P.res * 6.283185307179586) * P.kk;
-  let my = (-1.5707963267948966 + f32(gid.y) / P.res * 6.283185307179586) * P.kk;
-  let mz = (-1.5707963267948966 + f32(gid.z) / P.res * 6.283185307179586) * P.kk;
+  let mx = (-3.141592653589793 + f32(gid.x) / P.res * 6.283185307179586) * P.kk;
+  let my = (-3.141592653589793 + f32(gid.y) / P.res * 6.283185307179586) * P.kk;
+  let mz = (-3.141592653589793 + f32(gid.z) / P.res * 6.283185307179586) * P.kk;
   let px = (f32(gid.x) / P.res) * 2.0 - 1.0;
   let py = (f32(gid.y) / P.res) * 2.0 - 1.0;
   let pz = (f32(gid.z) / P.res) * 2.0 - 1.0;

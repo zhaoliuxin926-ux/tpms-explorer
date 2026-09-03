@@ -1,10 +1,16 @@
 // 移动端 sheet 模式抽查：390×844，底部抽屉 + 分组导航
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 4852;
-const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', '../tpms/docs/platform'], { shell: true });
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '../..');
+const DEPLOYED = path.join(ROOT, 'docs/platform');
+const SCREENSHOT = path.join(HERE, 'shots', 'ui-mobile-sheet.png');
+const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', DEPLOYED]);
 await new Promise((r) => setTimeout(r, 3500));
 
 const browser = await chromium.launch({
@@ -47,7 +53,7 @@ for (let t = 0; t < 12; t++) {
 }
 ok('sheet 内点击仿真滚动生效', scrolled > 50, `scrollTop=${scrolled}`);
 
-await page.screenshot({ path: 'shots/ui-mobile-sheet.png' });
+await page.screenshot({ path: SCREENSHOT });
 ok('0 异常', true);
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
 await browser.close();
