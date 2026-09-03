@@ -33,11 +33,10 @@
 └── tpms/                      ← 工程化与开发辅助（不参与 Pages）
     ├── README.md              ← 你正在看的项目中枢
     ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185）
-    │   └── 30 个源文件 · Web Worker 重建 · 7 种导出格式
+    │   └── 75 个源文件 · Web Worker 重建 · 10+ 种导出格式
     ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
     ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
     ├── .verify/               ← 回归验证脚本（已入库；run_all.mjs 一键全量 + parity_math.mjs 数学一致性）
-    ├── .diag/                 ← 诊断探针脚本（gitignored）
     └── .zcode/                ← 计划文件（gitignored）
 ```
 
@@ -118,7 +117,7 @@ npm run dev      # 访问 http://localhost:5173
 ---
 
 ## 技术要点
-- **Surface Nets v2 等值面重建**：自研替代 Marching Cubes，避免 256 条查找表。以「网格边穿越」为面提取键（构造性水密），孔口自动封盖，切向平滑 + 解析投影保体积，导出 STL 严格水密、定向一致、固相体积偏差 ≤6%（21 案例审计 `tpms/.verify/mesh_audit.mjs` 全过）。
+- **Surface Nets v2 等值面重建**：自研替代 Marching Cubes，避免 256 条查找表。以「网格边穿越」为面提取键（构造性水密），孔口自动封盖，切向平滑 + 解析投影保体积，导出 STL 严格水密、定向一致、固相体积偏差 ≤6%（28 案例审计 `tpms/.verify/mesh_audit.mjs` 全过）。
 - **孔隙率二分搜索**：在目标孔隙率下反解等值常数 C，所见即所得。
 - **渐进式重建**：拖动滑块低分辨率预览，松手后高清重建，保证 60fps 交互。
 - **零依赖交付**：单文件版内联 Three.js 0.160 IIFE bundle（docs/vendor/three.bundle.js，1.3MB），断网双击即开。
@@ -144,6 +143,8 @@ cd tpms/.verify && node run_all.mjs     # 6 套 UI 回归（需先起服务，�
 node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
+
+> CI 数量口径：`run_ci_suite.mjs` 串联 38 道正式门禁（其中第 12 门为 `run_all` UI 聚合）；另有 1 项独立的 `ui_jump_check` 顶层快检，因此最终调度汇总显示 39/39。
 
 ### 工程版部署到 GitHub Pages
 ```bash

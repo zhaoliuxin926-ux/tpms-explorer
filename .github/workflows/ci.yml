@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.os }} · 12 gates
+    name: ${{ matrix.os }} · 39 gates
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +45,7 @@ jobs:
           cp -r tpms/tpms-platform/dist docs/platform
           find docs/platform -name "*.map" -delete || true
 
-      - name: Run 12-gate suite
+      - name: Run 39-gate suite
         working-directory: tpms/tpms-platform
         run: npm run test:all
 
