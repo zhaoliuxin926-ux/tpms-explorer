@@ -100,7 +100,11 @@ export function mapPoint(kind: ManifoldKind, cfg: ManifoldConfig, ctx: ManifoldC
       if (r <= rC) {
         rp = f(r);
       } else {
-        const fpC = (2 * R0 * R0 * (R0 * R0 + 3 * rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
+        // 【2026-09-05 C¹ 根治】延拓斜率 = f 在截点的真实导数
+        // f'(r) = 2R₀²(R₀²+r²)/(R₀²−r²)²。旧实现 (R₀²+3rC²) 为错误解析式
+        // （斜率偏大 ~2×，截点处 C¹ 不连续），由门禁恒真审查轮发现并登记。
+        // C¹ 连续后延拓段与双曲段切线相接，保形性恢复；单射性（斜率恒正）不变。
+        const fpC = (2 * R0 * R0 * (R0 * R0 + rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
         rp = fpc + fpC * (r - rC);
       }
       const sc = rp / r;

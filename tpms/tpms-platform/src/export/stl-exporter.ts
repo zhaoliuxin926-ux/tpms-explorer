@@ -7,14 +7,14 @@ import { downloadBlob } from './download';
 /**
  * 生成二进制 STL 字节流（与下载解耦，供 .verify/parity_math.mjs 直接断言）。
  *
- * 缠绕定向：Surface Nets 的 quad 顶点序按坐标轴固定排列，与局部梯度无关，
- * 约一半三角形的几何法线与场梯度反向。提供 normals（顶点解析法线）时，
- * 按顶点法线与几何法线点积符号翻转每个三角形的缠绕序，使 STL 整体定向一致；
+ * 缠绕定向（2026-09-05 根治）：全局定向传播——共享边相邻三角绕向必然相反，
+ * 发散体积符号统一外向，封闭流形上 misoriented 由构造归零。此前逐三角按
+ * 顶点法线独立判向会把局部一致的缠绕打碎（实测恶化 ~5×），已废弃。
  * 法线行始终写归一化几何法线（与缠绕严格自洽，Abaqus/COMSOL 重建实体依赖此约定）。
  *
  * @param scale wc → mm 缩放因子（core/units 的 wcToMmFactor），
  *              使导出模型总宽 = cellSize mm（1 period = 1 mm）。默认 1 保持旧行为。
- * @param normals 可选顶点法线（Float32Array，每顶点 3 分量），仅用于缠绕翻转判定
+ * @param normals 已废弃（保留签名兼容）：定向改由 orientConsistently 全局传播保证
  */
 export function buildBinarySTL(
   positions: Float32Array,
@@ -22,6 +22,7 @@ export function buildBinarySTL(
   scale = 1,
   normals?: Float32Array
 ): ArrayBuffer {
+  void normals;
   const triCount = indices.length / 3;
   const headerSize = 80;
   const triSize = 50; // 12(float3 normal) + 12(float3 v0) + 12(float3 v1) + 12(float3 v2) + 2(uint16 attr)
@@ -33,11 +34,13 @@ export function buildBinarySTL(
   for (let i = 0; i < header.length && i < headerSize; i++) dv.setUint8(i, header.charCodeAt(i));
   dv.setUint32(headerSize, triCount, true);
 
+  const oriented = orientConsistently(positions, indices);
+
   let offset = headerSize + 4;
   for (let t = 0; t < triCount; t++) {
-    let i0 = indices[t * 3] * 3;
-    let i1 = indices[t * 3 + 1] * 3;
-    let i2 = indices[t * 3 + 2] * 3;
+    let i0 = oriented[t * 3] * 3;
+    let i1 = oriented[t * 3 + 1] * 3;
+    let i2 = oriented[t * 3 + 2] * 3;
 
     const ax = positions[i1] - positions[i0];
     const ay = positions[i1 + 1] - positions[i0 + 1];
@@ -48,17 +51,6 @@ export function buildBinarySTL(
     let cx = ay * bz - az * by;
     let cy = az * bx - ax * bz;
     let cz = ax * by - ay * bx;
-
-    if (normals) {
-      // 三顶点法线平均 → 期望外向；几何法线与之反向则交换 v1/v2（缠绕翻转）
-      const nx = normals[i0] + normals[i1] + normals[i2];
-      const ny = normals[i0 + 1] + normals[i1 + 1] + normals[i2 + 1];
-      const nz = normals[i0 + 2] + normals[i1 + 2] + normals[i2 + 2];
-      if (nx * cx + ny * cy + nz * cz < 0) {
-        const tmp = i1; i1 = i2; i2 = tmp;
-        cx = -cx; cy = -cy; cz = -cz;
-      }
-    }
 
     const clen = Math.sqrt(cx * cx + cy * cy + cz * cz) || 1;
     dv.setFloat32(offset, cx / clen, true); offset += 4;
@@ -115,6 +107,86 @@ export function exportBinarySTL(
  * snappyHexMesh / surfaceConvert 可直接读取分块命名边界。
  */
 export type CfdPatchName = 'inlet' | 'outlet' | 'sides' | 'wall';
+/**
+ * 全局定向传播（2026-09-05 缠绕翻转根治）。
+ *
+ * 此前逐三角独立地以「顶点法线 vs 几何法线点积」判向翻转：顶点法线场在
+ * 封盖扇心/边界层区不可靠，独立判向会把本局部一致的缠绕打碎——R96 gyroid
+ * 实测 misoriented 边 4536 → 翻转后 23571（恶化 ~5×）。
+ *
+ * 实现：①无向边登记（恰 2 入射）→ ②三角邻接图 BFS 二着色（共享边原始
+ * 方向相同者异色，即需翻转；着色只依赖原始拓扑，无中途状态过期）→
+ * ③应用翻转 → ④发散体积为负则整体再翻（统一外向法线约定）。
+ * 封闭流形（网格管线保证 open=nm=0）上 misoriented 由构造归零。
+ */
+function orientConsistently(positions: Float32Array, indices: Uint32Array): Uint32Array {
+  const triCount = indices.length / 3;
+  const out = indices.slice();
+  if (triCount === 0) return out;
+  const vertCount = positions.length / 3;
+
+  const edgeMap = new Map<number, Array<{ t: number; rev: boolean }>>();
+  for (let t = 0; t < triCount; t++) {
+    for (let e = 0; e < 3; e++) {
+      const a = indices[t * 3 + e], b = indices[t * 3 + (e + 1) % 3];
+      if (a === b) continue;
+      const rev = a > b;
+      const key = rev ? b * vertCount + a : a * vertCount + b;
+      let rec = edgeMap.get(key);
+      if (!rec) { rec = []; edgeMap.set(key, rec); }
+      if (rec.length < 2) rec.push({ t, rev });
+    }
+  }
+
+  const color = new Int8Array(triCount).fill(-1);
+  const queue = new Int32Array(triCount);
+  for (let seed = 0; seed < triCount; seed++) {
+    if (color[seed] !== -1) continue;
+    color[seed] = 0;
+    let head = 0, tail = 0;
+    queue[tail++] = seed;
+    while (head < tail) {
+      const t = queue[head++];
+      for (let e = 0; e < 3; e++) {
+        const a = indices[t * 3 + e], b = indices[t * 3 + (e + 1) % 3];
+        if (a === b) continue;
+        const key = a > b ? b * vertCount + a : a * vertCount + b;
+        const rec = edgeMap.get(key);
+        if (!rec || rec.length !== 2) continue;
+        const other = rec[0].t === t ? rec[1] : rec[0];
+        if (color[other.t] !== -1) continue;
+        // 共享边上两三角原始方向相同 ⇒ 局部定向冲突 ⇒ 邻接三角需翻转
+        color[other.t] = (other.rev === (a > b)) ? color[t] ^ 1 : color[t];
+        queue[tail++] = other.t;
+      }
+    }
+  }
+
+  for (let t = 0; t < triCount; t++) {
+    if (color[t] === 1) {
+      const tmp = out[t * 3 + 1];
+      out[t * 3 + 1] = out[t * 3 + 2];
+      out[t * 3 + 2] = tmp;
+    }
+  }
+
+  let vol6 = 0;
+  for (let t = 0; t < triCount; t++) {
+    const i0 = out[t * 3] * 3, i1 = out[t * 3 + 1] * 3, i2 = out[t * 3 + 2] * 3;
+    vol6 += positions[i0] * (positions[i1 + 1] * positions[i2 + 2] - positions[i1 + 2] * positions[i2 + 1])
+      + positions[i0 + 1] * (positions[i1 + 2] * positions[i2] - positions[i1] * positions[i2 + 2])
+      + positions[i0 + 2] * (positions[i1] * positions[i2 + 1] - positions[i1 + 1] * positions[i2]);
+  }
+  if (vol6 < 0) {
+    for (let t = 0; t < triCount; t++) {
+      const tmp = out[t * 3 + 1];
+      out[t * 3 + 1] = out[t * 3 + 2];
+      out[t * 3 + 2] = tmp;
+    }
+  }
+  return out;
+}
+
 const PATCH_ORDER: readonly CfdPatchName[] = ['inlet', 'outlet', 'sides', 'wall'];
 
 export function buildMultiSolidSTL(
@@ -123,6 +195,7 @@ export function buildMultiSolidSTL(
   scale = 1,
   normals?: Float32Array,
 ): string {
+  void normals; // 定向改由 orientConsistently 全局传播保证（与 binary 同源）
   const triCount = indices.length / 3;
 
   // 包围盒（缩放后 mm 域）
@@ -140,10 +213,12 @@ export function buildMultiSolidSTL(
   const chunks: Record<CfdPatchName, string[]> = { inlet: [], outlet: [], sides: [], wall: [] };
   const fmt = (v: number): string => v.toFixed(6);
 
+  const oriented = orientConsistently(positions, indices);
+
   for (let t = 0; t < triCount; t++) {
-    let i0 = indices[t * 3] * 3;
-    let i1 = indices[t * 3 + 1] * 3;
-    let i2 = indices[t * 3 + 2] * 3;
+    let i0 = oriented[t * 3] * 3;
+    let i1 = oriented[t * 3 + 1] * 3;
+    let i2 = oriented[t * 3 + 2] * 3;
 
     const ax = positions[i1] - positions[i0];
     const ay = positions[i1 + 1] - positions[i0 + 1];
@@ -155,16 +230,6 @@ export function buildMultiSolidSTL(
     let gy = az * bx - ax * bz;
     let gz = ax * by - ay * bx;
 
-    if (normals) {
-      // 与 binary 导出同一缠绕定向约定：几何法线与顶点解析法线反向则交换 v1/v2
-      const nx = normals[i0] + normals[i1] + normals[i2];
-      const ny = normals[i0 + 1] + normals[i1 + 1] + normals[i2 + 1];
-      const nz = normals[i0 + 2] + normals[i1 + 2] + normals[i2 + 2];
-      if (nx * gx + ny * gy + nz * gz < 0) {
-        const tmp = i1; i1 = i2; i2 = tmp;
-        gx = -gx; gy = -gy; gz = -gz;
-      }
-    }
     const gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1;
     const nx = gx / gl, ny = gy / gl, nz = gz / gl;
 
