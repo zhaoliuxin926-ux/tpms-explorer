@@ -212,7 +212,7 @@ console.log('\n[F] py 脚本同源静态断言');
   };
   const py = buildPythonScript(state);
   check('py 脚本含庞加莱逐式翻译块', py.includes("manifold_kind == 'poincare'") && py.includes('2 * R0**2 * rr / (R0**2 - rr**2)') && py.includes('0.95 * R0'));
-  check('py 脚本含截断延拓斜率式', py.includes('R0**2 + 3 * rC**2'));
+  check('py 脚本含截断延拓斜率式（C¹ 真导数）', py.includes('R0**2 + rC**2') && !py.includes('3 * rC**2'));
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
