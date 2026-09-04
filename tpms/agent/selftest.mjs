@@ -145,5 +145,13 @@ rmSync(stlPath, { force: true });
   try { unlinkSync(stlPath); } catch { /* 忽略 */ }
   try { unlinkSync(m1bPath); } catch { /* 忽略 */ }
 }
+// ── 11. B4.2 不可达判定轮次（显式用例）：高谐波族低分辨率 tol 不可达 → max-rounds 内 stall 判定 ──
+{
+  const r11 = run('solve', '--type', 'iwp', '--porosity', '0.6', '--resolution', '48', '--tolerance', '0.0005', '--max-rounds', '5', '--json');
+  let j11 = null;
+  try { j11 = JSON.parse(r11.stdout); } catch { /* 忽略 */ }
+  r11.status === 3 && j11?.reachable === false && j11.unreachable?.reason === 'stall' && j11.rounds <= 5 && j11.best?.deviation > 0.05
+    ? ok(`B4.2 不可达判定：iwp R48 stall 于 ${j11.rounds} 轮（best ${(j11.best.deviation * 100).toFixed(1)}pp 表示极限如实报告）`) : bad('B4.2 不可达判定', JSON.stringify({ s: r11.status, r: j11?.reachable, u: j11?.unreachable?.reason }).slice(-100));
+}
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

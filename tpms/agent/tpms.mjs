@@ -539,7 +539,7 @@ function cmdVerify(core, a, json) {
     isoUsed = res.isoUsed;
 
     // 检查 2：水密（失败修复策略：升分辨率）
-    attempt.checks.water_tightness = { pass: wt, open: audit.openEdges, nm: audit.nonManifoldEdges, degen: audit.degenTris };
+    attempt.checks.water_tightness = { pass: wt, open: audit.openEdges, nm: audit.nonManifoldEdges, degen: audit.degenTris, misoriented: audit.misorientedEdges };
     if (!wt) {
       attempts.push(attempt);
       finalStage = 'water_tightness';
