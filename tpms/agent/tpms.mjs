@@ -9,7 +9,7 @@
 //   node tpms.mjs list
 //   node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]
 import { loadCore } from './core-loader.mjs';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync } from 'node:fs';
 
 // ── A2 孔隙率精确求解器（解析积分口径 + 一轮割线校正）──
 // 方法对标 RegionTPMS（SoftwareX 2021）：在解析曲面上数值积分求 iso*，使
@@ -449,11 +449,175 @@ function cmdMesh(a, json) {
 
 
 // 每命令已知 flag 集（schema additionalProperties:false 的 CLI 层实现）
+// ── B-t4 跨门禁 verify-loop：verify 命令 ──
+// 输入设计方案 JSON，依次过四道检查（参数/构建水密/孔隙率偏差/物理合理性），
+// 失败按有限修复策略自动修正（解析割线校正、升分辨率），N 轮内出结构化 verdict。
+// 语义承诺：pass 必伴随交付物（STL + 指标）；fail 必伴随逐检查诊断与建议，非静默放弃。
+
+function cmdVerify(core, a, json) {
+  const usage = '用法: node tpms.mjs verify --design 设计.json [--max-rounds 5] [--json]';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const designPath = String(a.design ?? '');
+  if (!designPath) die('缺少 --design <设计方案.json>', usage);
+  if (!existsSync(designPath)) die(`设计文件不存在: ${designPath}`, usage);
+  let design;
+  try {
+    design = JSON.parse(readFileSync(designPath, 'utf8'));
+  } catch (e) {
+    die(`设计文件不是合法 JSON: ${e.message}`, usage);
+  }
+  const maxRounds = a['max-rounds'] === undefined ? 5 : Number(a['max-rounds']);
+  if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 8) die('max-rounds 须为 1~8 整数', usage);
+
+  // ── 检查 1：参数合法性（不可自动修复——需人工改设计文件）──
+  const paramErrors = [];
+  const type = design.type;
+  if (!BUILTIN_TYPES.includes(type)) paramErrors.push(`type "${type}" 不在 ${BUILTIN_TYPES.join('/')}`);
+  const rawP = design.porosity;
+  if (!Number.isFinite(rawP)) paramErrors.push('porosity 缺失或非数字');
+  const pf = Number.isFinite(rawP) ? (rawP > 1 ? rawP / 100 : rawP) : NaN;
+  if (Number.isFinite(pf) && (pf < 0.05 || pf >= 1)) paramErrors.push(`孔隙率 ${pf} 越界（0.05 ≤ p < 1）`);
+  const periods = design.periods ?? 6;
+  if (!Number.isInteger(periods) || periods < 1 || periods > 12) paramErrors.push(`periods ${periods} 越界（1~12）`);
+  const material = design.material ?? 'tc4';
+  if (!(material in core.BASE_MODULUS)) paramErrors.push(`material "${material}" 不在 ${Object.keys(core.BASE_MODULUS).join('/')}`);
+  const mode = design.mode ?? 'solid_network';
+  if (!STRUCTURE_MODES.includes(mode)) paramErrors.push(`mode "${mode}" 不在 ${STRUCTURE_MODES.join('/')}`);
+  const container = design.container ?? 'cube';
+  if (!CONTAINER_SHAPES.includes(container)) paramErrors.push(`container "${container}" 不在 ${CONTAINER_SHAPES.join('/')}`);
+
+  if (paramErrors.length) {
+    const out = { command: 'verify', design: designPath, verdict: 'fail', stage: 'parameter', paramErrors };
+    if (json) console.log(JSON.stringify(out, null, 2));
+    console.error('✗ 参数检查未过（需人工修改设计文件）:\n  - ' + paramErrors.join('\n  - '));
+    process.exit(3);
+  }
+
+  // ── 修复循环：分辨率升档表（水密/构建失败的修复策略）──
+  const LADDER = [48, 64, 96];
+  const tol = design.tolerance ?? 0.01;
+  let R = Number.isInteger(design.resolution) ? design.resolution : 64;
+  if (R < 48) R = 48;
+  if (R > 96) R = 96;
+
+  const W = [1, 1, 1, 1];
+  const attempts = [];
+  let verdict = 'fail', finalStage = '', res = null, audit = null, est = NaN, isoUsed = NaN;
+  let iso = null;
+  const t0 = Date.now();
+
+  for (let round = 1; round <= maxRounds; round++) {
+    const attempt = { round, resolution: R, iso: iso === null ? null : +iso.toFixed(4), checks: {} };
+    // 解析求根（每轮重置 LCG：确定性）
+    _lcg = 0x9e3779b9;
+    const { iso: isoStar, slope: slopeAnalytic } = solveIsoAnalytic(core, type, pf, W);
+    iso = iso === null ? isoStar : iso;
+
+    core.globalBufferPool.reset();
+    let built = null, buildErr = null;
+    try {
+      built = core.buildSurface({
+        type, iso, periods, resolution: R, targetPorosity: undefined,
+        weights: W, structureMode: mode, containerShape: container,
+        thickness: 1.0, gradientDir: 'z',
+        hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
+        customFormula: '', preview: false,
+      }, core.globalBufferPool);
+    } catch (e) { buildErr = String(e?.message ?? e); }
+    if (buildErr || !built?.positions) {
+      attempt.checks.build = { pass: false, detail: buildErr ?? 'empty' };
+      attempts.push(attempt);
+      finalStage = 'build';
+      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      if (nextR) { R = nextR; continue; }
+      break;
+    }
+    res = built;
+    audit = auditMeshIndices(res.positions, res.indices);
+    const wt = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
+    est = res.porosityEstimate;
+    isoUsed = res.isoUsed;
+
+    // 检查 2：水密（失败修复策略：升分辨率）
+    attempt.checks.water_tightness = { pass: wt, open: audit.openEdges, nm: audit.nonManifoldEdges, degen: audit.degenTris };
+    if (!wt) {
+      attempts.push(attempt);
+      finalStage = 'water_tightness';
+      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      if (nextR) { R = nextR; continue; }
+      break;
+    }
+
+    // 检查 3：孔隙率偏差（失败修复策略：解析斜率割线一步，再不行升分辨率）
+    const dev = Math.abs(est - pf);
+    attempt.checks.porosity_deviation = { pass: dev <= Math.max(tol, 0.03), deviation: +dev.toFixed(4) };
+    attempts.push(attempt);
+    if (dev > Math.max(tol, 0.03)) {
+      // 修复策略（A2 实测口径）：升分辨率优先（R96 割线后 0.26pp）；已达 96 才用割线微调
+      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      if (nextR) { R = nextR; continue; }
+      if (Number.isFinite(slopeAnalytic) && Math.abs(slopeAnalytic) > 1e-6) {
+        const step = Math.max(-0.35, Math.min(0.35, (pf - est) / slopeAnalytic));
+        iso += step;
+        continue;
+      }
+      break;
+    }
+
+    // 检查 4：物理合理性（E* ∈ (0, 基体模量)）
+    const { E_Es } = core.gibsonAshby(1 - pf, type);
+    const eStar = E_Es * (core.BASE_MODULUS[material] || 110);
+    const physicsOk = eStar > 0 && eStar < (core.BASE_MODULUS[material] || 110);
+    attempt.checks.physics_range = { pass: physicsOk, youngsModulusGPa: +eStar.toFixed(3) };
+    attempts.push(attempt);
+    if (!physicsOk) { finalStage = 'physics_range'; break; }
+
+    verdict = 'pass';
+    break;
+  }
+
+  const out = {
+    command: 'verify', design: designPath, verdict,
+    designNormalized: { type, porosity: pf, periods, material, mode, container },
+    resolutionUsed: R, rounds: attempts.length, attempts,
+    buildTimeMs: Date.now() - t0,
+    boundary: 'verify = 跨门禁闭环：参数/构建水密/孔隙率偏差/物理合理性四道检查，失败按有限策略自动修复（割线校正、升分辨率），不可修复项结构化报告',
+  };
+  if (verdict === 'pass') {
+    const outFile = design.out ?? `tpms-${type}-verified.stl`;
+    const stl = core.buildBinarySTL(res.positions, res.indices, core.wcToMmFactor(periods), res.normals);
+    writeFileSync(outFile, Buffer.from(stl));
+    out.file = outFile;
+    out.fileBytes = stl.byteLength;
+    out.metrics = {
+      porosityEstimate: +est.toFixed(4),
+      isoUsed: +isoUsed.toFixed(4),
+      vertCount: res.vertCount, triCount: res.triCount,
+      youngsModulusGPa: +(core.gibsonAshby(1 - pf, type).E_Es * core.BASE_MODULUS[material]).toFixed(3),
+    };
+    if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+    console.log(`verify PASS（${attempts.length} 轮，R=${R}）→ ${outFile}`);
+    console.log(`  实测孔隙率 ${(est * 100).toFixed(2)}% | 三角 ${res.triCount} | 水密三硬指标全零`);
+    return;
+  }
+  out.finalStage = finalStage;
+  out.suggestions = [
+    finalStage === 'parameter' ? '按 paramErrors 逐项修正设计文件' : null,
+    finalStage === 'water_tightness' || finalStage === 'build' ? `分辨率已升至 ${R} 仍失败——该 (曲面, 孔隙率, 容器) 组合在此精度下不可达，建议改曲面族或容器` : null,
+    finalStage === 'porosity_deviation' ? `分辨率已升至 ${R} 仍超容差——高谐波族在该分辨率属表示极限，建议 R=96 或放宽 tolerance` : null,
+  ].filter(Boolean);
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.error(`✗ verify FAIL @ ${finalStage}`);
+  console.error(JSON.stringify(out.suggestions, null, 2));
+  process.exit(3);
+}
+
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
   mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'out', 'json', 'help'],
+  verify: ['design', 'max-rounds', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -471,6 +635,7 @@ if (cmd === 'list') cmdList(json);
 else if (cmd === 'estimate') cmdEstimate(a, json);
 else if (cmd === 'mesh') cmdMesh(a, json);
 else if (cmd === 'solve') cmdSolve(a, json);
+else if (cmd === 'verify') cmdVerify(core, a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环）');
   console.log('用法:');
@@ -478,6 +643,7 @@ else {
   console.log('  node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]');
   console.log('  node tpms.mjs mesh --type gyroid --porosity 0.65 [--periods 6] [--resolution 64] [--out 文件.stl] [--json]');
   console.log('  node tpms.mjs solve --type gyroid --porosity 0.65 [--tolerance 0.01] [--max-rounds 5] [--json]');
+  console.log('  node tpms.mjs verify --design 设计.json [--max-rounds 5] [--json]');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }
