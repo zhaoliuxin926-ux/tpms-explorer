@@ -11,7 +11,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFileSync, rmSync, existsSync, unlinkSync } from 'node:fs';
+import { readFileSync, rmSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -133,6 +133,27 @@ rmSync(stlPath, { force: true });
   r10a.status === 0 && j10a?.reachable === true && j10a.porosityDeviation <= 0.01 && j10a.watertight === true
     ? ok(`solve 收敛：diamond R48 偏差 ${(j10a.porosityDeviation * 100).toFixed(2)}pp ≤ 1pp（${j10a.rounds} 轮）`) : bad('solve 收敛', JSON.stringify(j10a?.trace || r10a.stderr || '').slice(-80));
   existsSync(stlPath) ? ok('solve 产出 STL') : bad('solve STL 未产出');
+  // 10a+ 独立复核：solve 路径的 STL 同样过字节级有向配对（终审 4 节指出的循环论证残余修补）
+  try {
+    const bufS = readFileSync(stlPath);
+    const nS = bufS.readUInt32LE(80);
+    const hexS = (o) => bufS.toString('latin1', o, o + 12).split('').map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+    const eS = new Map();
+    for (let t = 0; t < nS; t++) {
+      const base = 84 + t * 50 + 12;
+      const vs = [0, 12, 24].map((o) => hexS(base + o));
+      for (const [i, j2] of [[0, 1], [1, 2], [2, 0]]) {
+        const fwd = vs[i] < vs[j2];
+        const k = fwd ? vs[i] + vs[j2] : vs[j2] + vs[i];
+        let rec = eS.get(k);
+        if (!rec) { rec = [0, 0]; eS.set(k, rec); }
+        rec[fwd ? 0 : 1]++;
+      }
+    }
+    let openS = 0, misoS = 0;
+    for (const [, [a, b]] of eS) { if (a + b === 1) openS++; else if ((a === 0) !== (b === 0)) misoS++; }
+    openS === 0 && misoS === 0 ? ok('solve STL 独立读回复核：open=0 misoriented=0（字节级）') : bad('solve STL 读回', `open=${openS} miso=${misoS}`);
+  } catch (e) { bad('solve STL 复核异常', String(e)); }
   // 10b. 不可达路径：splitp R48 tol 0.05pp → 结构化诊断（reachable=false + suggestions）非静默放弃
   const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '48', '--tolerance', '0.0005', '--max-rounds', '4', '--json');
   let j10b = null;
@@ -152,6 +173,25 @@ rmSync(stlPath, { force: true });
   try { j11 = JSON.parse(r11.stdout); } catch { /* 忽略 */ }
   r11.status === 3 && j11?.reachable === false && j11.unreachable?.reason === 'stall' && j11.rounds <= 5 && j11.best?.deviation > 0.05
     ? ok(`B4.2 不可达判定：iwp R48 stall 于 ${j11.rounds} 轮（best ${(j11.best.deviation * 100).toFixed(1)}pp 表示极限如实报告）`) : bad('B4.2 不可达判定', JSON.stringify({ s: r11.status, r: j11?.reachable, u: j11?.unreachable?.reason }).slice(-100));
+}
+// ── 12. verify 命令回归守卫（此前零覆盖）──
+{
+  const dOk = join(tmpdir(), `tpms_selftest_vfy_ok_${process.pid}.json`);
+  writeFileSync(dOk, JSON.stringify({ type: 'diamond', porosity: 0.65, resolution: 96, material: 'tc4', tolerance: 0.01 }));
+  const rv = run('verify', '--design', dOk, '--json');
+  let jv = null;
+  try { jv = JSON.parse(rv.stdout); } catch { /* 忽略 */ }
+  rv.status === 0 && jv?.verdict === 'pass' && jv?.attempts?.at(-1)?.checks?.water_tightness?.pass === true
+    ? ok('verify 好方案 PASS（钻石 R96，升档闭环）') : bad('verify 好方案', (rv.stderr || '').slice(-80));
+  const dBad = join(tmpdir(), `tpms_selftest_vfy_bad_${process.pid}.json`);
+  writeFileSync(dBad, JSON.stringify({ type: 'gyroid', porosity: 1.5 }));
+  const rb = run('verify', '--design', dBad, '--json');
+  let jb = null;
+  try { jb = JSON.parse(rb.stdout); } catch { /* 忽略 */ }
+  rb.status === 3 && jb?.verdict === 'fail' && jb?.stage === 'parameter' && Array.isArray(jb.paramErrors)
+    ? ok('verify 坏方案参数层结构化拒绝（exit3）') : bad('verify 坏方案', (rb.stderr || '').slice(-80));
+  run('verify').status !== 0 ? ok('verify 缺 --design 被拒') : bad('verify 缺 --design 未拒绝');
+  try { unlinkSync(dOk); unlinkSync(dBad); } catch { /* 忽略 */ }
 }
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);
