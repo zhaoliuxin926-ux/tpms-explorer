@@ -270,7 +270,8 @@ function cmdSolve(a, json) {
     const dev = Math.abs(est - pf);
     const wt = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
     trace.push({ round, iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6), watertight: wt });
-    if (!best || dev < best.deviation) best = { iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6) };
+    // best 只记水密轮：不可达诊断的备选建议必须指向网格表示可靠的 iso
+    if (wt && (!best || dev < best.deviation)) best = { iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6) };
 
     // 水密门前移（与 mesh 同承诺：水密不过不交货、不继续迭代——网格表示已不可信）。
     // 【终审修复】此前只查 nm/degen 漏掉 openEdges，且收敛交付前无水密检查，
@@ -284,7 +285,7 @@ function cmdSolve(a, json) {
     if (round > 0 && dev >= prevDev - 1e-9) stall++;
     else stall = 0;
     if (stall >= 1 && round >= 2) {
-      unreachable = { reason: 'stall', detail: `两轮校正无改善（dev=${dev.toFixed(4)}），该分辨率下物理受限`, iso };
+      unreachable = { reason: 'stall', detail: `校正无改善（dev=${dev.toFixed(4)}），保守早退防震荡；该分辨率下物理受限`, iso };
       break;
     }
     prevDev = dev;
@@ -333,6 +334,7 @@ function cmdSolve(a, json) {
     porosityDeviation: est === est ? Math.abs(est - pf) : NaN,
     watertight: audit ? (audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0) : false,
     boundary: 'solve = 解析求根起点 + 网格实测闭环校正；不可达时输出结构化诊断而非静默放弃',
+    lastAuditCounts: audit,
   };
 
   if (unreachable) {
@@ -416,6 +418,7 @@ function cmdMesh(a, json) {
     porosityEstimate: porEst,
     porosityDeviation: Math.abs(porEst - pf),
     audit, watertight,
+    lastAuditCounts: audit,
     solver, porosityTrace: porTrace,
     scaleMmPerWc: core.wcToMmFactor(periods),
     boundary: '水密自检 = mesh_audit 同款三硬指标（开放边/非流形/退化面，索引空间）；misoriented 为观测值不设门（导出翻转后全局定向一致性是平台已知盲区）；孔隙率为网格发散体积实测口径，与目标值的口径差随分辨率收敛',

@@ -11,7 +11,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFileSync, rmSync, existsSync } from 'node:fs';
+import { readFileSync, rmSync, existsSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -112,7 +112,8 @@ try {
 } catch (e) { bad('STL 读回复核异常', String(e)); }
 // 9c. A2 精确求解器：解析积分求根 + 一轮割线（确定性种子）
 // R96 验收 ≤1pp（实测最差 0.26pp）；solver 默认 exact
-const rm2 = run('mesh', '--type', 'diamond', '--porosity', '0.65', '--resolution', '96', '--out', join(tmpdir(), `tpms_selftest_m1b_${process.pid}.stl`), '--json');
+const m1bPath = join(tmpdir(), `tpms_selftest_m1b_${process.pid}.stl`);
+const rm2 = run('mesh', '--type', 'diamond', '--porosity', '0.65', '--resolution', '96', '--out', m1bPath, '--json');
 const j2 = JSON.parse(rm2.stdout || '{}');
 rm2.status === 0 && j2.porosityDeviation <= 0.01 ? ok(`exact 求解器 R96 孔隙率 ≤1pp（实测 ${(j2.porosityDeviation * 100).toFixed(2)}pp）`) : bad('R96 收敛', String(j2.porosityDeviation));
 j2.solver === 'exact' ? ok('默认求解器 = exact') : bad('solver 默认值', String(j2.solver));
@@ -142,6 +143,7 @@ rmSync(stlPath, { force: true });
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--tolerance', '0.5').status !== 0 ? ok('solve tolerance 越界被拒') : bad('solve tolerance 未拒绝');
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--max-rounds', '0').status !== 0 ? ok('solve max-rounds 越界被拒') : bad('solve max-rounds 未拒绝');
   try { unlinkSync(stlPath); } catch { /* 忽略 */ }
+  try { unlinkSync(m1bPath); } catch { /* 忽略 */ }
 }
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);
