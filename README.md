@@ -1,5 +1,7 @@
 # 工作区 · 总导航
 
+> **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
+
 ![release](https://img.shields.io/badge/release-v7.0.0--generative--biophysics-2563eb)
 ![ci](https://img.shields.io/badge/CI-38%2F38%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
