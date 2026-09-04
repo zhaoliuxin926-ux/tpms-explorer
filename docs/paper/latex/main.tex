@@ -24,7 +24,8 @@ and biophysical tissue-ingrowth dynamics}
 We present TPMS Explorer v7.0, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
-with thirty-six continuously executed CI gates ($>$1300 assertions) that verify every mathematical
+with thirty-eight continuously executed CI gates plus a navigation quick-check (39-item suite,
+$>1000 assertions under strict per-line accounting, each gate carrying a minimum-assertion guard)
 claim shipped to the user. Version 7.0 adds five research-grade modules: (i) a sinusoidal-activation
 implicit neural field (SIREN) with an exactly periodic Fourier-feature input and an 8-dimensional
 latent space over five distilled TPMS experts; (ii) multiaxial anisotropic yield envelopes
@@ -38,6 +39,11 @@ evolution driven by elastic and flow sensitivities under a volume constraint. Al
 client-side with zero dependencies beyond Three.js, export to industrial formats (STL, 3MF, GLB,
 Abaqus INP, OpenFOAM polyMesh, G-code), and are guarded by behavior-level audit gates whose
 calibration traps are documented.
+Post-release hardening adds (vi) a deterministic exact-porosity
+solver --- analytic-integration root finding with mesh-measured secant validation, reaching 0.26 pp
+deviation at resolution 96 --- and (vii) constructive global orientation propagation that reduces
+misoriented STL edges to zero by construction, replacing a per-triangle normal-voting scheme that
+degraded winding consistency five-fold.
 \end{abstract}
 
 \begin{keyword}
@@ -145,23 +151,60 @@ displacement control. Islands are removed by largest-component BFS, $\Phi$ is re
 exact 3D Euclidean distance transform, and the final field re-enters the platform's Surface Nets
 pipeline through the precomputed-field injection contract, guaranteeing water-tight extraction.
 
+\subsection{Exact porosity solver: analytic-integration root finding}
+The default porosity path couples the requested value to a voxel-rank bisection whose caliber
+differs from the delivered triangle mesh; measured deviations reached 24 pp for higher-harmonic
+families at coarse resolutions. Following the analytic-integration methodology of RegionTPMS
+(SoftwareX, 2021), the agent CLI now (i) locates $iso^{*}$ on the \emph{analytic} field by
+bisection over a deterministic Monte-Carlo integration of $P(F<iso)$ in the unit cell (LCG-seeded,
+bit-reproducible), then (ii) builds once with $iso^{*}$ (bypassing the internal bisection) and
+applies a single secant correction along the analytic slope to absorb the mesh-versus-analytic
+volume gap, reverting to the direct build if the corrected attempt is worse. Measured deviations:
+0.26 pp (Diamond, 65\% target, resolution 96) and 1.3--4.3 pp across cubic-symmetric families at
+resolution 48; higher-harmonic families at resolution 48 remain representation-limited (9--23 pp)
+and are reported honestly with an upgrade hint. A cube + Diamond + resolution-64 combination with
+non-manifold edges (nm = 740, down from 1940 under the legacy path) is fail-closed by the
+water-tightness gate.
+
+\subsection{Global orientation propagation}
+The binary and multi-solid STL writers previously flipped each triangle independently by comparing
+geometric normals against the vertex normal field; because that field is unreliable at cap fans and
+boundary skins, independent voting fragmented a locally consistent winding (misoriented edges
+4536 $\rightarrow$ 23571 after flipping at resolution 96). The writers now call a constructive
+orientation pass: register every undirected edge with its two incident triangles, two-color the
+triangle adjacency graph by BFS (same-direction neighbours get opposite colors), apply the parity,
+and flip the whole mesh once if the divergence-theorem volume is negative. For the closed manifolds
+the pipeline guarantees (open = non-manifold = degenerate = 0), misoriented edges are zero by
+construction --- verified byte-level on the exported STL (823,500 edges at resolution 96).
+
 \section{Quality control}
-Thirty-six gates run via \texttt{npm run test:all} on three platforms. Every gate loads the shipped
-TypeScript through a bundler and asserts behavior-level invariants (no mocked math). Gate
-calibration itself is treated as a first-class activity: two documented false-red episodes
-(a $\sqrt2$ scaling slip in the auditor's von-Mises conversion; a Gram--Schmidt normalization
-threshold that silently skipped $10^{-10}$-scale columns) are recorded and their fixes covered by
-regression assertions.
+Thirty-eight gates plus a navigation quick-check (39-item top-level suite) run via
+\texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
+bundler and asserts behavior-level invariants (no mocked math), and every gate now carries a
+\emph{minimum-assertion guard}: a probe experiment showed that an auditor whose assertions are all
+neutralized still exits green under the historical \texttt{if (fail) exit} idiom, so each gate
+additionally fails when its executed-assertion count drops below a measured baseline. Four
+tautological assertions (two \texttt{|| true} disjunctions, a self-multiplying metric check, and a
+dead variable that was computed but never asserted) were exposed by a dedicated audit and either
+removed or rewritten as real checks; one of them had been masking a wrong closed-form slope in the
+Poincaré extension for its entire lifetime. Gate calibration is treated as a first-class
+activity: documented false-red episodes (a $\sqrt2$ scaling slip in the auditor von-Mises
+conversion; a Gram--Schmidt normalization threshold that silently skipped $10^{-10}$-scale columns;
+a cross-implementation static sentinel left unsynced after a formula change) are recorded and their
+fixes covered by regression assertions.
 
 \section{Availability}
 \subsection{Current code version}
-v7.0.0-generative-biophysics.
+v7.0.0-generative-biophysics (MIT license).
 
 \subsection{Operating requirements}
-See \S\ref{}Necessary resources; no backend, no telemetry, no build-time secrets.
+See Necessary resources; no backend, no telemetry, no build-time secrets.
 
 \subsection{Installation}
-Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm run dev} in
-\texttt{tpms/tpms-platform}. CI: \texttt{npm run test:all}.
+Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm install} and
+\texttt{npm run dev} in \texttt{tpms/tpms-platform}. CI: \texttt{npm run test:all}.
+A deterministic agent CLI (\texttt{tpms/agent/tpms.mjs}) exposes \texttt{list}, 
+\texttt{estimate}, and \texttt{mesh} subcommands with JSON output for scripting and
+LLM-tool integration.
 
 \end{document}
