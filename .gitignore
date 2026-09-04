@@ -62,3 +62,7 @@ docs/paper/latex/*.log
 docs/paper/latex/*.out
 docs/paper/latex/*.spl
 /texput.log
+
+# verify 探针产物
+tpms/agent/tpms-diamond-verified.stl
+tpms/agent/*-verified.stl

@@ -114,7 +114,9 @@
 - [ ] B3.2 失败语义：越界意图 100% 钳制或拒绝并引用 schema 字段——验证：对抗指令集（越界/注入/歧义）
 
 ### B-t4 M4 闭环驱动器（~2 周）
-- [x] B4.0 mesh 内环自校正 `solve` 命令 ✅（2026-09-05，B4.1 的第一块）：解析求根起点 → 网格实测 → 两点割线（数值历史）→ 收敛 ≤tol 交付 / 不可达时结构化诊断 exit 3（stall/iso_boundary/non_manifold 三类原因 + suggestions 升分辨率建议 + best 备选）。实测：diamond R48 p0.65 三轮收敛 0.05pp；splitp R48 tol=0.05pp 触发 stall 判定输出 best=0.18pp 备选而非静默放弃。selftest 34/34（收敛/产出/不可达诊断/2 项防呆）。\n- [ ] B4.1 propose→execute→verify→fix 循环（读门禁 RESULT/GUARD 结构化输出，对标 text-to-CAD verify-loop）——验证：注入带缺陷初始方案（如孔隙率偏差超限、水密门失败），N≤5 轮自动收敛全绿（B4.0 已覆盖 mesh 内环；剩余为跨门禁 verify-loop）
+- [x] B4.0 mesh 内环自校正 `solve` 命令 ✅（2026-09-05，B4.1 的第一块）：解析求根起点 → 网格实测 → 两点割线（数值历史）→ 收敛 ≤tol 交付 / 不可达时结构化诊断 exit 3（stall/iso_boundary/non_manifold 三类原因 + suggestions 升分辨率建议 + best 备选）。实测：diamond R48 p0.65 三轮收敛 0.05pp；splitp R48 tol=0.05pp 触发 stall 判定输出 best=0.18pp 备选而非静默放弃。selftest 34/34（收敛/产出/不可达诊断/2 项防呆）。
+- [x] B4.1 跨门禁 verify-loop ✅（2026-09-05，147814b）：`verify` 命令——设计方案 JSON → 四道检查（参数合法性/构建水密/孔隙率偏差/物理合理性）→ 失败按有限策略自动修复（孔隙率偏差升分辨率 R48→64→96 优先、已达上限用解析斜率割线微调；水密失败升档）→ pass 必伴随 STL+指标交付 / fail 必伴随结构化诊断+suggestions（exit 0/3 语义分层）。实测：diamond p0.65 R48 起步 5 轮升档收敛 PASS；porosity=1.5 坏方案参数层结构化拒绝。对标确认：text-to-CAD 生态 generate→execute→verify→fix 模式已在领域内落地
+- [ ] B4.2 不可达判定的显式用例扩展（p=0.999@R48 类 2 轮内判定）→execute→verify→fix 循环（读门禁 RESULT/GUARD 结构化输出，对标 text-to-CAD verify-loop）——验证：注入带缺陷初始方案（如孔隙率偏差超限、水密门失败），N≤5 轮自动收敛全绿（B4.0 已覆盖 mesh 内环；剩余为跨门禁 verify-loop）
 - [ ] B4.2 失败升级语义：不可收敛时输出结构化诊断报告（非静默放弃）——验证：注入不可达目标（如 p=0.999@R48）能在 2 轮内判定并报告
 
 ### B-t5 质量债穿插清偿（不占主线，随审随修）
