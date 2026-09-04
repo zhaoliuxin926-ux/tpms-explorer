@@ -89,3 +89,38 @@
 
 ### 约定（不变）
 - 每个 [ ] 完成时勾选并附 commit 号；每完成一件事必须对抗式审查后才算完成；验证标准不满足不得勾选。
+
+
+---
+
+## 阶段 B 细化 · 发表与智能双轨（2026-09-05 定稿，4~8 周）
+
+> 战略判断：一人项目的最大风险是范围失控。阶段 B 砍掉阶段 C 全部推迟项与 surface-nets 根因修复（只做量化审计），
+> 收敛到两条主线——**SoftwareX 投稿**（研二时间窗口 + RegionTPMS 同刊 31+ 引用先例 + 投稿 deadline 是天然收敛动力 +
+> 审稿要求恰好倒逼可复现性补全）与 **Agent 双轨 M2/M3/M4**（求职作品集主线，M2 无需 key 可立即开工）。
+
+### B-t1 投稿包（第 1~2 周，最高优先）
+- [ ] B1.1 **LICENSE 文件**（当前缺失 = 法律上保留所有权利，投稿硬阻断）：选 MIT 或 CC-BY-4.0+MIT 双许可——验证：根目录 LICENSE 存在且 README 徽章更新
+- [ ] B1.2 手稿更新到当前事实：MANUSCRIPT/main.tex 停在 v5 口径——补 exact 孔隙率求解器（0.26pp@R96）、全局定向传播（misoriented=0 由构造）、39 门禁/1000+ 断言验证体系、CLM 与 tsc/vite 工具链；补"诚实边界"节（网格体积损耗数据、高谐波曲面 R48 极限）——验证：稿件中每个数字可溯源到门禁或审计脚本
+- [ ] B1.3 可复现包：一条命令复跑（`npm run test:all` 已满足）+ 数据/图生成脚本清单——验证：干净 clone → install → test:all 绿（CI 三平台即证据）
+- [ ] B1.4 投稿提交——验证：拿到投稿号
+
+### B-t2 M2 工具注册层（第 1 周，与投稿并行）
+- [ ] B2.1 CLI 命令 → JSON Schema 工具清单（list/estimate/mesh 的参数、类型、钳制范围取自 nl-agent 钳制表与 CLI 校验）——验证：schema 驱动的自检覆盖 nl_agent_audit 32 断言全部意图类型
+- [ ] B2.2 tool 调用往返测试：schema → CLI → JSON 输出 → 断言闭环——验证：非法参数 100% 被钳制或拒绝（复用 selftest 拒绝语义）
+
+### B-t3 M3 LLM 接入（key 到位后 ~1 周）
+- [ ] B3.1 provider 选型 + tool calling 接入（铁律：LLM 只填意图槽位）——验证：30 条中英设计指令回归、零 LLM 直写数值
+- [ ] B3.2 失败语义：越界意图 100% 钳制或拒绝并引用 schema 字段——验证：对抗指令集（越界/注入/歧义）
+
+### B-t4 M4 闭环驱动器（~2 周）
+- [ ] B4.1 propose→execute→verify→fix 循环（读门禁 RESULT/GUARD 结构化输出，对标 text-to-CAD verify-loop）——验证：注入带缺陷初始方案（如孔隙率偏差超限、水密门失败），N≤5 轮自动收敛全绿
+- [ ] B4.2 失败升级语义：不可收敛时输出结构化诊断报告（非静默放弃）——验证：注入不可达目标（如 p=0.999@R48）能在 2 轮内判定并报告
+
+### B-t5 质量债穿插清偿（不占主线，随审随修）
+- [ ] B5.1 surface-nets 体积损耗**量化审计脚本**（损耗 vs R/k/type 三维表，入 .verify 作数据基准；只审计不修根因）——验证：审计脚本进 CI 输出口径
+- [ ] B5.2 cylinder+diamond R64 非流形（nm 740）：定位封盖/容器交线机制——验证：该工况水密门通过或输出结构化不可达报告
+- [ ] B5.3 stl-exporter 定向一致性进 parity_math 门（字节级有向配对，当前仅 selftest 覆盖）——验证：parity_math 新增断言绿
+- [ ] B5.4 topics 手动添加（push 后）：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing
+
+### 阶段 C（3~6 月，B 交付后再细化——维持原清单：region 分区梯度支架 / 曲面库扩 19 族 / 实验数据闭环 / 社区机制）
