@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>转动的截面 · Gyroid 是怎么生成的 — TPMS 概念动画</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+  main { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0.2em 0; }
+  p.lead { color: #94a3b8; margin-top: 0.4em; line-height: 1.7; }
+  .stage { position: relative; border: 1px solid #334155; border-radius: 12px; overflow: hidden; background: #1e293b; }
+  canvas { display: block; width: 100%; height: auto; }
+  .hud { position: absolute; top: 10px; left: 12px; font: 13px/1.5 Consolas, monospace; color: #7dd3fc; background: rgba(15,23,42,.7); padding: 6px 10px; border-radius: 8px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin: 12px 0 4px; flex-wrap: wrap; }
+  button { background: #2563eb; color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+  button.ghost { background: #334155; }
+  input[type=range] { flex: 1; min-width: 160px; }
+  .formula { font: 15px Consolas, monospace; color: #fbbf24; background: rgba(30,41,59,.8); padding: 8px 12px; border-radius: 8px; margin: 14px 0; }
+  .steps { line-height: 1.9; color: #cbd5e1; }
+  .steps b { color: #e2e8f0; }
+  a.back { color: #7dd3fc; }
+  .legend { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; color: #94a3b8; flex-wrap: wrap; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>转动的截面：Gyroid 是怎么"长"出来的</h1>
+  <p class="lead">
+    极小曲面听不懂？没关系——先看动画。下面每一个画面都是 Gyroid 的<b>一个水平切片</b>：
+    平面 z = z₀ 横扫立方体时，切到曲面的位置画出一条条曲线。切片连续转动，曲线连续变形——
+    把几十万个这样的切片叠起来，就是一个 Gyroid。
+  </p>
+
+  <div class="stage">
+    <canvas id="cv" width="720" height="560"></canvas>
+    <div class="hud" id="hud">z₀ = 0.00 rad</div>
+  </div>
+
+  <div class="controls">
+    <button id="play">暂停</button>
+    <button class="ghost" id="reverse">反向扫描</button>
+    <input type="range" id="slider" min="0" max="628" value="0">
+    <span style="font-size:13px;color:#94a3b8">拖动滑块手动扫切片</span>
+  </div>
+
+  <div class="formula">F(x, y, z) = sin x · cos z + sin y · cos x + sin z · cos y &nbsp;&nbsp;→&nbsp;&nbsp; 曲面 = { F = 0 }</div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#38bdf8"></span>固相一侧（F &lt; 0）</span>
+    <span><span class="dot" style="background:#f472b6"></span>孔隙一侧（F &gt; 0）</span>
+    <span><span class="dot" style="background:#fbbf24"></span>曲面本身（F = 0 等值线）</span>
+  </div>
+
+  <h2 style="font-size:1.1rem;margin-top:28px">看懂这三步，TPMS 就入门了</h2>
+  <div class="steps">
+    <b>① 公式只是"高度场"</b>：把 F 想象成一片起伏的地形，每个点 (x,y,z) 都有一个高度值。<br>
+    <b>② 等值面 = "海拔 0 的等高线"的 3D 版</b>：F = 0 的点连成一张光滑曲面——它就是 TPMS。<br>
+    <b>③ 改公式 = 捏形状</b>：换掉 sin/cos 的组合（Diamond、Schwarz P…）或拖动权重，曲面族就变了；
+    上下平移 F（改变等值常数 C）就在"胖"与"瘦"之间调孔隙率。
+  </div>
+
+  <p class="lead" style="margin-top:24px">
+    下一步：打开 <a class="back" href="../index.html">交互沙盘</a>亲手拖滑块，
+    或回到 <a class="back" href="../LEARNING_PATH.md">学习路径</a>。
+  </p>
+</main>
+
+<script>
+(() => {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const hud = document.getElementById('hud'), slider = document.getElementById('slider');
+  const btnPlay = document.getElementById('play');
+  const N = 160;                       // 采样网格
+  const playing = { v: true };
+  let z0 = 0, dir = 1;
+
+  // F 场预计算？——z₀ 每帧变化，逐帧计算 160² 次 eval（~2.6 万次，充裕）
+  function F(x, y, z) { return Math.sin(x) * Math.cos(z) + Math.sin(y) * Math.cos(x) + Math.sin(z) * Math.cos(y); }
+
+  function draw() {
+    const w = cv.width, h = cv.height, pad = 40;
+    const gw = w - pad * 2, gh = h - pad * 2;
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, w, h);
+    const cell = gw / N, ch = gh / N;
+    const span = 2 * Math.PI;
+    for (let iy = 0; iy < N; iy++) {
+      const y = (iy / N) * span;
+      for (let ix = 0; ix < N; ix++) {
+        const x = (ix / N) * span;
+        const v = F(x, y, z0);
+        // 等值带：|F| 小 → 曲面（金）；F<0 固相（蓝）；F>0 孔隙（粉）
+        let c;
+        if (Math.abs(v) < 0.08) c = '#fbbf24';
+        else if (v < 0) c = 'rgba(56,189,248,' + Math.min(0.75, 0.18 + Math.min(-v, 1) * 0.5) + ')';
+        else c = 'rgba(244,114,182,' + Math.min(0.6, 0.12 + Math.min(v, 1) * 0.4) + ')';
+        ctx.fillStyle = c;
+        ctx.fillRect(pad + ix * cell, pad + gh - (iy + 1) * ch, cell + 0.5, ch + 0.5);
+      }
+    }
+    ctx.strokeStyle = '#475569'; ctx.strokeRect(pad, pad, gw, gh);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px Consolas';
+    ctx.fillText('x →', w - pad - 30, h - pad + 18);
+    ctx.fillText('y ↑', pad - 26, pad + 12);
+  }
+
+  function tick() {
+    if (playing.v) {
+      z0 += dir * 0.012;
+      if (z0 > 2 * Math.PI) z0 -= 2 * Math.PI;
+      if (z0 < 0) z0 += 2 * Math.PI;
+      slider.value = Math.round(z0 / (2 * Math.PI) * 628);
+    } else {
+      z0 = (slider.value / 628) * 2 * Math.PI;
+    }
+    hud.textContent = 'z₀ = ' + z0.toFixed(2) + ' rad  (' + (z0 / Math.PI).toFixed(2) + ' π)';
+    draw();
+    requestAnimationFrame(tick);
+  }
+  btnPlay.addEventListener('click', () => { playing.v = !playing.v; btnPlay.textContent = playing.v ? '暂停' : '播放'; });
+  document.getElementById('reverse').addEventListener('click', () => { dir = -dir; });
+  slider.addEventListener('input', () => { playing.v = false; btnPlay.textContent = '播放'; });
+  tick();
+})();
+</script>
+</body>
+</html>
