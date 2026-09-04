@@ -217,7 +217,7 @@ function cmdMesh(a, json) {
   console.log('  ───────────────────────────────');
   console.log(`  顶点/三角形  ${res.vertCount} / ${res.triCount}`);
   console.log(`  实测孔隙率   ${(porEst * 100).toFixed(2)}%（目标 ${(pf * 100).toFixed(1)}%，偏差 ${(Math.abs(porEst - pf) * 100).toFixed(2)}pp）`);
-  if (Math.abs(porEst - pf) > 0.05) console.log('  ⚠ 偏差偏大：体素二分与网格实测的口径差随分辨率收敛，建议提高 --resolution（如 96/128）');
+  if (Math.abs(porEst - pf) > 0.05) console.log('  ⚠ 偏差偏大：二分与网格实测的口径差随分辨率收敛，建议提高 --resolution（上限 96）');
   console.log(`  水密自检     开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris} → 通过（索引空间定向观测 misoriented=${audit.misorientedEdges}）`);
   console.log(`  STL 已写入   ${outFile}（${(stl.byteLength / 1024).toFixed(1)} KB，单位 mm，${scale.toFixed(4)} mm/wc）`);
 }

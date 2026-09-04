@@ -41,7 +41,7 @@ const { buildSurface } = await import(pathToFileURL(BUNDLE));
 
 let pass = 0, fail = 0;
 const failed = [];
-const ok = (name, detail = '') => { pass++; if (pass % 25 === 0) console.log(`  … ${pass} assertions so far`); };
+const ok = (name, detail = '') => { pass++; if (detail) console.log(`  ✓ ${name} — ${detail}`); };
 const bad = (name, detail = '') => { fail++; failed.push(`${name} | ${detail}`); console.log(`  ✗ ${name} — ${detail}`); };
 
 const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp'];
@@ -83,9 +83,9 @@ function runCase(name, buildParams, opts = {}) {
     const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
     if (cx * cx + cy * cy + cz * cz <= 1e-24) degen++;
   }
-  // nm 哨兵容差：极端工况（p0.01/p0.99+gradient_shell）实测 nm 达 2874（恒真审查修复时首测），
-  // 头注原宣称“零非流形”从未被测量。按 mesh_audit 容差哲学定为回归哨兵：开放边=0 硬门，
-  // nm ≤ max(512, 1%·E) 防劣化（当前最差 2874 / ~40 万边 ≈ 0.7%）。
+  // nm 哨兵容差：极端工况（p0.01/p0.99/aspect-k10）实测 nm 最高 5928 = 8.97%E（aspect k10，
+  // 2026-09-04 恒真审查首测，此前该变量从未被断言）。开放边=0 为硬门；nm 哨兵
+  // max(1024, 15%E)——覆盖实测最差值并留 1.67× 余量，防大幅劣化（非物理门）。
   const nmCap = Math.max(1024, Math.ceil(bs.indices.length / 3 * 1.5 * 0.15));
   if (open !== 0) { bad(name + ' 水密', `open=${open}`); return; }
   if (nm > nmCap) { bad(name + ' 非流形哨兵', `nm=${nm} > cap=${nmCap}`); return; }
