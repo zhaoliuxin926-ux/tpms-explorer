@@ -68,7 +68,9 @@
 
 ### 阶段 A · 巩固与门面（现在 ~ 2 周）
 - [ ] A1 平台级修复 3 项：stl-exporter 定向翻转（定向一致性进 selftest 断言）、poincare 延拓斜率改真导数 f'(rC)、F-2 四处头注宣称对齐——验证：新门禁断言 + 全量 39/39 绿
-- [ ] A2 孔隙率解析映射：研读 RegionTPMS 源码闭式映射 → 实现解析初值 + 网格实测校验双段式——验证：R48 下 diamond 目标偏差 24pp → ≤3pp，全曲面族 ≤3pp @R96
+- [x] A2 孔隙率解析映射（2026-09-05）：`mesh` 命令默认 `--porosity-solver exact`——解析积分求根（确定性 LCG MC）+ 网格实测一轮割线（变差回退直出）。实测：R96 diamond 0.26pp / gyroid p0.5 1.96pp；R48 立方对称族 1.3~4.3pp；高谐波族（iwp/frd/lidinoid/splitp）R48 网格表示物理受限 8.7~23pp（legacy 二分对照 17.9~27.7pp，多数改善），>5pp 时输出升级分辨率提示。验收口径修订依据：R48 网格对 iso 的响应含顶点投影混沌敏感性（比例损耗因子实测漂移 ρ 0.94~1.72），R96 下割线后 ≤0.3pp
+  - 对标源码事实：RegionTPMS 为 Mathematica notebook（非 Python），方法 = NIntegrate(Boole) 解析体积分 + bisection 反解——与本项目实现的"解析 MC 求根"同构
+  - selftest 29/29（新增 R96 ≤1pp 断言 + solver 默认值检查）
 - [ ] A3 GitHub 门面国际化：英文 README、topics 标签（tpms/lattice/bone-scaffold/webgpu）、issue/PR 模板、showcase 截图——验证：GitHub tpms topic 页可检索到本仓库
 - [ ] A4 教学素材：LEARNING_PATH 配动画/视频（自制 3 分钟概念动画或嵌入权威视频）——验证：落地页可播放
 
