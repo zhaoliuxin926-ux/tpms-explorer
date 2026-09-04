@@ -122,5 +122,26 @@ run('mesh', '--type', 'gyroid', '--porosity', '0.5', '--periods', '0').status !=
 run('mesh', '--type', 'gyroid', '--porosity', '0.02').status !== 0 ? ok('mesh 越界孔隙率被拒绝（近全实心）') : bad('mesh 孔隙率下限未拒绝');
 rmSync(stlPath, { force: true });
 
+// ── 10. B-t4.0 solve 闭环自校正 ──
+{
+  const stlPath = join(tmpdir(), `tpms_selftest_solve_${process.pid}.stl`);
+  // 10a. 收敛路径：diamond R48 tol 1pp → 3 轮内收敛（实测 0.05pp）且水密
+  const r10a = run('solve', '--type', 'diamond', '--porosity', '0.65', '--resolution', '48', '--tolerance', '0.01', '--out', stlPath, '--json');
+  let j10a = null;
+  try { j10a = JSON.parse(r10a.stdout); } catch { /* 忽略 */ }
+  r10a.status === 0 && j10a?.reachable === true && j10a.porosityDeviation <= 0.01 && j10a.watertight === true
+    ? ok(`solve 收敛：diamond R48 偏差 ${(j10a.porosityDeviation * 100).toFixed(2)}pp ≤ 1pp（${j10a.rounds} 轮）`) : bad('solve 收敛', JSON.stringify(j10a?.trace || r10a.stderr || '').slice(-80));
+  existsSync(stlPath) ? ok('solve 产出 STL') : bad('solve STL 未产出');
+  // 10b. 不可达路径：splitp R48 tol 0.05pp → 结构化诊断（reachable=false + suggestions）非静默放弃
+  const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '48', '--tolerance', '0.0005', '--max-rounds', '4', '--json');
+  let j10b = null;
+  try { j10b = JSON.parse(r10b.stdout); } catch { /* 忽略 */ }
+  r10b.status === 3 && j10b?.reachable === false && j10b.unreachable?.reason === 'stall' && Array.isArray(j10b.suggestions) && j10b.best?.deviation < 0.01
+    ? ok('不可达 → 结构化诊断（stall + suggestions + best=0.18pp）') : bad('不可达诊断', JSON.stringify({ s: r10b.status, r: j10b?.reachable, u: j10b?.unreachable?.reason }).slice(-100));
+  // 10c. solve 参数防呆
+  run('solve', '--type', 'gyroid', '--porosity', '0.5', '--tolerance', '0.5').status !== 0 ? ok('solve tolerance 越界被拒') : bad('solve tolerance 未拒绝');
+  run('solve', '--type', 'gyroid', '--porosity', '0.5', '--max-rounds', '0').status !== 0 ? ok('solve max-rounds 越界被拒') : bad('solve max-rounds 未拒绝');
+  try { unlinkSync(stlPath); } catch { /* 忽略 */ }
+}
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

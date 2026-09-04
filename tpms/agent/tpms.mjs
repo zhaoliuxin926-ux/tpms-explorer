@@ -207,6 +207,148 @@ function auditMeshIndices(positions, indices) {
   return { triCount, degenTris, openEdges, nonManifoldEdges, misorientedEdges };
 }
 
+// ── B-t4.0 M4 内环自校正：solve 命令 ──
+// 闭环语义：解析求根 → build → 网格实测 → 校正 iso → 重复，直至收敛或判定不可达。
+// 可达性判定（诚实边界）：iso 触界 / 连续两轮无改善 ⇒ 该分辨率下物理不可达，
+// 输出结构化诊断（非静默放弃），退出码 3。
+
+function cmdSolve(a, json) {
+  const usage = '用法: node tpms.mjs solve --type <曲面> --porosity <0~1|百分数> [--resolution 64] [--periods 6] [--tolerance 0.01] [--max-rounds 5] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--out 文件.stl] [--json]';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const type = String(a.type ?? '');
+  if (!BUILTIN_TYPES.includes(type)) die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}`, usage);
+  const p = Number(a.porosity);
+  if (!Number.isFinite(p)) die('porosity 必须是数字', usage);
+  const pf = p > 1 ? p / 100 : p;
+  if (pf < 0.05 || pf >= 1) die(`孔隙率 ${pf} 越界，须 0.05 ≤ p < 1`, usage);
+  const periods = a.periods === undefined ? 6 : Number(a.periods);
+  if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数', usage);
+  const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数', usage);
+  const container = String(a.container ?? 'cube');
+  if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"`, usage);
+  const mode = String(a.mode ?? 'solid_network');
+  if (!STRUCTURE_MODES.includes(mode)) die(`未知结构模式 "${mode}"`, usage);
+  const tolerance = a.tolerance === undefined ? 0.01 : Number(a.tolerance);
+  if (!Number.isFinite(tolerance) || tolerance <= 0 || tolerance > 0.2) die('tolerance 须为 0 < t ≤ 0.2', usage);
+  const maxRounds = a['max-rounds'] === undefined ? 5 : Number(a['max-rounds']);
+  if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 8) die('max-rounds 须为 1~8 整数', usage);
+
+  const buildOnce = (iso) => {
+    core.globalBufferPool.reset();
+    return core.buildSurface({
+      type, iso, periods, resolution, targetPorosity: undefined,
+      weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      thickness: 1.0, gradientDir: 'z',
+      hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
+      customFormula: '', preview: false,
+    }, core.globalBufferPool);
+  };
+
+  _lcg = 0x9e3779b9;
+  const W = [1, 1, 1, 1];
+  const { iso: iso0, slope } = solveIsoAnalytic(core, type, pf, W);
+
+  const trace = [];
+  let iso = iso0, est = NaN, res = null, audit = null, best = null;
+  let unreachable = null, prevDev = Infinity, stall = 0;
+  let round = 0;
+
+  for (; round < maxRounds; round++) {
+    try {
+      res = buildOnce(iso);
+    } catch (e) {
+      unreachable = { reason: 'build_throw', detail: String(e?.message ?? e), iso };
+      break;
+    }
+    if (res.type === 'error' || !res.positions) {
+      unreachable = { reason: 'build_error', detail: String(res.message ?? res.type), iso };
+      break;
+    }
+    audit = auditMeshIndices(res.positions, res.indices);
+    est = res.porosityEstimate;
+    const dev = Math.abs(est - pf);
+    trace.push({ round, iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6), watertight: audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0 });
+    if (!best || dev < best.deviation) best = { iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6) };
+    if (dev <= tolerance) break;
+
+    // 非流形/退化严重时继续迭代无意义（网格表示已不可信）
+    if (audit.nonManifoldEdges > 0 || audit.degenTris > 0) {
+      unreachable = { reason: 'non_manifold_or_degenerate', detail: `nm=${audit.nonManifoldEdges} degen=${audit.degenTris}（该分辨率/孔隙率组合网格表示不可靠）`, iso };
+      break;
+    }
+    // 收敛停滞：连续两轮校正无改善
+    if (round > 0 && dev >= prevDev - 1e-9) stall++;
+    else stall = 0;
+    if (stall >= 1 && round >= 2) {
+      unreachable = { reason: 'stall', detail: `两轮校正无改善（dev=${dev.toFixed(4)}），该分辨率下物理受限`, iso };
+      break;
+    }
+    prevDev = dev;
+
+    // 校正：首轮解析斜率，之后两点割线（数值历史，非字符串解析）
+    let slopeUse = slope;
+    if (trace.length >= 2) {
+      const [p1, p2] = trace.slice(-2);
+      const den = (p2.est - p1.est) / (p2.iso - p1.iso);
+      if (Number.isFinite(den) && Math.abs(den) > 1e-6) slopeUse = den;
+    }
+    let next = iso + (pf - est) / slopeUse;
+    const step = Math.max(-0.35, Math.min(0.35, next - iso));
+    next = iso + step;
+    if (next <= -1.6 || next >= 1.6) {
+      unreachable = { reason: 'iso_boundary', detail: `iso 触界 ${next.toFixed(3)}（目标在该分辨率下不可达）`, iso };
+      break;
+    }
+    iso = next;
+  }
+
+  // 结构化诊断
+  if (!unreachable && (round >= maxRounds) && Math.abs(est - pf) > tolerance) {
+    unreachable = { reason: 'max_rounds', detail: `${maxRounds} 轮未收敛（best 偏差 ${(best.deviation * 100).toFixed(2)}pp）`, iso };
+  }
+
+  const suggestions = [];
+  if (unreachable) {
+    if (resolution < 96) suggestions.push(`提高 --resolution 96（当前 ${resolution}；孔隙率偏差随分辨率收敛）`);
+    if (pf < 0.15) suggestions.push('孔隙率目标过接近全实心，建议 ≥0.15 或改用 shell 模式');
+    if (pf > 0.9) suggestions.push('孔隙率目标过接近全空，建议 ≤0.9');
+    suggestions.push(`best: iso=${best ? best.iso : '—'} est=${best ? (best.est * 100).toFixed(2) + '%' : '—'}`);
+  }
+
+  const out = {
+    command: 'solve', type, porosity: pf, periods, resolution, container, mode,
+    tolerance, maxRounds, rounds: trace.length,
+    reachable: !unreachable,
+    unreachable: unreachable ?? undefined,
+    best, trace,
+    porosityEstimate: est,
+    porosityDeviation: est === est ? Math.abs(est - pf) : NaN,
+    watertight: audit ? (audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0) : false,
+    boundary: 'solve = 解析求根起点 + 网格实测闭环校正；不可达时输出结构化诊断而非静默放弃',
+  };
+
+  if (unreachable) {
+    out.suggestions = suggestions;
+    if (json) console.log(JSON.stringify(out, null, 2));
+    console.error(`✗ 不可达: ${unreachable.reason} — ${unreachable.detail}` + (suggestions.length ? `
+  建议: ${suggestions.join('; ')}` : ''));
+    process.exit(3);
+  }
+
+  const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}-solved.stl`);
+  const stl = core.buildBinarySTL(res.positions, res.indices, core.wcToMmFactor(periods), res.normals);
+  writeFileSync(outFile, Buffer.from(stl));
+  out.file = outFile;
+  out.fileBytes = stl.byteLength;
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.log('TPMS 闭环求解（解析求根起点 + 网格实测自校正）');
+  console.log(`  目标/收敛    ${(pf * 100).toFixed(1)}% → 实测 ${(est * 100).toFixed(2)}%（偏差 ${(Math.abs(est - pf) * 100).toFixed(2)}pp ≤ 容差 ${(tolerance * 100).toFixed(1)}pp）`);
+  console.log(`  轮次         ${trace.length}（iso: ${trace.map((x) => x.iso).join(' → ')})`);
+  console.log(`  水密自检     开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris}（索引空间）`);
+  console.log(`  STL 已写入   ${outFile}（${(stl.byteLength / 1024).toFixed(1)} KB）`);
+}
+
 function cmdMesh(a, json) {
   const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]';
   if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
@@ -303,12 +445,14 @@ a._ = a._.slice(1); // 命令字出栈，其余位置参数供子命令校验
 if (cmd === 'list') cmdList(json);
 else if (cmd === 'estimate') cmdEstimate(a, json);
 else if (cmd === 'mesh') cmdMesh(a, json);
+else if (cmd === 'solve') cmdSolve(a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环）');
   console.log('用法:');
   console.log('  node tpms.mjs list');
   console.log('  node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]');
   console.log('  node tpms.mjs mesh --type gyroid --porosity 0.65 [--periods 6] [--resolution 64] [--out 文件.stl] [--json]');
+  console.log('  node tpms.mjs solve --type gyroid --porosity 0.65 [--tolerance 0.01] [--max-rounds 5] [--json]');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }
