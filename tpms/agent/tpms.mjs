@@ -217,10 +217,10 @@ function cmdMesh(a, json) {
   const pf = p > 1 ? p / 100 : p;
   if (pf < 0.05 || pf >= 1) die(`孔隙率 ${pf} 越界，须 0.05 ≤ p < 1（近全实心的网格无工程意义）`, usage);
   const periods = a.periods === undefined ? 6 : Number(a.periods);
-  if (!Number.isInteger(periods) || periods < 1 || periods > 16) die('periods 须为 1~16 整数', usage);
+  if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数（上限保证 R≤96 时每周期 ≥8 格）', usage);
   // 平台缓冲池容量硬约束：N³ > 1e6 即 throw（units.ts 分辨率档位 R≤99）——CLI 上限对齐
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
-  if (!Number.isInteger(resolution) || resolution < 24 || resolution > 96) die('resolution 须为 24~96 整数（平台缓冲池 N³≤1e6 约束）', usage);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数（<48 无法稳定产出水密网格；平台缓冲池 N³≤1e6 约束上限 96）', usage);
   const container = String(a.container ?? 'cube');
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"，可选: ${CONTAINER_SHAPES.join(' ')}`, usage);
   const mode = String(a.mode ?? 'solid_network');
@@ -273,7 +273,9 @@ function cmdMesh(a, json) {
   };
   if (!watertight) {
     if (json) console.log(JSON.stringify(out, null, 2));
-    die(`水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 不产出 STL`);
+    // 退出码约定：2=参数错误（改输入可解）；3=构建/水密门失败（物理不可产出，升分辨率或改设计）
+    console.error(`✗ 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 不产出 STL`);
+    process.exit(3);
   }
   const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}.stl`);
   const scale = core.wcToMmFactor(periods);

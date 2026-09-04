@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TPMS Agent Tools (M2)",
+  "description": "TPMS Explorer 确定性工具层。铁律：LLM 只产出本 schema 定义的参数槽位，一切数值由 CLI 确定性代码生成或校验；越界值 100% 被钳制或拒绝（见各参数 description），无静默回退。",
+  "tools": [
+    {
+      "name": "tpms_list",
+      "description": "列出内置 TPMS 曲面族（8 种，含 Gibson-Ashby 刚度系数 C1 与各向异性比）、基体材料（tc4/polymer/thermal 的模量与屈服强度）与模型常数（C2=0.3，文献出处）。用于回答'有哪些曲面/材料'类查询。无副作用。",
+      "parameters": { "type": "object", "properties": {}, "additionalProperties": false }
+    },
+    {
+      "name": "tpms_estimate",
+      "description": "Gibson-Ashby 开孔泡沫力学估算：E*/Es = C1·ρ̄²，σ*/σs = C2·ρ̄^1.5（ρ̄ = 1−孔隙率）。材料级解析近似（秒级），几何相关指标（比表面积/渗透率/孔径）不在本工具范围。回答'某孔隙率下刚度/强度多少'类查询。",
+      "parameters": {
+        "type": "object",
+        "required": ["type", "porosity"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp"], "description": "TPMS 曲面族。custom 公式沙箱未注册本工具，传入将被拒绝。" },
+          "porosity": { "type": "number", "exclusiveMinimum": 0, "maximum": 100, "description": "孔隙率，0 < p < 1 小数或 1~100 百分数（>1 自动按百分数解释，与平台 computePhysicsMetrics 同口径）。越界（≥100% 或 <0 或换算后 ≥1）被拒绝。" },
+          "material": { "type": "string", "enum": ["tc4", "polymer", "thermal"], "description": "基体材料：tc4=Ti-6Al-4V (E=110GPa σ=880MPa)、polymer=PLLA/PLA (3.5/50)、thermal≈Al-SiC (70/300)。默认 tc4；'auto' 等未注册值被拒绝。" },
+          "json": { "type": "boolean", "description": "输出机器可读 JSON（agent 消费方必须置 true）" }
+        }
+      }
+    },
+    {
+      "name": "tpms_mesh",
+      "description": "参数 → Surface Nets 网格 → 水密三硬指标门（开放边/非流形/退化面任一非零即 exit 1 不产 STL）→ 二进制 STL 落盘（mm）。映射 nl-agent 动作 export-stl。含 exact 孔隙率求解器（解析积分求根 + 网格实测割线校正，R96 实测偏差 0.26pp；低分辨率或高谐波族偏差大时如实报告并提示升分辨率）。对应平台动作 run-simulation 为后续扩展（B-t3+）。",
+      "parameters": {
+        "type": "object",
+        "required": ["type", "porosity"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp"], "description": "TPMS 曲面族" },
+          "porosity": { "type": "number", "minimum": 0.05, "exclusiveMaximum": 1, "description": "目标孔隙率（0.05 ≤ p < 1；>1 的输入按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。注意：低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。" },
+          "periods": { "type": "integer", "minimum": 1, "maximum": 12, "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素" },
+          "resolution": { "type": "integer", "minimum": 48, "maximum": 96, "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 96 对齐平台缓冲池 N³≤1e6 约束；越高孔隙率偏差越小" },
+          "container": { "type": "string", "enum": ["cube", "cylinder"], "description": "容器形状，默认 cube。注意：cylinder+diamond+R64 特定 iso 区间存在非流形边（nm≤1940），水密门会 fail-closed 拒产 STL（平台已知缺陷，登记 bugs.md）" },
+          "mode": { "type": "string", "enum": ["solid_network", "shell", "gradient_shell"], "description": "结构拓扑模式，默认 solid_network" },
+          "out": { "type": "string", "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl" },
+          "json": { "type": "boolean", "description": "输出机器可读 JSON" }
+        }
+      }
+    }
+  ],
+  "nl_agent_semantic_coverage": {
+    "说明": "对 nl_agent_audit 32 断言语义类型的覆盖映射（B-t2 验证口径）",
+    "TYPE_WORDS(8)": "✅ tpms_estimate/tpms_mesh type enum 全覆盖",
+    "MATERIAL_WORDS(3)": "✅ tpms_estimate material enum 全覆盖",
+    "MODE_WORDS(2: solid_network/gradient_shell)": "✅ tpms_mesh mode enum（另含平台 shell，超集）",
+    "CONTAINER_WORDS(2)": "✅ tpms_mesh container enum 全覆盖",
+    "porosity 参数": "✅ 双口径（小数/百分数）+ 边界拒绝",
+    "NLAction.export-stl": "✅ tpms_mesh",
+    "NLAction.export-3mf": "⬜ 未覆盖（3MF 导出器在平台 UI；CLI 扩展属 B-t3+）",
+    "NLAction.run-simulation": "⬜ 未覆盖（声明于 tpms_mesh description）",
+    "NLAction.reset": "⬜ 不适用（CLI 无状态会话）",
+    "NLAction.preset-bone / preset-thermal": "⬜ 未覆盖（预设参数组合属 M5 场景模板）"
+  }
+}
