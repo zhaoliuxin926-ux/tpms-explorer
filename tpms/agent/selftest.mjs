@@ -101,14 +101,21 @@ try {
       rec[fwd ? 0 : 1]++;
     }
   }
-  let open = 0;
-  for (const [, [a, b]] of edges) if (a + b === 1) open++;
+  let open = 0, miso = 0;
+  for (const [, [a, b]] of edges) {
+    if (a + b === 1) open++;
+    else if ((a === 0) !== (b === 0)) miso++; // 两三角同向 = 定向错
+  }
   open === 0 ? ok('STL 独立读复核对账：开放边 = 0（字节级）') : bad('STL 读回开放边', String(open));
+  // A1 定向根治断言：stl-exporter 全局定向传播后，有向错边必须为 0
+  miso === 0 ? ok('STL 全局定向一致：misoriented = 0（字节级有向配对）') : bad('STL misoriented', String(miso));
 } catch (e) { bad('STL 读回复核异常', String(e)); }
-// 9c. 高分辨率孔隙率收敛（口径：体素二分 vs 网格实测的离散差随 R 收敛；R96 实测 ~1.0pp，取 3pp 带）
-const rm2 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '96', '--out', join(tmpdir(), `tpms_selftest_m1b_${process.pid}.stl`), '--json');
+// 9c. A2 精确求解器：解析积分求根 + 一轮割线（确定性种子）
+// R96 验收 ≤1pp（实测最差 0.26pp）；solver 默认 exact
+const rm2 = run('mesh', '--type', 'diamond', '--porosity', '0.65', '--resolution', '96', '--out', join(tmpdir(), `tpms_selftest_m1b_${process.pid}.stl`), '--json');
 const j2 = JSON.parse(rm2.stdout || '{}');
-rm2.status === 0 && j2.porosityDeviation <= 0.03 ? ok(`R96 孔隙率收敛 ≤3pp（实测 ${(j2.porosityDeviation * 100).toFixed(2)}pp）`) : bad('R96 收敛', String(j2.porosityDeviation));
+rm2.status === 0 && j2.porosityDeviation <= 0.01 ? ok(`exact 求解器 R96 孔隙率 ≤1pp（实测 ${(j2.porosityDeviation * 100).toFixed(2)}pp）`) : bad('R96 收敛', String(j2.porosityDeviation));
+j2.solver === 'exact' ? ok('默认求解器 = exact') : bad('solver 默认值', String(j2.solver));
 // 9d. mesh 参数防呆
 run('mesh', '--type', 'gyroid', '--porosity', '0.5', '--resolution', '20').status !== 0 ? ok('mesh 低于分辨率下限被拒绝') : bad('分辨率下限未拒绝');
 run('mesh', '--type', 'gyroid', '--porosity', '0.5', '--periods', '0').status !== 0 ? ok('mesh 非法周期被拒绝') : bad('周期下限未拒绝');

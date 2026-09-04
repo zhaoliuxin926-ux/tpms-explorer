@@ -191,7 +191,7 @@ console.log('\n[E] 度规一致性（G⁻¹ = 1/s²，s = 2R₀²/(R₀²−r²)
   check('延拓段单调（单射）', y1 < y2 && y2 < y3);
   // 延拓斜率与平台 fpC 公式自洽（数值差分对拍，修复原 fpC>0 恒真）
   const sNum = (y2 - y1) / (e2 - e1);
-  const sAna = (2 * R0 * R0 * (R0 * R0 + 3 * rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2);
+  const sAna = (2 * R0 * R0 * (R0 * R0 + rC * rC)) / Math.pow(R0 * R0 - rC * rC, 2); // f'(rC) 真导数
   check('延拓斜率 = 平台 fpC 公式（数值差分对拍）', Math.abs(sNum - sAna) <= 1e-6 * sAna, 'num=' + sNum.toFixed(3) + ' ana=' + sAna.toFixed(3));
 }
 

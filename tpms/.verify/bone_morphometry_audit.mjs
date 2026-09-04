@@ -4,8 +4,9 @@
  * A. DICOM：手工构造 explicit VR LE 小端字节流 → 解析 Rows/Cols/Spacing/Thickness/
  *    Rescale + 像素解码；非 DICM 抛错
  * B. TIFF：手工构造未压缩 8bit 灰度 IFD → 解析宽高/像素；多页 IFD 链页数；非 TIFF 抛错
- * C. 骨形态计量：体素化 gyroid（已知理论壁厚）→ Tb.Th 误差 ≤15%；BV/TV 精确；
- *    Tb.Th/Tb.Sp > 0；Tb.N = BV/TV/Tb.Th 一致
+ * C. 骨形态计量：体素化 gyroid → BV/TV ∈ [0.3,0.7]（体素口径）；Tb.Th/Tb.Sp > 0
+ *    （EDT 近似口径，无解析真值可断言——与平台模块诚实边界一致）；
+ *    Tb.N = BV/TV/Tb.Th 恒等式精确。头注 2026-09-05 对齐实现（原"Tb.Th 误差 ≤15%"无真值来源）
  * D. SMI：实体块（板状）SMI < 0.5；细杆幻影 SMI > 1
  * E. Otsu：双峰谷区
  *

@@ -299,7 +299,7 @@ if manifold_kind != 'identity':
         rC = 0.95 * R0
         f = lambda rr: 2 * R0**2 * rr / (R0**2 - rr**2)
         fpc = f(min(rC, 0.999 * R0))
-        fpC = 2 * R0**2 * (R0**2 + 3 * rC**2) / (R0**2 - rC**2)**2
+        fpC = 2 * R0**2 * (R0**2 + rC**2) / (R0**2 - rC**2)**2  # f'(rC) 真导数（2026-09-05 C¹ 根治）
         rp = np.where(r <= rC, f(np.minimum(r, rC)), fpc + fpC * (r - rC))
         sc = rp / r
         P[:, 0] *= sc; P[:, 1] *= sc; P[:, 2] *= sc
@@ -667,7 +667,7 @@ if ~strcmp(manifold_kind, 'identity') && (strcmp(manifold_kind, 'poincare') || s
         rC = 0.95 * R0;
         rcEff = min(rC, 0.999 * R0);
         fpc = 2 * R0^2 * rcEff / (R0^2 - rcEff^2);
-        fpC = 2 * R0^2 * (R0^2 + 3 * rC^2) / (R0^2 - rC^2)^2;
+        fpC = 2 * R0^2 * (R0^2 + rC^2) / (R0^2 - rC^2)^2; % f'(rC) 真导数（2026-09-05 C¹ 根治）
         rp = (r <= rC) .* (2 * R0^2 * r ./ max(R0^2 - r.^2, 1e-9)) + (r > rC) .* (fpc + fpC * (r - rC));
         sc = rp ./ r;
     else
