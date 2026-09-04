@@ -53,3 +53,12 @@ tpms/.verify/probe_bisect_bias.mjs
 tpms/.verify/web/shots/
 tpms/.verify/burr_baseline.json
 tpms/.verify/burr_after.json
+
+# LaTeX 编译中间产物（main.pdf 保留作投稿预览）
+docs/paper/latex/*.aux
+docs/paper/latex/*.bbl
+docs/paper/latex/*.blg
+docs/paper/latex/*.log
+docs/paper/latex/*.out
+docs/paper/latex/*.spl
+/texput.log
