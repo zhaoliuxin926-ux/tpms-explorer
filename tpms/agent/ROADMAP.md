@@ -106,8 +106,8 @@
 - [ ] B1.4 投稿提交——验证：拿到投稿号
 
 ### B-t2 M2 工具注册层（第 1 周，与投稿并行）
-- [ ] B2.1 CLI 命令 → JSON Schema 工具清单（list/estimate/mesh 的参数、类型、钳制范围取自 nl-agent 钳制表与 CLI 校验）——验证：schema 驱动的自检覆盖 nl_agent_audit 32 断言全部意图类型
-- [ ] B2.2 tool 调用往返测试：schema → CLI → JSON 输出 → 断言闭环——验证：非法参数 100% 被钳制或拒绝（复用 selftest 拒绝语义）
+- [x] B2.1/B2.2 工具注册层 ✅（2026-09-05）：`tools.schema.json`（function-calling 三工具 list/estimate/mesh，枚举与钳制范围与 CLI 实际校验逐项对齐）+ `schema_check.mjs`（26 断言：结构/枚举遍历 8 曲面/数值边界 47·48·96·97 与 12·13/拒绝语义/双层守卫）。nl-agent 语义覆盖：参数类意图（TYPE 8/MATERIAL 3/MODE 2/CONTAINER 2/porosity 双口径）100%；动作类 export-stl ✅，export-3mf/run-simulation/reset/preset-* 4 项如实声明未覆盖（B-t3+/M5）
+-     过程修正：①resolution 下限 24→48、periods 上限 16→12（R24 与 periods16 组合产不出水密网格，参数声明对齐物理）②退出码分层 2=参数错误 / 3=构建与水密门失败（LLM 消费方可区分"改输入"vs"升分辨率"）③porosity<0.3 低分辨率下水密门 fail-closed 属网格表示物理极限，schema description 如实声明。selftest 29/29 + schema_check 26/26
 
 ### B-t3 M3 LLM 接入（key 到位后 ~1 周）
 - [ ] B3.1 provider 选型 + tool calling 接入（铁律：LLM 只填意图槽位）——验证：30 条中英设计指令回归、零 LLM 直写数值
