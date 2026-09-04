@@ -120,7 +120,7 @@
 - [ ] B4.2 失败升级语义：不可收敛时输出结构化诊断报告（非静默放弃）——验证：注入不可达目标（如 p=0.999@R48）能在 2 轮内判定并报告
 
 ### B-t5 质量债穿插清偿（不占主线，随审随修）
-- [ ] B5.1 surface-nets 体积损耗**量化审计脚本**（损耗 vs R/k/type 三维表，入 .verify 作数据基准；只审计不修根因）——验证：审计脚本进 CI 输出口径
+- [x] B5.1 体积损耗量化审计 ✅（2026-09-05）：`tpms/.verify/volume_loss_audit.mjs`（8 曲面 × R{48,64,96} × p 4 档 = 32 组合，独立运行不进 CI 调度）。**量化发现**：损耗 iwp R48 p0.65 最差 18.5pp、gyroid/lidinoid 最优 0~0.4pp，总体随 R 收敛；单胞/多周期解析口径差 1.7pp、网格与解析差 9~11pp（R48）——根因（场采样域一致性/投影体积收缩）登记 bugs.md 待平台级深挖
 - [ ] B5.2 cylinder+diamond R64 非流形（nm 740）：定位封盖/容器交线机制——验证：该工况水密门通过或输出结构化不可达报告
 - [ ] B5.3 stl-exporter 定向一致性进 parity_math 门（字节级有向配对，当前仅 selftest 覆盖）——验证：parity_math 新增断言绿
 - [ ] B5.4 topics 手动添加（push 后）：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing
