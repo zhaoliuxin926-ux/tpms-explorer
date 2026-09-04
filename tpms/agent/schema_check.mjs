@@ -47,7 +47,7 @@ for (const [label, args, check] of [
   const r = run('mesh', ...args, '--json');
   check(r) ? ok(label) : bad(label, (r.stderr || '').slice(-80));
 }
-// type enum 逐值遍历（每值 R24 最小成本构建，验证 enum 与 CLI 接受域完全一致）
+// type enum 逐值遍历（每值 R48 最小水密可行成本构建，验证 enum 与 CLI 接受域完全一致）
 for (const ty of TYPES) {
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
   r.status === 0 ? ok(`type enum 值 ${ty} 可构建`) : bad(`type enum ${ty}`, (r.stderr || '').slice(-60));
@@ -61,10 +61,12 @@ for (const [label, args] of [
   ['periods 13 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--periods', '13']],
   ['container 不在 enum 被拒', ['--type', 'gyroid', '--porosity', '0.5', '--container', 'sphere']],
   ['mode 不在 enum 被拒', ['--type', 'gyroid', '--porosity', '0.5', '--mode', 'warpdrive']],
-  ['未知属性被拒（additionalProperties=false）', ['estimate', '--type', 'gyroid', '--porosity', '0.5', '--weapon', 'laser']],
+  ['estimate 未知属性被拒（--weapon）', ['estimate', '--type', 'gyroid', '--porosity', '0.5', '--weapon', 'laser']],
+  ['mesh 未知属性被拒（--weapon）', ['mesh', '--type', 'gyroid', '--porosity', '0.5', '--resolution', '48', '--weapon', 'laser']],
+  ['estimate 非法值拒绝为 exit 2（参数错误语义）', ['estimate', '--type', 'nope', '--porosity', '0.5']],
 ]) {
   const r = run('mesh', ...args);
-  r.status !== 0 ? ok(label) : bad(label + ' 未拒绝', `exit=${r.status}`);
+  r.status === 2 ? ok(label + ' [exit2]') : bad(label + ' 未拒绝或退出码非 2', `exit=${r.status}`);
 }
 
 // estimate 枚举与 material 约束
@@ -85,6 +87,8 @@ for (const [label, args] of [
   console.log(`  · 显式未覆盖项（如实声明）: ${uncovered.length} → ${uncovered.join(', ')}`);
   keys.every((k) => typeof cov[k] === 'string' && cov[k].length > 4)
     ? ok('每条覆盖项均有状态说明') : bad('覆盖映射存在空声明');
+  const coveredN = keys.filter((k) => String(cov[k]).startsWith('✅')).length;
+  coveredN >= 6 ? ok(`已覆盖语义项 ≥6（实测 ${coveredN}）`) : bad('已覆盖语义项不足', String(coveredN));
 }
 
 function tmpOut() { return join(HERE, `_schema_tmp_${process.pid}.stl`); }

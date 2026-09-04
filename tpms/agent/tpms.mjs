@@ -268,15 +268,18 @@ function cmdSolve(a, json) {
     audit = auditMeshIndices(res.positions, res.indices);
     est = res.porosityEstimate;
     const dev = Math.abs(est - pf);
-    trace.push({ round, iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6), watertight: audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0 });
+    const wt = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
+    trace.push({ round, iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6), watertight: wt });
     if (!best || dev < best.deviation) best = { iso: +iso.toFixed(6), est: +est.toFixed(6), deviation: +dev.toFixed(6) };
-    if (dev <= tolerance) break;
 
-    // 非流形/退化严重时继续迭代无意义（网格表示已不可信）
-    if (audit.nonManifoldEdges > 0 || audit.degenTris > 0) {
-      unreachable = { reason: 'non_manifold_or_degenerate', detail: `nm=${audit.nonManifoldEdges} degen=${audit.degenTris}（该分辨率/孔隙率组合网格表示不可靠）`, iso };
+    // 水密门前移（与 mesh 同承诺：水密不过不交货、不继续迭代——网格表示已不可信）。
+    // 【终审修复】此前只查 nm/degen 漏掉 openEdges，且收敛交付前无水密检查，
+    // 曾静默交付 12.1MB 非水密 STL（gyroid R64 第 3 轮 open>0 实录）
+    if (!wt) {
+      unreachable = { reason: 'water_tightness', detail: `open=${audit.openEdges} nm=${audit.nonManifoldEdges} degen=${audit.degenTris}（该分辨率/孔隙率/iso 组合网格表示不可靠）`, iso };
       break;
     }
+    if (dev <= tolerance) break;
     // 收敛停滞：连续两轮校正无改善
     if (round > 0 && dev >= prevDev - 1e-9) stall++;
     else stall = 0;
@@ -306,6 +309,10 @@ function cmdSolve(a, json) {
   // 结构化诊断
   if (!unreachable && (round >= maxRounds) && Math.abs(est - pf) > tolerance) {
     unreachable = { reason: 'max_rounds', detail: `${maxRounds} 轮未收敛（best 偏差 ${(best.deviation * 100).toFixed(2)}pp）`, iso };
+  }
+  // 收敛但水密不达标（理论上前向门已拦，双保险）
+  if (!unreachable && !(audit && audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0)) {
+    unreachable = { reason: 'water_tightness', detail: '收敛但水密指标非零（双保险拦截止产出）', iso };
   }
 
   const suggestions = [];
@@ -432,16 +439,31 @@ function cmdMesh(a, json) {
   console.log('  ───────────────────────────────');
   console.log(`  顶点/三角形  ${res.vertCount} / ${res.triCount}`);
   console.log(`  实测孔隙率   ${(porEst * 100).toFixed(2)}%（目标 ${(pf * 100).toFixed(1)}%，偏差 ${(Math.abs(porEst - pf) * 100).toFixed(2)}pp）`);
-  if (Math.abs(porEst - pf) > 0.05) console.log('  ⚠ 偏差偏大：二分与网格实测的口径差随分辨率收敛，建议提高 --resolution（上限 96）');
+  if (Math.abs(porEst - pf) > 0.02) console.log('  ⚠ 偏差 >2pp：exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），可尝试 --porosity-solver legacy；或提高 --resolution（上限 96）');
   console.log(`  水密自检     开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris} → 通过（索引空间定向观测 misoriented=${audit.misorientedEdges}）`);
   console.log(`  STL 已写入   ${outFile}（${(stl.byteLength / 1024).toFixed(1)} KB，单位 mm，${scale.toFixed(4)} mm/wc）`);
 }
 
 
+// 每命令已知 flag 集（schema additionalProperties:false 的 CLI 层实现）
+const KNOWN_FLAGS = {
+  list: ['json', 'help'],
+  estimate: ['type', 'porosity', 'material', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'out', 'json', 'help'],
+  solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'out', 'json', 'help'],
+};
+
 const a = parseArgs(process.argv.slice(2));
 const json = a.json === true;
 const cmd = a._[0];
 a._ = a._.slice(1); // 命令字出栈，其余位置参数供子命令校验
+{
+  const known = KNOWN_FLAGS[cmd];
+  if (known) {
+    const unknown = Object.keys(a).filter((k) => k !== '_' && !known.includes(k));
+    if (unknown.length) die(`未知选项 ${unknown.map((k) => '--' + k).join(' ')}（${cmd} 支持: --${known.join(' --')}）`);
+  }
+}
 if (cmd === 'list') cmdList(json);
 else if (cmd === 'estimate') cmdEstimate(a, json);
 else if (cmd === 'mesh') cmdMesh(a, json);

@@ -32,7 +32,7 @@
         "additionalProperties": false,
         "properties": {
           "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp"], "description": "TPMS 曲面族" },
-          "porosity": { "type": "number", "minimum": 0.05, "exclusiveMaximum": 1, "description": "目标孔隙率（0.05 ≤ p < 1；>1 的输入按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。注意：低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。" },
+          "porosity": { "type": "number", "minimum": 0.05, "exclusiveMaximum": 1, "description": "目标孔隙率（0.05 ≤ p < 1；>1 的输入按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。精度（网格实测口径）：R96 Diamond 0.26pp / Gyroid ~1pp，随曲面族与目标值变化；exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），偏差 >2pp 时 CLI 会提示。低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。" },
           "periods": { "type": "integer", "minimum": 1, "maximum": 12, "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素" },
           "resolution": { "type": "integer", "minimum": 48, "maximum": 96, "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 96 对齐平台缓冲池 N³≤1e6 约束；越高孔隙率偏差越小" },
           "container": { "type": "string", "enum": ["cube", "cylinder"], "description": "容器形状，默认 cube。注意：cylinder+diamond+R64 特定 iso 区间存在非流形边（nm≤1940），水密门会 fail-closed 拒产 STL（平台已知缺陷，登记 bugs.md）" },
