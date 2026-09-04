@@ -95,7 +95,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | # | 门禁 | 断言 | # | 门禁 | 断言 |
 |---|---|---|---|---|---|
 | 1 | mesh_audit 几何质量 | 29 案例 | 17 | inverse_design 逆向设计 | 23 |
-| 2 | parity_math 数学同源（py/matlab/平台） | 184 | 18 | poincare_metric 庞加莱映射 | 12 |
+| 2 | parity_math 数学同源（py/matlab/平台） | 185 | 18 | poincare_metric 庞加莱映射 | 12 |
 | 3 | sim_export_check CFD 分块+曲率 | 13 | 19 | cae_verification CAE 验证链 | 25 |
 | 4 | endplate_audit 端板专项 | 26 | 20 | impact_modal 冲击吸能+模态 | 11 |
 | 5 | micro_physics 迂曲度+刚度 | 17 | 21 | ct_reconstruction CT 重构 | 11 |

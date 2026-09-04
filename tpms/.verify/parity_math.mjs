@@ -299,6 +299,30 @@ for (const type of Object.keys(LIT)) {
     if (nxx * (ay*bz-az*by) + nyy * (az*bx-ax*bz) + nzz * (ax*by-ay*bx) < -1e-12) flipped++;
   }
   check('STL: 法线与缠绕自洽（0 翻转）', flipped === 0, `${flipped}/${triCount} 反向`);
+  // 全局定向一致性（2026-09-05 定向传播根治后的门禁化）：共享边两三角绕向必须相反。
+  // 单三角内自洽检测（上条）抓不到跨三角定向冲突——此处按无向边有向配对统计。
+  {
+    // 定长 hex 顶点 key（防分隔符碰撞），共享边有向配对
+    const vtx = (byteOff) => { let t2 = ''; for (let k = 0; k < 12; k++) t2 += dv.getUint8(byteOff + k).toString(16).padStart(2, '0'); return t2; };
+    const eM = new Map();
+    for (let t = 0; t < triCount; t++) {
+      const base = 84 + t * 50 + 12;
+      const vs = [0, 12, 24].map((o) => vtx(base + o));
+      for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) {
+        const fwd = vs[i] < vs[j];
+        const k2 = fwd ? vs[i] + vs[j] : vs[j] + vs[i];
+        let rec = eM.get(k2);
+        if (!rec) { rec = [0, 0]; eM.set(k2, rec); }
+        rec[fwd ? 0 : 1]++;
+      }
+    }
+    let openEdges = 0, misoriented = 0;
+    for (const [, [a, b]] of eM) {
+      if (a + b === 1) openEdges++;
+      else if ((a === 0) !== (b === 0)) misoriented++;
+    }
+    check('STL: 全局定向一致（共享边反向，0 违例）', openEdges === 0 && misoriented === 0, `open=${openEdges} miso=${misoriented} edges=${eM.size}`);
+  }
 }
 
 // ── 2b2. 法线覆盖补全 + needNumericGrad 路径（R2 复验缺口）──
