@@ -66,3 +66,5 @@ docs/paper/latex/*.spl
 # verify 探针产物
 tpms/agent/tpms-diamond-verified.stl
 tpms/agent/*-verified.stl
+# agent 探针/求解产物 STL
+tpms/agent/*.stl

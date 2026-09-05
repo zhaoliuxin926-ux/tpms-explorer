@@ -154,12 +154,12 @@ rmSync(stlPath, { force: true });
     for (const [, [a, b]] of eS) { if (a + b === 1) openS++; else if ((a === 0) !== (b === 0)) misoS++; }
     openS === 0 && misoS === 0 ? ok('solve STL 独立读回复核：open=0 misoriented=0（字节级）') : bad('solve STL 读回', `open=${openS} miso=${misoS}`);
   } catch (e) { bad('solve STL 复核异常', String(e)); }
-  // 10b. 不可达路径：splitp R48 tol 0.05pp → 结构化诊断（reachable=false + suggestions）非静默放弃
+  // 10b.【k 修复后新现实】splitp R48 在 0.05pp 容差下 3 轮收敛（修复前 stall best=0.18pp 判不可达）
   const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '48', '--tolerance', '0.0005', '--max-rounds', '4', '--json');
   let j10b = null;
   try { j10b = JSON.parse(r10b.stdout); } catch { /* 忽略 */ }
-  r10b.status === 3 && j10b?.reachable === false && j10b.unreachable?.reason === 'stall' && Array.isArray(j10b.suggestions) && j10b.best?.deviation < 0.01
-    ? ok('不可达 → 结构化诊断（stall + suggestions + best=0.18pp）') : bad('不可达诊断', JSON.stringify({ s: r10b.status, r: j10b?.reachable, u: j10b?.unreachable?.reason }).slice(-100));
+  r10b.status === 0 && j10b?.reachable === true && j10b.porosityDeviation <= 0.0005 && j10b.watertight === true
+    ? ok(`splitp R48 0.05pp 容差收敛（实测 ${(j10b.porosityDeviation * 100).toFixed(3)}pp，k 修复前 stall@0.18pp）`) : bad('splitp 高精度收敛', JSON.stringify({ s: r10b.status, r: j10b?.reachable, d: j10b?.porosityDeviation }).slice(-100));
   // 10c. solve 参数防呆
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--tolerance', '0.5').status !== 0 ? ok('solve tolerance 越界被拒') : bad('solve tolerance 未拒绝');
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--max-rounds', '0').status !== 0 ? ok('solve max-rounds 越界被拒') : bad('solve max-rounds 未拒绝');
@@ -168,11 +168,18 @@ rmSync(stlPath, { force: true });
 }
 // ── 11. B4.2 不可达判定轮次（显式用例）：高谐波族低分辨率 tol 不可达 → max-rounds 内 stall 判定 ──
 {
+  // 11a.【k 修复后】iwp R48 0.05pp 容差 3 轮收敛（修复前 stall best=23.1pp）
   const r11 = run('solve', '--type', 'iwp', '--porosity', '0.6', '--resolution', '48', '--tolerance', '0.0005', '--max-rounds', '5', '--json');
   let j11 = null;
   try { j11 = JSON.parse(r11.stdout); } catch { /* 忽略 */ }
-  r11.status === 3 && j11?.reachable === false && j11.unreachable?.reason === 'stall' && j11.rounds <= 5 && j11.best?.deviation > 0.05
-    ? ok(`B4.2 不可达判定：iwp R48 stall 于 ${j11.rounds} 轮（best ${(j11.best.deviation * 100).toFixed(1)}pp 表示极限如实报告）`) : bad('B4.2 不可达判定', JSON.stringify({ s: r11.status, r: j11?.reachable, u: j11?.unreachable?.reason }).slice(-100));
+  r11.status === 0 && j11?.reachable === true && j11.porosityDeviation <= 0.0005 && j11.watertight === true
+    ? ok(`B4.2 iwp R48 0.05pp 容差收敛（${j11.rounds} 轮，k 修复前 stall@23.1pp）`) : bad('B4.2 iwp 收敛', JSON.stringify({ s: r11.status, r: j11?.reachable, d: j11?.porosityDeviation }).slice(-100));
+  // 11b. 不可达诊断路径保底：极端容差 + 单轮 → max_rounds 结构化诊断（确定性）
+  const r11b = run('solve', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--tolerance', '0.00005', '--max-rounds', '1', '--json');
+  let j11b = null;
+  try { j11b = JSON.parse(r11b.stdout); } catch { /* 忽略 */ }
+  r11b.status === 3 && j11b?.reachable === false && j11b.unreachable?.reason === 'max_rounds' && Array.isArray(j11b.suggestions)
+    ? ok('不可达诊断路径保底（max_rounds + suggestions 结构化）') : bad('不可达保底', JSON.stringify({ s: r11b.status, u: j11b?.unreachable?.reason }).slice(-100));
 }
 // ── 12. verify 命令回归守卫（此前零覆盖）──
 {

@@ -774,9 +774,14 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         const len2 = gx * gx + gy * gy + gz * gz;
         if (!(len2 > 1e-16)) continue;
         // 可靠性守卫：|f| 远超单步钳位可达量（梯度病态/远离曲面）时跳过，
-        // 防止 f/|g|² 爆炸被限幅转成「满速定向漂移」（slab 下板漂移 2.4 格的根因）
-        if (Math.abs(fC) > 2.4 * hStep * Math.sqrt(len2)) continue;   // 只滤 |g|→0 病态；1.0h 会误杀高曲率合法顶点（diamond −10.5% 实测）
-        let stepN = fC / len2;
+        // 防止 f/|g|² 爆炸被限幅转成「满速定向漂移」。
+        // 【2026-09-06 k 倍单位错误根治】梯度 gx/gy/gz 是对 k·wc 域的中心差分（∂f/∂(k·wc)），
+        // 而 Newton 位移施加在 wc 域：wc 域步长 = fC/(k·len²)。旧实现缺 k 因子 →
+        // 步长放大 k 倍 → 大量顶点被 1.2h 限幅饱和，投影退化为混沌过冲
+        // （= 体积损耗 9~11pp /「投影混沌敏感」/ solve 割线过冲的全部根因，
+        //   归因实验见 bugs.md 2026-09-06 条：iwp R48 网格固相 12.4%→33.8%）。守卫阈值同步乘 k。
+        if (Math.abs(fC) > 2.4 * hStep * k * Math.sqrt(len2)) continue;   // 只滤 |g|→0 病态
+        let stepN = fC / (k * len2);
         // 限幅 1.2h：文献审计建议 0.5h，但实测 0.5h 削减高曲率细杆顶点的
         // 可达行程（diamond −5.8→−10.4%）——折叠防护由 |g|→0 守卫独立承担
         const dispLen = Math.sqrt(len2) * Math.abs(stepN);
