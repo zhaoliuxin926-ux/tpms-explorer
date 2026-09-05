@@ -227,6 +227,8 @@
   }
   @media(max-width:560px){
     .topbar{padding:10px 14px;flex-wrap:nowrap;overflow:hidden}
+    .topbar .brand h1{font-size:1.02rem;white-space:nowrap}
+    .topbar .btn-guide,.topbar button{white-space:nowrap}
     .topbar .pills{display:none}
     .topbar .brand .sub{display:none}
     .stat-overlay{font-size:.7rem;padding:7px 10px}
@@ -365,6 +367,8 @@
   :root.dark .stat-overlay{background:rgba(13,16,21,.6);border-color:rgba(255,255,255,.08);color:#e7ecf3}
   :root.dark .stat-overlay b{color:#fff}
   :root.dark .scene .ds, :root.dark .opt .o-sub{color:var(--ink-3)}
+  /* 激活态副标签落在饱和底色上，必须保持白字（否则 1.21:1 不可读，终审实测） */
+  :root.dark .opt.active .o-sub{color:rgba(255,255,255,.82)}
   :root.dark .ob-card{background:#141922;border-color:rgba(255,255,255,.1)}
   :root.dark .ob-btn.ghost{background:#2a3140;color:var(--ink-2)}
   :root.dark .ob-btn.ghost:hover{background:#333b4d}
