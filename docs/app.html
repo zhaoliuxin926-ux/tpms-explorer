@@ -647,6 +647,10 @@ function buildSurface(type, iso, periods, R, options={}){
         if(!isFinite(v)) nonFiniteCount++;
         if(v<minV) minV=v; if(v>maxV) maxV=v;
       } } }
+  // 物理坐标（归一化到 [-1,1]）：ix/R ∈ [0,1] → px ∈ [-1,1]，供容器边界与混合波前使用。
+  // 【修复】此前声明位于混合块之后，混合路径在 TDZ 内调用 phys 直接抛
+  // "Cannot access 'phys' before initialization"（启用混合即崩，2026-09-05 用户实测）。
+  const phys = (i)=> (i/R)*2 - 1;
   // 【阶段 III】多相混合 Hybrid（与平台 createHybridField 同源）：
   // V_hyb = α·V_A + (1−α)·V_B，α 由波前投影坐标（x/y/z/radial）经 sigmoid/linear 给出。
   // 混合在二分之前完成（与平台一致：二分作用于混合后的场）。
@@ -680,8 +684,6 @@ function buildSurface(type, iso, periods, R, options={}){
           if(vv<minV) minV=vv; if(vv>maxV) maxV=vv;
         } } }
   }
-  // 物理坐标（归一化到 [-1,1]），供容器边界函数使用。ix/R ∈ [0,1] → px ∈ [-1,1]
-  const phys = (i)=> (i/R)*2 - 1;
   // 容器边界函数 F_bound：返回>0 表示在容器外（将被裁掉）
   // 物理坐标 px/py/pz ∈ [-1,1]，容器半宽 1。注意下表面对称用 |pz|-1，不能用 -pz
   // （-pz 在 pz<0 时恒为正，会把整个 -Z 半空间误判为容器外）
