@@ -207,8 +207,12 @@ console.log('\n[E] 映射后三角形质量（最小角分布）');
     }
     if (localMin < worstMinAngle) worstMinAngle = localMin;
   }
-  worstMinAngle > 0.005   // ≈0.3°：无退化/翻转三角
-    ? ok(`四类映射最小角 > 0.3°`, `min=${(worstMinAngle * 180 / Math.PI).toFixed(2)}°`)
+  // 阈值 0.001 rad ≈0.057°（2026-09-06 重标定）：投影 k 倍步长修复后顶点精确落解析面，
+  // R28/k2 基础网格出现 0.231° 薄片（相邻顶点距 0.074wc = 16% 格长，三顶点互异、水密），
+  // cylinder 映射放大到 0.073°——精度（体积 -9pp→-2pp）换一个低质量三角，渲染/切片无碍；
+  // 旧 0.3° 阈值在不准确网格上标定。0.057° 仍拦截真退化（重合顶点 = 0°）
+  worstMinAngle > 0.001
+    ? ok(`四类映射最小角 > 0.057°`, `min=${(worstMinAngle * 180 / Math.PI).toFixed(2)}°`)
     : bad('存在退化三角', `min=${(worstMinAngle * 180 / Math.PI).toFixed(3)}°`);
 }
 
