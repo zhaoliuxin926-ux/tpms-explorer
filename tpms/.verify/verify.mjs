@@ -11,13 +11,28 @@ function log(label, ok, detail=''){ results.push({label, ok, detail}); console.l
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=default','--enable-gpu','--ignore-gpu-blocklist','--enable-webgl', '--enable-unsafe-swiftshader'] });
 
+// CI windows runner 上静态服务器偶发挂起（run48/50/51 失败形态漂移：networkidle→screenshot→
+// reload，环境级不稳定非单点 bug）——导航一律 3 次重试，客户端韧性兜底
+async function gotoRetry(page, url, opts = {}) {
+  for (let a = 0; a < 3; a++) {
+    try { return await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000, ...opts }); }
+    catch (e) { if (a === 2) throw e; await page.waitForTimeout(2500); }
+  }
+}
+async function reloadRetry(page, opts = {}) {
+  for (let a = 0; a < 3; a++) {
+    try { return await reloadRetry(page, { waitUntil: 'domcontentloaded', timeout: 45000, ...opts }); }
+    catch (e) { if (a === 2) throw e; await page.waitForTimeout(2500); }
+  }
+}
+
 // ---- Test 1: 首次进入自动弹出引导（清除 localStorage）----
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {}); // 首访引导卡（750ms 延时+CI 慢机余量）
   const cardVisible = await page.locator('#ob-card').isVisible();
   log('首次进入自动弹出引导卡片', cardVisible);
@@ -34,9 +49,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
 
   const stepTitles = [];
@@ -64,9 +79,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
 
   // 第2步演示孔隙率
@@ -100,9 +115,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
 
   await page.locator('#ob-skip').click();
@@ -110,7 +125,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const stored = await page.evaluate(() => localStorage.getItem('tpms-onboarded'));
   log('跳过后写入 localStorage', stored === '1', `actual=${stored}`);
 
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const again = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('刷新后不再弹', !again);
@@ -122,9 +137,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html?type=diamond&porosity=70', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html?type=diamond&porosity=70', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const popup = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('带 URL 参数时不弹', !popup);
@@ -136,9 +151,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadRetry(page, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
   await page.locator('#ob-skip').click();
   await page.waitForTimeout(400);
@@ -154,7 +169,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 {
   const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   // 不清 localStorage——带参数自然不弹
   await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const statsText = await page.locator('#stats').textContent();
@@ -176,7 +191,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const page = await ctx.newPage();
   let dialogs = 0;
   page.on('dialog', async d => { dialogs++; await d.dismiss(); });
-  await page.goto(BASE + '/app.html?type=gyroid', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html?type=gyroid', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 }).catch(() => {});
   const before = await page.locator('#stats').textContent();
   await page.locator('#hybrid-sect').evaluate(el => { el.open = true; }); // 折叠 section 先展开（2026-09-06 降密度后默认收起）
@@ -199,7 +214,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   let dialogs = 0;
   page.on('dialog', async d => { dialogs++; await d.dismiss(); });
   await page.addInitScript(() => { window.Worker = function (){ throw new Error('worker blocked for test'); }; });
-  await page.goto(BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
   let rendered = true;
   try {
     await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 }).catch(() => {});
