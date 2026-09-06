@@ -10,7 +10,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const DEPLOYED = path.join(ROOT, 'docs/platform');
 const SCREENSHOT = path.join(HERE, 'shots', 'ui-mobile-sheet.png');
-const server = spawn(process.platform === 'win32' ? 'python' : 'python3', ['-m', 'http.server', String(PORT), '--directory', DEPLOYED]);
+const server = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(PORT), DEPLOYED]);
 await new Promise((r) => setTimeout(r, 3500));
 
 const browser = await chromium.launch({
