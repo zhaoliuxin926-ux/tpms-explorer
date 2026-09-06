@@ -49,9 +49,9 @@ function sweepPorts(ports) {
   }
 }
 
-// 最重单门实测 ~253s（数字孪生）；20min 为 4× 余量。门挂死不再拖死整个池
-//（终审 MINOR：原版无超时 + spawn 'error' 无监听，挂死门使 Promise.all 永久悬挂）
-const STEP_TIMEOUT_MS = Number(process.env.STEP_TIMEOUT_MS) || 1_200_000;
+// 最重单门实测 ~253s（数字孪生）；默认 30min——run54 实证 runner 高峰期系统性变慢
+//（重门 306-569s 可膨胀至 1200s+），1200s 上限会误伤真跑的门
+const STEP_TIMEOUT_MS = Number(process.env.STEP_TIMEOUT_MS) || 1_800_000;
 
 function runStep(name, script) {
   return new Promise((resolve) => {
