@@ -18,7 +18,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500); // 750ms 延迟 + buffer
+  await page.waitForTimeout(4000); // 750ms 延迟 + buffer
   const cardVisible = await page.locator('#ob-card').isVisible();
   log('首次进入自动弹出引导卡片', cardVisible);
   await page.screenshot({ path: `${OUT}/01-onboard-start.png` });
@@ -37,7 +37,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
 
   const stepTitles = [];
   for (let i = 0; i < 6; i++) {
@@ -67,7 +67,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
 
   // 第2步演示孔隙率
   await page.locator('#ob-next').click();
@@ -103,7 +103,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
 
   await page.locator('#ob-skip').click();
   await page.waitForTimeout(500);
@@ -111,7 +111,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   log('跳过后写入 localStorage', stored === '1', `actual=${stored}`);
 
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
   const again = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('刷新后不再弹', !again);
 
@@ -125,7 +125,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html?type=diamond&porosity=70', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
   const popup = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('带 URL 参数时不弹', !popup);
 
@@ -139,7 +139,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
   await page.locator('#ob-skip').click();
   await page.waitForTimeout(400);
   await page.locator('#btn-onboard').click();
@@ -156,7 +156,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const page = await ctx.newPage();
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   // 不清 localStorage——带参数自然不弹
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(4000);
   const statsText = await page.locator('#stats').textContent();
   const rendered = /顶点\s*\d/.test(statsText);
   log('3D 渲染正常（顶点数已输出）', rendered, `stats="${statsText.replace(/\s+/g,' ').trim().slice(0,60)}"`);
