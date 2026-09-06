@@ -2005,7 +2005,18 @@ function runMicroPhysics(): void {
 }
 
 // ── UI 事件绑定 ─────────────────────────────────────────────
-function bindUIEvents(): void {
+export function bindUIEvents(): void {
+  bindCoreParamSliders();
+  bindSliceAndSections();
+  bindShareAndExport();
+  bindViewerExtras();
+  bindInverseCtHierStress();
+  bindNeuralManifold();
+  bindHybridCustom();
+  bindKeyboardUndo();
+}
+
+function bindCoreParamSliders(): void { // 核心参数滑块（孔隙率/单元密度/壁厚/端板）
   // 滑块：孔隙率
   const porEl = document.getElementById('porosity') as HTMLInputElement;
   if (porEl) {
@@ -2085,6 +2096,9 @@ function bindUIEvents(): void {
       runPercolation();
     });
   });
+}
+
+function bindSliceAndSections(): void { // 剖切与分区调度
 
   // 权重滑块：由 refreshWeightsUI() 在每次重建权重行时绑定（见 syncUI），
   // 静态绑定会在滑块 DOM 重建后失效，故不在此处绑定。
@@ -2170,6 +2184,9 @@ function bindUIEvents(): void {
     // 按需渲染在自动旋转关闭后会停帧；重新开启时主动续上 RAF。
     requestRender();
   });
+}
+
+function bindShareAndExport(): void { // 分享链接与 URL
 
   document.getElementById('btn-reset')?.addEventListener('click', () => {
     ctx.camera.position.set(2.4, 1.5, 4.6);
@@ -2217,6 +2234,9 @@ function bindUIEvents(): void {
     // 统一走导出中心路径：共享 HD 锁（此前该入口无锁，拖动后 350ms 内导出 preview 网格，两入口产物不一致）
     handleExport('stl');
   });
+}
+
+function bindViewerExtras(): void { // 查看器扩展工具（对比快照/卡尺/剖切导出）
 
   // 导出中心：VTK / VTI / Python / MATLAB / BibTeX / JSON 统一入口
   const exportMenu = document.getElementById('export-menu');
@@ -2321,6 +2341,9 @@ function bindUIEvents(): void {
   document.getElementById('stat-toggle')?.addEventListener('click', () => {
     document.getElementById('statbox')?.classList.toggle('open');
   });
+}
+
+function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引导
 
   // 窗口大小变化
   window.addEventListener('resize', () => {
@@ -2483,6 +2506,9 @@ function bindUIEvents(): void {
     scheduleRebuild(true);
   });
   document.getElementById('stress-anisotropy')?.addEventListener('change', () => scheduleRebuild(false));
+}
+
+function bindNeuralManifold(): void { // 神经场锚点与流形映射
 
   // 【v7.0 Stage I】隐式神经拓扑（SIREN）：启用 + 专家锚点 + 8 维潜在滑块
   document.getElementById('neural-enabled')?.addEventListener('click', () => {
@@ -2599,6 +2625,9 @@ function bindUIEvents(): void {
       scheduleRebuild(false);
     });
   });
+}
+
+function bindHybridCustom(): void { // 多相混合与自定义公式
 
   // 过渡中心 / 宽度滑块（拖动 preview，松手 HD）
   const centerEl = document.getElementById('hybrid-center') as HTMLInputElement;
@@ -2758,6 +2787,9 @@ function bindUIEvents(): void {
     }
   }
 
+}
+
+function bindKeyboardUndo(): void { // 键盘快捷键与撤销
   // ── 键盘快捷键 ─────────────────────────────────────────────
   window.addEventListener('keydown', (e) => {
     // 忽略输入框内的按键
@@ -2885,6 +2917,7 @@ function bindUIEvents(): void {
     }
   });
 }
+
 
 /** 检查孔隙率极值并弹出警告 */
 function checkPorosityWarning(porosity: number): void {
