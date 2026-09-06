@@ -11,12 +11,11 @@
 - ⬜ cover letter：草稿要点——①对标 RegionTPMS 同刊先例 ②差异=验证门禁文化（39 门/1000+ 断言）③exact 求解器与定向传播两处方法论贡献 ④全部声明可由 CI 复跑验证
 
 ## 需用户操作（AI 无法代劳）
-- ⬜ **push 仓库**（本地领先远程多个 commit；GitHub Actions 三平台矩阵即"干净环境可复现"证据）
-- ⬜ repo Settings → Topics 添加：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`
-- ⬜ LICENSE 版权行：`Copyright (c) 2026 TPMS Explorer contributors` 可改为真实署名
-- ⬜ main.tex 作者信息：`Anonymous Author` → 真实姓名/单位（投稿前必须）
-- ⬜ Editorial Manager 注册并提交（投稿系统账号只能本人注册）
-- ⬜ `https://github.com/xxx/tpms` 占位链接改为真实仓库地址（README_EN / MANUSCRIPT）
+- ⬜ **push 仓库**（2026-09-06 实测：本机无任何存储 GitHub 凭据——GCM 无 github.com 记录、gh token 已失效；github.com 直连被阻、仅 Clash 7890 代理可通。**在你自己的终端跑一次 `git push origin main`，GCM 会弹浏览器授权一次**；授权成功后凭据入库，此后的 Actions 核对/topics 均可由 AI 代办）
+- ⬜ repo Settings → Topics：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`（凭据入库后可由 AI 经 GitHub API 代设）
+- ⬜ LICENSE 版权行 + main.tex 作者行（L20 `Anonymous Author`）+ 单位行：真实署名（学术署名须本人定，2026-09-06 询问未获答复，保持现状）
+- ⬜ Editorial Manager 注册并提交（投稿系统账号只能本人注册）；提交号回填本清单与 progress.md
+- ✅ `https://github.com/xxx/tpms` 占位链接 → 已改真实地址 `zhaoliuxin926-ux/tpms-explorer`（MANUSCRIPT.md，2026-09-06）
 
 ## 提交前终检
 - [ ] push 后 GitHub Actions 三平台全绿截图（审稿证据）

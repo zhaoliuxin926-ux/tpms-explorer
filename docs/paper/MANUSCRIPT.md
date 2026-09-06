@@ -27,6 +27,6 @@ TPMS Explorer is an open-source, browser-based platform for parametric design, a
 
 ## Statements
 
-**Availability**: MIT license（仓库根 LICENSE）, https://github.com/xxx/tpms
+**Availability**: MIT license（仓库根 LICENSE）, https://github.com/zhaoliuxin926-ux/tpms-explorer
 **Requirements**: Modern browser (Chrome/Firefox/Safari); WebGPU optional; Node.js ≥ 20 for CI
 **Dependencies**: Three.js r0.185 (bundled); zero other runtime dependencies
