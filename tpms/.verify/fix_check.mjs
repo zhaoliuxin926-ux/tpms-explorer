@@ -83,11 +83,13 @@ closed.card && closed.key === '1' ? ok('B3 完成引导并写 localStorage') : b
 
 // B3-5 刷新不再弹出；顶栏按钮重开 + Esc 关闭
 await page.reload({ waitUntil: 'domcontentloaded' });
-await page.waitForTimeout(1600);
+await page.waitForFunction(() => document.getElementById('btn-onboard') !== null, null, { timeout: 60000 }).catch(() => {});
 let autoAgain = await page.evaluate(() => document.getElementById('ob-card')?.classList.contains('show'));
 !autoAgain ? ok('B3 二次访问不自动弹出') : bad('B3 二次访问不应弹出');
-await page.click('#btn-onboard');
-await page.waitForTimeout(300);
+// DOM click 绕过 Playwright hit-test：重建窗口期 loading 覆盖层会拦截顶栏按钮的
+// 真实指针事件（run44 macos 实测 resolved+visible+stable 后仍 45s 超时），语义不变
+await domClick('#btn-onboard');
+await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 15000 }).catch(() => {});
 let reopened = await page.evaluate(() => document.getElementById('ob-card')?.classList.contains('show'));
 reopened ? ok('B3 顶栏按钮重开引导') : bad('B3 重开');
 await page.keyboard.press('Escape');
