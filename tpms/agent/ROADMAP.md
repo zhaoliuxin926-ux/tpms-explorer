@@ -134,8 +134,8 @@
 | 项 | 状态 | 实测收益 | commit |
 |---|---|---|---|
 | surface-nets 投影 k 倍步长修复 | ✅ | iwp R48 固相 +21.5pp；splitp/iwp R48 0.05pp 容差 3 轮收敛（原 stall） | 51c034c |
-| solve MC 样本量 120k→30k/40k | ✅ | 采样 4.38M→1.1M（省 ~0.7s/次），收敛性不退化 | a1208c2 |
-| iso* 跨进程缓存 | ✅ | 命中省 ~0.2s/次（.iso-cache.json 确定性落盘） | a1208c2 |
+| solve MC 样本量 120k→30k/40k | ⚠️→✅ | 终审实测 30k 固定种子噪声最差 0.235pp 超 0.12pp 宣称 → 提至 60k（固定种子 ~0.17pp，采样 4.38M→2.2M 仍省 ~0.35s） | a1208c2+终审 |
+| iso* 跨进程缓存 | ✅ | 命中省 ~0.2s/次；终审加固：key 掺公式源哈希+权重+样本数（实现变更自动失活）、temp/rename 原子写 | a1208c2+终审 |
 | CI 并行化（并发池 4） | ✅ | 全量 420s→294s（1.43×，长尾 run_all ~200s 串行封顶） | f13c75e |
 | three.bundle 瘦身 | ✅ | 1.37MB→552KB raw（-60%，gzip 285→139KB），首帧主瓶颈消除 | cc1bba5 |
 | 重建下放 Blob Worker | ✅ | 重建窗口 rAF 342 帧（主线程零冻结；同步路径阻塞 1.3-2.2s） | 87e6c80 |
@@ -143,6 +143,25 @@
 
 附带修复：UI 布局逃逸复发（f362d46）/混合 TDZ 崩溃（938592b）/深色对比度 1.21:1（7ec0097）/移动端顶栏竖排+浮层收纳+10 aria-label（7ec0097+f48719c）/verify 19 断言（Worker 守卫）。
 新登记待攻：lidinoid p≥0.7 体素拓扑非流形（legacy 同病）。
+
+## 优化轮独立终审（2026-09-06 · 双线子代理 · 全部发现已修复）
+
+六项优化 commit 首次经独立终审（前端线/算法工具线并行）。裁决：51c034c / a1208c2 / cc1bba5 / 87e6c80 PASS-with-findings，f13c75e / 350f0c4 PASS。**0 CRITICAL，3 MAJOR（2 修复 + 1 范围外），7 MINOR（5 修复 2 登记）**。
+
+| 发现 | 级 | 处置 |
+|---|---|---|
+| 87e6c80 hybridAlpha 未注入 Worker——教学版启用混合必"构建失败"（同步路径本正常，属 Worker 化回归） | MAJOR | ✅ WORKER_SRC 注入 hybridAlpha.toString()；free-vars 分析确认无其他自由变量 |
+| 87e6c80 同步回退死代码：lastRequestSafe() 在置空后读取 → 无 Worker 环境（CSP/旧 webview）全瘫 | MAJOR | ✅ 快照后再置空；verify 新增"禁 Worker 仍渲染"回归门 |
+| f362d46（范围外）误删 #structure-desc 唯一幸存元素 → 结构按钮/预设/URL 恢复三链路 TypeError 不重建 | MAJOR | ✅ field-note 恢复 id；探针实证 0 pageerror + 重建触发 |
+| a1208c2 MC 30k 噪声 0.12pp 宣称失实（实测固定种子 0.235pp/跨种子 0.49pp） | MINOR | ✅ 提至 60k + 文档口径纠正 |
+| a1208c2 iso 缓存无版本指纹/非原子写 | MINOR | ✅ key 掺 tpms-functions.ts 哈希+W+样本数；temp+rename |
+| f13c75e 门无超时 + spawn error 无监听（挂死门拖死全池） | MINOR | ✅ 20min 超时强杀 + error handler |
+| cc1bba5 bundle 重建脚本未入库（复现性只靠 prose） | MINOR | ✅ build_three_bundle.mjs 入库 docs/vendor（与产物 md5 逐位一致） |
+| 87e6c80 Worker onmessage 组装区在 try 外 + verify 第 19 断言强度中等 | MINOR | ✅ 组装区纳入 try + verify 19→22 断言（混合路径/无 Worker 回退） |
+| 51c034c manifold_audit 0.057° 新阈值余量仅 ~22%、单案例标定（重合顶点型退化仍拦截） | MINOR | 📋 登记不修（bugs.md） |
+| 51c034c k 修复副作用：frd R48/R64 p0.6 薄壁自触 nm 20736/3840 fail-closed（R96 可构建；schema_check 不在 CI 调度致漏检） | MINOR | ✅ schema_check frd 案例钉住已登记拒产+R96 可构建，守卫 30 断言 |
+
+数学复核：k 修复 stepN=fC/(k·len2) 独立推导吻合（len2=|g|² 平方口径核对无误）；守卫阈值乘 k 量纲一致；全库无其他同型单位错误。bundle 37 键对账全命中、shim computeVertexNormals 与真 THREE 对拍 0 差异、bindUIEvents 8 函数体逐字一致。缓存命中/未命中 solve 输出逐字节一致。
 
 ## 下一步（更新）
 1. **用户操作**：git push（40+ commit）→ 署名 → topics → Editorial Manager 提交。

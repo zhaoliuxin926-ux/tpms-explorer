@@ -522,7 +522,7 @@
           <button class="opt" data-structure="shell">等厚双壳<span class="o-sub">Shell</span></button>
           <button class="opt" data-structure="gradient_shell">梯度双壳<span class="o-sub">Gradient</span></button>
         </div>
-        <div class="field-note">实体网络：把等值面一侧填成实体——截断 TPMS 的 solid 表示（严格的 TPMS 是 C=0 的零厚度极小曲面），材料集中在等值面一侧。</div>
+        <div class="field-note" id="structure-desc">实体网络：把等值面一侧填成实体——截断 TPMS 的 solid 表示（严格的 TPMS 是 C=0 的零厚度极小曲面），材料集中在等值面一侧。</div>
       </details>
       <details class="sect" id="hybrid-sect">
         <summary class="sect-h">多相混合拓扑 (Hybrid TPMS)</summary>
@@ -1707,21 +1707,28 @@ const THREE = {
   }
 };
 `;
-      const src = WORKER_SRC + buildSurface.toString() + `;
+      // buildSurface 的自由变量必须全部在此注入（2026-09-06 终审：TS parser 全量分析仅
+      // hybridAlpha 一个；改动 buildSurface 引用新模块级函数时必须同步追加，否则 Worker 内
+      // ReferenceError 且被 onmessage catch 吞成"构建失败"弹窗）。
+      const src = WORKER_SRC
+        + 'const hybridAlpha = ' + hybridAlpha.toString() + ';\n'
+        + buildSurface.toString() + `;
 self.onmessage = (e) => {
   const d = e.data;
-  let res;
-  try { res = buildSurface(d.type, d.iso, d.periods, d.R, d.options); }
-  catch (err) { self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: false, error: String(err && err.message || err) }); return; }
-  const g = res.geo;
-  const pos = g.attributes.position.array;
-  const nrm = g.attributes.normal ? g.attributes.normal.array : null;
-  const idx = g.index && (g.index.array ? g.index.array : g.index);
-  self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: true,
-    bs: { positions: pos, normals: nrm, indices: idx, vertCount: res.vertCount, triCount: res.triCount,
-          porosityEstimate: res.porosityEstimate, isoUsed: res.isoUsed, tEffBase: res.tEffBase,
-          meshSolidFraction: res.meshSolidFraction, solidEstimate: res.solidEstimate } },
-    [pos.buffer].concat(nrm ? [nrm.buffer] : []).concat(idx && idx.buffer ? [idx.buffer] : []));
+  try {
+    const res = buildSurface(d.type, d.iso, d.periods, d.R, d.options);
+    const g = res.geo;
+    const pos = g.attributes.position ? g.attributes.position.array : new Float32Array(0);
+    const nrm = g.attributes.normal ? g.attributes.normal.array : null;
+    const idx = g.index && (g.index.array ? g.index.array : g.index);
+    self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: true,
+      bs: { positions: pos, normals: nrm, indices: idx, vertCount: res.vertCount, triCount: res.triCount,
+            porosityEstimate: res.porosityEstimate, isoUsed: res.isoUsed, tEffBase: res.tEffBase,
+            meshSolidFraction: res.meshSolidFraction, solidEstimate: res.solidEstimate } },
+      [pos.buffer].concat(nrm ? [nrm.buffer] : []).concat(idx && idx.buffer ? [idx.buffer] : []));
+  } catch (err) {
+    self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: false, error: String(err && err.message || err) });
+  }
 };`;
       rebuildWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       rebuildWorker.onerror = () => {
@@ -1789,10 +1796,11 @@ function rebuild(preview=false){
     w.postMessage({ reqId, ...lastRequest });
     return true;
   }
-  lastRequest = null;
-  return rebuildSync(lastRequestSafe());
+  // 先取快照再置空：lastRequest 属于本次重建的入参，置空后不可再读（终审 MAJOR：原
+  // lastRequestSafe() 在置空后读取，无 Worker 环境恒 null → rebuildSync 抛 TypeError）
+  const rq = lastRequest; lastRequest = null;
+  return rebuildSync(rq);
 }
-function lastRequestSafe(){ return lastRequest; }
 function rebuildSync(rq){
   let bs;
   try {

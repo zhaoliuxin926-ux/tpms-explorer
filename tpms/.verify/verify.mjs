@@ -169,9 +169,49 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await ctx.close();
 }
 
+// ---- Test 8: 混合模式重建（2026-09-06 终审 MAJOR 回归守卫：buildSurface 自由变量
+// hybridAlpha 必须注入 Worker，否则启用混合后 Worker 内 ReferenceError → "构建失败"弹窗）----
+{
+  const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
+  const page = await ctx.newPage();
+  let dialogs = 0;
+  page.on('dialog', async d => { dialogs++; await d.dismiss(); });
+  await page.goto(BASE + '/app.html?type=gyroid', { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 20000 });
+  const before = await page.locator('#stats').textContent();
+  await page.locator('#hybrid-sect').evaluate(el => { el.open = true; }); // 折叠 section 先展开（2026-09-06 降密度后默认收起）
+  await page.locator('#hybrid-enabled').check();
+  let statsChanged = true;
+  try {
+    await page.waitForFunction(prev => document.getElementById('stats').textContent !== prev, before, { timeout: 20000 });
+  } catch (_){ statsChanged = false; }
+  const workerAlive = await page.evaluate(() => window.__workerMode === true);
+  log('混合模式重建无报错弹窗（hybridAlpha Worker 注入）', dialogs === 0, `dialogs=${dialogs}`);
+  log('混合模式几何更新且 Worker 未降级', statsChanged && workerAlive, `changed=${statsChanged} workerAlive=${workerAlive}`);
+  await ctx.close();
+}
+
+// ---- Test 9: 无 Worker 环境同步回退（2026-09-06 终审 MAJOR 回归守卫：Worker 构造失败时
+// 同步路径必须用本次重建入参跑通；CSP 无 blob: / 旧 webview 触发面）----
+{
+  const ctx = await browser.newContext({ viewport: { width: 1480, height: 900 } });
+  const page = await ctx.newPage();
+  let dialogs = 0;
+  page.on('dialog', async d => { dialogs++; await d.dismiss(); });
+  await page.addInitScript(() => { window.Worker = function (){ throw new Error('worker blocked for test'); }; });
+  await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
+  let rendered = true;
+  try {
+    await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 25000 });
+  } catch (_){ rendered = false; }
+  log('无 Worker 环境同步回退渲染正常', rendered && dialogs === 0, `rendered=${rendered} dialogs=${dialogs}`);
+  await page.screenshot({ path: `${OUT}/04-sync-fallback.png` });
+  await ctx.close();
+}
+
 await browser.close();
 
-if (results.length < 19) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 18（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+if (results.length < 22) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 22（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 const failed = results.filter(r => !r.ok);
 console.log('\n==== SUMMARY ====');
 console.log(`PASS ${results.length - failed.length} / ${results.length}`);
