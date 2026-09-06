@@ -163,8 +163,27 @@
 
 数学复核：k 修复 stepN=fC/(k·len2) 独立推导吻合（len2=|g|² 平方口径核对无误）；守卫阈值乘 k 量纲一致；全库无其他同型单位错误。bundle 37 键对账全命中、shim computeVertexNormals 与真 THREE 对拍 0 差异、bindUIEvents 8 函数体逐字一致。缓存命中/未命中 solve 输出逐字节一致。
 
+## CI 三平台转绿轮（2026-09-06 · 用户首次 push 触发 · 六层存量缺陷清零）
+
+GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 push 早于 9/5，无人触发故无人知晓）；用户 push 后 run34-44 连续十红，逐层日志取证修复，run 45 首次三平台全绿。投稿"干净环境可复现"证据链自此为真。
+
+| 层 | 根因 | 波及 | commit |
+|---|---|---|---|
+| 1 | 40 门自带打包引导硬编码 `rolldown.cmd` | Linux/macOS 每门 0.0s 秒崩 | 762520d |
+| 2 | playwright 只装在本地 gitignored 目录；numpy 缺失 | 5 个 UI 套件 ERR_MODULE_NOT_FOUND；2 个 codegen 门 | 2fd0cde |
+| 3 | 6 脚本硬编码 Windows chromePath；verify 固定 1.5s 等待慢机不够 | ui_jump_check + run_all | 9e1254b |
+| 4 | fix_check 固定 2.5s 早于工程版 init（750ms 引导延时未到即采样） | fix_check B3 链 | 99183a7 |
+| 5 | run_all 静态服务器强制反斜杠路径（win32 假设）→ 非 win `--directory` 指向不存在目录，**监听正常但全部 404**，5 套件拿空页（ready:complete 无 canvas 零报错） | run_all 全部子套件 | 5eb6322 |
+| 6a | Chrome≥137 需 `--enable-unsafe-swiftshader`（旧旗标被忽略→软件 WebGL 创建失败→boot-error 兜底→引导卡 DOM 不存在） | verify/fix_check 时红时绿 | 8e2b8bd |
+| 6b | WGSL 逐字比较撞 windows autocrlf（CRLF vs LF 差值=行数）；`python` 命令 macos 不存在（5 处 spawn）；numpy 装进与 spawn 不同的解释器 | webgpu_parity/gpu_plasticity/hybrid/custom_equation | a338fd2 |
+| 7 | UI 门禁静态服务 python 依赖链终结：零依赖 node static-server.mjs（手工解析 req.url——`new URL('//app.html')` 协议相对陷阱恰为 BASE 尾斜杠拼接形状）；fix_check 顶栏按钮 DOM click（loading 覆盖层拦截 hit-test） | run_all/ui_jump/ui_mobile/fix_check | df60c1f + c218541 |
+
+收官证据：**run 45 三平台全 success**（ubuntu/windows/macos）https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34025777466 。本机每步均有对应套件复验（run_all 6/6、verify 22/22、fix_check 23/23、webgpu_parity 43/43、ui_jump 7/7）。
+
+教训沉淀：①本机全绿 + CI 全红可共存数日——内核/门禁改动后必须在真 CI 上复验；②node 门禁链路里每一个 python/平台假设（路径分隔符、命令存在性、解释器版本、行尾）都是潜在 CI 假红；③条件等待必须按测试语义选目标（onboarding 等卡、渲染等 stats），固定 sleep 在 2 核慢机上是抛硬币；④逐字比较文件前先归一化行尾；⑤失败输出别过滤太狠（崩溃栈不在 FAIL 行里）。
+
 ## 下一步（更新）
-1. **用户操作**：git push（40+ commit）→ 署名 → topics → Editorial Manager 提交。
+1. **用户操作**：署名三项（作者拼写/单位/LICENSE 版权行）→ Editorial Manager 注册提交 → 回填投稿号。
 2. B-t3 LLM 接入（等 key）。
 3. 可选深水区：surface-nets 场离散原子化（R48/k6 仅 1165 互异场值）的分辨率补偿、lidinoid 高孔隙拓扑、cap 段 Map→TypedArray（再省 1.2s/R96）。
 
