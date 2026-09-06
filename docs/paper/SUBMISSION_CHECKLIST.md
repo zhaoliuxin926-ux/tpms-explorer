@@ -13,7 +13,8 @@
 
 ## 需用户操作（AI 无法代劳）
 - ✅ **push 仓库**（2026-09-06 完成：用户交互授权一次后 50+ commit 全部上远程；此后 push 由 AI 以入库凭据代办）
-- ✅ **GitHub Actions 三平台全绿**（run 45：ubuntu/windows/macos 全 success；2026-09-06 自 CI 首启以来首次全绿——存量六层平台缺陷清零，见 tpms/agent/ROADMAP.md "CI 三平台转绿轮"）
+- ✅ **GitHub Actions 三平台全绿**（run 45：ubuntu/windows/macos 全 success，commit c218541；2026-09-06 自 CI 首启以来首次全绿——存量六层平台缺陷清零 + flake 加固层，见 tpms/agent/ROADMAP.md "CI 三平台转绿轮"）
+  ⚠️ 2026-09-06 午后 GitHub runner 系统性慢化（同门耗时 3-6 倍膨胀，重门/run_all 1800s 超时强杀，run 48-56 交替红），HEAD 的 CI 待 runner 恢复后重跑确认——若需最新 commit 的绿证，在 Actions 页对 HEAD 手动 Re-run 或等夜间窗口
 - ✅ **repo Topics**：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`（经 GitHub API 设置并公开复核）
 - ⬜ LICENSE 版权行 + main.tex 作者行（L20 `Anonymous Author`）+ 单位行：真实署名（**投稿前必须**；署名三项信息 2026-09-06 已向用户征集，待答复）
 - ⬜ Editorial Manager 注册并提交（投稿系统账号只能本人注册）；提交号回填本清单与 progress.md

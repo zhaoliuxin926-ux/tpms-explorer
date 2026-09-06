@@ -163,9 +163,23 @@
 
 数学复核：k 修复 stepN=fC/(k·len2) 独立推导吻合（len2=|g|² 平方口径核对无误）；守卫阈值乘 k 量纲一致；全库无其他同型单位错误。bundle 37 键对账全命中、shim computeVertexNormals 与真 THREE 对拍 0 差异、bindUIEvents 8 函数体逐字一致。缓存命中/未命中 solve 输出逐字节一致。
 
-## CI 三平台转绿轮（2026-09-06 · 用户首次 push 触发 · 六层存量缺陷清零）
+## CI 三平台转绿轮（2026-09-06 · 用户首次 push 触发 · 六层存量缺陷清零 + flake 加固层）
 
 GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 push 早于 9/5，无人触发故无人知晓）；用户 push 后 run34-44 连续十红，逐层日志取证修复，run 45 首次三平台全绿。投稿"干净环境可复现"证据链自此为真。
+
+**flake 加固层（run48-56，午后 GitHub runner 系统性慢化 3-6 倍背景）**：
+| 层 | 根因 | 修复 |
+|---|---|---|
+| 7 | verify 16 处 networkidle 慢机永不达成 | → domcontentloaded + 条件等待全覆盖（b91d16b） |
+| 8 | page.screenshot 30s 超时（swiftshader 合成器慢机不出帧，headless-gpu 老坑） | 截图降级产物非判据：15s+catch（8d9d172） |
+| 9 | 导航单次失败即崩（失败形态漂移：networkidle→screenshot→reload） | goto/reload 统一 3 次重试（98b65a5） |
+| 10 | **探针 A 实锤 python http.server 在 windows 裸并发丢 49%**（diag_server_windows.mjs SERVER-LAYER；旧"六连绿"是页面轻的假象）；探针 B node+Chromium 30 次零失败 | 三平台统一 node static-server（72e1d8a 分派错误已回撤，04894cc） |
+| 11 | run54 重门 1200s 被强杀（runner 高峰慢化） | STEP_TIMEOUT 1800s（04894cc）；run56 仍 1800s 超时 → **环境问题非代码问题**，待 runner 恢复 |
+| 12 | run55 run_all 启动即崩（join→path.join 被批量改写回退） | 一行修复（7b06780） |
+
+run 56 终态：windows 重门+三平台 run_all 全部 1800s 超时——同门此前 250-570s，**runner 当日性能劣化 3-6 倍**，继续循环无意义。**投稿证据用 run 45**；HEAD（7b06780+）待 runner 恢复后 workflow_dispatch 重跑确认。诊断资产留存：diag_server_windows.mjs（分层探针，可复跑）。
+
+教训沉淀：①本机全绿 + CI 全红可共存数日——内核/门禁改动后必须在真 CI 上复验；②node 门禁链路里每一个 python/平台假设（路径分隔符、命令存在性、解释器版本、行尾）都是潜在 CI 假红；③条件等待必须按测试语义选目标（onboarding 等卡、渲染等 stats），固定 sleep 在 2 核慢机上是抛硬币；④逐字比较文件前先归一化行尾；⑤失败输出别过滤太狠（崩溃栈不在 FAIL 行里）；⑥**平台分派要用探针数据不能用历史绿run 归因**（页面负载变化会让"稳定组合"翻车）；⑦runner 性能是第三个变量——代码不变也可能全红，超时上限要按最坏 Runner 日校准。
 
 | 层 | 根因 | 波及 | commit |
 |---|---|---|---|
