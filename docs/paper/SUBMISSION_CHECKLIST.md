@@ -4,11 +4,12 @@
 
 ## 材料
 - ✅ 主稿：`docs/paper/latex/main.tex`（pdflatex 三连编译通过，PDF 112KB，无错误）
+- ✅ References：7 条 thebibliography（2026-09-06 补——原稿零引用为 desk reject 硬伤；RegionTPMS DOI 经 doi.org 核对，正文 7 处 authoryear 行内引用，pdftotext 逐条验证渲染）
 - ✅ 摘要导览：`docs/paper/MANUSCRIPT.md`（与主稿同步）
+- ✅ Cover letter：`docs/paper/COVER_LETTER.md` 完整稿
 - ✅ LICENSE：仓库根 MIT
-- ✅ 可复现：`npm install && npm run test:all` → 39/39 门禁（CI 三平台矩阵 .github/workflows/ci.yml）
+- ✅ 可复现：`npm install && npm run test:all` → 39/39 门禁（CI 三平台矩阵 .github/workflows/ci.yml，**run 45 起三平台实测全绿**）
 - ⬜ figures/：现有图是否覆盖新特性（定向传播前后对比图、exact 求解器流程图可加分）——建议投稿前补 1~2 张
-- ✅ cover letter：`docs/paper/COVER_LETTER.md` 完整稿（2026-09-06；对标 RegionTPMS / 验证门禁文化 / exact 求解器+k 修复两方法论贡献 / 四声明；署名占位待定稿后同步）
 
 ## 需用户操作（AI 无法代劳）
 - ✅ **push 仓库**（2026-09-06 完成：用户交互授权一次后 50+ commit 全部上远程；此后 push 由 AI 以入库凭据代办）
