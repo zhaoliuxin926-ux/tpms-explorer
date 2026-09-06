@@ -23,12 +23,10 @@ const suites = [
 ];
 
 function startServer(port, dir) {
-  // 2026-09-06 CI 终审定位：原实现 dir.replace(/\//g,'\\') 强制反斜杠（win32 假设），
-  // Linux/macOS 上 --directory 指向不存在的 'docs\platform'——http.server 照常监听
-  // 但所有请求 404（run39-41 全部 run_all 子套件空页且零报错的根因）。
-  // 正斜杠 Windows python 同样接受，直接传原生路径；非 win 用 python3。
-  const bin = process.platform === 'win32' ? 'python' : 'python3';
-  const p = spawn(bin, ['-m', 'http.server', String(port), '--directory', dir], {
+  // 2026-09-06 CI 终审定案：python http.server 的跨平台 spawn 差异（win32 假设反斜杠路径、
+  // macos 无 python 命令）连续制造三层 CI 假红——改用零依赖 node 静态服务器（static-server.mjs），
+  // 三平台行为一致。绑定 127.0.0.1（macos 下 localhost 可能先解析 ::1 而服务器只听 IPv4）。
+  const p = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(port), dir], {
     stdio: 'ignore', detached: false,
   });
   p.on('error', () => { /* spawn 失败由 waitPort 超时兜底报错 */ });
@@ -51,7 +49,8 @@ function runSuite({ name, cmd, env }) {
       const isResultFmt = /== RESULT:/.test(out);
       const summary = isResultFmt && m ? `${m[1]} PASS / ${m[2]} FAIL` : m ? `${m[1]} / ${m[2]} 全过` : `exit=${code}`;
       console.log(`[${code === 0 ? 'OK ' : 'ERR'}] ${name} — ${summary}`);
-      if (code !== 0) console.log(out.split('\n').filter(l => l.includes('FAIL')).slice(0, 5).join('\n'));
+      if (code !== 0) console.log(out.split('\n').filter(l => l.includes('FAIL')).slice(0, 5).join('\n')
+        + '\n' + out.split('\n').slice(-40).join('\n')); // 失败套件输出末 40 行：崩溃栈不被 FAIL 过滤吞掉（2026-09-06 windows verify 取证教训）
       resolve(code === 0);
     });
   });
