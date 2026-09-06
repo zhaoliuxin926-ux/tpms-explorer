@@ -11,13 +11,14 @@
 - ✅ cover letter：`docs/paper/COVER_LETTER.md` 完整稿（2026-09-06；对标 RegionTPMS / 验证门禁文化 / exact 求解器+k 修复两方法论贡献 / 四声明；署名占位待定稿后同步）
 
 ## 需用户操作（AI 无法代劳）
-- ⬜ **push 仓库**（2026-09-06 实测：本机无任何存储 GitHub 凭据——GCM 无 github.com 记录、gh token 已失效；github.com 直连被阻、仅 Clash 7890 代理可通。**在你自己的终端跑一次 `git push origin main`，GCM 会弹浏览器授权一次**；授权成功后凭据入库，此后的 Actions 核对/topics 均可由 AI 代办）
-- ⬜ repo Settings → Topics：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`（凭据入库后可由 AI 经 GitHub API 代设）
-- ⬜ LICENSE 版权行 + main.tex 作者行（L20 `Anonymous Author`）+ 单位行：真实署名（学术署名须本人定，2026-09-06 询问未获答复，保持现状）
+- ✅ **push 仓库**（2026-09-06 完成：用户交互授权一次后 50+ commit 全部上远程；此后 push 由 AI 以入库凭据代办）
+- ✅ **GitHub Actions 三平台全绿**（run 45：ubuntu/windows/macos 全 success；2026-09-06 自 CI 首启以来首次全绿——存量六层平台缺陷清零，见 tpms/agent/ROADMAP.md "CI 三平台转绿轮"）
+- ✅ **repo Topics**：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`（经 GitHub API 设置并公开复核）
+- ⬜ LICENSE 版权行 + main.tex 作者行（L20 `Anonymous Author`）+ 单位行：真实署名（**投稿前必须**；署名三项信息 2026-09-06 已向用户征集，待答复）
 - ⬜ Editorial Manager 注册并提交（投稿系统账号只能本人注册）；提交号回填本清单与 progress.md
 - ✅ `https://github.com/xxx/tpms` 占位链接 → 已改真实地址 `zhaoliuxin926-ux/tpms-explorer`（MANUSCRIPT.md，2026-09-06）
 
 ## 提交前终检
-- [ ] push 后 GitHub Actions 三平台全绿截图（审稿证据）
+- [x] GitHub Actions 三平台全绿（run 45，2026-09-06）：https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34025777466
 - [ ] main.pdf 人眼通读一遍（图表编号、引用、作者信息）
-- [ ] 仓库根 `git status` 干净
+- [x] 仓库根 `git status` 干净（2026-09-06 复核）
