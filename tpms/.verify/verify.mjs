@@ -161,13 +161,17 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const rendered = /顶点\s*\d/.test(statsText);
   log('3D 渲染正常（顶点数已输出）', rendered, `stats="${statsText.replace(/\s+/g,' ').trim().slice(0,60)}"`);
   await page.screenshot({ path: `${OUT}/03-render-check.png` });
+  // 2026-09-06 Worker 迁移回归守卫：重建走 Worker 路径（主线程不阻塞架构）
+  await page.waitForTimeout(400);
+  const workerMode = await page.evaluate(() => window.__workerMode === true);
+  log('重建走 Worker 路径（主线程不阻塞架构）', workerMode);
 
   await ctx.close();
 }
 
 await browser.close();
 
-if (results.length < 18) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 18（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+if (results.length < 19) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 18（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 const failed = results.filter(r => !r.ok);
 console.log('\n==== SUMMARY ====');
 console.log(`PASS ${results.length - failed.length} / ${results.length}`);
