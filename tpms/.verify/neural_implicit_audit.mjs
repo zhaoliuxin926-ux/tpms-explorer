@@ -29,7 +29,7 @@ const BUNDLE = join(tmpdir(), 'tpms_neural_audit_bundle.mjs');
     `export { createNeuralField, sanitizeLatent, mixtureWeights, expertLipschitzBound, expertGradientSup, expertCount, NEURAL_EXPERT_NAMES } from ${JSON.stringify(join(PLATFORM, 'src/core/neural-implicit-field.ts'))};`,
     `export { TPMS_FUNCTIONS } from ${JSON.stringify(join(PLATFORM, 'src/core/tpms-functions.ts'))};`,
   ].join('\n'));
-  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
+  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }

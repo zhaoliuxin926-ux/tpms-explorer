@@ -22,7 +22,7 @@ function bundle(exportLines, name) {
   const entry = join(tmpdir(), `ns29_${name}_entry.ts`);
   writeFileSync(entry, exportLines.join('\n'));
   const out = join(tmpdir(), `ns29_${name}_bundle.mjs`);
-  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
+  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${out}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }

@@ -14,7 +14,7 @@ const BUNDLE = tmpdir() + '/tpms_evaluator_check_bundle.mjs';
 {
   const entry = tmpdir() + `/tpms_evaluator_check_entry_${process.pid}.ts`;
   writeFileSync(entry, `export { compileCustomFormula, getTpmsFunction, getDefaultWeights } from ${JSON.stringify(PLATFORM + '/src/core/tpms-functions.ts')};`);
-  const rolldown = PLATFORM + '/node_modules/.bin/rolldown.cmd';
+  const rolldown = PLATFORM + '/node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : '');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
   try { rmSync(entry, { force: true }); } catch { /* 忽略 */ }

@@ -14,7 +14,7 @@ writeFileSync(entry, [
   `export * from ${JSON.stringify(join(PLATFORM, 'src/state.ts'))};`,
   `export { parseURLParams } from ${JSON.stringify(join(PLATFORM, 'src/url-params.ts'))};`,
 ].join('\n'));
-const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
+const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
 if (!existsSync(rolldown)) {
   console.error('rolldown 不存在:', rolldown);
   process.exit(1);

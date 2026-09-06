@@ -11,7 +11,7 @@ const PLATFORM = join(HERE, '../tpms-platform');
 const entry = join(tmpdir(), 'tpms_worker_bridge_audit_entry.ts');
 const bundle = join(tmpdir(), 'tpms_worker_bridge_audit_bundle.mjs');
 writeFileSync(entry, `export * from ${JSON.stringify(join(PLATFORM, 'src/worker/worker-bridge.ts'))};`);
-const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
+const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
 if (!existsSync(rolldown)) {
   console.error('rolldown 不存在:', rolldown);
   process.exit(1);
