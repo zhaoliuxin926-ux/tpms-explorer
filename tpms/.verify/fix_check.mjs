@@ -10,7 +10,7 @@ const bad = (name, info = '') => { fail++; console.log('FAIL', name, info); };
 
 const browser = await chromium.launch({
   channel: 'chrome', executablePath: process.platform === 'win32' ? chromePath : undefined,
-  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader'],
+  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const page = await ctx.newPage();
@@ -22,15 +22,19 @@ page.on('console', m => { if (m.type() === 'error') errors.push('console.error: 
 await page.goto(BASE, { waitUntil: 'domcontentloaded' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'domcontentloaded' });
-// 首屏重建 + 引导 750ms 延时：CI 慢机上 bundle 解析+init 远超固定 2.5s（run39 实测 B3 链
-// 整段 undefined 灭绝的根因）——改条件等卡可见，超时后仍落到下方断言如实记失败
-await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 20000 }).catch(() => {});
+// 首屏重建 + 引导 750ms 延时：CI 2 核软件渲染下工程版 init（PMREM 环境）可远超本地耗时
+//（run39/40 实测 B3 链整段灭绝）——条件等卡可见 120s，超时后仍落到下方断言如实记失败
+await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 120000 }).catch(() => {});
 
 // B3-1 首访自动弹出引导
 let ob = await page.evaluate(() => ({
   show: document.getElementById('ob-card')?.classList.contains('show'),
   step1: document.querySelector('.ob-step')?.textContent,
   title: document.querySelector('#ob-card h4')?.textContent,
+  cardEl: !!document.getElementById('ob-card'),
+  canvas: !!document.querySelector('canvas'),
+  bootErr: !!document.querySelector('#boot-error,[data-boot-error]'),
+  ready: document.readyState,
 }));
 ob.show && /第 1 步 \/ 共 6/.test(ob.step1 || '') && /欢迎/.test(ob.title || '')
   ? ok('B3 首访自动弹出第 1/6 步') : bad('B3 首访自动弹出', JSON.stringify(ob));
@@ -42,7 +46,7 @@ try {
   await page.waitForFunction(() => {
     const s = document.getElementById('ob-spot');
     return !!s && s.classList.contains('show') && (s.offsetWidth || 0) > 50 && (s.offsetHeight || 0) > 50;
-  }, null, { timeout: 10000 });
+  }, null, { timeout: 30000 });
   spot = { show: true, ok: true };
 } catch {
   spot = await page.evaluate(() => {
