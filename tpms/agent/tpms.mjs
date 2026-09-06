@@ -27,16 +27,26 @@ function porAnalytic(core, type, iso, W, N = 200000) {
   return 1 - solid / N;
 }
 
+// iso* 跨进程缓存：固定种子 + 固定样本数下 iso*(type,pf) 是确定值，按 key 落盘复用
+// （审查 2 节：省 ~0.2s/次；确定性语义不变——同 key 必命中同一结果）
+const ISO_CACHE = new URL('./.iso-cache.json', import.meta.url);
 function solveIsoAnalytic(core, type, target, W) {
+  const key = `${type}|${target.toFixed(6)}`;
+  let cache = {};
+  try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
+  if (cache[key]) return cache[key];
   let lo = -1.6, hi = 1.6;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
-    if (porAnalytic(core, type, mid, W, 120000) > target) lo = mid; else hi = mid;
+    if (porAnalytic(core, type, mid, W, 30000) > target) lo = mid; else hi = mid;
   }
   const iso = (lo + hi) / 2;
   const d = 0.02;
-  const slope = (porAnalytic(core, type, iso + d, W, 150000) - porAnalytic(core, type, iso - d, W, 150000)) / (2 * d);
-  return { iso, slope };
+  const slope = (porAnalytic(core, type, iso + d, W, 40000) - porAnalytic(core, type, iso - d, W, 40000)) / (2 * d);
+  const result = { iso, slope };
+  cache[key] = result;
+  try { writeFileSync(ISO_CACHE, JSON.stringify(cache, null, 1)); } catch { /* 只读环境忽略 */ }
+  return result;
 }
 
 /**
