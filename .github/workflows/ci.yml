@@ -31,6 +31,17 @@ jobs:
         working-directory: tpms/tpms-platform
         run: npm ci
 
+      # UI 门禁依赖 playwright（本地装在 tpms/.verify/node_modules，gitignored 不随仓库走）
+      # --no-save + --no-package-lock：不动 package-lock（防 @emnapi/* optional 条目被改写，历史教训）
+      - name: Install playwright (UI gates)
+        working-directory: tpms/.verify
+        run: npm install --no-save --no-package-lock playwright@1.61.1
+
+      # hybrid_audit / custom_equation_audit 的代码生成对拍脚本 import numpy
+      # （--break-system-packages 兜底 ubuntu-24.04 的 PEP 668 外部托管限制）
+      - name: Install numpy (codegen gates)
+        run: pip3 install numpy || pip3 install --break-system-packages numpy
+
       - name: Type check
         working-directory: tpms/tpms-platform
         run: npx tsc --noEmit
