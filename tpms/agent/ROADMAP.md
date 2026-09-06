@@ -126,3 +126,26 @@
 - [ ] B5.4 topics 手动添加（push 后）：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing
 
 ### 阶段 C（3~6 月，B 交付后再细化——维持原清单：region 分区梯度支架 / 曲面库扩 19 族 / 实验数据闭环 / 社区机制）
+
+---
+
+## 优化推进轮（2026-09-06 · 六项全部落地）
+
+| 项 | 状态 | 实测收益 | commit |
+|---|---|---|---|
+| surface-nets 投影 k 倍步长修复 | ✅ | iwp R48 固相 +21.5pp；splitp/iwp R48 0.05pp 容差 3 轮收敛（原 stall） | 51c034c |
+| solve MC 样本量 120k→30k/40k | ✅ | 采样 4.38M→1.1M（省 ~0.7s/次），收敛性不退化 | a1208c2 |
+| iso* 跨进程缓存 | ✅ | 命中省 ~0.2s/次（.iso-cache.json 确定性落盘） | a1208c2 |
+| CI 并行化（并发池 4） | ✅ | 全量 420s→294s（1.43×，长尾 run_all ~200s 串行封顶） | f13c75e |
+| three.bundle 瘦身 | ✅ | 1.37MB→552KB raw（-60%，gzip 285→139KB），首帧主瓶颈消除 | cc1bba5 |
+| 重建下放 Blob Worker | ✅ | 重建窗口 rAF 342 帧（主线程零冻结；同步路径阻塞 1.3-2.2s） | 87e6c80 |
+| bindUIEvents 880 行拆分 | ✅ | 8 个区域命名函数 + 调度器，tsc 零错误 | 350f0c4 |
+
+附带修复：UI 布局逃逸复发（f362d46）/混合 TDZ 崩溃（938592b）/深色对比度 1.21:1（7ec0097）/移动端顶栏竖排+浮层收纳+10 aria-label（7ec0097+f48719c）/verify 19 断言（Worker 守卫）。
+新登记待攻：lidinoid p≥0.7 体素拓扑非流形（legacy 同病）。
+
+## 下一步（更新）
+1. **用户操作**：git push（40+ commit）→ 署名 → topics → Editorial Manager 提交。
+2. B-t3 LLM 接入（等 key）。
+3. 可选深水区：surface-nets 场离散原子化（R48/k6 仅 1165 互异场值）的分辨率补偿、lidinoid 高孔隙拓扑、cap 段 Map→TypedArray（再省 1.2s/R96）。
+
