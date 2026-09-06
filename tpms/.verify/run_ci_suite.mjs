@@ -49,6 +49,10 @@ function sweepPorts(ports) {
   }
 }
 
+// 最重单门实测 ~253s（数字孪生）；20min 为 4× 余量。门挂死不再拖死整个池
+//（终审 MINOR：原版无超时 + spawn 'error' 无监听，挂死门使 Promise.all 永久悬挂）
+const STEP_TIMEOUT_MS = Number(process.env.STEP_TIMEOUT_MS) || 1_200_000;
+
 function runStep(name, script) {
   return new Promise((resolve) => {
     const t0 = Date.now();
@@ -65,17 +69,27 @@ function runStep(name, script) {
     };
     p.stdout.on('data', grab);
     p.stderr.on('data', grab);
-    p.on('close', (code) => {
+    let settled = false;
+    const finish = (ok, extra, code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (extra) tail += `\n[runStep] ${extra}`;
       // 汇总行兼容两种格式："RESULT: X PASS / Y FAIL" 与 "PASS X / Y"
       const m = tail.match(/RESULT:\s*(\d+)\s*PASS\s*\/\s*(\d+)\s*FAIL/) || tail.match(/PASS (\d+) \/ (\d+)/);
-      const okAll = code === 0;
-      const summary = m ? `${m[1]} PASS / ${m[2]} FAIL` : (okAll ? 'exit=0' : `exit=${code}`);
+      const summary = m ? `${m[1]} PASS / ${m[2]} FAIL` : (ok ? 'exit=0' : `exit=${code ?? 'n/a'}`);
       const dur = ((Date.now() - t0) / 1000).toFixed(1);
-      console.log(okAll
+      console.log(ok
         ? `${C.grn}${C.b}✓ ${name} — ${summary}（${dur}s）${C.rst}`
         : `${C.red}${C.b}✗ ${name} — ${summary}（${dur}s）${C.rst}`);
-      resolve(okAll);
-    });
+      resolve(ok);
+    };
+    p.on('close', (code) => finish(code === 0, null, code));
+    p.on('error', (err) => finish(false, `spawn 失败: ${err && err.message || err}`));
+    const timer = setTimeout(() => {
+      try { p.kill('SIGKILL'); } catch { /* 已退出 */ }
+      finish(false, `门超时（${STEP_TIMEOUT_MS / 1000}s）强杀`);
+    }, STEP_TIMEOUT_MS);
   });
 }
 

@@ -47,8 +47,20 @@ for (const [label, args, check] of [
   const r = run('mesh', ...args, '--json');
   check(r) ? ok(label) : bad(label, (r.stderr || '').slice(-80));
 }
-// type enum 逐值遍历（每值 R48 最小水密可行成本构建，验证 enum 与 CLI 接受域完全一致）
+// type enum 逐值遍历（验证 enum 与 CLI 接受域完全一致）
+// frd 例外（2026-09-06 登记，bugs.md）：k 修复后精确投影暴露 R48/R64 薄壁自触非流形
+//（nm 20736/3840，随分辨率收敛、R96 可构建）——体素场拓扑极限，fail-closed 是正确行为。
+// 对 frd 钉住 R48 结构化拒产（exit3+水密门）+ R96 可构建；其余 7 类型维持 R48 可构建。
 for (const ty of TYPES) {
+  if (ty === 'frd') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 3 && (r48.stderr || '').includes('水密门')
+      ? ok('type enum 值 frd R48 已登记 fail-closed（薄壁自触，bugs.md）')
+      : bad('type enum frd R48 行为漂移', `exit=${r48.status}`);
+    const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96.status === 0 ? ok('type enum 值 frd 可构建（R96）') : bad('type enum frd R96', (r96.stderr || '').slice(-60));
+    continue;
+  }
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
   r.status === 0 ? ok(`type enum 值 ${ty} 可构建`) : bad(`type enum ${ty}`, (r.stderr || '').slice(-60));
 }
@@ -97,4 +109,6 @@ import { readdirSync, unlinkSync } from 'node:fs';
 for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unlinkSync(join(HERE, f)); } catch { /* 忽略 */ } }
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
+// pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
+if (pass < 30) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 30`); process.exit(1); }
 process.exit(fail ? 1 : 0);

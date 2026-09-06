@@ -9,7 +9,8 @@
 //   node tpms.mjs list
 //   node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]
 import { loadCore } from './core-loader.mjs';
-import { writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync, renameSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 // ── A2 孔隙率精确求解器（解析积分口径 + 一轮割线校正）──
 // 方法对标 RegionTPMS（SoftwareX 2021）：在解析曲面上数值积分求 iso*，使
@@ -28,24 +29,38 @@ function porAnalytic(core, type, iso, W, N = 200000) {
 }
 
 // iso* 跨进程缓存：固定种子 + 固定样本数下 iso*(type,pf) 是确定值，按 key 落盘复用
-// （审查 2 节：省 ~0.2s/次；确定性语义不变——同 key 必命中同一结果）
+// （审查 2 节：省 ~0.2s/次；确定性语义不变——同 key 必命中同一结果）。
+// key 含四要素（2026-09-06 终审加固）：类型|目标孔隙率|权重|公式指纹(源哈希:样本数)——
+// 公式实现或样本量变更后旧缓存自动失活，不静默命中陈旧 iso*。
 const ISO_CACHE = new URL('./.iso-cache.json', import.meta.url);
+const ISO_CACHE_TMP = new URL('./.iso-cache.json.tmp', import.meta.url);
+const MC_BISECT_N = 60000; // 终审实测 30k 固定种子噪声最差 0.235pp 超宣称口径，60k 减半仍省一半采样
+let _formulaFp = null;
+function formulaFingerprint() {
+  if (_formulaFp) return _formulaFp;
+  try {
+    const src = readFileSync(new URL('../tpms-platform/src/core/tpms-functions.ts', import.meta.url));
+    _formulaFp = createHash('sha1').update(src).digest('hex').slice(0, 8);
+  } catch { _formulaFp = 'nosrc'; }
+  return _formulaFp;
+}
 function solveIsoAnalytic(core, type, target, W) {
-  const key = `${type}|${target.toFixed(6)}`;
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
   let lo = -1.6, hi = 1.6;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
-    if (porAnalytic(core, type, mid, W, 30000) > target) lo = mid; else hi = mid;
+    if (porAnalytic(core, type, mid, W, MC_BISECT_N) > target) lo = mid; else hi = mid;
   }
   const iso = (lo + hi) / 2;
   const d = 0.02;
   const slope = (porAnalytic(core, type, iso + d, W, 40000) - porAnalytic(core, type, iso - d, W, 40000)) / (2 * d);
   const result = { iso, slope };
   cache[key] = result;
-  try { writeFileSync(ISO_CACHE, JSON.stringify(cache, null, 1)); } catch { /* 只读环境忽略 */ }
+  // 原子写（终审：直写被并发/中断截断会丢整个缓存）：temp + rename
+  try { writeFileSync(ISO_CACHE_TMP, JSON.stringify(cache, null, 1)); renameSync(ISO_CACHE_TMP, ISO_CACHE); } catch { /* 只读环境忽略 */ }
   return result;
 }
 
