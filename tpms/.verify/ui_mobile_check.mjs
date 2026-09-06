@@ -14,7 +14,7 @@ const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory'
 await new Promise((r) => setTimeout(r, 3500));
 
 const browser = await chromium.launch({
-  channel: 'chrome', executablePath: chromePath,
+  channel: 'chrome', executablePath: process.platform === 'win32' ? chromePath : undefined,
   args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader'],
 });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
