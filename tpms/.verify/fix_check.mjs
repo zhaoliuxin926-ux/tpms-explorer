@@ -22,7 +22,9 @@ page.on('console', m => { if (m.type() === 'error') errors.push('console.error: 
 await page.goto(BASE, { waitUntil: 'domcontentloaded' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'domcontentloaded' });
-await page.waitForTimeout(2500); // 首屏重建 + 引导 750ms 延时
+// 首屏重建 + 引导 750ms 延时：CI 慢机上 bundle 解析+init 远超固定 2.5s（run39 实测 B3 链
+// 整段 undefined 灭绝的根因）——改条件等卡可见，超时后仍落到下方断言如实记失败
+await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 20000 }).catch(() => {});
 
 // B3-1 首访自动弹出引导
 let ob = await page.evaluate(() => ({
