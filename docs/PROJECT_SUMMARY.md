@@ -1,6 +1,7 @@
 # TPMS Explorer 项目全貌总结（v6.0.0-digital-twin-hpc）
 
-> 生成：2026-08-29 ｜ 对应提交 `5e9575f` ｜ 31/31 CI 门禁全绿 · 1000+ 断言
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-06（对应 44+ commit 优化推进轮）｜ 38 道正式门禁 + 快检汇总 39/39 全绿 · 1000+ 断言
+> 近期要点：exact 孔隙率求解器（0.26pp@R96）/ 投影 k 倍步长修复（体积损耗根因）/ STL 全局定向传播（misoriented=0）/ Agent CLI（list/estimate/mesh/solve/verify）/ 前端降密度与 Worker 化
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。
 
 ---
@@ -15,7 +16,7 @@
 
 ```
 （仓库根 = GitHub Pages 源）
-├── README.md                  ← 项目总览 + 特性矩阵（31 门徽章）
+├── README.md                  ← 项目总览 + 特性矩阵 + 文件导航
 ├── docs/                      ← 主交付（Pages）
 │   ├── index.html             ← 落地页（特性卡片 + 应用场景 + 展示图）
 │   ├── app.html               ← 单文件版应用（双击即开，无构建）
@@ -88,7 +89,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 游标卡尺 · 三维边界条件拾取器（法向角区域生长→INP/FOAM 注入）· SVG 剖面 ·
 包围盒标注；Web Worker 承载重建（Transferable 零拷贝）。
 
-## 四、门禁体系（.verify/，31 门 · 1000+ 断言）
+## 四、门禁体系（.verify/，38 道正式门禁 + ui_jump_check 快检 · 1000+ 断言）
 
 入口：`cd tpms/tpms-platform && npm run test:all`（run_ci_suite.mjs 顺序调度 + 端口清扫）。
 
@@ -116,7 +117,7 @@ shaders/navier-stokes.wat——wabt.js/V8 编码分歧降级披露）。
 
 ## 五、文档体系
 
-- **README.md**：定位 + 快速开始 + 特性矩阵（v6.0 徽章 31 门 1000+）
+- **README.md**：定位 + 文件导航 + 特性矩阵（38 门徽章 1000+）+ LEARNING_PATH 入口
 - **WORKFLOW_GUIDE.md**：35 章实战指南——几何/着色/混合/映射（早期）→ 分形/逆向/CT/冲击（v3-v4）→ FEA/BC 拾取/DICOM/G-code/ML（v5）→ 弹塑性/压溃孪生/微流体/LPBF/NL 代理（v6 §26-30）
 - **RELEASE_NOTES_v2.4~v6.0**：五份双语发布说明
 - **paper/MANUSCRIPT.md**：期刊手稿
