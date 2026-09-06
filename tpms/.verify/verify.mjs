@@ -21,7 +21,9 @@ async function gotoRetry(page, url, opts = {}) {
 }
 async function reloadRetry(page, opts = {}) {
   for (let a = 0; a < 3; a++) {
-    try { return await reloadRetry(page, { waitUntil: 'domcontentloaded', timeout: 45000, ...opts }); }
+    // 注意此处必须调 page.reload：批量 sed 曾把它误替换成 reloadRetry 自身 → async 无限
+    // 自递归 = 永久挂起（run56-58 三平台 verify 零输出 1800s 强杀的根因）
+    try { return await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000, ...opts }); }
     catch (e) { if (a === 2) throw e; await page.waitForTimeout(2500); }
   }
 }
