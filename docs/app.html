@@ -1664,18 +1664,92 @@ function renderMeasurements(){
 }
 
 let lastIsoUsed = null, lastTEffGlobal = null;
-function rebuild(preview=false){
-  const t0 = performance.now();
-  const iso = baseIso();
-  const R = resolutionFromCell(state.cellSize, preview);
-  const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
-  let bs;
-  try {
-    bs = buildSurface(state.type, iso, state.cellSize, R, { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview, endplateMm:state.endplateMm, hybrid:state.hybrid });
-  } catch (e) {
-    alert('构建失败：' + (e && e.message ? e.message : e));
-    return false;
+let rebuildWorker = null, workerBroken = false, latestBuildReq = 0, lastRequest = null;
+function getBuildWorker(){
+  if (workerBroken) return null;
+  if (!rebuildWorker) {
+    try {
+      // Worker 源 = buildSurface.toString() + 最小 shim。Blob Worker 保持单文件交付
+      // （file:// 下外部 worker.js 被 CORS 拦截，Blob 内联不受限）。
+      // shim：THREE.MathUtils.clamp + BufferGeometry/Float32BufferAttribute 最小复刻
+      //（computeVertexNormals 按 THREE 算法逐位同源：(C−B)×(A−B) 累加后归一化）。
+      const WORKER_SRC = `
+const state = { endplateMm: 0 };
+const THREE = {
+  MathUtils: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) },
+  Float32BufferAttribute: class { constructor(arr, size){ this.array = arr instanceof Float32Array ? arr : Float32Array.from(arr); this.itemSize = size; } },
+  BufferGeometry: class {
+    constructor(){ this.attributes = {}; this.index = null; }
+    setAttribute(name, attr){ this.attributes[name] = attr; }
+    setIndex(idx){ this.index = idx && idx.array ? idx.array : idx; }
+    computeVertexNormals(){
+      const pos = this.attributes.position.array;
+      const idx = this.index && this.index.array ? this.index.array : this.index;
+      const nv = pos.length / 3;
+      const nrm = new Float32Array(nv * 3);
+      for (let t = 0; t < idx.length; t += 3) {
+        const a = idx[t]*3, b = idx[t+1]*3, c = idx[t+2]*3;
+        const cbx = pos[c]-pos[b], cby = pos[c+1]-pos[b+1], cbz = pos[c+2]-pos[b+2];
+        const abx = pos[a]-pos[b], aby = pos[a+1]-pos[b+1], abz = pos[a+2]-pos[b+2];
+        const nx = cby*abz - cbz*aby, ny = cbz*abx - cbx*abz, nz = cbx*aby - cby*abx;
+        nrm[a] += nx; nrm[a+1] += ny; nrm[a+2] += nz;
+        nrm[b] += nx; nrm[b+1] += ny; nrm[b+2] += nz;
+        nrm[c] += nx; nrm[c+1] += ny; nrm[c+2] += nz;
+      }
+      for (let i = 0; i < nv; i++) {
+        const l = Math.hypot(nrm[i*3], nrm[i*3+1], nrm[i*3+2]) || 1;
+        nrm[i*3] /= l; nrm[i*3+1] /= l; nrm[i*3+2] /= l;
+      }
+      this.attributes.normal = { array: nrm };
+    }
+    computeBoundingSphere(){}
+    dispose(){}
   }
+};
+`;
+      const src = WORKER_SRC + buildSurface.toString() + `;
+self.onmessage = (e) => {
+  const d = e.data;
+  let res;
+  try { res = buildSurface(d.type, d.iso, d.periods, d.R, d.options); }
+  catch (err) { self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: false, error: String(err && err.message || err) }); return; }
+  const g = res.geo;
+  const pos = g.attributes.position.array;
+  const nrm = g.attributes.normal ? g.attributes.normal.array : null;
+  const idx = g.index && (g.index.array ? g.index.array : g.index);
+  self.postMessage({ reqId: d.reqId, preview: d.preview, t0: d.t0, R: d.R, ok: true,
+    bs: { positions: pos, normals: nrm, indices: idx, vertCount: res.vertCount, triCount: res.triCount,
+          porosityEstimate: res.porosityEstimate, isoUsed: res.isoUsed, tEffBase: res.tEffBase,
+          meshSolidFraction: res.meshSolidFraction, solidEstimate: res.solidEstimate } },
+    [pos.buffer].concat(nrm ? [nrm.buffer] : []).concat(idx && idx.buffer ? [idx.buffer] : []));
+};`;
+      rebuildWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      rebuildWorker.onerror = () => {
+        // Worker 启动/脚本失败：标记降级 + 用同步路径补跑未决请求（防首帧永久空窗）
+        window.__workerMode = false;
+        workerBroken = true;
+        try { rebuildWorker.terminate(); } catch (_){}
+        rebuildWorker = null;
+        if (lastRequest) { const rq = lastRequest; lastRequest = null; rebuildSync(rq); }
+      };
+      rebuildWorker.onmessage = onWorkerMessage;
+      window.__workerMode = true; // 回归断言锚点：重建走 Worker 路径
+    } catch (e) { workerBroken = true; }
+  }
+  return workerBroken ? null : rebuildWorker;
+}
+function finishRebuild(bs, preview, t0, R){
+  // 由 raw 数组构造 THREE 几何（Worker 路径）；同步回退路径直接带 geo
+  if (!bs.geo) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(bs.positions, 3));
+    if (bs.normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(bs.normals, 3));
+    geo.setIndex(bs.indices);
+    geo.computeBoundingSphere();
+    bs.geo = geo;
+  }
+  const loading = document.getElementById('loading');
+  if (loading) loading.classList.remove('show');
   const { geo, vertCount, triCount, porosityEstimate, isoUsed, meshSolidFraction } = bs;
   lastIsoUsed = isoUsed;
   lastTEffGlobal = bs.tEffBase;
@@ -1702,7 +1776,48 @@ function rebuild(preview=false){
   updateTips();
   requestRender(); // P2：模型重建后按需重绘
 }
-function scheduleRebuild(preview=false){ const loading=document.getElementById('loading'); loading.classList.add('show'); clearTimeout(rebuildTimer); rebuildTimer=setTimeout(()=>{ rebuild(preview); loading.classList.remove('show'); }, preview?16:45); }
+function rebuild(preview=false){
+  const t0 = performance.now();
+  const iso = baseIso();
+  const R = resolutionFromCell(state.cellSize, preview);
+  const targetPorosity = THREE.MathUtils.clamp(state.model==='solid' ? state.porosity - (state.thickness-1)*10 : state.porosity, 35, 94);
+  const options = { targetPorosity, weights:state.weights, structureMode:state.structureMode, containerShape:state.containerShape, thickness:state.thickness, preview, endplateMm:state.endplateMm, hybrid:state.hybrid };
+  lastRequest = { preview, t0, R, type: state.type, iso, periods: state.cellSize, options };
+  const w = getBuildWorker();
+  if (w) {
+    const reqId = ++latestBuildReq;
+    w.postMessage({ reqId, ...lastRequest });
+    return true;
+  }
+  lastRequest = null;
+  return rebuildSync(lastRequestSafe());
+}
+function lastRequestSafe(){ return lastRequest; }
+function rebuildSync(rq){
+  let bs;
+  try {
+    bs = buildSurface(rq.type, rq.iso, rq.periods, rq.R, rq.options);
+  } catch (e) {
+    alert('构建失败：' + (e && e.message ? e.message : e));
+    const loading = document.getElementById('loading');
+    if (loading) loading.classList.remove('show');
+    return false;
+  }
+  finishRebuild(bs, rq.preview, rq.t0, rq.R);
+  return true;
+}
+function onWorkerMessage(e){
+  const d = e.data;
+  if (d.reqId !== latestBuildReq) return; // 过期请求丢弃（新请求已发出）
+  if (!d.ok) {
+    alert('构建失败：' + d.error);
+    const loading = document.getElementById('loading');
+    if (loading) loading.classList.remove('show');
+    return;
+  }
+  finishRebuild(d.bs, d.preview, d.t0, d.R);
+}
+function scheduleRebuild(preview=false){ const loading=document.getElementById('loading'); loading.classList.add('show'); clearTimeout(rebuildTimer); rebuildTimer=setTimeout(()=>{ rebuild(preview); }, preview?16:45); }
 
 let activeWeightKey = null;
 function updateFormula(iso){
