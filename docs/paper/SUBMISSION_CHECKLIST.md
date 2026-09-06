@@ -16,11 +16,10 @@
 - ✅ **GitHub Actions 三平台全绿**（**HEAD 双重实证**：run 59 + run 60 三平台 success，2026-09-07；历史首绿 run 45。13 层修复全记录见 tpms/agent/ROADMAP.md "CI 三平台转绿轮"——最后一层为 verify 无限自递归挂死，两度误诊后根治）
   证据链接：https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34047851986
 - ✅ **repo Topics**：`tpms` `lattice` `bone-scaffold` `webgpu` `additive-manufacturing`（经 GitHub API 设置并公开复核）
-- ⬜ LICENSE 版权行 + main.tex 作者行（L20 `Anonymous Author`）+ 单位行：真实署名（**投稿前必须**；署名三项信息 2026-09-06 已向用户征集，待答复）
-- ⬜ Editorial Manager 注册并提交（投稿系统账号只能本人注册）；提交号回填本清单与 progress.md
+- ⏸ **投稿整体搁置（2026-09-07 用户决策）**：项目优先继续打磨优化，不急于投稿。搁置项包括：署名三项（作者拼写/单位行/LICENSE 版权行——建议投稿前与导师确认单位署名规范）、Editorial Manager 注册提交、投稿号回填；软件确认 SoftwareX 为完全开放获取（APC 以官网为准）后再做预算决定。重启时从本清单续走即可，所有材料不会过期。
 - ✅ `https://github.com/xxx/tpms` 占位链接 → 已改真实地址 `zhaoliuxin926-ux/tpms-explorer`（MANUSCRIPT.md，2026-09-06）
 
 ## 提交前终检
 - [x] GitHub Actions 三平台全绿（**run 59+60 双重 success @HEAD b6e5054**，2026-09-07）：https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34047851986
-- [ ] main.pdf 人眼通读一遍（图表编号、引用、作者信息）
+- [ ] main.pdf 人眼通读一遍（图表编号、引用、作者信息）——投稿重启时做
 - [x] 仓库根 `git status` 干净（2026-09-07 复核）
