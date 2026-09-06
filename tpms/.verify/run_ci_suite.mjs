@@ -1,8 +1,8 @@
-// run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6）
+// run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6 → 2026-09-06 并行化）
 //
-// 串联三道门：mesh_audit（几何质量）→ parity_math（数学同源）→ run_all（6 套 UI 回归）。
-// run_all 自带服务编排与清理（4814 平台 / 8125 文档），本脚本只负责顺序调度、
-// 兜底端口清扫与彩色汇总。用法：
+// 调度：39 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
+//       结果按原序汇报。并发度 CI_JOBS 可调（默认 4；18 核机器实测安全）。
+// 用法：
 //   cd tpms/tpms-platform && npm run test:all
 //   （等价于 node ../.verify/run_ci_suite.mjs）
 import { spawn } from 'node:child_process';
@@ -20,7 +20,7 @@ const C = process.stdout.isTTY || process.env.FORCE_COLOR
   ? { b: '\x1b[1m', dim: '\x1b[2m', red: '\x1b[31m', grn: '\x1b[32m', ylw: '\x1b[33m', cyn: '\x1b[36m', rst: '\x1b[0m' }
   : { b: '', dim: '', red: '', grn: '', ylw: '', cyn: '', rst: '' };
 
-// ── 部署门禁：run_all 服务的是部署产物，产物缺失时提前失败并给出修法 ──
+// ── 部署门禁：产物缺失时提前失败并给出修法 ──
 if (!existsSync(path.join(DEPLOYED, 'index.html'))) {
   console.error(`${C.red}✗ 缺少部署产物 docs/platform/index.html${C.rst}`);
   console.error(`  先执行: cd tpms/tpms-platform && npm run build`);
@@ -28,8 +28,7 @@ if (!existsSync(path.join(DEPLOYED, 'index.html'))) {
   process.exit(2);
 }
 
-// ── 端口兜底清扫（win32）：run_all 正常退出会自清其服务；
-//    若它中途崩死留下孤儿监听，这里按端口找 PID 强杀（仅 LISTENING 态）。──
+// ── 端口兜底清扫（win32）：门自清；中途崩死留下孤儿监听时按端口强杀（仅 LISTENING 态）──
 function sweepPorts(ports) {
   if (!WIN32) return;
   let out = '';
@@ -39,7 +38,6 @@ function sweepPorts(ports) {
   const pids = new Set();
   for (const line of out.split('\n')) {
     const cols = line.trim().split(/\s+/);
-    // TCP  Local  Foreign  STATE  PID —— 本地列精确以 :port 结尾（防 :4814 误吞 :48140）
     if (cols.length >= 5 && cols[3] === 'LISTENING' && /^\d+$/.test(cols[4])
       && ports.some((pt) => cols[1].endsWith(':' + pt))) pids.add(cols[4]);
   }
@@ -54,7 +52,6 @@ function sweepPorts(ports) {
 function runStep(name, script) {
   return new Promise((resolve) => {
     const t0 = Date.now();
-    console.log(`\n${C.cyn}${C.b}▶ ${name}${C.rst} ${C.dim}(${script})${C.rst}`);
     const p = spawn(process.execPath, [path.join(HERE, script)], {
       cwd: HERE,
       env: { ...process.env, FORCE_COLOR: '1' },
@@ -82,51 +79,67 @@ function runStep(name, script) {
   });
 }
 
-console.log(`${C.b}══════ TPMS 全量 CI 套件 ══════${C.rst} ${C.dim}${new Date().toLocaleString()}${C.rst}`);
+// ── 调度清单（[汇报名, 步骤名, 脚本]；顺序 = 历史顺序，执行 = 并发池）──
+const SCHEDULE = [
+  ['mesh_audit 几何质量门（28 案例）', '几何质量门', 'mesh_audit.mjs'],
+  ['parity_math 数学同源（185 断言）', '数学同源', 'parity_math.mjs'],
+  ['state_url_audit 状态隔离+分享恢复（门37）', '状态与分享审计', 'state_url_audit.mjs'],
+  ['worker_bridge_audit Worker生命周期（门38，11断言）', 'Worker生命周期审计', 'worker_bridge_audit.mjs'],
+  ['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', '仿真导出校验', 'sim_export_check.mjs'],
+  ['endplate_audit 端板专项（水密/满填/体积增量）', '端板审计', 'endplate_audit.mjs'],
+  ['micro_physics_audit 迂曲度+各向异性刚度', '微物理审计', 'micro_physics_audit.mjs'],
+  ['hybrid_audit 多相混合（水密/极限/双语言残差）', '混合审计', 'hybrid_audit.mjs'],
+  ['industrial_export_audit 工业格式（GLB+3MF）', '工业格式审计', 'industrial_export_audit.mjs'],
+  ['custom_equation_audit 自定义公式沙箱（AST+AD+代码生成）', '自定义公式审计', 'custom_equation_audit.mjs'],
+  ['homogenization_audit RVE 均质化+方向模量', '均质化审计', 'homogenization_audit.mjs'],
+  ['manifold_audit 非欧度规空间映射', '流形映射审计', 'manifold_audit.mjs'],
+  ['redteam_matrix_audit 红队极端工况矩阵', '红队矩阵审计', 'redteam_matrix_audit.mjs'],
+  ['webgpu_parity_audit WebGPU 数学同源（门13）', 'WebGPU 同源审计', 'webgpu_parity_audit.mjs'],
+  ['periodic_rve_audit 周期性RVE/PBC（门14）', '周期RVE审计', 'periodic_rve_audit.mjs'],
+  ['cae_mesh_audit Abaqus/OpenFOAM体网格（门15）', 'CAE体网格审计', 'cae_mesh_audit.mjs'],
+  ['hierarchical_audit 多级分形+应力单调性（门16）', '分级TPMS审计', 'hierarchical_audit.mjs'],
+  ['inverse_design_audit 逆向设计引擎（门17）', '逆向设计审计', 'inverse_design_audit.mjs'],
+  ['poincare_metric_audit 庞加莱双曲映射（门18）', '庞加莱映射审计', 'poincare_metric_audit.mjs'],
+  ['cae_verification_audit CAE验证链（门19）', 'CAE验证链审计', 'cae_verification_audit.mjs'],
+  ['impact_modal_audit 冲击吸能与模态（门20）', '冲击模态审计', 'impact_modal_audit.mjs'],
+  ['ct_reconstruction_audit CT重构偏差（门21）', 'CT重构审计', 'ct_reconstruction_audit.mjs'],
+  ['native_cae_solver_audit 原生CAE求解器（门22）', '原生CAE审计', 'native_cae_solver_audit.mjs'],
+  ['boundary_picker_audit 边界拾取器（门23）', '边界拾取审计', 'boundary_picker_audit.mjs'],
+  ['bone_morphometry_audit DICOM与骨计量（门24）', '骨计量审计', 'bone_morphometry_audit.mjs'],
+  ['gcode_slicer_audit G-code切片引擎（门25）', 'G-code切片审计', 'gcode_slicer_audit.mjs'],
+  ['ml_pareto_audit ML代理Pareto（门26）', 'ML Pareto审计', 'ml_pareto_audit.mjs'],
+  ['gpu_plasticity_audit WebGPU弹塑性大变形（门27）', '弹塑性审计', 'gpu_plasticity_audit.mjs'],
+  ['digital_twin_compression_audit 数字孪生压溃失效（门28）', '数字孪生审计', 'digital_twin_compression_audit.mjs'],
+  ['wasm_navier_stokes_audit Navier-Stokes微流体（门29）', '微流体审计', 'wasm_navier_stokes_audit.mjs'],
+  ['lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）', 'LPBF审计', 'lpbf_thermo_mechanical_audit.mjs'],
+  ['nl_agent_audit 自然语言CAD代理（门31）', 'NL代理审计', 'nl_agent_audit.mjs'],
+  ['neural_implicit_audit 隐式神经场SIREN（门32）', '神经场审计', 'neural_implicit_audit.mjs'],
+  ['yield_surface_audit 多轴屈服包络面（门33）', '屈服面审计', 'yield_surface_audit.mjs'],
+  ['phononic_bandgap_audit 声子能带与禁带（门34）', '声子能带审计', 'phononic_bandgap_audit.mjs'],
+  ['tissue_growth_audit 组织长入反应扩散（门35）', '组织长入审计', 'tissue_growth_audit.mjs'],
+  ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
+  ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
+  ['run_all UI 回归（6 套件）', 'UI 回归', 'run_all.mjs'],
+];
 
-const results = [];
+const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));
+
+console.log(`${C.b}══════ TPMS 全量 CI 套件 ══════${C.rst} ${C.dim}${new Date().toLocaleString()} · 并发 ${JOBS}${C.rst}`);
+
+const results = new Array(SCHEDULE.length);
 try {
-  results.push(['mesh_audit 几何质量门（28 案例）', await runStep('几何质量门', 'mesh_audit.mjs')]);
-  results.push(['parity_math 数学同源（184 断言）', await runStep('数学同源', 'parity_math.mjs')]);
-  results.push(['state_url_audit 状态隔离+分享恢复（门37）', await runStep('状态与分享审计', 'state_url_audit.mjs')]);
-  results.push(['worker_bridge_audit Worker生命周期（门38，11断言）', await runStep('Worker生命周期审计', 'worker_bridge_audit.mjs')]);
-  results.push(['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', await runStep('仿真导出校验', 'sim_export_check.mjs')]);
-  results.push(['endplate_audit 端板专项（水密/满填/体积增量）', await runStep('端板审计', 'endplate_audit.mjs')]);
-  results.push(['micro_physics_audit 迂曲度+各向异性刚度', await runStep('微物理审计', 'micro_physics_audit.mjs')]);
-  results.push(['hybrid_audit 多相混合（水密/极限/双语言残差）', await runStep('混合审计', 'hybrid_audit.mjs')]);
-  results.push(['industrial_export_audit 工业格式（GLB+3MF）', await runStep('工业格式审计', 'industrial_export_audit.mjs')]);
-  results.push(['custom_equation_audit 自定义公式沙箱（AST+AD+代码生成）', await runStep('自定义公式审计', 'custom_equation_audit.mjs')]);
-  results.push(['homogenization_audit RVE 均质化+方向模量', await runStep('均质化审计', 'homogenization_audit.mjs')]);
-  results.push(['manifold_audit 非欧度规空间映射', await runStep('流形映射审计', 'manifold_audit.mjs')]);
-  results.push(['redteam_matrix_audit 红队极端工况矩阵', await runStep('红队矩阵审计', 'redteam_matrix_audit.mjs')]);
-  results.push(['webgpu_parity_audit WebGPU 数学同源（门13）', await runStep('WebGPU 同源审计', 'webgpu_parity_audit.mjs')]);
-  results.push(['periodic_rve_audit 周期性RVE/PBC（门14）', await runStep('周期RVE审计', 'periodic_rve_audit.mjs')]);
-  results.push(['cae_mesh_audit Abaqus/OpenFOAM体网格（门15）', await runStep('CAE体网格审计', 'cae_mesh_audit.mjs')]);
-  results.push(['hierarchical_audit 多级分形+应力单调性（门16）', await runStep('分级TPMS审计', 'hierarchical_audit.mjs')]);
-  results.push(['inverse_design_audit 逆向设计引擎（门17）', await runStep('逆向设计审计', 'inverse_design_audit.mjs')]);
-  results.push(['poincare_metric_audit 庞加莱双曲映射（门18）', await runStep('庞加莱映射审计', 'poincare_metric_audit.mjs')]);
-  results.push(['cae_verification_audit CAE验证链（门19）', await runStep('CAE验证链审计', 'cae_verification_audit.mjs')]);
-  results.push(['impact_modal_audit 冲击吸能与模态（门20）', await runStep('冲击模态审计', 'impact_modal_audit.mjs')]);
-  results.push(['ct_reconstruction_audit CT重构偏差（门21）', await runStep('CT重构审计', 'ct_reconstruction_audit.mjs')]);
-  results.push(['native_cae_solver_audit 原生CAE求解器（门22）', await runStep('原生CAE审计', 'native_cae_solver_audit.mjs')]);
-  results.push(['boundary_picker_audit 边界拾取器（门23）', await runStep('边界拾取审计', 'boundary_picker_audit.mjs')]);
-  results.push(['bone_morphometry_audit DICOM与骨计量（门24）', await runStep('骨计量审计', 'bone_morphometry_audit.mjs')]);
-  results.push(['gcode_slicer_audit G-code切片引擎（门25）', await runStep('G-code切片审计', 'gcode_slicer_audit.mjs')]);
-  results.push(['ml_pareto_audit ML代理Pareto（门26）', await runStep('ML Pareto审计', 'ml_pareto_audit.mjs')]);
-  results.push(['gpu_plasticity_audit WebGPU弹塑性大变形（门27）', await runStep('弹塑性审计', 'gpu_plasticity_audit.mjs')]);
-  results.push(['digital_twin_compression_audit 数字孪生压溃失效（门28）', await runStep('数字孪生审计', 'digital_twin_compression_audit.mjs')]);
-  results.push(['wasm_navier_stokes_audit Navier-Stokes微流体（门29）', await runStep('微流体审计', 'wasm_navier_stokes_audit.mjs')]);
-  results.push(['lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）', await runStep('LPBF审计', 'lpbf_thermo_mechanical_audit.mjs')]);
-  results.push(['nl_agent_audit 自然语言CAD代理（门31）', await runStep('NL代理审计', 'nl_agent_audit.mjs')]);
-  results.push(['neural_implicit_audit 隐式神经场SIREN（门32）', await runStep('神经场审计', 'neural_implicit_audit.mjs')]);
-  results.push(['yield_surface_audit 多轴屈服包络面（门33）', await runStep('屈服面审计', 'yield_surface_audit.mjs')]);
-  results.push(['phononic_bandgap_audit 声子能带与禁带（门34）', await runStep('声子能带审计', 'phononic_bandgap_audit.mjs')]);
-  results.push(['tissue_growth_audit 组织长入反应扩散（门35）', await runStep('组织长入审计', 'tissue_growth_audit.mjs')]);
-  results.push(['levelset_optimizer_audit 水平集拓扑优化（门36）', await runStep('水平集审计', 'levelset_optimizer_audit.mjs')]);
-  results.push(['ui_jump_check 控制台分组导航（UI 重组回归）', await runStep('分组导航快检', 'ui_jump_check.mjs')]);
-  results.push(['run_all UI 回归（6 套件）', await runStep('UI 回归', 'run_all.mjs')]);
+  let next = 0;
+  const worker = async () => {
+    while (true) {
+      const i = next++;
+      if (i >= SCHEDULE.length) break;
+      const [name, label, script] = SCHEDULE[i];
+      results[i] = [name, await runStep(label, script)];
+    }
+  };
+  await Promise.all(Array.from({ length: JOBS }, worker));
 } finally {
-  sweepPorts([4814, 8125]); // 无论成败，回收可能的孤儿服务
+  sweepPorts([4814, 8125, 4855]); // 无论成败，回收可能的孤儿服务
 }
 
 const failed = results.filter(([, ok]) => !ok);
@@ -134,12 +147,12 @@ const pad = Math.max(...results.map(([n]) => n.length));
 console.log(`
 ${C.b}╔══════════════════════════════════════╗${C.rst}
 ${C.b}║          测 试 结 果 汇 总           ║${C.rst}
-${C.b}╠══════════════════════════════════════╣${C.rst}`);
-for (const [n, ok] of results) {
-  console.log(`${ok ? `${C.grn}║ ✓` : `${C.red}║ ✗`} ${C.rst}${n.padEnd(pad)}${ok ? C.grn : C.red}${C.rst}`);
-}
-const verdict = failed.length === 0
-  ? `${C.grn}${C.b}全部通过 · ${results.length}/${results.length} 门通过${C.rst}`
-  : `${C.red}${C.b}失败 ${failed.length}/${results.length}${C.rst}`;
-console.log(`${C.b}╠══════════════════════════════════════╣${C.rst}\n║ ${verdict}\n${C.b}╚══════════════════════════════════════╝${C.rst}`);
+${C.b}╠══════════════════════════════════════╣${C.rst}
+${results.map(([n, ok]) => `${ok ? '║ ✓' : '║ ✗'} ${n.padEnd(pad)}${ok ? '' : '  ← FAILED'}`).join('\n')}
+${C.b}╠══════════════════════════════════════╣${C.rst}
+${failed.length === 0
+    ? `${C.grn}║ 全部通过 · ${results.length}/${results.length} 门通过${C.rst}`
+    : `${C.red}║ 失败 ${failed.length}/${results.length}${C.rst}\n${failed.map(([n]) => `${C.red}║   ✗ ${n}${C.rst}`).join('\n')}`}
+${C.b}╚══════════════════════════════════════╝${C.rst}
+`);
 process.exit(failed.length ? 1 : 0);
