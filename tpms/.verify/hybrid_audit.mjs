@@ -138,7 +138,7 @@ out = np.stack([x, y, z, V], axis=1)
 np.savetxt(${JSON.stringify(sampleTxt)}, out, fmt='%.12e')
 print('py ok', N)
 `);
-  const r = spawnSync('python', [pyScript], { encoding: 'utf8', timeout: 60000 });
+  const r = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [pyScript], { encoding: 'utf8', timeout: 60000 });
   if (r.status !== 0) {
     bad('py 残差脚本执行', (r.stderr || r.stdout || '').slice(0, 200));
   } else {

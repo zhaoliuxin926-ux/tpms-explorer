@@ -207,10 +207,12 @@ console.log('\n[F] 单元生死（onStep 失效回调）');
 // ══ G. WGSL 模板逐字同步 ══
 console.log('\n[G] WGSL 同步锚定');
 {
-  const fileSrc = readFileSync(wgslPath, 'utf-8');
+  const fileSrc = readFileSync(wgslPath, 'utf-8').replace(/\r\n/g, '\n');
+  const tpl = gpu.PLASTICITY_WGSL_TEMPLATE.replace(/\r\n/g, '\n');
   check('shaders/plasticity.wgsl 存在且非空', fileSrc.length > 500);
-  check('TS 内联模板 ≡ .wgsl 文件（逐字）', gpu.PLASTICITY_WGSL_TEMPLATE === fileSrc,
-    `template=${gpu.PLASTICITY_WGSL_TEMPLATE.length} file=${fileSrc.length}`);
+  // CI windows checkout（autocrlf）文件侧为 CRLF 而 bundle 内字符串为 LF——逐字比较前归一化行尾
+  check('TS 内联模板 ≡ .wgsl 文件（逐字）', tpl === fileSrc,
+    `template=${tpl.length} file=${fileSrc.length}`);
   for (const anchor of ['vonMises6', 'Prandtl-Reuss', 'dGamma', 'workgroup_size(64)', 'ioPeek']) {
     check(`WGSL 锚点 "${anchor}"`, fileSrc.includes(anchor));
   }

@@ -107,9 +107,12 @@ for (const type of TYPES) {
   const k = compileFieldKernel(mkCfg('gyroid'));
   const ph = WGSL_FILE.indexOf('{{FIELD_FN}}');
   check('wgsl 模板含唯一占位符', ph >= 0 && WGSL_FILE.indexOf('{{FIELD_FN}}', ph + 1) === -1);
-  const head = WGSL_FILE.slice(0, ph), tail = WGSL_FILE.slice(ph + '{{FIELD_FN}}'.length);
+  // CI windows checkout（autocrlf）文件侧 CRLF vs bundle 内字符串 LF——比较前归一化行尾
+  const norm = (s) => s.replace(/\r\n/g, '\n');
+  const headN = norm(WGSL_FILE.slice(0, ph)), tailN = norm(WGSL_FILE.slice(ph + '{{FIELD_FN}}'.length));
+  const kw = norm(k.wgsl);
   check('wgsl 模板与 TS 内联模板逐字同步（头/尾锚定）',
-    k.wgsl.startsWith(head) && k.wgsl.endsWith(tail) && k.wgsl.length > head.length + tail.length);
+    kw.startsWith(headN) && kw.endsWith(tailN) && kw.length > headN.length + tailN.length);
 
   // 网格节点坐标必须与 CPU Surface Nets 同源：[-π, +π] × periods。
   // 这里只做静态内核断言，确保真实 WebGPU 路径不会因起点常量漂移而
