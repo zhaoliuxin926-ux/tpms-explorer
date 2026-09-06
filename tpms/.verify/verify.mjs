@@ -21,7 +21,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {}); // 首访引导卡（750ms 延时+CI 慢机余量）
   const cardVisible = await page.locator('#ob-card').isVisible();
   log('首次进入自动弹出引导卡片', cardVisible);
-  await page.screenshot({ path: `${OUT}/01-onboard-start.png` });
+  await page.screenshot({ path: `${OUT}/01-onboard-start.png`, timeout: 15000 }).catch(() => {}); // 截图是产物非判据：swiftshader 合成器慢机可能不出帧（headless-gpu 坑），失败不阻塞断言
 
   // 第一步文字
   const h4 = await page.locator('#ob-card h4').textContent();
@@ -46,7 +46,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
     stepTitles.push(t);
     const dotCount = await page.locator('.ob-dots i').count();
     log(`第${i+1}步: "${t}"`, !!t, `dots=${dotCount}`);
-    await page.screenshot({ path: `${OUT}/02-step-${i+1}.png` });
+    await page.screenshot({ path: `${OUT}/02-step-${i+1}.png`, timeout: 15000 }).catch(() => {});
     if (i < 5) await page.locator('#ob-next').click();
   }
   log('共 6 步且标题不重复', stepTitles.length === 6 && new Set(stepTitles).size === 6);
@@ -160,7 +160,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const statsText = await page.locator('#stats').textContent();
   const rendered = /顶点\s*\d/.test(statsText);
   log('3D 渲染正常（顶点数已输出）', rendered, `stats="${statsText.replace(/\s+/g,' ').trim().slice(0,60)}"`);
-  await page.screenshot({ path: `${OUT}/03-render-check.png` });
+  await page.screenshot({ path: `${OUT}/03-render-check.png`, timeout: 15000 }).catch(() => {});
   // 2026-09-06 Worker 迁移回归守卫：重建走 Worker 路径（主线程不阻塞架构）
   await page.waitForTimeout(400);
   const workerMode = await page.evaluate(() => window.__workerMode === true);
@@ -205,7 +205,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
     await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 }).catch(() => {});
   } catch (_){ rendered = false; }
   log('无 Worker 环境同步回退渲染正常', rendered && dialogs === 0, `rendered=${rendered} dialogs=${dialogs}`);
-  await page.screenshot({ path: `${OUT}/04-sync-fallback.png` });
+  await page.screenshot({ path: `${OUT}/04-sync-fallback.png`, timeout: 15000 }).catch(() => {});
   await ctx.close();
 }
 
