@@ -10,7 +10,7 @@ const bad = (name, info = '') => { fail++; console.log('FAIL', name, info); };
 
 const browser = await chromium.launch({
   channel: 'chrome', executablePath: process.platform === 'win32' ? chromePath : undefined,
-  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader'],
+  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 
 async function checkTipbar(label, url, onboardKey) {

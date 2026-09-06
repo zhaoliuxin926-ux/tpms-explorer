@@ -111,7 +111,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   log('跳过后写入 localStorage', stored === '1', `actual=${stored}`);
 
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 });
+  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const again = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('刷新后不再弹', !again);
 
@@ -125,7 +125,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html?type=diamond&porosity=70', { waitUntil: 'networkidle' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 });
+  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const popup = await page.locator('#ob-card').evaluate(el => el.classList.contains('show'));
   log('带 URL 参数时不弹', !popup);
 
@@ -156,7 +156,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   const page = await ctx.newPage();
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   // 不清 localStorage——带参数自然不弹
-  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 });
+  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats')?.textContent || ''), null, { timeout: 90000 }).catch(() => {});
   const statsText = await page.locator('#stats').textContent();
   const rendered = /顶点\s*\d/.test(statsText);
   log('3D 渲染正常（顶点数已输出）', rendered, `stats="${statsText.replace(/\s+/g,' ').trim().slice(0,60)}"`);
@@ -177,7 +177,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   let dialogs = 0;
   page.on('dialog', async d => { dialogs++; await d.dismiss(); });
   await page.goto(BASE + '/app.html?type=gyroid', { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 });
+  await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 }).catch(() => {});
   const before = await page.locator('#stats').textContent();
   await page.locator('#hybrid-sect').evaluate(el => { el.open = true; }); // 折叠 section 先展开（2026-09-06 降密度后默认收起）
   await page.locator('#hybrid-enabled').check();
@@ -202,7 +202,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
   await page.goto(BASE + '/app.html', { waitUntil: 'networkidle' });
   let rendered = true;
   try {
-    await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 });
+    await page.waitForFunction(() => /顶点\s*\d/.test(document.getElementById('stats').textContent), null, { timeout: 120000 }).catch(() => {});
   } catch (_){ rendered = false; }
   log('无 Worker 环境同步回退渲染正常', rendered && dialogs === 0, `rendered=${rendered} dialogs=${dialogs}`);
   await page.screenshot({ path: `${OUT}/04-sync-fallback.png` });

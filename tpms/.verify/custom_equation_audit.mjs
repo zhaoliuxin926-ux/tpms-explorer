@@ -317,7 +317,7 @@ console.log('\n[E] 代码生成 NumPy/MATLAB');
     L.push(`        fh.write('${idx} ' + repr(float(v)) + '\\n')`);
   });
   writeFileSync(pyFile, L.join('\n'));
-  const r = spawnSync('python', [pyFile], { encoding: 'utf8', timeout: 120000 });
+  const r = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [pyFile], { encoding: 'utf8', timeout: 120000 });
   if (r.status !== 0) {
     bad('NumPy 代码生成脚本执行', (r.stderr || r.stdout || '').slice(0, 300));
   } else {

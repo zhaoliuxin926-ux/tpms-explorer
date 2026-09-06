@@ -9,12 +9,12 @@ const PORT = 4855;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const DEPLOYED = path.join(ROOT, 'docs/platform');
-const server = spawn('python', ['-m', 'http.server', String(PORT), '--directory', DEPLOYED]);
+const server = spawn(process.platform === 'win32' ? 'python' : 'python3', ['-m', 'http.server', String(PORT), '--directory', DEPLOYED]);
 await new Promise((r) => setTimeout(r, 4000));
 
 const browser = await chromium.launch({
   channel: 'chrome', executablePath: process.platform === 'win32' ? chromePath : undefined,
-  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader'],
+  args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 950 } });
 const page = await ctx.newPage();
