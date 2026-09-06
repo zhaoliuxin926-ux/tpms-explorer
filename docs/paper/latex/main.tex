@@ -54,7 +54,11 @@ tissue engineering \sep level-set topology optimization \sep continuous integrat
 \end{frontmatter}
 
 \section{Impact overview}
-TPMS Explorer turns a browser tab into a research bench for architected materials. The five v7.0
+Triply periodic minimal surfaces --- first catalogued systematically by Schoen
+\cite{schoen1970infinite} --- are today a mainstay of architected-materials design and
+bone-scaffold engineering, where matching a target porosity while keeping the lattice
+manufacturable is the central numerical problem. TPMS Explorer turns a browser tab into a
+research bench for architected materials. The five v7.0
 modules extend the platform from ``geometry plus linear physics surrogates'' to generative design,
 structural-failure envelopes, wave dynamics, biophysical growth, and closed-loop shape optimization
 --- each guarded by an audit gate that executes the same code paths the user sees
@@ -97,7 +101,8 @@ Three.js 0.185 (only runtime dependency).
 
 \section{Method design}
 \subsection{SIREN implicit field with exact periodicity}
-A 4-layer sinusoidal network $F_\theta(\mathbf{x})=W_3\sin(W_2\sin(W_1\sin(W_0\,\mathbf{u})))
+A 4-layer sinusoidal network in the spirit of SIREN \cite{sitzmann2020siren},
+$F_\theta(\mathbf{x})=W_3\sin(W_2\sin(W_1\sin(W_0\,\mathbf{u})))
 +\mathbf{b}_3$ consumes the Fourier feature $\mathbf{u}=[\sin x,\cos x,\sin y,\cos y,\sin z,\cos z]$.
 Because every coordinate enters only through $\sin/\cos$, $F_\theta$ is \emph{exactly} $2\pi$-periodic
 (measured deviation $2.2\times10^{-15}$), which makes cross-period water-tightness a property of the
@@ -111,16 +116,21 @@ $\prod_i\|W_i\|_2$ (power iteration) and cross-checked against sampled gradient 
 
 \subsection{Multiaxial yield envelopes}
 All four criteria are expressed in a unified \emph{ray-distance} form: the distance $r(\hat{\mathbf{n}})$
-from the origin to the envelope along a unit direction of principal-stress space. Hill-48 (with a
+from the origin to the envelope along a unit direction of principal-stress space. Hill-48
+\cite{hill1948theory} (with a
 hydrostatic cap), capped Drucker--Prager, and Gurson close to star-convex bodies containing the
 origin, hence $r$ is single-valued and the safety factor is exactly $r(\hat{\mathbf{n}})/\|\boldsymbol{\sigma}_0\|$.
 Tsai-Wu admits a closed-form quadratic root. Gurson's hydrostatic pole
+\cite{gurson1977continuum}
 $(2\sigma_0/3)\,\mathrm{arccosh}((1+q^2)/2q)$ with $q$ equal to the porosity provides a strong
-analytic anchor. Scaffold-level parameters are derived from the same Gibson--Ashby constants used
+analytic anchor. Scaffold-level parameters are derived from the same Gibson--Ashby constants
+\cite{gibson1997cellular} used
 by the platform's energy-absorption module.
 
 \subsection{Bloch--Floquet phononic bands}
-The unit cell is discretized into voxel masses connected by 26-neighbourhood axial springs.
+The unit cell is discretized into voxel masses connected by 26-neighbourhood axial springs;
+the Bloch--Floquet treatment follows the standard phononic-crystal formalism
+\cite{hussein2014review}.
 Bloch phases assemble a complex Hermitian $K(\mathbf{k})$, realified as
 $\begin{psmallmatrix}A&-B\\B&A\end{psmallmatrix}$ so that all eigensolution machinery is real.
 Two-pass \emph{deflate-Lanczos} (full reorthogonalization; the second run is deflated against the
@@ -155,7 +165,7 @@ pipeline through the precomputed-field injection contract, guaranteeing water-ti
 The default porosity path couples the requested value to a voxel-rank bisection whose caliber
 differs from the delivered triangle mesh; measured deviations reached 24 pp for higher-harmonic
 families at coarse resolutions. Following the analytic-integration methodology of RegionTPMS
-(SoftwareX, 2021), the agent CLI now (i) locates $iso^{*}$ on the \emph{analytic} field by
+\cite{karakoc2021regiontpms}, the agent CLI now (i) locates $iso^{*}$ on the \emph{analytic} field by
 bisection over a deterministic Monte-Carlo integration of $P(F<iso)$ in the unit cell (LCG-seeded,
 bit-reproducible), then (ii) builds once with $iso^{*}$ (bypassing the internal bisection) and
 applies a single secant correction along the analytic slope to absorb the mesh-versus-analytic
@@ -206,5 +216,41 @@ Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm install
 A deterministic agent CLI (\texttt{tpms/agent/tpms.mjs}) exposes \texttt{list}, 
 \texttt{estimate}, and \texttt{mesh} subcommands with JSON output for scripting and
 LLM-tool integration.
+
+\begin{thebibliography}{9}
+
+\bibitem[{Karako{\c{c}}(2021)}]{karakoc2021regiontpms}
+Karako{\c{c}}, A., 2021. Region based triply periodic minimal surfaces (TPMS) for 3-D printed
+multiphase bone scaffolds with exact porosity values. SoftwareX 16, 100835.
+\doi{10.1016/j.softx.2021.100835}
+
+\bibitem[{Schoen(1970)}]{schoen1970infinite}
+Schoen, A.H., 1970. Infinite periodic minimal surfaces and their crystallography in nature and
+the design of catalysts. NASA Technical Note TN D-5541.
+
+\bibitem[{Gibson(1997)}]{gibson1997cellular}
+Gibson, L.J., Ashby, M.F., 1997. Cellular Solids: Structure and Properties, 2nd ed. Cambridge
+University Press, Cambridge.
+
+\bibitem[{Sitzmann(2020)}]{sitzmann2020siren}
+Sitzmann, V., Martel, J.N.P., Bergman, A.W., Lindell, D.B., Wetzstein, G., 2020. Implicit neural
+representations with periodic activation functions. In: Advances in Neural Information Processing
+Systems 33 (NeurIPS 2020), pp. 7462--7473.
+
+\bibitem[{Hussein(2014)}]{hussein2014review}
+Hussein, M.I., Leamy, M.J., Ruzzene, M., 2014. Dynamics of phononic materials and structures:
+Historical origins, recent progress, and future outlook. Applied Mechanics Reviews 66(4), 040802.
+\doi{10.1115/1.4026911}
+
+\bibitem[{Gurson(1977)}]{gurson1977continuum}
+Gurson, A.L., 1977. Continuum theory of ductile rupture by void nucleation and growth: Part I ---
+Yield criteria and flow rules for porous ductile media. Journal of Engineering Materials and
+Technology 99(1), 2--15. \doi{10.1115/1.3443401}
+
+\bibitem[{Hill(1948)}]{hill1948theory}
+Hill, R., 1948. A theory of the yielding and plastic flow of anisotropic metals. Proceedings of
+the Royal Society of London. Series A 193(1033), 281--297. \doi{10.1098/rspa.1948.0045}
+
+\end{thebibliography}
 
 \end{document}
