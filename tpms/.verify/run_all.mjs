@@ -23,16 +23,10 @@ const suites = [
 ];
 
 function startServer(port, dir) {
-  // 2026-09-06 run42-52 实证分派：windows runner 上 node 静态服务 4/5 红（Defender/防火墙
-  // 干扰嫌疑）而 python http.server 六连绿；ubuntu/macos 相反（python spawn 链三层假红、
-  // node 全绿）——按平台各用其实证稳定的组合，不再追求单一实现。
-  if (process.platform === 'win32') {
-    const p = spawn('python', ['-m', 'http.server', String(port), '--directory', dir], {
-      stdio: 'ignore', detached: false,
-    });
-    p.on('error', () => { /* 由 waitPort 超时兜底 */ });
-    return p;
-  }
+  // 2026-09-06 run54 探针定案（diag_server_windows.mjs）：windows 上 python http.server 裸
+  // 并发 100 丢 49%（SERVER-LAYER 实锤，旧"六连绿"是页面轻、请求稀疏的假象）；node+Chromium
+  // 30 次加载零失败——三平台统一 node static-server。run48-52 的 windows 红属长时序偶发，
+  // 由 verify 导航重试 + 本文件套件重跑兜底，不回退实现。
   const p = spawn(process.execPath, [join(HERE, 'static-server.mjs'), String(port), dir], {
     stdio: 'ignore', detached: false,
   });
