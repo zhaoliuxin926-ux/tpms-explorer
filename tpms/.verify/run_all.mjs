@@ -23,9 +23,15 @@ const suites = [
 ];
 
 function startServer(port, dir) {
-  const p = spawn('python', ['-m', 'http.server', String(port), '--directory', dir.replace(/\//g, '\\')], {
+  // 2026-09-06 CI 终审定位：原实现 dir.replace(/\//g,'\\') 强制反斜杠（win32 假设），
+  // Linux/macOS 上 --directory 指向不存在的 'docs\platform'——http.server 照常监听
+  // 但所有请求 404（run39-41 全部 run_all 子套件空页且零报错的根因）。
+  // 正斜杠 Windows python 同样接受，直接传原生路径；非 win 用 python3。
+  const bin = process.platform === 'win32' ? 'python' : 'python3';
+  const p = spawn(bin, ['-m', 'http.server', String(port), '--directory', dir], {
     stdio: 'ignore', detached: false,
   });
+  p.on('error', () => { /* spawn 失败由 waitPort 超时兜底报错 */ });
   return p;
 }
 
