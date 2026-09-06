@@ -23,13 +23,20 @@ const suites = [
 ];
 
 function startServer(port, dir) {
-  // 2026-09-06 CI 终审定案：python http.server 的跨平台 spawn 差异（win32 假设反斜杠路径、
-  // macos 无 python 命令）连续制造三层 CI 假红——改用零依赖 node 静态服务器（static-server.mjs），
-  // 三平台行为一致。绑定 127.0.0.1（macos 下 localhost 可能先解析 ::1 而服务器只听 IPv4）。
-  const p = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(port), dir], {
+  // 2026-09-06 run42-52 实证分派：windows runner 上 node 静态服务 4/5 红（Defender/防火墙
+  // 干扰嫌疑）而 python http.server 六连绿；ubuntu/macos 相反（python spawn 链三层假红、
+  // node 全绿）——按平台各用其实证稳定的组合，不再追求单一实现。
+  if (process.platform === 'win32') {
+    const p = spawn('python', ['-m', 'http.server', String(port), '--directory', dir], {
+      stdio: 'ignore', detached: false,
+    });
+    p.on('error', () => { /* 由 waitPort 超时兜底 */ });
+    return p;
+  }
+  const p = spawn(process.execPath, [join(HERE, 'static-server.mjs'), String(port), dir], {
     stdio: 'ignore', detached: false,
   });
-  p.on('error', () => { /* spawn 失败由 waitPort 超时兜底报错 */ });
+  p.on('error', () => { /* 由 waitPort 超时兜底 */ });
   return p;
 }
 
