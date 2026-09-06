@@ -30,7 +30,7 @@ const BUNDLE = join(tmpdir(), 'tpms_manifold_audit_bundle.mjs');
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
     `export type { ManifoldKind, ManifoldConfig } from ${JSON.stringify(join(PLATFORM, 'src/core/manifold-mapping.ts'))};`,
   ].join('\n'));
-  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown.cmd');
+  const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
   try { rmSync(entry, { force: true }); } catch { /* 忽略 */ }
