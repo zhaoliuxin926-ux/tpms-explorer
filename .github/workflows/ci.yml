@@ -57,6 +57,13 @@ jobs:
           cp -r tpms/tpms-platform/dist docs/platform
           find docs/platform -name "*.map" -delete || true
 
+      # windows runner 上 verify 套件六红五且失败点随机漂移（run48-53）——分层探针拿铁证：
+      # A=服务器裸并发 B=浏览器全链路，一次 run 区分服务器层/浏览器层/长时序三种根因
+      - name: Static server layer diagnosis (windows flake)
+        if: runner.os == 'Windows'
+        working-directory: tpms/.verify
+        run: node diag_server_windows.mjs ../../docs/platform
+
       - name: Run 39-gate suite
         working-directory: tpms/tpms-platform
         run: npm run test:all

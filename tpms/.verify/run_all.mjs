@@ -88,7 +88,17 @@ await Promise.all([waitPort(PORT_PLAT), waitPort(PORT_DOCS)]);
 console.log('[服务] 4814(docs/platform) 与 8125(docs) 已就绪');
 
 const results = [];
-for (const s of suites) results.push([s.name, await runSuite(s)]);
+for (const s of suites) {
+  let ok = await runSuite(s);
+  // flaky-tolerant：windows runner 环境级偶发（run48-53 失败点随机漂移），失败单次重跑兜底，
+  // 重跑仍败才记红——cap 1 次防无限循环，重跑结果如实展示
+  if (!ok) {
+    console.log(`[RETRY] ${s.name} — 首跑失败，重跑一次（flaky 兜底）`);
+    ok = await runSuite(s);
+    if (ok) console.log(`[RETRY-OK] ${s.name} — 重跑通过（首跑记为环境抖动）`);
+  }
+  results.push([s.name, ok]);
+}
 
 srvPlat.kill(); srvDocs.kill();
 const failed = results.filter(([, ok]) => !ok);
