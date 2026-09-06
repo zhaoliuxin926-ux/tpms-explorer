@@ -27,7 +27,7 @@ function startServer(port, dir) {
   // 并发 100 丢 49%（SERVER-LAYER 实锤，旧"六连绿"是页面轻、请求稀疏的假象）；node+Chromium
   // 30 次加载零失败——三平台统一 node static-server。run48-52 的 windows 红属长时序偶发，
   // 由 verify 导航重试 + 本文件套件重跑兜底，不回退实现。
-  const p = spawn(process.execPath, [join(HERE, 'static-server.mjs'), String(port), dir], {
+  const p = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(port), dir], {
     stdio: 'ignore', detached: false,
   });
   p.on('error', () => { /* 由 waitPort 超时兜底 */ });
