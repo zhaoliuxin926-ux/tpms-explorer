@@ -30,9 +30,12 @@
 - 目标：propose → 执行 → 读门禁/审计结构化输出（CI RESULT 行）→ 修正重跑 循环
 - 成功标准：注入带故意缺陷的初始方案，Agent 在有限轮内凭门禁反馈收敛全绿，全程无人工干预
 
-### M5 骨支架场景模板 — 未开始
-- 目标：第一真实场景固化——"目标孔隙率/力学指标 → gyroid 支架 → 仿真 → Abaqus/OpenFOAM 导出 + 验证报告"
-- 成功标准：一条指令产出论文级参数表 + STL/INP + 与 Gibson-Ashby/文献带对比的验证报告
+### M5 骨支架场景模板 — ✅ 已完成（2026-09-07，scenario 命令）
+- 交付：`tpms.mjs scenario --design 方案.json`——设计意图 JSON → Gibson-Ashby 解析预测 → exact 孔隙率求解（水密门 fail-closed）→ 水密 STL（mm）+ Abaqus INP（体素 C3D8+PBC 压缩工况，buildVoxelModel+buildAbaqusInp）→ 验证报告 MD+JSON（参数表/孔隙率双口径[网格实测 vs 体素分位]/Gibson-Ashby 文献带对比/交付物 sha256 指纹/诚实边界声明）。exit 0 必伴随四件交付物；exit 3 = 参数层结构化拒绝（与 verify 同构）或构建失败
+- 口径事实：INP 体素孔隙率走 buildVoxelModel 内部体素分位二分（targetPorosity 口径），与 STL 网格实测口径并列披露随 R 收敛；材料泊松比为 CLI 确定性常数表（tc4=0.34/polymer=0.4/thermal=0.3）+ 报告披露；力学预测为解析工程口径非 FEA（报告内声明，schema description 同步声明勿向终端用户宣称仿真精度）
+- 注册：tools.schema.json 第四工具 tpms_scenario（design 单参数，值全部入 JSON 文件）+ nl_agent 语义覆盖升级（run-simulation/preset-* → 🔶 scenario 部分覆盖）；schema_check 30→40 断言（含退出码分层/参数越界逐点/UNKNOWN_FLAGS 拒绝）+ 守卫基线 40；selftest 40→47（端到端交付/双口径 trace/INP 结构/诚实边界/拒绝语义）
+- 验证：selftest 47/47 + schema_check 40/40 + 全量 39 门绿；实测冒烟 gyroid p0.65 tc4 R64×6：四件交付、网格实测 64.23%（偏差 0.77pp）、体素 64.99%、E*=5.12 GPa 带内
+- 剩余：M3 LLM 接入（等 key）——接入后 LLM tool calling 直填 scenario design 槽位即达成完整 Agent 闭环
 
 ## 约定
 - 每个 M 完成时更新本文件状态 + agent_memory/progress.md；新门禁进 .verify 前先在 agent/ 内自检（正式注册门禁会改变 CI 矩阵计数，须单独决策）

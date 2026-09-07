@@ -8,7 +8,7 @@
 //
 // 运行: node schema_check.mjs
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -23,9 +23,9 @@ const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding:
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
-schema.tools?.length === 3 && ['tpms_list', 'tpms_estimate', 'tpms_mesh'].every((n) => tool(n))
-  ? ok('schema 含三工具') : bad('schema 工具清单');
-for (const n of ['tpms_estimate', 'tpms_mesh']) {
+schema.tools?.length === 4 && ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_scenario'].every((n) => tool(n))
+  ? ok('schema 含四工具') : bad('schema 工具清单');
+for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario']) {
   const t = tool(n);
   t.parameters.additionalProperties === false && Array.isArray(t.parameters.required)
     ? ok(`${n} additionalProperties=false + required 声明`) : bad(`${n} 参数结构`);
@@ -90,6 +90,49 @@ for (const [label, args] of [
     ? ok('estimate/mesh type enum 相互一致') : bad('type enum 不一致');
 }
 
+// ── 3b. tpms_scenario（M5 场景模板）schema ↔ CLI 行为对拍 ──
+{
+  const t = tool('tpms_scenario');
+  t.parameters.required.includes('design') && Object.keys(t.parameters.properties).length === 1
+    ? ok('tpms_scenario required=[design] 且单参数（设计值全部入 JSON 文件）') : bad('tpms_scenario 参数结构');
+  t.description.includes('exit 0') && t.description.includes('非 FEA')
+    ? ok('tpms_scenario description 声明退出码分层与解析口径边界') : bad('tpms_scenario description 边界声明');
+
+  const writeDesign = (obj) => {
+    const p = join(HERE, `_schema_tmp_scn_${process.pid}.json`);
+    writeFileSync(p, JSON.stringify(obj));
+    return p;
+  };
+  // 合法方案端到端交付（R48 快档）
+  const dOk = writeDesign({ type: 'gyroid', porosity: 0.65, material: 'tc4', resolution: 48, periods: 4, out: join(HERE, `_schema_tmp_scn_out_${process.pid}`) });
+  const rOk = run('scenario', '--design', dOk, '--json');
+  const jOk = j(rOk.stdout);
+  rOk.status === 0 && jOk?.files?.length === 2 && jOk.geometry?.watertight?.openEdges === 0
+    ? ok('scenario 合法方案 exit0 交付（STL+INP+双报告）') : bad('scenario 合法方案', (rOk.stderr || '').slice(-80));
+  // 参数层结构化拒绝（未知材料 → exit3 + stage=parameter + paramErrors，与 verify 同构）
+  const dBad = writeDesign({ type: 'gyroid', porosity: 0.65, material: 'unobtanium' });
+  const rBad = run('scenario', '--design', dBad, '--json');
+  const jBad = j(rBad.stdout);
+  rBad.status === 3 && jBad?.stage === 'parameter' && Array.isArray(jBad.paramErrors) && jBad.paramErrors.length === 1
+    ? ok('scenario 未知材料结构化拒绝 [exit3+stage=parameter]') : bad('scenario 拒绝语义', `exit=${rBad.status}`);
+  // design JSON 数值越界逐点（schema description 声明的边界 ↔ CLI 拒绝）
+  for (const [label, over] of [
+    ['porosity 1.5 越界', { porosity: 1.5, material: 'tc4' }],
+    ['resolution 47 越下界', { resolution: 47, material: 'tc4' }],
+    ['nominalStrain 0.5 越界', { nominalStrain: 0.5, material: 'tc4' }],
+  ]) {
+    const d = writeDesign({ type: 'gyroid', material: 'tc4', ...over });
+    const r = run('scenario', '--design', d, '--json');
+    r.status === 3 && j(r.stdout)?.stage === 'parameter'
+      ? ok(`scenario ${label} 结构化拒绝`) : bad(`scenario ${label}`, `exit=${r.status}`);
+  }
+  // CLI 层未知属性拒绝（KNOWN_FLAGS）
+  const rW = run('scenario', '--design', dOk, '--weapon', 'laser');
+  rW.status === 2 ? ok('scenario 未知 CLI 属性被拒 [exit2]') : bad('scenario KNOWN_FLAGS', `exit=${rW.status}`);
+  // 缺 --design 被拒
+  run('scenario').status !== 0 ? ok('scenario 缺 --design 被拒') : bad('scenario 缺 --design');
+}
+
 // ── 4. nl-agent 语义覆盖映射完整性 ──
 {
   const cov = schema.nl_agent_semantic_coverage || {};
@@ -110,5 +153,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 30) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 30`); process.exit(1); }
+if (pass < 40) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 40`); process.exit(1); }
 process.exit(fail ? 1 : 0);

@@ -11,7 +11,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFileSync, rmSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, existsSync, unlinkSync, writeFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -199,6 +199,42 @@ rmSync(stlPath, { force: true });
     ? ok('verify 坏方案参数层结构化拒绝（exit3）') : bad('verify 坏方案', (rb.stderr || '').slice(-80));
   run('verify').status !== 0 ? ok('verify 缺 --design 被拒') : bad('verify 缺 --design 未拒绝');
   try { unlinkSync(dOk); unlinkSync(dBad); } catch { /* 忽略 */ }
+}
+// ── 13. scenario 命令回归守卫（M5 场景模板：一条指令 → STL+INP+验证报告）──
+{
+  const mk = (over) => join(tmpdir(), `tpms_selftest_scn_${process.pid}_${Math.random().toString(36).slice(2, 7)}.json`);
+  const prefix = join(tmpdir(), `tpms_selftest_scn_out_${process.pid}`);
+  const dGood = mk();
+  writeFileSync(dGood, JSON.stringify({ type: 'gyroid', porosity: 0.65, material: 'tc4', resolution: 48, periods: 4, out: prefix }));
+  const rs = run('scenario', '--design', dGood, '--json');
+  let js = null;
+  try { js = JSON.parse(rs.stdout); } catch { /* 忽略 */ }
+  const exists = (p) => { try { return statSync(p).size > 0; } catch { return false; } };
+  rs.status === 0 && js?.geometry?.watertight?.openEdges === 0 && js?.files?.length === 2
+    && exists(prefix + '.stl') && exists(prefix + '.inp') && exists(prefix + '.report.md') && exists(prefix + '.report.json')
+    ? ok('scenario 端到端交付（四件产出+水密+files 数据清单）') : bad('scenario 端到端', (rs.stderr || '').slice(-100));
+  js?.mechanics?.youngsModulusGPa > 0 && js.mechanics.youngsModulusGPa < 110 && typeof js.mechanics.inLiteratureBand === 'boolean'
+    ? ok('scenario 力学预测口径（0 < E* < 基体 + 文献带字段）') : bad('scenario 力学字段', JSON.stringify(js?.mechanics).slice(-80));
+  js?.geometry?.meshPorosity > 0 && js.geometry.voxelPorosity > 0 && js.geometry.porosityTrace?.length >= 1
+    ? ok('scenario 双口径孔隙率 + 求解 trace 可溯源') : bad('scenario 双口径', JSON.stringify(js?.geometry).slice(-80));
+  const inp = readFileSync(prefix + '.inp', 'utf8');
+  inp.includes('*NODE') && inp.includes('*ELEMENT, TYPE=C3D8') && inp.includes('*ELASTIC') && inp.includes('NSET_BOTTOM')
+    ? ok('scenario INP 结构（NODE/C3D8/ELASTIC/压缩面集）') : bad('scenario INP 结构', inp.slice(0, 60));
+  const mdText = readFileSync(prefix + '.report.md', 'utf8');
+  mdText.includes('验证报告') && mdText.includes('边界与限制')
+    ? ok('scenario 报告含诚实边界声明') : bad('scenario 报告边界', mdText.slice(0, 60));
+  const dBad = mk();
+  writeFileSync(dBad, JSON.stringify({ type: 'gyroid', porosity: 0.65, material: 'unobtanium' }));
+  const rbad = run('scenario', '--design', dBad, '--json');
+  let jbad = null;
+  try { jbad = JSON.parse(rbad.stdout); } catch { /* 忽略 */ }
+  rbad.status === 3 && jbad?.stage === 'parameter' && Array.isArray(jbad.paramErrors) && jbad.paramErrors.length === 1
+    ? ok('scenario 未知材料结构化拒绝（exit3 + stage=parameter，与 verify 同构）') : bad('scenario 拒绝', (rbad.stderr || '').slice(-80));
+  run('scenario').status !== 0 ? ok('scenario 缺 --design 被拒') : bad('scenario 缺 --design 未拒绝');
+  try {
+    unlinkSync(dGood); unlinkSync(dBad);
+    for (const suf of ['.stl', '.inp', '.report.md', '.report.json']) unlinkSync(prefix + suf);
+  } catch { /* 忽略 */ }
 }
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

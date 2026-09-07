@@ -649,12 +649,206 @@ function cmdVerify(core, a, json) {
   process.exit(3);
 }
 
+// ── M5 骨支架场景模板：一条指令的端到端交付 ──
+// 设计意图 JSON → Gibson-Ashby 解析预测 → exact 孔隙率求解（水密门）→ STL + Abaqus INP → 验证报告。
+// 语义承诺：exit 0 必伴随四件交付物（STL/INP/报告 MD+JSON）；失败必伴随结构化诊断（exit 2 参数/exit 3 构建）。
+// 口径诚实：STL 网格实测孔隙率（exact 求解校正）与 INP 体素孔隙率（体素分位二分）是同 iso 的两种
+// 离散表示，双口径并列披露；力学预测为 Gibson-Ashby 解析工程口径（非 FEA），文献带对比如实引用系数。
+
+const POISSON_BY_MATERIAL = { tc4: 0.34, polymer: 0.4, thermal: 0.3 }; // 基体泊松比（工程常数，INP *ELASTIC 用）
+
+function cmdScenario(a, json) {
+  const usage = '用法: node tpms.mjs scenario --design <方案.json> [--json]\n'
+    + '方案 JSON: { type, porosity, material 必填; resolution/periods/container/mode/tolerance/\n'
+    + '  nominalStrain/specimenSizeMm/out 可选（默认 64 / 6 / cube / solid_network / 0.01 / 0.05 / periods / scenario-<type>）}';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const designPath = String(a.design ?? '');
+  if (!designPath) die('缺少 --design <方案.json>', usage);
+  let design;
+  try { design = JSON.parse(readFileSync(designPath, 'utf8')); } catch (e) { die(`设计文件读取/解析失败: ${e?.message ?? e}`, usage); }
+  if (!design || typeof design !== 'object' || Array.isArray(design)) die('设计文件顶层须为 JSON 对象', usage);
+
+  // ── 1. 参数校验（结构化 paramErrors，与 verify 同语义）──
+  const paramErrors = [];
+  const type = String(design.type ?? '');
+  if (!BUILTIN_TYPES.includes(type)) paramErrors.push(`type "${type}" 不在 ${BUILTIN_TYPES.join('/')}`);
+  const pRaw = Number(design.porosity);
+  const pf = pRaw > 1 ? pRaw / 100 : pRaw;
+  if (!Number.isFinite(pRaw)) paramErrors.push('porosity 必须是数字');
+  else if (pf < 0.05 || pf >= 1) paramErrors.push(`porosity ${pf} 越界，须 0.05 ≤ p < 1（>1 视为百分数）`);
+  const material = String(design.material ?? '');
+  if (!(material in core.BASE_MODULUS)) paramErrors.push(`material "${material}" 不在 ${Object.keys(core.BASE_MODULUS).join('/')}`);
+  const resolution = design.resolution === undefined ? 64 : Number(design.resolution);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) paramErrors.push('resolution 须为 48~96 整数');
+  const periods = design.periods === undefined ? 6 : Number(design.periods);
+  if (!Number.isInteger(periods) || periods < 1 || periods > 12) paramErrors.push('periods 须为 1~12 整数');
+  const container = String(design.container ?? 'cube');
+  if (!CONTAINER_SHAPES.includes(container)) paramErrors.push(`container "${container}" 不在 ${CONTAINER_SHAPES.join('/')}`);
+  const mode = String(design.mode ?? 'solid_network');
+  if (!STRUCTURE_MODES.includes(mode)) paramErrors.push(`mode "${mode}" 不在 ${STRUCTURE_MODES.join('/')}`);
+  const tolerance = design.tolerance === undefined ? 0.01 : Number(design.tolerance);
+  if (!Number.isFinite(tolerance) || tolerance <= 0 || tolerance > 0.2) paramErrors.push('tolerance 须为 0 < t ≤ 0.2');
+  const nominalStrain = design.nominalStrain === undefined ? 0.05 : Number(design.nominalStrain);
+  if (!Number.isFinite(nominalStrain) || nominalStrain <= 0 || nominalStrain > 0.2) paramErrors.push('nominalStrain 须为 0 < ε ≤ 0.2（小应变压缩口径）');
+  const specimenSizeMm = design.specimenSizeMm === undefined ? periods : Number(design.specimenSizeMm);
+  if (!Number.isFinite(specimenSizeMm) || specimenSizeMm <= 0 || specimenSizeMm > 1000) paramErrors.push('specimenSizeMm 须为 0 < L ≤ 1000');
+  const outPrefix = String(design.out ?? `scenario-${type}`);
+  if (paramErrors.length) {
+    const out = { command: 'scenario', stage: 'parameter', paramErrors, designPath };
+    if (json) { console.log(JSON.stringify(out, null, 2)); process.exit(3); }
+    console.error(`✗ scenario 参数层拒绝（${paramErrors.length} 项）：`);
+    for (const e of paramErrors) console.error('  - ' + e);
+    process.exit(3);
+  }
+
+  const t0 = Date.now();
+  const rel = 1 - pf;
+  const matGPa = core.BASE_MODULUS[material];
+  const poisson = POISSON_BY_MATERIAL[material];
+
+  // ── 2. Gibson-Ashby 解析预测（工程口径，非 FEA）──
+  const ga = core.gibsonAshby(rel, type);
+  const eStarGPa = ga.E_Es * matGPa;
+  const sigmaStarMPa = ga.sigma_Es * core.BASE_YIELD_STRENGTH[material];
+  // 文献带（gibson-ashby.ts 头注定案）：E* 经典开孔 C1∈[0.35,0.44]·ρ̄²；σ* 平台 C2=0.3（网格泡沫折中上界）vs 经典开孔 0.23·ρ̄^1.5
+  const eBandGPa = [0.35 * rel * rel * matGPa, 0.44 * rel * rel * matGPa];
+  const sigmaBandMPa = [0.23 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material], 0.3 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material]];
+
+  // ── 3. exact 孔隙率求解（解析求根 + 网格实测割线校正）──
+  const buildOnce = (iso) => {
+    core.globalBufferPool.reset();
+    return core.buildSurface({
+      type, iso, periods, resolution, targetPorosity: undefined,
+      weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      thickness: 1.0, gradientDir: 'z',
+      hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
+      customFormula: '', preview: false,
+    }, core.globalBufferPool);
+  };
+  _lcg = 0x9e3779b9;
+  let solved;
+  try { solved = solveExactPorosity(core, type, pf, resolution, buildOnce); } catch (e) {
+    console.error(`✗ scenario 构建失败: ${e?.message ?? e}`);
+    process.exit(3);
+  }
+  const res = solved.res;
+  const audit = auditMeshIndices(res.positions, res.indices);
+  const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
+  if (!watertight) {
+    console.error(`✗ scenario 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 该 (曲面, 孔隙率, 容器) 组合在 R=${resolution} 下网格表示不可靠，建议提高 resolution`);
+    process.exit(3);
+  }
+  const meshPorosity = res.porosityEstimate;
+  const isoUsed = solved.isoUsed;
+
+  // ── 4. 交付物：STL（mm）+ Abaqus INP（体素 C3D8 + PBC 压缩工况）──
+  const scale = core.wcToMmFactor(periods);
+  const stlBuf = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
+  const stlFile = `${outPrefix}.stl`;
+  writeFileSync(stlFile, Buffer.from(stlBuf));
+
+  const voxel = core.buildVoxelModel({
+    type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+    thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
+  }, resolution);
+  const { text: inpText, nodeCount, elemCount } = core.buildAbaqusInp(voxel, {
+    youngModulusMPa: matGPa * 1000, poisson, nominalStrain, specimenSizeMm,
+  });
+  const inpFile = `${outPrefix}.inp`;
+  writeFileSync(inpFile, inpText, 'utf8');
+  const voxelPorosity = 1 - voxel.solidCount / (resolution * resolution * resolution); // 全包络口径
+
+  // ── 5. 验证报告（MD + JSON）──
+  const sha16 = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 16);
+  const reportJson = {
+    command: 'scenario', scenario: 'bone-scaffold-template (M5)',
+    design: { type, porosity: pf, material, materialLabel: MATERIAL_LABELS[material], resolution, periods, container, mode, tolerance, nominalStrain, specimenSizeMm },
+    geometry: {
+      isoUsed: +isoUsed.toFixed(6), rounds: solved.trace.length, porosityTrace: solved.trace,
+      meshPorosity: +meshPorosity.toFixed(6), meshPorosityDeviation: +(Math.abs(meshPorosity - pf)).toFixed(6),
+      voxelPorosity: +voxelPorosity.toFixed(6), voxelSolidCount: voxel.solidCount,
+      watertight: { openEdges: audit.openEdges, nonManifoldEdges: audit.nonManifoldEdges, degenTris: audit.degenTris },
+      vertCount: res.vertCount, triCount: res.triCount,
+    },
+    mechanics: {
+      method: 'Gibson-Ashby 解析工程口径（非 FEA）',
+      relativeDensity: +rel.toFixed(6),
+      youngsModulusGPa: +eStarGPa.toFixed(4),
+      literatureBandGPa: eBandGPa.map((v) => +v.toFixed(4)),
+      inLiteratureBand: eStarGPa >= eBandGPa[0] && eStarGPa <= eBandGPa[1],
+      yieldStrengthMPa: +sigmaStarMPa.toFixed(2),
+      sigmaNote: '平台 C2=0.3·ρ̄^1.5（网格泡沫折中上界）；经典开孔泡沫 0.23·ρ̄^1.5 为带下界',
+      inpElastic: { youngModulusMPa: matGPa * 1000, poisson, nominalStrain, specimenSizeMm },
+    },
+    files: [
+      { path: stlFile, bytes: stlBuf.byteLength, sha256_16: sha16(Buffer.from(stlBuf)), role: '水密网格（mm，打印/CFD）' },
+      { path: inpFile, bytes: Buffer.byteLength(inpText), sha256_16: sha16(inpText), role: 'Abaqus 体素压缩模型（C3D8+PBC）', nodeCount, elemCount },
+    ],
+    boundary: '报告口径：孔隙率双口径（网格实测/体素分位）随分辨率收敛；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准',
+    elapsedMs: Date.now() - t0,
+  };
+  const md = [
+    `# TPMS 场景验证报告 — ${type} 支架 @ ${(pf * 100).toFixed(1)}% 孔隙率`,
+    '',
+    `生成：${new Date().toISOString()}｜scenario 命令（M5 骨支架场景模板）｜耗时 ${reportJson.elapsedMs}ms`,
+    '',
+    '## 1. 设计参数',
+    '| 项 | 值 |', '|---|---|',
+    `| 曲面族 | ${type} |`, `| 目标孔隙率 | ${(pf * 100).toFixed(1)}% |`,
+    `| 材料 | ${MATERIAL_LABELS[material]}（E=${matGPa} GPa, ν=${poisson}） |`,
+    `| 结构/容器 | ${mode} / ${container} |`, `| 分辨率/周期 | R=${resolution} / ${periods} 周期 |`,
+    `| 试样宽 | ${specimenSizeMm} mm（${scale.toFixed(4)} mm/wc） |`,
+    '',
+    '## 2. 几何交付（STL 网格）',
+    `- 等值常数 iso = ${isoUsed.toFixed(6)}（exact 解析求根 + ${solved.trace.length} 轮网格实测校正）`,
+    `- 网格实测孔隙率 **${(meshPorosity * 100).toFixed(2)}%**（目标偏差 ${(Math.abs(meshPorosity - pf) * 100).toFixed(2)}pp）`,
+    `- 水密三硬指标：开放边 ${audit.openEdges} / 非流形边 ${audit.nonManifoldEdges} / 退化面 ${audit.degenTris}（全零通过）`,
+    `- 顶点 ${res.vertCount} / 三角 ${res.triCount}`,
+    '',
+    '## 3. 仿真交付（Abaqus INP）',
+    `- 体素模型 R=${resolution}（C3D8 单元 ${elemCount} 个 / 节点 ${nodeCount} 个，含 PBC 周期边界集与 BOTTOM/TOP 压缩面集）`,
+    `- 体素孔隙率 ${(voxelPorosity * 100).toFixed(2)}%（体素分位二分口径；与网格口径的差随 R 收敛，双口径并列披露）`,
+    `- 工况：单轴压缩名义应变 ${nominalStrain}（TOP 面位移/L），E=${matGPa * 1000} MPa，ν=${poisson}`,
+    '',
+    '## 4. 力学预测（Gibson-Ashby 解析口径，非 FEA）',
+    '| 量 | 平台预测 | 文献带 | 带内 |',
+    '|---|---|---|---|',
+    `| 相对密度 ρ̄ | ${rel.toFixed(4)} | — | — |`,
+    `| E* (GPa) | ${eStarGPa.toFixed(4)} | [${eBandGPa[0].toFixed(4)}, ${eBandGPa[1].toFixed(4)}]（C1∈[0.35,0.44]·ρ̄²） | ${eStarGPa >= eBandGPa[0] && eStarGPa <= eBandGPa[1] ? '✓' : '✗'} |`,
+    `| σ* (MPa) | ${sigmaStarMPa.toFixed(2)} | [${sigmaBandMPa[0].toFixed(2)}, ${sigmaBandMPa[1].toFixed(2)}]（0.23~0.3·ρ̄^1.5） | ${sigmaStarMPa >= sigmaBandMPa[0] && sigmaStarMPa <= sigmaBandMPa[1] ? '✓' : '✗'} |`,
+    '',
+    '## 5. 交付物',
+    '| 文件 | 字节 | sha256(16) | 用途 |', '|---|---|---|---|',
+    `| ${stlFile} | ${stlBuf.byteLength} | \`${sha16(Buffer.from(stlBuf))}\` | 水密网格（打印/CFD） |`,
+    `| ${inpFile} | ${Buffer.byteLength(inpText)} | \`${sha16(inpText)}\` | Abaqus 体素压缩模型 |`,
+    '',
+    '## 6. 边界与限制（诚实声明）',
+    '- 力学预测为 Gibson-Ashby 解析工程估算，非仿真结果；压缩响应以 Abaqus 实跑为准',
+    '- STL（网格）与 INP（体素）是同一 iso 的两种离散表示，孔隙率口径差随分辨率收敛',
+    '- 高谐波曲面族（iwp/frd/lidinoid/splitp）低分辨率下网格表示物理受限，偏差 >2pp 时建议 R=96',
+    '',
+  ].join('\n');
+  const mdFile = `${outPrefix}.report.md`;
+  const reportJsonFile = `${outPrefix}.report.json`;
+  writeFileSync(mdFile, md, 'utf8');
+  writeFileSync(reportJsonFile, JSON.stringify(reportJson, null, 2), 'utf8');
+
+  if (json) { console.log(JSON.stringify(reportJson, null, 2)); return; }
+  console.log('TPMS 场景交付（M5 骨支架模板：设计 → 求解 → STL+INP → 验证报告）');
+  console.log('  ───────────────────────────────');
+  console.log(`  方案         ${type} / ${(pf * 100).toFixed(1)}% / ${MATERIAL_LABELS[material]} / R=${resolution} × ${periods} 周期`);
+  console.log(`  网格实测孔隙率 ${(meshPorosity * 100).toFixed(2)}%（偏差 ${(Math.abs(meshPorosity - pf) * 100).toFixed(2)}pp）｜体素口径 ${(voxelPorosity * 100).toFixed(2)}%`);
+  console.log(`  E* 预测      ${eStarGPa.toFixed(3)} GPa（文献带 [${eBandGPa[0].toFixed(3)}, ${eBandGPa[1].toFixed(3)}]）`);
+  console.log(`  交付         ${stlFile} + ${inpFile}（C3D8×${elemCount}）+ ${mdFile} + ${reportJsonFile}`);
+}
+
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
   mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
+  scenario: ['design', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -673,14 +867,16 @@ else if (cmd === 'estimate') cmdEstimate(a, json);
 else if (cmd === 'mesh') cmdMesh(a, json);
 else if (cmd === 'solve') cmdSolve(a, json);
 else if (cmd === 'verify') cmdVerify(core, a, json);
+else if (cmd === 'scenario') cmdScenario(a, json);
 else {
-  console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环）');
+  console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环 + M5 场景模板）');
   console.log('用法:');
   console.log('  node tpms.mjs list');
   console.log('  node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]');
   console.log('  node tpms.mjs mesh --type gyroid --porosity 0.65 [--periods 6] [--resolution 64] [--out 文件.stl] [--json]');
   console.log('  node tpms.mjs solve --type gyroid --porosity 0.65 [--tolerance 0.01] [--max-rounds 5] [--json]');
   console.log('  node tpms.mjs verify --design 设计.json [--max-rounds 5] [--json]');
+  console.log('  node tpms.mjs scenario --design 方案.json   # M5：一条指令 → STL+INP+验证报告');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }

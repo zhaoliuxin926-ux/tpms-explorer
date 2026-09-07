@@ -12,7 +12,7 @@ import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLATFORM = join(HERE, '../tpms-platform');
 
-// 按需导出的核心符号清单（M0：纯数学层；M1：几何管线）
+// 按需导出的核心符号清单（M0：纯数学层；M1：几何管线；M5：体素 INP 交付）
 const CORE_EXPORTS = [
   `export { getTpmsFunction } from ${JSON.stringify(join(PLATFORM, 'src/core/tpms-functions.ts'))};`,
   `export { gibsonAshby, getAnisotropy, BASE_MODULUS, BASE_YIELD_STRENGTH } from ${JSON.stringify(join(PLATFORM, 'src/physics/gibson-ashby.ts'))};`,
@@ -20,6 +20,8 @@ const CORE_EXPORTS = [
   `export { globalBufferPool } from ${JSON.stringify(join(PLATFORM, 'src/geometry/buffer-pool.ts'))};`,
   `export { wcToMmFactor } from ${JSON.stringify(join(PLATFORM, 'src/core/units.ts'))};`,
   `export { buildBinarySTL } from ${JSON.stringify(join(PLATFORM, 'src/export/stl-exporter.ts'))};`,
+  `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
+  `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');
 
 export async function loadCore() {
