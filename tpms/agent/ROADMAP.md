@@ -124,7 +124,7 @@
 
 ### B-t5 质量债穿插清偿（不占主线，随审随修）
 - [x] B5.1 体积损耗量化审计 ✅（2026-09-05）：`tpms/.verify/volume_loss_audit.mjs`（8 曲面 × R{48,64,96} × p 4 档 = 32 组合，独立运行不进 CI 调度）。**量化发现**：损耗 iwp R48 p0.65 最差 18.5pp、gyroid/lidinoid 最优 0~0.4pp，总体随 R 收敛；单胞/多周期解析口径差 1.7pp、网格与解析差 9~11pp（R48）——根因（场采样域一致性/投影体积收缩）登记 bugs.md 待平台级深挖
-- [ ] B5.2 cylinder+diamond R64 非流形（nm 740）：定位封盖/容器交线机制——验证：该工况水密门通过或输出结构化不可达报告
+- [x] B5.2 cylinder+diamond R64 非流形（nm 740）：定位封盖/容器交线机制——✅ 定案（2026-09-08 诊断轮）：**"容器交线"假设被空间分布取证否定**（nm 边全域分布不贴壁）；单一根因=亚体素薄壁自触（详见 bugs.md 诊断定案）。修复裁决：nudge 探针证伪（iso 邻域平台状）+ 真拓扑修复成本超收益（v2 先例）→ fail-closed 为正确行为，触发域钉进 schema_check/tools.schema.json；cylinder R96 残余 nm=164 单组合登记延后
 - [ ] B5.3 stl-exporter 定向一致性进 parity_math 门（字节级有向配对，当前仅 selftest 覆盖）——验证：parity_math 新增断言绿
 - [ ] B5.4 topics 手动添加（push 后）：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing
 

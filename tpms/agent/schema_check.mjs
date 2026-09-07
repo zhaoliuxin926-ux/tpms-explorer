@@ -51,6 +51,10 @@ for (const [label, args, check] of [
 // frd 例外（2026-09-06 登记，bugs.md）：k 修复后精确投影暴露 R48/R64 薄壁自触非流形
 //（nm 20736/3840，随分辨率收敛、R96 可构建）——体素场拓扑极限，fail-closed 是正确行为。
 // 对 frd 钉住 R48 结构化拒产（exit3+水密门）+ R96 可构建；其余 7 类型维持 R48 可构建。
+// lidinoid 例外（2026-09-08 诊断轮定案，bugs.md）：p≥0.7 薄壁自触同族——R48/R64 拒产
+//（nm 28512/8640@p0.7）、R96 可产（拓扑自愈，旧登记 R96 nm=10368 已过时）；p0.9 R48 可产
+// 但 exact 求解孔隙率偏差大（薄壁区 iso 响应混沌）。nudge（iso 微调避坑）已被探针证伪：
+// nm 在 iso 邻域呈平台状（±0.02 内无归零点）——fail-closed + 可用域声明为定案路线。
 for (const ty of TYPES) {
   if (ty === 'frd') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
@@ -59,6 +63,19 @@ for (const ty of TYPES) {
       : bad('type enum frd R48 行为漂移', `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok('type enum 值 frd 可构建（R96）') : bad('type enum frd R96', (r96.stderr || '').slice(-60));
+    continue;
+  }
+  if (ty === 'lidinoid') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 3 && (r48.stderr || '').includes('水密门')
+      ? ok('type enum 值 lidinoid p0.7 R48 已登记 fail-closed（薄壁自触，bugs.md）')
+      : bad('type enum lidinoid p0.7 R48 行为漂移', `exit=${r48.status}`);
+    const r64 = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '64', '--out', join(tmpOut()), '--json');
+    r64.status === 3 && (r64.stderr || '').includes('水密门')
+      ? ok('type enum 值 lidinoid p0.7 R64 已登记 fail-closed（薄壁自触）')
+      : bad('type enum lidinoid p0.7 R64 行为漂移', `exit=${r64.status}`);
+    const r96 = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96.status === 0 ? ok('type enum 值 lidinoid p0.7 可构建（R96，拓扑自愈）') : bad('type enum lidinoid p0.7 R96', (r96.stderr || '').slice(-60));
     continue;
   }
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
@@ -153,5 +170,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 40) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 40`); process.exit(1); }
+if (pass < 42) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 42`); process.exit(1); }
 process.exit(fail ? 1 : 0);
