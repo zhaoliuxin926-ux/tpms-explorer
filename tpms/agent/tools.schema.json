@@ -41,19 +41,31 @@
           "json": { "type": "boolean", "description": "输出机器可读 JSON" }
         }
       }
+    },
+    {
+      "name": "tpms_scenario",
+      "description": "M5 骨支架场景模板：一条指令的端到端交付——设计意图 JSON → Gibson-Ashby 解析预测 → exact 孔隙率求解（水密门 fail-closed）→ 水密 STL（mm）+ Abaqus INP（体素 C3D8+PBC 压缩工况）→ 验证报告（MD+JSON，含参数表/孔隙率双口径/Gibson-Ashby 文献带对比/交付物指纹）。输入为 design 文件路径（设计值全部写入 JSON 文件而非命令行）。exit 0 必伴随四件交付物；exit 3 = 参数层结构化拒绝（stage=parameter + paramErrors，与 verify 同构）或构建/水密门失败。力学预测为解析工程口径非 FEA——报告内已诚实声明，勿向终端用户宣称仿真精度。",
+      "parameters": {
+        "type": "object",
+        "required": ["design"],
+        "additionalProperties": false,
+        "properties": {
+          "design": { "type": "string", "description": "设计方案 JSON 文件路径。JSON 字段：type/porosity/material 必填（枚举同 tpms_mesh/tpms_estimate）；resolution(48~96,默认64)/periods(1~12,默认6)/container/mode/tolerance(0<t≤0.2,默认0.01)/nominalStrain(0<ε≤0.2,默认0.05)/specimenSizeMm(默认=periods，1 period=1mm 约定)/out(输出前缀) 可选。参数越界在参数层结构化拒绝。" }
+        }
+      }
     }
   ],
   "nl_agent_semantic_coverage": {
-    "说明": "对 nl_agent_audit 32 断言语义类型的覆盖映射（B-t2 验证口径）",
-    "TYPE_WORDS(8)": "✅ tpms_estimate/tpms_mesh type enum 全覆盖",
-    "MATERIAL_WORDS(3)": "✅ tpms_estimate material enum 全覆盖",
+    "说明": "对 nl_agent_audit 32 断言语义类型的覆盖映射（B-t2 验证口径；M5 增补 scenario）",
+    "TYPE_WORDS(8)": "✅ tpms_estimate/tpms_mesh type enum 全覆盖；tpms_scenario design.type 同枚举",
+    "MATERIAL_WORDS(3)": "✅ tpms_estimate material enum 全覆盖；tpms_scenario design.material 同枚举",
     "MODE_WORDS(2: solid_network/gradient_shell)": "✅ tpms_mesh mode enum（另含平台 shell，超集）",
     "CONTAINER_WORDS(2)": "✅ tpms_mesh container enum 全覆盖",
     "porosity 参数": "✅ 双口径（小数/百分数）+ 边界拒绝",
     "NLAction.export-stl": "✅ tpms_mesh",
     "NLAction.export-3mf": "⬜ 未覆盖（3MF 导出器在平台 UI；CLI 扩展属 B-t3+）",
-    "NLAction.run-simulation": "⬜ 未覆盖（声明于 tpms_mesh description）",
+    "NLAction.run-simulation": "🔶 tpms_scenario 部分覆盖（Abaqus INP 压缩模型交付；Abaqus 实跑在外部 CAE）",
     "NLAction.reset": "⬜ 不适用（CLI 无状态会话）",
-    "NLAction.preset-bone / preset-thermal": "⬜ 未覆盖（预设参数组合属 M5 场景模板）"
+    "NLAction.preset-bone / preset-thermal": "🔶 tpms_scenario 场景化覆盖（参数组合固化为 design JSON）"
   }
 }
