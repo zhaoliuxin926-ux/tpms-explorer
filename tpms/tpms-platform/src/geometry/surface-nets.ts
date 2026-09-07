@@ -321,7 +321,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     // targetPorosity 已由主线程转换为 0~1 小数（main.ts 中 s.porosity / 100）
     const targetSolid = Math.max(0.02, Math.min(0.98, 1 - targetPorosity));
 
-    // 提取容器内 V 值并排序，供 lower_bound 使用
+    // 提取容器内 V 值，建「桶前缀和 + 桶内精确计数」分位结构供 lower_bound 使用
     // 注意：boundArr 已叠加封盖皮肤环（±ε），容器内外判定必须用原始 boundAt
     const insideV = pool.insideV.subarray(0, containerInside);
     let insideIdx = 0;
@@ -338,19 +338,38 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         }
       }
     }
-    const insideArr = insideV.slice(0, insideIdx);
-    insideArr.sort((a, b) => a - b);
-    const insideN = insideArr.length;
+    const insideN = insideIdx;
+    // 桶分区（计数排序放置，O(n)）替代全量比较排序（O(n log n)，R96 曾 ~0.4s）：
+    // lb 语义保持逐元素精确等价——前缀和给桶基址，桶内真元素扫描给 <value 计数
+    const NBUCKETS = 8192;
+    const vSpan = maxV - minV;
+    const bucketOf = (x: number): number => {
+      const b = Math.floor((x - minV) / vSpan * NBUCKETS);
+      return b < 0 ? 0 : b >= NBUCKETS ? NBUCKETS - 1 : b;
+    };
+    const bucketStart = new Int32Array(NBUCKETS + 1);
+    for (let i = 0; i < insideN; i++) bucketStart[bucketOf(insideV[i]) + 1]++;
+    for (let b = 0; b < NBUCKETS; b++) bucketStart[b + 1] += bucketStart[b];
+    const bucketArr = new Float32Array(insideN);
+    {
+      const cursor = bucketStart.slice(0, NBUCKETS);
+      for (let i = 0; i < insideN; i++) {
+        const b = bucketOf(insideV[i]);
+        bucketArr[cursor[b]++] = insideV[i];
+      }
+    }
 
     /** lower_bound：返回第一个 >= value 的索引；[0, idx) 均 < value */
     const lb = (value: number): number => {
-      let lo = 0, hi = insideN;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (insideArr[mid] < value) lo = mid + 1;
-        else hi = mid;
+      if (value <= minV) return 0;
+      if (value > maxV) return insideN;
+      const b = bucketOf(value);
+      let c = bucketStart[b]; // 前面所有桶的元素全部 < value（桶界保证）
+      const e = bucketStart[b + 1];
+      for (let j = c; j < e; j++) {   // 所在桶内逐元素精确计数（元素 == value 不计入，与二分一致）
+        if (bucketArr[j] < value) c++;
       }
-      return lo;
+      return c;
     };
 
     if (mode === 'solid_network') {
@@ -684,25 +703,30 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const frozenCap = new Uint8Array(vertCount + 65536);  // 扇心：完全不动
   {
     const KM = vertCount + 1;
-    const dirCnt = new Map<number, number>();
-    const undCnt = new Map<number, number>();
+    // 无向边 pack = (min*KM+max)*2 + 方向位（min→max→0）：整数 <2^53，Float64 精确；
+    // 排序聚合替代 dirCnt/undCnt 双 Map（R96 165 万边 ×4 次 Map 操作曾是构建最大热点之一）
+    const edgeKeys = new Float64Array(indexCount);
     for (let t = 0; t < indexCount; t += 3) {
       const a = indices[t], b = indices[t + 1], c = indices[t + 2];
-      const put = (u: number, v: number) => {
-        const dk = u * KM + v;
-        dirCnt.set(dk, (dirCnt.get(dk) ?? 0) + 1);
-        const uk = u < v ? u * KM + v : v * KM + u;
-        undCnt.set(uk, (undCnt.get(uk) ?? 0) + 1);
-      };
-      put(a, b); put(b, c); put(c, a);
+      edgeKeys[t]     = (a < b ? a * KM + b : b * KM + a) * 2 + (a < b ? 0 : 1);
+      edgeKeys[t + 1] = (b < c ? b * KM + c : c * KM + b) * 2 + (b < c ? 0 : 1);
+      edgeKeys[t + 2] = (c < a ? c * KM + a : a * KM + c) * 2 + (c < a ? 0 : 1);
     }
+    edgeKeys.sort(); // TypedArray 数值排序：同无向边必相邻，方向位在组内区分
     let nmCountLocal = 0;
-    for (const [, cnt] of undCnt) if (cnt > 2) nmCountLocal++;
     const succ = new Map<number, number>();
-    for (const [uk, cnt] of undCnt) {
+    for (let i = 0; i < indexCount; ) {
+      const undKey = Math.floor(edgeKeys[i] / 2);
+      let ab = 0, ba = 0; // ab = min→max 计数，ba = max→min 计数
+      while (i < indexCount && Math.floor(edgeKeys[i] / 2) === undKey) {
+        if (edgeKeys[i] % 2 === 0) ab++; else ba++;
+        i++;
+      }
+      const cnt = ab + ba;
+      if (cnt > 2) nmCountLocal++;
       if (cnt !== 1) continue;
-      const u = Math.floor(uk / KM), v = uk % KM;
-      const su = (dirCnt.get(u * KM + v) ?? 0) === 1 ? u : v;
+      const u = Math.floor(undKey / KM), v = undKey % KM;
+      const su = ab === 1 ? u : v;
       const sv = su === u ? v : u;
       if (succ.has(su)) continue;   // 非流形边界顶点（罕见）：放弃该段，审计暴露
       succ.set(su, sv);

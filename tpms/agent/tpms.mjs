@@ -205,25 +205,34 @@ function cmdEstimate(a, json) {
 
 function auditMeshIndices(positions, indices) {
   const triCount = indices.length / 3;
-  const edgeOut = new Map(); // 无向边 key → [u<v 计数, u>v 计数]
-  let degenTris = 0;
+  const vertCount = positions.length / 3;
+  const KM = vertCount + 1;
+  // 无向边 pack = (min*KM+max)*2 + 方向位（u<v→0）：整数 <2^53，Float64 精确；
+  // 排序聚合替代字符串 key Map（R96 165 万边，Map+装箱是 CLI 命令最大热点之一）
+  const edgeKeys = new Float64Array(triCount * 3);
+  let n = 0, degenTris = 0;
   for (let t = 0; t < triCount; t++) {
     const i0 = indices[t * 3], i1 = indices[t * 3 + 1], i2 = indices[t * 3 + 2];
     if (i0 === i1 || i1 === i2 || i0 === i2) { degenTris++; continue; }
-    for (const [u, v] of [[i0, i1], [i1, i2], [i2, i0]]) {
-      const k = u < v ? u + ',' + v : v + ',' + u;
-      let rec = edgeOut.get(k);
-      if (!rec) { rec = [0, 0]; edgeOut.set(k, rec); }
-      if (u < v) rec[0]++; else rec[1]++;
-    }
+    edgeKeys[n++] = (i0 < i1 ? i0 * KM + i1 : i1 * KM + i0) * 2 + (i0 < i1 ? 0 : 1);
+    edgeKeys[n++] = (i1 < i2 ? i1 * KM + i2 : i2 * KM + i1) * 2 + (i1 < i2 ? 0 : 1);
+    edgeKeys[n++] = (i2 < i0 ? i2 * KM + i0 : i0 * KM + i2) * 2 + (i2 < i0 ? 0 : 1);
     const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3;
     const ax = positions[p1] - positions[p0], ay = positions[p1 + 1] - positions[p0 + 1], az = positions[p1 + 2] - positions[p0 + 2];
     const bx = positions[p2] - positions[p0], by = positions[p2 + 1] - positions[p0 + 1], bz = positions[p2 + 2] - positions[p0 + 2];
     const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
     if (cx * cx + cy * cy + cz * cz <= 1e-18) degenTris++;
   }
+  const edges = edgeKeys.subarray(0, n);
+  edges.sort(); // TypedArray 数值排序
   let openEdges = 0, nonManifoldEdges = 0, misorientedEdges = 0;
-  for (const [, [ab, ba]] of edgeOut) {
+  for (let i = 0; i < n; ) {
+    const undKey = Math.floor(edges[i] / 2);
+    let ab = 0, ba = 0; // ab = min→max 计数，ba = max→min 计数
+    while (i < n && Math.floor(edges[i] / 2) === undKey) {
+      if (edges[i] % 2 === 0) ab++; else ba++;
+      i++;
+    }
     const total = ab + ba;
     if (total === 1) openEdges++;
     else if (total > 2) nonManifoldEdges++;
@@ -531,11 +540,14 @@ function cmdVerify(core, a, json) {
   let iso = null;
   const t0 = Date.now();
 
+  // 解析求根只依赖 (type, pf, W, MC_BISECT_N)，与轮次/分辨率无关——循环不变量，算一次复用。
+  // （此前在循环内每轮重算：缓存未命中场景下每轮全量 34 轮 MC 二分，纯浪费；
+  //   _lcg 仅被 porAnalytic 消耗、buildSurface 确定性，外提不影响轮次间行为。）
+  _lcg = 0x9e3779b9; // 重置 LCG：确定性
+  const { iso: isoStar, slope: slopeAnalytic } = solveIsoAnalytic(core, type, pf, W);
+
   for (let round = 1; round <= maxRounds; round++) {
     const attempt = { round, resolution: R, iso: iso === null ? null : +iso.toFixed(4), checks: {} };
-    // 解析求根（每轮重置 LCG：确定性）
-    _lcg = 0x9e3779b9;
-    const { iso: isoStar, slope: slopeAnalytic } = solveIsoAnalytic(core, type, pf, W);
     iso = iso === null ? isoStar : iso;
 
     core.globalBufferPool.reset();
