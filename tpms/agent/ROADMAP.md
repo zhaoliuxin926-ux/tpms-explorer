@@ -200,5 +200,8 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 ## 下一步（更新）
 1. **用户操作**：署名三项（作者拼写/单位/LICENSE 版权行）→ Editorial Manager 注册提交 → 回填投稿号。
 2. B-t3 LLM 接入（等 key）。
-3. 可选深水区：surface-nets 场离散原子化（R48/k6 仅 1165 互异场值）的分辨率补偿、lidinoid 高孔隙拓扑、cap 段 Map→TypedArray（再省 1.2s/R96）。
+3. 可选深水区：surface-nets 场离散原子化（R48/k6 仅 1165 互异场值）的分辨率补偿、lidinoid 高孔隙拓扑。
+   ~~cap 段 Map→TypedArray（再省 1.2s/R96）~~ ✅（2026-09-07 性能轮 1748e17：cap 段与 CLI audit 边计数
+   Map→pack 排序聚合 + 分位数排序→桶计数 + verify 循环 solveIsoAnalytic 外提，R96 场景全线 -8%~-46%，
+   输出指纹逐字节一致，39/39 门绿）
 
