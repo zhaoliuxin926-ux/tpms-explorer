@@ -252,6 +252,25 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       ]);
       return sumChain(b, [mulChain(b, [wreg(0), low]), mulChain(b, [wreg(1), hi])]);
     }
+    case 'fcks': {
+      // 谐波 3×：IR 无 sin3/cos3 原语 → 用乘法链组合（与 CPU 逐项对应，万点对拍守门）
+      const sin3 = (r: number) => b.binary('mul', b.binary('mul', sin(r), sin(r)), sin(r));
+      const cos3 = (r: number) => b.binary('mul', b.binary('mul', cos(r), cos(r)), cos(r));
+      const c2 = (r: number) => cos2(b, r);
+      const s2 = (r: number) => sin2(b, r);
+      const base = sumChain(b, [c2(mx), c2(my), c2(mz)]);
+      const g1 = sumChain(b, [
+        mulChain(b, [sin3(mx), s2(my), cos(mz)]),
+        mulChain(b, [cos(mx), sin3(my), s2(mz)]),
+        mulChain(b, [s2(mx), cos(my), sin3(mz)]),
+      ]);
+      const g2 = sumChain(b, [
+        mulChain(b, [s2(mx), cos3(my), sin(mz)]),
+        mulChain(b, [sin(mx), s2(my), cos3(mz)]),
+        mulChain(b, [cos3(mx), sin(my), s2(mz)]),
+      ]);
+      return sumChain(b, [base, mulChain(b, [wreg(0), b.load(2), g1]), mulChain(b, [wreg(0), b.load(2), g2])]);
+    }
     case 'gprime': {
       const t = sumChain(b, [
         mulChain(b, [sin2(b, mx), cos(my), sin(mz)]),

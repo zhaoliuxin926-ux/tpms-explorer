@@ -17,6 +17,7 @@ const C1_MAP: Record<string, number> = {
   fks: 0.38,
   fky: 0.38,
   gprime: 0.38,
+  fcks: 0.38, // 谐波 3× 带内估值
   custom: 0.38,  // default to gyroid value
 };
 
@@ -47,6 +48,7 @@ const ANISOTROPY_MAP: Record<string, number> = {
   fks: 1.35,
   fky: 1.32,
   gprime: 1.32,
+  fcks: 1.36, // 谐波 3× 非立方
   custom: 1.30,
 };
 

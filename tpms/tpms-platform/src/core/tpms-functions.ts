@@ -135,9 +135,27 @@ const gprime: TpmsFunction = (mx, my, mz, w) =>
     Math.sin(2 * my) * Math.cos(mz) * Math.sin(mx) +
     Math.sin(2 * mz) * Math.cos(mx) * Math.sin(my)) + 0.32;
 
+/**
+ * Fisher-Koch C(S)（C2 第二批，谐波 3×——须 R≥96 表示，R128 档位为目标场景）：1 权重
+ * cos2x+cos2y+cos2z + 2(sin3x·sin2y·cosz + cosx·sin3y·sin2z + sin2x·cosy·sin3z)
+ *                  + 2(sin2x·cos3y·sinz + sinx·sin2y·cos3z + cos3x·siny·sin2z)
+ * 公式独立抄自 MiniSurf（Hsieh & Valdevit 2020）官方源码。
+ */
+const fcks: TpmsFunction = (mx, my, mz, w) => {
+  const S2x = Math.sin(2 * mx), S2y = Math.sin(2 * my), S2z = Math.sin(2 * mz);
+  const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
+  const S3x = Math.sin(3 * mx), S3y = Math.sin(3 * my), S3z = Math.sin(3 * mz);
+  const C3x = Math.cos(3 * mx), C3y = Math.cos(3 * my), C3z = Math.cos(3 * mz);
+  return w[0] * (
+    C2x + C2y + C2z +
+    2 * (S3x * S2y * Math.cos(mz) + Math.cos(mx) * S3y * S2z + S2x * Math.cos(my) * S3z) +
+    2 * (S2x * C3y * Math.sin(mz) + Math.sin(mx) * S2y * C3z + C3x * Math.sin(my) * S2z)
+  );
+};
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
-  gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime,
+  gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -150,7 +168,7 @@ export function getWeightCount(type: TpmType): number {
     case 'diamond': return 4;
     case 'octo': return 2;
     case 'karcher': case 'fks': case 'fky': return 3;
-    case 'gprime': return 1;
+    case 'gprime': case 'fcks': return 1;
     case 'custom': return 4;
     default: return 3;
   }

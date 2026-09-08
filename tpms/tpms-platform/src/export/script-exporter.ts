@@ -136,6 +136,14 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
         return (w[0]*(np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z) + np.sin(kk*X)*np.sin(kk*Y)*np.sin(kk*Z))
                 + w[1]*(np.sin(2*kk*X)*np.sin(kk*Y) + np.sin(2*kk*Y)*np.sin(kk*Z) + np.sin(kk*X)*np.sin(2*kk*Z)
                         + np.sin(2*kk*X)*np.cos(kk*Z) + np.cos(kk*X)*np.sin(2*kk*Y) + np.cos(kk*Y)*np.sin(2*kk*Z)))
+    elif t == 'fcks':
+        S2x, S2y, S2z = np.sin(2*kk*X), np.sin(2*kk*Y), np.sin(2*kk*Z)
+        C2x, C2y, C2z = np.cos(2*kk*X), np.cos(2*kk*Y), np.cos(2*kk*Z)
+        S3x, S3y, S3z = np.sin(3*kk*X), np.sin(3*kk*Y), np.sin(3*kk*Z)
+        C3x, C3y, C3z = np.cos(3*kk*X), np.cos(3*kk*Y), np.cos(3*kk*Z)
+        return (w[0]*(C2x + C2y + C2z
+                + 2*(S3x*S2y*np.cos(kk*Z) + np.cos(kk*X)*S3y*S2z + S2x*np.cos(kk*Y)*S3z)
+                + 2*(S2x*C3y*np.sin(kk*Z) + np.sin(kk*X)*S2y*C3z + C3x*np.sin(kk*Y)*S2z)))
     elif t == 'gprime':
         return (w[0]*(np.sin(2*kk*X)*np.cos(kk*Y)*np.sin(kk*Z)
                       + np.sin(2*kk*Y)*np.cos(kk*Z)*np.sin(kk*X)
@@ -545,6 +553,14 @@ elseif strcmp(tpms_type, 'fky')
     V = weights(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
       + weights(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
                     + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+elseif strcmp(tpms_type, 'fcks')
+    S2x_ = sin(2*kk*X); S2y_ = sin(2*kk*Y); S2z_ = sin(2*kk*Z);
+    C2x_ = cos(2*kk*X); C2y_ = cos(2*kk*Y); C2z_ = cos(2*kk*Z);
+    S3x_ = sin(3*kk*X); S3y_ = sin(3*kk*Y); S3z_ = sin(3*kk*Z);
+    C3x_ = cos(3*kk*X); C3y_ = cos(3*kk*Y); C3z_ = cos(3*kk*Z);
+    V = weights(1)*(C2x_ + C2y_ + C2z_ ...
+        + 2*(S3x_.*S2y_.*cos(kk*Z) + cos(kk*X).*S3y_.*S2z_ + S2x_.*cos(kk*Y).*S3z_) ...
+        + 2*(S2x_.*C3y_.*sin(kk*Z) + sin(kk*X).*S2y_.*C3z_ + C3x_.*sin(kk*Y).*S2z_));
 elseif strcmp(tpms_type, 'gprime')
     V = weights(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
                     + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...
@@ -605,6 +621,8 @@ if ${safeId(state.hybrid.enabled)}
         V_b = weights_b(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
             + weights_b(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
                             + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+    elseif strcmp(type_b, 'fcks')
+        error('Unsupported hybrid TPMS type'); % C(S) 谐波 3× 暂不开放 B 侧混合
     elseif strcmp(type_b, 'gprime')
         V_b = weights_b(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
                             + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...

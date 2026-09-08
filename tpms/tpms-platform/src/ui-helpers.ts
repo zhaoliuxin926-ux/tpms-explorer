@@ -19,6 +19,7 @@ export const LABEL: Record<string, string> = {
   fks: 'Fischer-Koch S',
   fky: 'Fischer-Koch Y',
   gprime: 'G′',
+  fcks: 'Fisher-Koch C(S)',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -42,6 +43,7 @@ export const FORMULA: Record<string, string> = {
   fks: 'cos 2x sin y cos z + cos x cos 2y sin z + sin x cos y cos 2z',
   fky: 'cos x cos y cos z + sin x sin y sin z + sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z',
   gprime: 'sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y + 0.32',
+  fcks: 'cos 2x + cos 2y + cos 2z + 2(sin 3x sin 2y cos z + cos x sin 3y sin 2z + sin 2x cos y sin 3z) + 2(sin 2x cos 3y sin z + sin x sin 2y cos 3z + cos 3x sin y sin 2z)',
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
@@ -58,6 +60,7 @@ export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
   fks:     [['cos 2x sin y cos z', 'a', 1], ['cos x cos 2y sin z', 'b', 1], ['sin x cos y cos 2z', 'c', 1]],
   fky:     [['cos x cos y cos z + sin x sin y sin z', 'a', 1], ['sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z', 'b', 1]],
   gprime:  [['sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y', 'a', 1]],
+  fcks:    [['cos 2x + cos 2y + cos 2z + 2(六项 3×2×1 谐波积)', 'a', 1]],
 };
 
 export const MODEL_DESC: Record<string, string> = {

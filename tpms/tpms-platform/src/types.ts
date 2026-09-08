@@ -4,7 +4,7 @@
  */
 
 /** 支持的 TPMS 曲面类型（C2 第一批：+octo/karcher/fks/fky/gprime，level-set 近似公式对标 MiniSurf（Hsieh & Valdevit 2020）官方源码） */
-export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'custom';
+export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'fcks' | 'custom';
 
 /** 渲染模式 */
 export type RenderModel = 'surface' | 'strut' | 'solid';
@@ -308,6 +308,7 @@ export const TYPE_COLORS: Record<TpmType, string> = {
   fks: '#f97316',
   fky: '#eab308',
   gprime: '#06b6d4',
+  fcks: '#c084fc',
   custom: '#6b7280',
 };
 

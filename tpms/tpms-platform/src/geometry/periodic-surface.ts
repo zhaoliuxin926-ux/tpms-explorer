@@ -90,7 +90,7 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
 
   // ── 1. 场填充（查表族走 sin/cos 表；custom 与含 2 倍频谐波的 C2 扩展族实时求值）──
   const useLookup = type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
-    type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime';
+    type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime' && type !== 'fcks';
   const tpmFn = useLookup ? null : getTpmsFunction(type, customFormula, { k, t: params.thickness, iso });
   const sn = new Float64Array(N), cs = new Float64Array(N), cs2 = new Float64Array(N);
   for (let i = 0; i < N; i++) {
