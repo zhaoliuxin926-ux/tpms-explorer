@@ -117,6 +117,18 @@ const LIT = {
     w[0] * (Math.sin(2 * x) * Math.cos(y) * Math.sin(z) +
       Math.sin(2 * y) * Math.cos(z) * Math.sin(x) +
       Math.sin(2 * z) * Math.cos(x) * Math.sin(y)) + 0.32,
+  // ── C2 第二批（谐波 3×，公式独立抄自 MiniSurf 官方源码；R128 档位为目标表示场景）──
+  fcks: (x, y, z, w) => {
+    const S2x = Math.sin(2 * x), S2y = Math.sin(2 * y), S2z = Math.sin(2 * z);
+    const C2x = Math.cos(2 * x), C2y = Math.cos(2 * y), C2z = Math.cos(2 * z);
+    const S3x = Math.sin(3 * x), S3y = Math.sin(3 * y), S3z = Math.sin(3 * z);
+    const C3x = Math.cos(3 * x), C3y = Math.cos(3 * y), C3z = Math.cos(3 * z);
+    return w[0] * (
+      C2x + C2y + C2z +
+      2 * (S3x * S2y * Math.cos(z) + Math.cos(x) * S3y * S2z + S2x * Math.cos(y) * S3z) +
+      2 * (S2x * C3y * Math.sin(z) + Math.sin(x) * S2y * C3z + C3x * Math.sin(y) * S2z)
+    );
+  },
 };
 
 // 确定性伪随机（可复现）
@@ -175,6 +187,10 @@ for (const type of Object.keys(LIT)) {
   // gprime：每项两 sin 一 cos → 全域反演为偶函数；原点值 = 0.32
   check('解析锚点 gprime 原点值 0.32', near(F.gprime(0, 0, 0, W), 0.32), String(F.gprime(0, 0, 0, W)));
   check('解析锚点 gprime 偶对称', near(F.gprime(p, q, r, W), F.gprime(-p, -q, -r, W), 1e-9));
+  // fcks：原点值 = 3（仅 cos2x+cos2y+cos2z 存活）；全域反演偶（各项偶）；循环置换不变
+  check('解析锚点 fcks 原点值 3', near(F.fcks(0, 0, 0, W), 3), String(F.fcks(0, 0, 0, W)));
+  check('解析锚点 fcks 偶对称', near(F.fcks(p, q, r, W), F.fcks(-p, -q, -r, W), 1e-9));
+  check('解析锚点 fcks 循环置换不变', near(F.fcks(p, q, r, W), F.fcks(q, r, p, W)) && near(F.fcks(p, q, r, W), F.fcks(r, p, q, W)));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -656,7 +672,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 223) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 229) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

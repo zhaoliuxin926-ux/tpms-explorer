@@ -37,7 +37,7 @@ const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 
 // 合法边界通过
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 上限 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
@@ -57,7 +57,16 @@ for (const [label, args, check] of [
 // nm 在 iso 邻域呈平台状（±0.02 内无归零点）——fail-closed + 可用域声明为定案路线。
 // fks/fky 例外（2026-09-08 C2 扩展实测）：p0.6 R48 薄壁自触（nm 9504/4752）、R96 可产
 //（nm=0，孔隙率偏差 0.2/0.6pp）——与 frd 同族钉住。
+// fcks 例外（2026-09-09 C2 第二批实测）：谐波 3× R48 拒产；R96 nm=10368 拒产（表示极限
+// 实锤）；R128 档位为目标场景但 exact 求解构建耗时实测 >15 分钟（待性能路径），如实登记。
 for (const ty of TYPES) {
+  if (ty === 'fcks') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 3 && (r48.stderr || '').includes('水密门')
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（谐波 3× 表示极限，R128 档位待性能路径）`)
+      : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
+    continue;
+  }
   if (ty === 'fks' || ty === 'fky') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     r48.status === 3 && (r48.stderr || '').includes('水密门')
@@ -96,7 +105,7 @@ for (const ty of TYPES) {
 // 非法值拒绝（schema 之外 → CLI 必拒）
 for (const [label, args] of [
   ['type 不在 enum 被拒', ['--type', 'warpdrive', '--porosity', '0.5', '--resolution', '24']],
-  ['resolution 97 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '97']],
+  ['resolution 129 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '129']],
   ['resolution 47 越下界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '47']],
   ['periods 13 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--periods', '13']],
   ['container 不在 enum 被拒', ['--type', 'gyroid', '--porosity', '0.5', '--container', 'sphere']],
@@ -197,5 +206,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 52) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 52`); process.exit(1); }
+if (pass < 53) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 53`); process.exit(1); }
 process.exit(fail ? 1 : 0);

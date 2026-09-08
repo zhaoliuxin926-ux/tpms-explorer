@@ -76,6 +76,24 @@ function parseIsoGrad(str, usage) {
   return { dir: 'z', stops: gradStops(values, band), values, band };
 }
 
+/** 解析 --hybrid 参数（C1 第二批异族拼接）："<typeB>[:<blend>[:<center>[:<width>[:<axis>]]]]"。
+ *  blend ∈ linear|sigmoid（默认 linear=两区平台+线性过渡带——凸组合场连续，零面闭合⇒跨族水密缝合）；
+ *  axis ∈ x|y|z|radial（默认 x）。返回 BuildParams.hybrid 同构对象（enabled: true）。 */
+function parseHybrid(str, usage) {
+  const parts = String(str ?? '').split(':');
+  const typeB = parts[0] ?? '';
+  if (!BUILTIN_TYPES.includes(typeB)) die(`--hybrid typeB "${typeB}" 不在 ${BUILTIN_TYPES.join('/')}`, usage);
+  const blendFunction = parts[1] === undefined || parts[1] === '' ? 'linear' : parts[1];
+  if (blendFunction !== 'linear' && blendFunction !== 'sigmoid') die('--hybrid blend 须 linear|sigmoid', usage);
+  const blendCenter = parts[2] === undefined || parts[2] === '' ? 0 : Number(parts[2]);
+  if (!Number.isFinite(blendCenter) || blendCenter < -1 || blendCenter > 1) die('--hybrid center 须 -1 ≤ c ≤ 1（phys 域）', usage);
+  const blendWidth = parts[3] === undefined || parts[3] === '' ? 0.6 : Number(parts[3]);
+  if (!Number.isFinite(blendWidth) || blendWidth <= 0 || blendWidth > 2) die('--hybrid width 须 0 < w ≤ 2', usage);
+  const axis = parts[4] === undefined || parts[4] === '' ? 'x' : parts[4];
+  if (!['x', 'y', 'z', 'radial'].includes(axis)) die('--hybrid axis 须 x|y|z|radial', usage);
+  return { enabled: true, typeB, blendFunction, blendCenter, blendWidth, axis };
+}
+
 // iso* 跨进程缓存：固定种子 + 固定样本数下 iso*(type,pf) 是确定值，按 key 落盘复用
 // （审查 2 节：省 ~0.2s/次；确定性语义不变——同 key 必命中同一结果）。
 // key 含四要素（2026-09-06 终审加固）：类型|目标孔隙率|权重|公式指纹(源哈希:样本数)——
@@ -141,7 +159,7 @@ function solveExactPorosity(core, type, pf, R, buildOnce, isoGrad = null) {
 }
 
 
-const BUILTIN_TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime'];
+const BUILTIN_TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks'];
 const MATERIAL_LABELS = { tc4: 'Ti-6Al-4V', polymer: 'PLLA/PLA', thermal: '高导热复合材料(≈Al-SiC)' };
 const STRUCTURE_MODES = ['solid_network', 'shell', 'gradient_shell'];
 const CONTAINER_SHAPES = ['cube', 'cylinder'];
@@ -307,7 +325,7 @@ function cmdSolve(a, json) {
   const periods = a.periods === undefined ? 6 : Number(a.periods);
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数', usage);
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数', usage);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
   const container = String(a.container ?? 'cube');
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"`, usage);
   const mode = String(a.mode ?? 'solid_network');
@@ -319,6 +337,9 @@ function cmdSolve(a, json) {
   const isoGrad = a['iso-grad'] !== undefined ? parseIsoGrad(a['iso-grad'], usage) : null;
   const isoGrad0 = isoGrad ? { dir: 'z', stops: isoGrad.stops } : null;
   if (isoGrad && mode !== 'solid_network') die('--iso-grad 暂仅支持 solid_network 模式', usage);
+  const hybridS = a.hybrid !== undefined ? parseHybrid(a.hybrid, usage) : null;
+  if (hybridS && isoGrad) die('--hybrid 与 --iso-grad 暂不支持组合', usage);
+  if (hybridS && mode !== 'solid_network') die('--hybrid 暂仅支持 solid_network 模式', usage);
 
   const buildOnce = (iso) => {
     core.globalBufferPool.reset();
@@ -328,6 +349,7 @@ function cmdSolve(a, json) {
       thickness: 1.0, gradientDir: 'z',
       hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
       customFormula: '', preview: false, isoGrad,
+      hybrid: hybridS ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     }, core.globalBufferPool);
   };
 
@@ -458,13 +480,16 @@ function cmdMesh(a, json) {
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数（上限保证 R≤96 时每周期 ≥8 格）', usage);
   // 平台缓冲池容量硬约束：N³ > 1e6 即 throw（units.ts 分辨率档位 R≤99）——CLI 上限对齐
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数（<48 无法稳定产出水密网格；平台缓冲池 N³≤1e6 约束上限 96）', usage);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
   const container = String(a.container ?? 'cube');
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"，可选: ${CONTAINER_SHAPES.join(' ')}`, usage);
   const mode = String(a.mode ?? 'solid_network');
   if (!STRUCTURE_MODES.includes(mode)) die(`未知结构模式 "${mode}"，可选: ${STRUCTURE_MODES.join(' ')}`, usage);
   const isoGradM = a['iso-grad'] !== undefined ? parseIsoGrad(a['iso-grad'], usage) : null;
   if (isoGradM && mode !== 'solid_network') die('--iso-grad 暂仅支持 solid_network 模式', usage);
+  const hybridM = a.hybrid !== undefined ? parseHybrid(a.hybrid, usage) : null;
+  if (hybridM && isoGradM) die('--hybrid 与 --iso-grad 暂不支持组合（渐变基准下的异族拼接待定案）', usage);
+  if (hybridM && a['porosity-solver'] === 'legacy') die('--hybrid 需 exact 求解器（legacy 体素二分无混合语义）', usage);
 
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
@@ -472,6 +497,7 @@ function cmdMesh(a, json) {
     thickness: 1.0, gradientDir: 'z',
     hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     customFormula: '', preview: false,
+    hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
   };
   const solver = String(a['porosity-solver'] ?? 'exact');
@@ -749,7 +775,7 @@ function cmdScenario(a, json) {
   const material = String(design.material ?? '');
   if (!(material in core.BASE_MODULUS)) paramErrors.push(`material "${material}" 不在 ${Object.keys(core.BASE_MODULUS).join('/')}`);
   const resolution = design.resolution === undefined ? 64 : Number(design.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) paramErrors.push('resolution 须为 48~96 整数');
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) paramErrors.push('resolution 须为 48~128 整数');
   const periods = design.periods === undefined ? 6 : Number(design.periods);
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) paramErrors.push('periods 须为 1~12 整数');
   const container = String(design.container ?? 'cube');
@@ -945,8 +971,8 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'out', 'json', 'help'],
-  solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
+  solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
 };

@@ -27,7 +27,7 @@ export const E0_GPA = 110;
 const C1_MAP: Record<string, number> = {
   gyroid: 0.3, diamond: 0.35, schwarz: 0.3, neovius: 0.35,
   iwp: 0.38, frd: 0.4, lidinoid: 0.32, splitp: 0.33,
-  octo: 0.33, karcher: 0.33, fks: 0.32, fky: 0.32, gprime: 0.32, // C2 扩展：带内估值
+  octo: 0.33, karcher: 0.33, fks: 0.32, fky: 0.32, gprime: 0.32, fcks: 0.32, // C2 扩展：带内估值
 };
 
 /** 单胞解析面积密度 cArea（mm⁻¹ @ cellSize=1；Schwarz P 2.31 引自极小曲面经典面积，其余同量级标定） */

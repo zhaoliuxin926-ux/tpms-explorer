@@ -29,6 +29,7 @@ const PORE_FACTOR: Record<string, number> = {
   fks: 0.55,
   fky: 0.57,
   gprime: 0.57,
+  fcks: 0.55, // 谐波 3× 估值
   custom: 0.58,
 };
 

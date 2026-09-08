@@ -168,7 +168,8 @@ const CASES = [
   { name: 'RT 全零权重→必须抛错', type: 'gyroid', mode: 'solid_network', p: 0.75, k: 2, R: 41, weights: [0, 0, 0, 0], expectThrow: true },
   { name: 'RT NaN 公式→必须抛错', type: 'custom', customFormula: 'sqrt(-1)', mode: 'solid_network', p: 0.5, k: 2, R: 41, expectThrow: true },
   { name: 'RT 除零公式→必须抛错', type: 'custom', customFormula: '1/0', mode: 'solid_network', p: 0.5, k: 2, R: 41, expectThrow: true },
-  { name: 'RT 超容量 R110→必须抛错', type: 'gyroid', mode: 'solid_network', p: 0.75, k: 2, R: 110, expectThrow: true },
+  // 超池红队边界随 C2 第二批场缓冲扩容同步上移：2.5M 采样点 ⇒ N=136³ > 2.5M（R≥135 超池）
+  { name: 'RT 超容量 R140→必须抛错', type: 'gyroid', mode: 'solid_network', p: 0.75, k: 2, R: 140, expectThrow: true },
   { name: 'RT 混叠公式(守卫后)', type: 'custom', customFormula: 'sin(x*40)*sin(y*40)*sin(z*40)', mode: 'solid_network', p: 0.50, k: 5, R: 61, tolAlias: true },
 ];
 
