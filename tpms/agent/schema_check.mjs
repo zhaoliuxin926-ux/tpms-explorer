@@ -105,7 +105,7 @@ for (const ty of TYPES) {
 // 非法值拒绝（schema 之外 → CLI 必拒）
 for (const [label, args] of [
   ['type 不在 enum 被拒', ['--type', 'warpdrive', '--porosity', '0.5', '--resolution', '24']],
-  ['resolution 129 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '129']],
+  ['resolution 97 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '97']],
   ['resolution 47 越下界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '47']],
   ['periods 13 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--periods', '13']],
   ['container 不在 enum 被拒', ['--type', 'gyroid', '--porosity', '0.5', '--container', 'sphere']],
