@@ -85,7 +85,8 @@
 - [ ] B5 BENCHMARKS.md 公开基准：解析锚点 + 与文献实验数据（Ti6Al4V gyroid/diamond）对比表——验证：外部用户可一条命令复跑
 
 ### 阶段 C · 扩展与社区（3 ~ 6 月）
-- [ ] C1 region-based 梯度支架（多相分区变孔隙率，骨支架真实需求，对标 RegionTPMS）——验证：三区梯度支架解析孔隙率 vs 实测 ≤2pp
+- [x] C1 第一批（2026-09-08，渐变等值场 isoGrad）：solid_network + z 向分段线性 iso 场（n 平台 + 过渡带，`--iso-grad "v0,v1,...@band"`）——**三区梯度支架验收达标：gyroid R96 三区（±0.12@0.4）水密 nm=0 且解析/实测偏差 0.09pp（≤2pp 线）；R48 dev 0.34pp**；R64 过渡带薄壁自触 nm=56 fail-closed（敏感，与 frd 族同性质）。实现：surface-nets biasAt 逐点偏置（四调用点+投影判据）、exact 求解链透传（缓存 key 掺渐变形状指纹）、scenario design JSON isoGrad 字段（INP 体素模型暂不支持渐变→诚实跳过+报告声明）。语义决策：连续渐变（水密天然保持）优先于 RegionTPMS 式硬拼接（异族界面非水密风险，留第二批）
+- [ ] C1 第二批（异族多相拼接 GyroidIWP 等硬界面语义）——依赖跨族交界的水密缝合方案，待设计
 - [x] C2 第一批（2026-09-08，8→13）：新增 **octo（O,C-TO，Schoen 立方四大族补缺）/ karcher（K）/ fks（Fischer-Koch S）/ fky（Fischer-Koch Y）/ gprime（G′）**——level-set 公式独立抄自 MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方源码 mengtinh/MiniSurf；全部低谐波（≤2 倍频）健壮族。四方同源同步：权威库/渲染实时求值守卫（防 diamond 梯度静默回退，历史 bug 同款形态）/GPU IR（parity 万点对拍守门）/script-exporter Python+MATLAB A/B 双语；解析锚点断言 8 条（原点精确值+对称性，parity_math 184→223+守卫 223）；schema枚举/CLI/UI 按钮/词表/常数表全链 13 文件。实测：R96 全部水密且孔隙率 ≤0.6pp；fks/fky R48 薄壁自触拒产（nm 9504/4752）已照 frd 同族钉住（schema_check 42→49+守卫 49）
 - [ ] C2 第二批（剩余对标差集）：C(S)/C(D)（谐波 3×，高谐波表示受限须先解离散补偿）、D′、Double 系列（Double Gyroid 官方源码本身有语法 bug `.cos` 缺乘号须文献校正公式）、Slotted P、F、Q*、W 等——依赖 surface-nets 场离散原子化深水区，暂缓
 - [ ] C3 与实验数据闭环：micro-CT/力学实验数据接入 ct_reconstruction 与 impact 模块做对比基准——验证：对比报告一键产出

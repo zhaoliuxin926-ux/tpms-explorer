@@ -109,6 +109,22 @@ for (const [label, args] of [
   r.status === 2 ? ok(label + ' [exit2]') : bad(label + ' 未拒绝或退出码非 2', `exit=${r.status}`);
 }
 
+// ── 3c. iso-grad（C1 渐变等值场）钉住 ──
+// 2026-09-08 实测：gyroid 三区平台（-0.12,0,0.12@0.4）R96 水密 nm=0 且解析/实测偏差 0.09pp（≤2pp 验收线）；
+// R48 水密可产（dev 0.34pp）；R64 过渡带薄壁自触 nm=56 fail-closed（对分辨率/过渡带敏感，与 frd/lidinoid 同族）。
+{
+  const r48 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()), '--json');
+  let j48 = null;
+  try { j48 = JSON.parse(r48.stdout); } catch { /* 忽略 */ }
+  r48.status === 0 && j48?.watertight === true
+    ? ok('iso-grad 三区梯度 R48 可产（水密门通过）')
+    : bad('iso-grad R48 行为漂移', `exit=${r48.status}`);
+  const rBad = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', 'nonsense', '--out', join(tmpOut()));
+  rBad.status === 2 ? ok('iso-grad 非法格式被拒 [exit2]') : bad('iso-grad 格式守卫', `exit=${rBad.status}`);
+  const rShell = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--mode', 'shell', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()));
+  rShell.status === 2 ? ok('iso-grad × shell 模式互斥被拒 [exit2]') : bad('iso-grad 模式守卫', `exit=${rShell.status}`);
+}
+
 // estimate 枚举与 material 约束
 {
   const t = tool('tpms_estimate').parameters.properties;
@@ -181,5 +197,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 49) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 42`); process.exit(1); }
+if (pass < 52) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 52`); process.exit(1); }
 process.exit(fail ? 1 : 0);

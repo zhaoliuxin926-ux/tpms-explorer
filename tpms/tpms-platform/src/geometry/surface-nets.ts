@@ -304,6 +304,38 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   let tEffBase = Math.max(0.05, thickness * 1.5);
   let biasBase = iso;
 
+  // ── C1 渐变等值场：bias 基准沿指定轴分段线性偏移（phys 域 [-1,1]，端点外钳制）──
+  // 零面连续 ⇒ 水密性天然保持；与 targetPorosity 二分互斥（下方守卫显式抛错）。
+  const isoGradCfg = params.isoGrad;
+  let gradAmp = 0;
+  const biasAt = (px: number, py: number, pz: number): number => {
+    if (!isoGradCfg) return biasBase;
+    const coord = isoGradCfg.dir === 'x' ? px : isoGradCfg.dir === 'y' ? py : pz;
+    const st = isoGradCfg.stops;
+    let off: number;
+    if (coord <= st[0][0]) off = st[0][1];
+    else if (coord >= st[st.length - 1][0]) off = st[st.length - 1][1];
+    else {
+      let i = 0;
+      while (i < st.length - 2 && coord > st[i + 1][0]) i++;
+      const [x0, y0] = st[i], [x1, y1] = st[i + 1];
+      off = y0 + (y1 - y0) * ((coord - x0) / (x1 - x0));
+    }
+    return biasBase + off;
+  };
+  if (isoGradCfg) {
+    if (mode !== 'solid_network') throw new Error('isoGrad 渐变等值场暂仅支持 solid_network 模式（壳类平方场渐变语义待定案）');
+    if (typeof params.targetPorosity === 'number') throw new Error('isoGrad 与 targetPorosity 二分互斥——渐变模式请显式给定 iso（可用 solve 命令按目标孔隙率求基准值）');
+    const st = isoGradCfg.stops;
+    if (!Array.isArray(st) || st.length < 2 || st.some(([x]) => !Number.isFinite(x)) || st.some(([, y]) => !Number.isFinite(y))) {
+      throw new Error('isoGrad.stops 须为 ≥2 个 [phys坐标, iso偏移] 折线点（数值有限）');
+    }
+    for (let i = 1; i < st.length; i++) {
+      if (st[i][0] <= st[i - 1][0]) throw new Error('isoGrad.stops 坐标须严格升序');
+    }
+    gradAmp = Math.max(...st.map(([, y]) => Math.abs(y)));
+  }
+
   const tpmsAt = (v: number, bias: number, tEff: number, px?: number, py?: number, pz?: number): number => {
     if (mode === 'solid_network') return bias - v;
     const dv = v - bias;
@@ -441,7 +473,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       const yB = zB + iy * N;
       for (let ix = 0; ix < N; ix++) {
         const px = phys(ix);
-        const f = tpmsAt(V[yB + ix], biasBase, tEffBase, px, py, pz);
+        const f = tpmsAt(V[yB + ix], biasAt(px, py, pz), tEffBase, px, py, pz);
         const b = boundArr[yB + ix];
         // 统一封盖规则（v2）：容器外(b>=0)或网格边界层(dAx==0)一律空气。
         // max(f, clip) 不行——公式在圆柱角落的正瓣会压过负 clip（+109%→+27% 教训），
@@ -780,7 +812,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     // 其修复须用 dv 符号锁边的专用投影, 见 progress.md 2026-08-28 条目。
     const rawAt = (a: number, b2: number, c2: number, p2x: number, p2y: number, p2z: number): number => {
       const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : projSolidFn!(a, b2, c2, w);
-      return tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
+      return tpmsAt(v, biasAt(p2x, p2y, p2z), tEffBase, p2x, p2y, p2z);
     };
     const hh = 1e-4;
     for (let it = 0; it < newtonIters; it++) {
@@ -793,7 +825,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         // solidFn 期望弧度参数 mx=k·wc；phys 坐标随弧度联动（与法线段 rawAt 同约定）
         const fC = rawAt(wx * k, wy * k, wz * k, ppx, ppy, ppz);
         // 收敛判据（文献审计 P4）：已达零面精度需求则跳过后续步
-        if (Math.abs(fC) < 1e-6 * (1 + Math.abs(biasBase))) continue;
+        if (Math.abs(fC) < 1e-6 * (1 + Math.abs(biasBase) + gradAmp)) continue;
         const gx = (rawAt(wx * k + hh, wy * k, wz * k, ppx + hh * kpi, ppy, ppz) - rawAt(wx * k - hh, wy * k, wz * k, ppx - hh * kpi, ppy, ppz)) / (2 * hh);
         const gy = (rawAt(wx * k, wy * k + hh, wz * k, ppx, ppy + hh * kpi, ppz) - rawAt(wx * k, wy * k - hh, wz * k, ppx, ppy - hh * kpi, ppz)) / (2 * hh);
         const gz = (rawAt(wx * k, wy * k, wz * k + hh, ppx, ppy, ppz + hh * kpi) - rawAt(wx * k, wy * k, wz * k - hh, ppx, ppy, ppz - hh * kpi)) / (2 * hh);
@@ -882,7 +914,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
             const hh = 1e-4;
             const ev = (a: number, b2: number, c2: number, q2x: number, q2y: number, q2z: number): number => {
               const v = hybridFn ? hybridFn(a, b2, c2, q2x, q2y, q2z, w) : projSolidFn!(a, b2, c2, w);
-              return tpmsAt(v, biasBase, tEffBase, q2x, q2y, q2z);
+              return tpmsAt(v, biasAt(q2x, q2y, q2z), tEffBase, q2x, q2y, q2z);
             };
             const gxx = (ev(vx0 * k + hh, vy0 * k, vz0 * k, ppx + hh * kpi, ppy, ppz) - ev(vx0 * k - hh, vy0 * k, vz0 * k, ppx - hh * kpi, ppy, ppz)) / (2 * hh);
             const gyy = (ev(vx0 * k, vy0 * k + hh, vz0 * k, ppx, ppy + hh * kpi, ppz) - ev(vx0 * k, vy0 * k - hh, vz0 * k, ppx, ppy - hh * kpi, ppz)) / (2 * hh);
