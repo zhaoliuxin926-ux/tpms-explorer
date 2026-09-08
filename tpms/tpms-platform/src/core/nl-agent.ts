@@ -44,6 +44,11 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/f-?rd|frd/i, 'frd', 'F-RD'],
   [/lidinoid|利迪诺/i, 'lidinoid', 'Lidinoid'],
   [/split-?p|分裂p/i, 'splitp', 'Split-P'],
+  [/o,?-?c-?to|octo|正交/i, 'octo', 'O,C-TO'],
+  [/karcher|\bk\b|卡切尔/i, 'karcher', 'K'],
+  [/fischer-?koch-?s|fk-?s\b/i, 'fks', 'Fischer-Koch S'],
+  [/fischer-?koch-?y|fk-?y\b/i, 'fky', 'Fischer-Koch Y'],
+  [/g-?prime|g′|g撇/i, 'gprime', "G'"],
 ];
 
 const MATERIAL_WORDS: Array<[RegExp, string, string]> = [

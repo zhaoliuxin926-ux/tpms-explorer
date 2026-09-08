@@ -121,6 +121,25 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
                               + 2*np.cos(kk*X)*np.sin(kk*Y)*np.sin(kk*Z)*np.cos(kk*Z))
                 - 0.2 * w[1] * (np.cos(2*kk*X)*np.cos(2*kk*Y) + np.cos(2*kk*Y)*np.cos(2*kk*Z) + np.cos(2*kk*Z)*np.cos(2*kk*X))
                 - 0.4 * w[2] * (np.cos(2*kk*X) + np.cos(2*kk*Y) + np.cos(2*kk*Z)))
+    elif t == 'octo':
+        return (0.6 * w[0] * (np.cos(kk*X)*np.cos(kk*Y) + np.cos(kk*Y)*np.cos(kk*Z) + np.cos(kk*Z)*np.cos(kk*X))
+                - 0.4 * w[1] * (np.cos(kk*X) + np.cos(kk*Y) + np.cos(kk*Z)) + 0.25)
+    elif t == 'karcher':
+        return (0.3 * w[0] * (np.cos(kk*X) + np.cos(kk*Y) + np.cos(kk*Z))
+                + 0.3 * w[1] * (np.cos(kk*X)*np.cos(kk*Y) + np.cos(kk*Y)*np.cos(kk*Z) + np.cos(kk*Z)*np.cos(kk*X))
+                - 0.4 * w[2] * (np.cos(2*kk*X) + np.cos(2*kk*Y) + np.cos(2*kk*Z)) + 0.2)
+    elif t == 'fks':
+        return (w[0]*np.cos(2*kk*X)*np.sin(kk*Y)*np.cos(kk*Z)
+                + w[1]*np.cos(kk*X)*np.cos(2*kk*Y)*np.sin(kk*Z)
+                + w[2]*np.sin(kk*X)*np.cos(kk*Y)*np.cos(2*kk*Z))
+    elif t == 'fky':
+        return (w[0]*(np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z) + np.sin(kk*X)*np.sin(kk*Y)*np.sin(kk*Z))
+                + w[1]*(np.sin(2*kk*X)*np.sin(kk*Y) + np.sin(2*kk*Y)*np.sin(kk*Z) + np.sin(kk*X)*np.sin(2*kk*Z)
+                        + np.sin(2*kk*X)*np.cos(kk*Z) + np.cos(kk*X)*np.sin(2*kk*Y) + np.cos(kk*Y)*np.sin(2*kk*Z)))
+    elif t == 'gprime':
+        return (w[0]*(np.sin(2*kk*X)*np.cos(kk*Y)*np.sin(kk*Z)
+                      + np.sin(2*kk*Y)*np.cos(kk*Z)*np.sin(kk*X)
+                      + np.sin(2*kk*Z)*np.cos(kk*X)*np.sin(kk*Y)) + 0.32)
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -511,6 +530,25 @@ elseif strcmp(tpms_type, 'splitp')
             + 2*cos(kk*X).*sin(kk*Y).*sin(kk*Z).*cos(kk*Z)) ...
         - 0.2*weights(2)*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X)) ...
         - 0.4*weights(3)*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z));
+elseif strcmp(tpms_type, 'octo')
+    V = 0.6*weights(1)*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+      - 0.4*weights(2)*(cos(kk*X) + cos(kk*Y) + cos(kk*Z)) + 0.25;
+elseif strcmp(tpms_type, 'karcher')
+    V = 0.3*weights(1)*(cos(kk*X) + cos(kk*Y) + cos(kk*Z)) ...
+      + 0.3*weights(2)*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+      - 0.4*weights(3)*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z)) + 0.2;
+elseif strcmp(tpms_type, 'fks')
+    V = weights(1)*cos(2*kk*X).*sin(kk*Y).*cos(kk*Z) ...
+      + weights(2)*cos(kk*X).*cos(2*kk*Y).*sin(kk*Z) ...
+      + weights(3)*sin(kk*X).*cos(kk*Y).*cos(2*kk*Z);
+elseif strcmp(tpms_type, 'fky')
+    V = weights(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
+      + weights(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
+                    + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+elseif strcmp(tpms_type, 'gprime')
+    V = weights(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
+                    + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...
+                    + sin(2*kk*Z).*cos(kk*X).*sin(kk*Y)) + 0.32;
 else
     error('Unsupported TPMS type');
 end
@@ -552,6 +590,25 @@ if ${safeId(state.hybrid.enabled)}
                 + 2*cos(kk*X).*sin(kk*Y).*sin(kk*Z).*cos(kk*Z)) ...
               - 0.2*weights_b(2)*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X)) ...
               - 0.4*weights_b(3)*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z));
+    elseif strcmp(type_b, 'octo')
+        V_b = 0.6*weights_b(1)*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+            - 0.4*weights_b(2)*(cos(kk*X) + cos(kk*Y) + cos(kk*Z)) + 0.25;
+    elseif strcmp(type_b, 'karcher')
+        V_b = 0.3*weights_b(1)*(cos(kk*X) + cos(kk*Y) + cos(kk*Z)) ...
+            + 0.3*weights_b(2)*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+            - 0.4*weights_b(3)*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z)) + 0.2;
+    elseif strcmp(type_b, 'fks')
+        V_b = weights_b(1)*cos(2*kk*X).*sin(kk*Y).*cos(kk*Z) ...
+            + weights_b(2)*cos(kk*X).*cos(2*kk*Y).*sin(kk*Z) ...
+            + weights_b(3)*sin(kk*X).*cos(kk*Y).*cos(2*kk*Z);
+    elseif strcmp(type_b, 'fky')
+        V_b = weights_b(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
+            + weights_b(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
+                            + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+    elseif strcmp(type_b, 'gprime')
+        V_b = weights_b(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
+                            + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...
+                            + sin(2*kk*Z).*cos(kk*X).*sin(kk*Y)) + 0.32;
     else
         error('Unsupported hybrid TPMS type');
     end

@@ -11,6 +11,12 @@ const C1_MAP: Record<string, number> = {
   neovius: 0.36,
   lidinoid: 0.37,
   splitp: 0.39,
+  // C2 扩展第一批：文献带内估值（0.38 ≈ 带 [0.35,0.44] 中值），非实验标定——与新曲面先例一致如实披露
+  octo: 0.39,
+  karcher: 0.38,
+  fks: 0.38,
+  fky: 0.38,
+  gprime: 0.38,
   custom: 0.38,  // default to gyroid value
 };
 
@@ -35,6 +41,12 @@ const ANISOTROPY_MAP: Record<string, number> = {
   neovius: 1.28,
   lidinoid: 1.32,
   splitp: 1.33,
+  // C2 扩展第一批：octo/karcher 立方对称取立方族近值；fks/fky/gprime 非立方略高
+  octo: 1.28,
+  karcher: 1.30,
+  fks: 1.35,
+  fky: 1.32,
+  gprime: 1.32,
   custom: 1.30,
 };
 

@@ -841,9 +841,9 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
   const out = document.getElementById('phonon-result');
   const canvas = document.getElementById('phonon-canvas') as HTMLCanvasElement | null;
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.hybrid.enabled;
   if (unsupported) {
-    if (out) { out.style.display = 'block'; out.textContent = '声子能带暂不支持 custom/lidinoid/splitp/混合场（固相判定语义源限制）'; }
+    if (out) { out.style.display = 'block'; out.textContent = '声子能带暂不支持 custom/lidinoid/splitp/C2扩展5族/混合场（固相判定语义源限制）'; }
     return;
   }
   try {
@@ -953,9 +953,9 @@ function tissueShowStat(): void {
 document.getElementById('btn-tissue')?.addEventListener('click', () => {
   const out = document.getElementById('tissue-result');
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.hybrid.enabled;
   if (unsupported) {
-    if (out) { out.style.display = 'block'; out.textContent = '组织长入暂不支持 custom/lidinoid/splitp/混合场（固相判定语义源限制）'; }
+    if (out) { out.style.display = 'block'; out.textContent = '组织长入暂不支持 custom/lidinoid/splitp/C2扩展5族/混合场（固相判定语义源限制）'; }
     return;
   }
   try {
@@ -1054,7 +1054,7 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
     lsAccumSteps = 0;
     if (btnApply) btnApply.style.display = 'none';
   }
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.hybrid.enabled || s.structureMode !== 'solid_network';
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.hybrid.enabled || s.structureMode !== 'solid_network';
   if (unsupported && !lsPhi) {
     if (out) { out.style.display = 'block'; out.textContent = '水平集演化需 solid_network + 内置曲面类型（custom/lidinoid/splitp/混合/壳模式不支持的语义源限制）'; }
     return;

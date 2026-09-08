@@ -23,6 +23,12 @@ const PORE_FACTOR: Record<string, number> = {
   neovius: 0.60,
   lidinoid: 0.57,
   splitp: 0.54,
+  // C2 扩展第一批：同量级估值（基准孔径系数，custom 回退口径一致）
+  octo: 0.56,
+  karcher: 0.58,
+  fks: 0.55,
+  fky: 0.57,
+  gprime: 0.57,
   custom: 0.58,
 };
 

@@ -86,7 +86,8 @@
 
 ### 阶段 C · 扩展与社区（3 ~ 6 月）
 - [ ] C1 region-based 梯度支架（多相分区变孔隙率，骨支架真实需求，对标 RegionTPMS）——验证：三区梯度支架解析孔隙率 vs 实测 ≤2pp
-- [ ] C2 曲面库扩展（对标 MiniSurf 19 曲面，补齐族系 + 用户自定义公式的门禁覆盖）——验证：每新曲面 ≥1 解析锚点断言
+- [x] C2 第一批（2026-09-08，8→13）：新增 **octo（O,C-TO，Schoen 立方四大族补缺）/ karcher（K）/ fks（Fischer-Koch S）/ fky（Fischer-Koch Y）/ gprime（G′）**——level-set 公式独立抄自 MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方源码 mengtinh/MiniSurf；全部低谐波（≤2 倍频）健壮族。四方同源同步：权威库/渲染实时求值守卫（防 diamond 梯度静默回退，历史 bug 同款形态）/GPU IR（parity 万点对拍守门）/script-exporter Python+MATLAB A/B 双语；解析锚点断言 8 条（原点精确值+对称性，parity_math 184→223+守卫 223）；schema枚举/CLI/UI 按钮/词表/常数表全链 13 文件。实测：R96 全部水密且孔隙率 ≤0.6pp；fks/fky R48 薄壁自触拒产（nm 9504/4752）已照 frd 同族钉住（schema_check 42→49+守卫 49）
+- [ ] C2 第二批（剩余对标差集）：C(S)/C(D)（谐波 3×，高谐波表示受限须先解离散补偿）、D′、Double 系列（Double Gyroid 官方源码本身有语法 bug `.cos` 缺乘号须文献校正公式）、Slotted P、F、Q*、W 等——依赖 surface-nets 场离散原子化深水区，暂缓
 - [ ] C3 与实验数据闭环：micro-CT/力学实验数据接入 ct_reconstruction 与 impact 模块做对比基准——验证：对比报告一键产出
 - [ ] C4 社区机制：Discussions、案例 showcase、 CONTRIBUTING——验证：外部 issue 可_triage_
 

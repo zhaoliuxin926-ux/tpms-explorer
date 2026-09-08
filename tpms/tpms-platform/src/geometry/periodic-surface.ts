@@ -88,9 +88,10 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
   const w = weights as Weights;
   const N = R + 1;                      // 节点 0..R（层 R = 层 0 的位级复制）
 
-  // ── 1. 场填充（内置 8 类走 sin/cos 查表；custom 实时求值）──
-  const useLookup = type !== 'custom';
-  const tpmFn = useLookup ? null : getTpmsFunction('custom', customFormula, { k, t: params.thickness, iso });
+  // ── 1. 场填充（查表族走 sin/cos 表；custom 与含 2 倍频谐波的 C2 扩展族实时求值）──
+  const useLookup = type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
+    type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime';
+  const tpmFn = useLookup ? null : getTpmsFunction(type, customFormula, { k, t: params.thickness, iso });
   const sn = new Float64Array(N), cs = new Float64Array(N), cs2 = new Float64Array(N);
   for (let i = 0; i < N; i++) {
     const a = (-HALF + (i / R) * span) * k;
@@ -109,12 +110,7 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
       else if (type === 'iwp') v = w[0] * 2 * (Cx * Cy + Cy * Cz + Cz * Cx) - w[1] * (C2x + C2y + C2z);
       else if (type === 'frd') v = w[0] * 4 * Cx * Cy * Cz - w[1] * (C2x * C2y + C2y * C2z + C2z * C2x);
       else if (type === 'diamond') v = w[0] * Sx * Sy * Sz + w[1] * Sx * Cy * Cz + w[2] * Cx * Sy * Cz + w[3] * Cx * Cy * Sz;
-      else if (type === 'lidinoid')
-        v = w[0] * 0.5 * (2 * Sx * Cx * Cy * Sz + 2 * Sy * Cy * Cz * Sx + 2 * Sz * Cz * Cx * Sy)
-          + w[1] * (-0.5) * (C2x * C2y + C2y * C2z + C2z * C2x);
-      else if (type === 'splitp')
-        v = w[0] * 1.1 * (2 * Sx * Cx * Cy * Sz + 2 * Sx * Sy * Cy * Cz + 2 * Cx * Sy * Sz * Cz)
-          + w[1] * (-0.2) * (C2x * C2y + C2y * C2z + C2z * C2x) + w[2] * (-0.4) * (C2x + C2y + C2z);
+      // lidinoid/splitp 与 C2 扩展 5 族走实时求值分支（useLookup 排除集），查表链不再覆盖
       else v = w[0] * Cx + w[1] * Cy + w[2] * Cz;   // schwarz
     } else {
       v = tpmFn!(-HALF * k + (ix / R) * span * k, -HALF * k + (iy / R) * span * k, -HALF * k + (iz / R) * span * k, w);
