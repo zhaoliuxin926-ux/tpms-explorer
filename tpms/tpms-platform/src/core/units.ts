@@ -30,7 +30,7 @@ export function wcToMmFactor(cellSize: number): number {
  * I-WP / F-RD / Neovius 的公式含 cos(2kx) 与 cos³ 积项，特征空间频率高于
  * 基频曲面（谐波至 2k~3k）；相同 R 下每特征周期的格数减少，弦切离散误差
  * 显著放大（IWP@R61 实测 −17%、Neovius −7%）。因此这三类曲面的分辨率
- * 密度加倍补偿。分辨率全局上限 128（C2 第二批场离散补偿：BufferPool 场缓冲扩至 2.5M 采样点，2026-09-09；高谐波族 HD 密度触顶让渡后可达 128）。
+ * 密度加倍补偿。分辨率全局上限 96（BufferPool 容量 N³≤1M ⇒ R≤99，留余量）。
  */
 export function resolutionPerPeriod(type: string, structureMode?: string, gradientDir?: string): number {
   if (type === 'iwp' || type === 'frd' || type === 'neovius') return 28;
@@ -39,8 +39,8 @@ export function resolutionPerPeriod(type: string, structureMode?: string, gradie
   return 14;
 }
 
-/** HD 分辨率上限（BufferPool 场缓冲 2.5M 采样点 ⇒ N≤135，留余量定 128） */
-export const RES_CAP_HD = 128;
+/** HD 分辨率上限（BufferPool 容量 N³≤1M ⇒ R≤99，留余量定 96） */
+export const RES_CAP_HD = 96;
 
 /**
  * 【A2 密度保优】HD 重建分辨率（单一来源；main.ts / script-exporter / app.html 同步消费）。

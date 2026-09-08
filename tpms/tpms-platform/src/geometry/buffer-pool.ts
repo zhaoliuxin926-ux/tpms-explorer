@@ -7,7 +7,7 @@
 /** 缓冲池配置 */
 const MAX_VERTICES = 1_500_000;   // R=88 时约 ~120 万顶点，留 25% 余量
 const MAX_INDICES = 6_000_000;    // 每个顶点约 4-5 个三角面索引
-const MAX_FIELDS = 2_500_000;     // N³ 场值 (89³ ≈ 704K)
+const MAX_FIELDS = 1_000_000;     // N³ 场值 (89³ ≈ 704K)
 
 export class BufferPool {
   /** 顶点位置缓冲 */

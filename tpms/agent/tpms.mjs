@@ -325,7 +325,7 @@ function cmdSolve(a, json) {
   const periods = a.periods === undefined ? 6 : Number(a.periods);
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数', usage);
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数（<48 无法稳定产出水密网格；平台缓冲池 N³≤1e6 约束上限 96）', usage);
   const container = String(a.container ?? 'cube');
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"`, usage);
   const mode = String(a.mode ?? 'solid_network');
@@ -480,7 +480,7 @@ function cmdMesh(a, json) {
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数（上限保证 R≤96 时每周期 ≥8 格）', usage);
   // 平台缓冲池容量硬约束：N³ > 1e6 即 throw（units.ts 分辨率档位 R≤99）——CLI 上限对齐
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) die('resolution 须为 48~96 整数（<48 无法稳定产出水密网格；平台缓冲池 N³≤1e6 约束上限 96）', usage);
   const container = String(a.container ?? 'cube');
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"，可选: ${CONTAINER_SHAPES.join(' ')}`, usage);
   const mode = String(a.mode ?? 'solid_network');
@@ -775,7 +775,7 @@ function cmdScenario(a, json) {
   const material = String(design.material ?? '');
   if (!(material in core.BASE_MODULUS)) paramErrors.push(`material "${material}" 不在 ${Object.keys(core.BASE_MODULUS).join('/')}`);
   const resolution = design.resolution === undefined ? 64 : Number(design.resolution);
-  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) paramErrors.push('resolution 须为 48~128 整数');
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 96) paramErrors.push('resolution 须为 48~96 整数');
   const periods = design.periods === undefined ? 6 : Number(design.periods);
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) paramErrors.push('periods 须为 1~12 整数');
   const container = String(design.container ?? 'cube');

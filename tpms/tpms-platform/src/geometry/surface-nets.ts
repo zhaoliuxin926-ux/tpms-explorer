@@ -109,8 +109,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const N = R + 1;
   // 红队守卫（V-6）：超池分辨率会被 TypedArray.subarray 静默钳制，产出截肢几何
   // 且零告警——必须显式失败（UI 的 min(88,…) 公式不会触达；脚本/API 侧防护）
-  if (N * N * N > 2_500_000) {
-    throw new Error(`分辨率 ${R}³ 超出缓冲池容量（${N * N * N} > 2,500,000 采样点），请降低周期数或分辨率`);
+  if (N * N * N > 1_000_000) {
+    throw new Error(`分辨率 ${R}³ 超出缓冲池容量（${N * N * N} > 1,000,000 采样点），请降低周期数或分辨率`);
   }
   const half = Math.PI;
   const span = 2 * half;
