@@ -55,10 +55,10 @@ for (const [x, y, z] of [[0.3, 0.7, 1.1], [-1.2, 0.4, 2.0], [2.5, 2.5, 2.5]]) {
 }
 p5 ? ok('Schwarz P = cos x + cos y + cos z（3 点 1e-12）') : bad('Schwarz P 对拍');
 
-// ── 6. list：8 内置曲面 + 材料表字段完整 ──
+// ── 6. list：13 内置曲面（C2 扩展第一批 +5）+ 材料表字段完整 ──
 const rl = JSON.parse(run('list', '--json').stdout);
-rl.types.length === 8 && rl.types.every((t) => t.C1 > 0 && t.anisotropy > 1) && rl.materials.tc4.modulusGPa === 110
-  ? ok('list 含 8 曲面且常数/材料表完整') : bad('list', JSON.stringify(rl.types?.length));
+rl.types.length === 13 && rl.types.every((t) => t.C1 > 0 && t.anisotropy > 1) && rl.materials.tc4.modulusGPa === 110
+  ? ok('list 含 13 曲面且常数/材料表完整') : bad('list', JSON.stringify(rl.types?.length));
 
 // ── 7. 拒绝语义：非法输入必须非零退出（不臆造）──
 run('estimate', '--type', 'nope', '--porosity', '0.5').status !== 0 ? ok('非法曲面类型被拒绝') : bad('非法类型未拒绝');

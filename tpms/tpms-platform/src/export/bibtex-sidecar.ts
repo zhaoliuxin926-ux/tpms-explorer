@@ -9,9 +9,16 @@ const DOI_MAP: Record<string, string> = {
   neovius: '10.1016/j.eml.2020.100688',
   lidinoid: '',
   splitp: '',
+  octo: '',
+  karcher: '',
+  fks: '',
+  fky: '',
+  gprime: '',
   custom: '',
   // f-rd / lidinoid / splitp：原始数学文献（Schoen 1970 NASA TR、Lidin & Larsson 1990）无 DOI，
-  // 亦未检索到可靠的现代专文 DOI，宁缺毋滥保持空——生成 BibTeX 时省略 doi 行
+  // 亦未检索到可靠的现代专文 DOI，宁缺毋滥保持空——生成 BibTeX 时省略 doi 行。
+  // C2 扩展 5 族同口径：公式对标 MiniSurf（Hsieh & Valdevit 2020, Software Impacts,
+  // DOI 10.1016/j.simpa.2020.100026——该 DOI 归属软件论文本身，附于平台引用而非单曲面）
 };
 
 function mapType(type: string): string {

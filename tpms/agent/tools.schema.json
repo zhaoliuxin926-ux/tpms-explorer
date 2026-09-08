@@ -16,7 +16,7 @@
         "required": ["type", "porosity"],
         "additionalProperties": false,
         "properties": {
-          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp"], "description": "TPMS 曲面族。custom 公式沙箱未注册本工具，传入将被拒绝。" },
+          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp", "octo", "karcher", "fks", "fky", "gprime"], "description": "TPMS 曲面族。custom 公式沙箱未注册本工具，传入将被拒绝。" },
           "porosity": { "type": "number", "exclusiveMinimum": 0, "maximum": 100, "description": "孔隙率，0 < p < 1 小数或 1~100 百分数（>1 自动按百分数解释，与平台 computePhysicsMetrics 同口径）。越界（≥100% 或 <0 或换算后 ≥1）被拒绝。" },
           "material": { "type": "string", "enum": ["tc4", "polymer", "thermal"], "description": "基体材料：tc4=Ti-6Al-4V (E=110GPa σ=880MPa)、polymer=PLLA/PLA (3.5/50)、thermal≈Al-SiC (70/300)。默认 tc4；'auto' 等未注册值被拒绝。" },
           "json": { "type": "boolean", "description": "输出机器可读 JSON（agent 消费方必须置 true）" }
@@ -31,7 +31,7 @@
         "required": ["type", "porosity"],
         "additionalProperties": false,
         "properties": {
-          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp"], "description": "TPMS 曲面族" },
+          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp", "octo", "karcher", "fks", "fky", "gprime"], "description": "TPMS 曲面族" },
           "porosity": { "type": "number", "minimum": 0.05, "exclusiveMaximum": 1, "description": "目标孔隙率（0.05 ≤ p < 1；>1 的输入按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。精度（网格实测口径）：R96 Diamond 0.26pp / Gyroid ~1pp，随曲面族与目标值变化；exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），偏差 >2pp 时 CLI 会提示。低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。高孔隙薄壁自触域（2026-09-08 诊断定案）：lidinoid p≥0.7 在 R48/R64 fail-closed（nm 28512/8640）、R96 可产；lidinoid p0.9 R48 虽可产但 exact 求解孔隙率偏差可达 4.6pp（薄壁区 iso 响应混沌，如实报告）；frd p0.6 R48/R64 同族拒产。根因=亚体素薄壁自触（零等值面两叶间距<体素尺寸），nm 边全域分布、随分辨率收敛、iso 邻域呈平台状（nudge 微调不可逃逸，已实证）。" },
           "periods": { "type": "integer", "minimum": 1, "maximum": 12, "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素" },
           "resolution": { "type": "integer", "minimum": 48, "maximum": 96, "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 96 对齐平台缓冲池 N³≤1e6 约束；越高孔隙率偏差越小" },

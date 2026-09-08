@@ -97,6 +97,26 @@ const LIT = {
     ) + w[1] * (-0.2) * (
       Math.cos(2 * x) * Math.cos(2 * y) + Math.cos(2 * y) * Math.cos(2 * z) + Math.cos(2 * z) * Math.cos(2 * x)
     ) + w[2] * (-0.4) * (Math.cos(2 * x) + Math.cos(2 * y) + Math.cos(2 * z)),
+  // ── C2 扩展第一批（公式独立抄自 MiniSurf（Hsieh & Valdevit 2020）官方源码 mengtinh/MiniSurf）──
+  octo: (x, y, z, w) =>
+    w[0] * 0.6 * (Math.cos(x) * Math.cos(y) + Math.cos(y) * Math.cos(z) + Math.cos(z) * Math.cos(x)) -
+    w[1] * 0.4 * (Math.cos(x) + Math.cos(y) + Math.cos(z)) + 0.25,
+  karcher: (x, y, z, w) =>
+    w[0] * 0.3 * (Math.cos(x) + Math.cos(y) + Math.cos(z)) +
+    w[1] * 0.3 * (Math.cos(x) * Math.cos(y) + Math.cos(y) * Math.cos(z) + Math.cos(z) * Math.cos(x)) -
+    w[2] * 0.4 * (Math.cos(2 * x) + Math.cos(2 * y) + Math.cos(2 * z)) + 0.2,
+  fks: (x, y, z, w) =>
+    w[0] * Math.cos(2 * x) * Math.sin(y) * Math.cos(z) +
+    w[1] * Math.cos(x) * Math.cos(2 * y) * Math.sin(z) +
+    w[2] * Math.sin(x) * Math.cos(y) * Math.cos(2 * z),
+  fky: (x, y, z, w) =>
+    w[0] * (Math.cos(x) * Math.cos(y) * Math.cos(z) + Math.sin(x) * Math.sin(y) * Math.sin(z)) +
+    w[1] * (Math.sin(2 * x) * Math.sin(y) + Math.sin(2 * y) * Math.sin(z) + Math.sin(x) * Math.sin(2 * z) +
+      Math.sin(2 * x) * Math.cos(z) + Math.cos(x) * Math.sin(2 * y) + Math.cos(y) * Math.sin(2 * z)),
+  gprime: (x, y, z, w) =>
+    w[0] * (Math.sin(2 * x) * Math.cos(y) * Math.sin(z) +
+      Math.sin(2 * y) * Math.cos(z) * Math.sin(x) +
+      Math.sin(2 * z) * Math.cos(x) * Math.sin(y)) + 0.32,
 };
 
 // 确定性伪随机（可复现）
@@ -132,6 +152,29 @@ for (const type of Object.keys(LIT)) {
     if (d > maxd2) maxd2 = d;
   }
   check(`文献一致性 ${type} (自定义权重)`, maxd2 < 1e-9, `maxdiff=${fmt(maxd2)}`);
+}
+
+// ── 1b. C2 扩展解析锚点（独立数学事实，非同式对拍）────────────
+// 每新曲面 ≥1 解析精确锚点 + 对称性，公式手推可溯源（0 与 特征点值 由常数项直算）。
+{
+  const F = TPMS_FUNCTIONS;
+  const W = [1, 1, 1, 1];
+  const near = (a, b, tol = 1e-12) => Math.abs(a - b) < tol;
+
+  // octo：原点值 = 0.6·3 − 0.4·3 + 0.25 = 0.85；循环置换不变（立方对称）
+  check('解析锚点 octo 原点值 0.85', near(F.octo(0, 0, 0, W), 0.85), String(F.octo(0, 0, 0, W)));
+  const p = 1.1, q = -0.7, r = 2.3;
+  check('解析锚点 octo 循环置换不变', near(F.octo(p, q, r, W), F.octo(q, r, p, W)) && near(F.octo(p, q, r, W), F.octo(r, p, q, W)));
+  // karcher：原点值 = 0.3·3 + 0.3·3 − 0.4·3 + 0.2 = 0.8
+  check('解析锚点 karcher 原点值 0.8', near(F.karcher(0, 0, 0, W), 0.8), String(F.karcher(0, 0, 0, W)));
+  // fks：奇对称 f(−x,−y,−z) = −f(x,y,z)；(π/2,π/2,π/2) 为零点
+  check('解析锚点 fks 奇对称', near(F.fks(p, q, r, W), -F.fks(-p, -q, -r, W)));
+  check('解析锚点 fks 零点 (π/2,π/2,π/2)', near(F.fks(Math.PI / 2, Math.PI / 2, Math.PI / 2, W), 0, 1e-9), String(F.fks(Math.PI / 2, Math.PI / 2, Math.PI / 2, W)));
+  // fky：原点值 = 1（仅 ccc 项存活）
+  check('解析锚点 fky 原点值 1', near(F.fky(0, 0, 0, W), 1), String(F.fky(0, 0, 0, W)));
+  // gprime：每项两 sin 一 cos → 全域反演为偶函数；原点值 = 0.32
+  check('解析锚点 gprime 原点值 0.32', near(F.gprime(0, 0, 0, W), 0.32), String(F.gprime(0, 0, 0, W)));
+  check('解析锚点 gprime 偶对称', near(F.gprime(p, q, r, W), F.gprime(-p, -q, -r, W), 1e-9));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -613,7 +656,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 184) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 223) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

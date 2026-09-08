@@ -3,8 +3,8 @@
  * 所有模块共享的核心类型声明，确保主线程与 Worker 之间的契约一致。
  */
 
-/** 支持的 TPMS 曲面类型 */
-export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'custom';
+/** 支持的 TPMS 曲面类型（C2 第一批：+octo/karcher/fks/fky/gprime，level-set 近似公式对标 MiniSurf（Hsieh & Valdevit 2020）官方源码） */
+export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'custom';
 
 /** 渲染模式 */
 export type RenderModel = 'surface' | 'strut' | 'solid';
@@ -296,6 +296,11 @@ export const TYPE_COLORS: Record<TpmType, string> = {
   frd: '#ef4444',
   lidinoid: '#84cc16',
   splitp: '#f43f5e',
+  octo: '#14b8a6',
+  karcher: '#a855f7',
+  fks: '#f97316',
+  fky: '#eab308',
+  gprime: '#06b6d4',
   custom: '#6b7280',
 };
 

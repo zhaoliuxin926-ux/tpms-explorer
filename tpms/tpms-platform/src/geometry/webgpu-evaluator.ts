@@ -217,11 +217,59 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const termC = b.binary('mul', mulChain(b, [wreg(2), kC]), sumChain(b, [cos2(b, mx), cos2(b, my), cos2(b, mz)]));
       return sumChain(b, [termA, termB, termC]);
     }
+    // ── C2 扩展第一批（公式与 tpms-functions.ts 逐项对应，webgpu_parity_audit 万点对拍守门）──
+    case 'octo': {
+      const p1 = mulChain(b, [wreg(0), b.load(0.6), cos(mx), cos(my)]);
+      const p2 = mulChain(b, [wreg(0), b.load(0.6), cos(my), cos(mz)]);
+      const p3 = mulChain(b, [wreg(0), b.load(0.6), cos(mz), cos(mx)]);
+      const n1 = mulChain(b, [wreg(1), b.load(-0.4), cos(mx)]);
+      const n2 = mulChain(b, [wreg(1), b.load(-0.4), cos(my)]);
+      const n3 = mulChain(b, [wreg(1), b.load(-0.4), cos(mz)]);
+      return sumChain(b, [p1, p2, p3, n1, n2, n3, b.load(0.25)]);
+    }
+    case 'karcher': {
+      const cSum = sumChain(b, [cos(mx), cos(my), cos(mz)]);
+      const pSum = sumChain(b, [mulChain(b, [cos(mx), cos(my)]), mulChain(b, [cos(my), cos(mz)]), mulChain(b, [cos(mz), cos(mx)])]);
+      const c2Sum = sumChain(b, [cos2(b, mx), cos2(b, my), cos2(b, mz)]);
+      return sumChain(b, [
+        mulChain(b, [wreg(0), b.load(0.3)]), cSum,
+        mulChain(b, [wreg(1), b.load(0.3)]), pSum,
+        mulChain(b, [wreg(2), b.load(-0.4)]), c2Sum,
+        b.load(0.2),
+      ]);
+    }
+    case 'fks': {
+      const t1 = mulChain(b, [wreg(0), cos2(b, mx), sin(my), cos(mz)]);
+      const t2 = mulChain(b, [wreg(1), cos(mx), cos2(b, my), sin(mz)]);
+      const t3 = mulChain(b, [wreg(2), sin(mx), cos(my), cos2(b, mz)]);
+      return sumChain(b, [t1, t2, t3]);
+    }
+    case 'fky': {
+      const low = sumChain(b, [mulChain(b, [cos(mx), cos(my), cos(mz)]), mulChain(b, [sin(mx), sin(my), sin(mz)])]);
+      const hi = sumChain(b, [
+        mulChain(b, [sin2(b, mx), sin(my)]), mulChain(b, [sin2(b, my), sin(mz)]), mulChain(b, [sin(mx), sin2(b, mz)]),
+        mulChain(b, [sin2(b, mx), cos(mz)]), mulChain(b, [cos(mx), sin2(b, my)]), mulChain(b, [cos(my), sin2(b, mz)]),
+      ]);
+      return sumChain(b, [mulChain(b, [wreg(0), low]), mulChain(b, [wreg(1), hi])]);
+    }
+    case 'gprime': {
+      const t = sumChain(b, [
+        mulChain(b, [sin2(b, mx), cos(my), sin(mz)]),
+        mulChain(b, [sin2(b, my), cos(mz), sin(mx)]),
+        mulChain(b, [sin2(b, mz), cos(mx), sin(my)]),
+      ]);
+      return sumChain(b, [mulChain(b, [wreg(0), t]), b.load(0.32)]);
+    }
   }
 }
 
 function cos2(b: IrBuilder, r: number): number {
   return b.unary('cos', b.binary('mul', r, b.load(2)));
+}
+
+/** 2 倍频正弦（C2 扩展曲面用） */
+function sin2(b: IrBuilder, r: number): number {
+  return b.unary('sin', b.binary('mul', r, b.load(2)));
 }
 
 /**

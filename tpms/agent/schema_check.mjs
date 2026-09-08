@@ -37,7 +37,7 @@ const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 
 // 合法边界通过
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 上限 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
@@ -55,7 +55,18 @@ for (const [label, args, check] of [
 //（nm 28512/8640@p0.7）、R96 可产（拓扑自愈，旧登记 R96 nm=10368 已过时）；p0.9 R48 可产
 // 但 exact 求解孔隙率偏差大（薄壁区 iso 响应混沌）。nudge（iso 微调避坑）已被探针证伪：
 // nm 在 iso 邻域呈平台状（±0.02 内无归零点）——fail-closed + 可用域声明为定案路线。
+// fks/fky 例外（2026-09-08 C2 扩展实测）：p0.6 R48 薄壁自触（nm 9504/4752）、R96 可产
+//（nm=0，孔隙率偏差 0.2/0.6pp）——与 frd 同族钉住。
 for (const ty of TYPES) {
+  if (ty === 'fks' || ty === 'fky') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 3 && (r48.stderr || '').includes('水密门')
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 扩展实测）`)
+      : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
+    const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    continue;
+  }
   if (ty === 'frd') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     r48.status === 3 && (r48.stderr || '').includes('水密门')
@@ -170,5 +181,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 42) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 42`); process.exit(1); }
+if (pass < 49) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 42`); process.exit(1); }
 process.exit(fail ? 1 : 0);

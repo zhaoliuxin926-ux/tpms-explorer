@@ -85,9 +85,59 @@ const splitp: TpmsFunction = (mx, my, mz, w) =>
     Math.cos(2 * mx) + Math.cos(2 * my) + Math.cos(2 * mz)
   );
 
+// ── C2 曲面库扩展第一批（2026-09-08）：level-set 近似对标 MiniSurf（Hsieh & Valdevit 2020）官方源码 ──
+// 均含 2 倍频谐波或常偏置 → 走 surface-nets 实时求值 + 数值梯度路径（与 lidinoid/splitp 同语义）。
+
+/**
+ * O,C-TO（Schoen 正交 C(−TO) 族，Schoen 立方四大 TPMS 之四，Karcher 1989 证明存在）：2 权重
+ * 0.6·w0·(cosx cosy + cosy cosz + cosz cosx) − 0.4·w1·(cosx + cosy + cosz) + 0.25
+ */
+const octo: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * 0.6 * (Math.cos(mx) * Math.cos(my) + Math.cos(my) * Math.cos(mz) + Math.cos(mz) * Math.cos(mx)) -
+  w[1] * 0.4 * (Math.cos(mx) + Math.cos(my) + Math.cos(mz)) + 0.25;
+
+/**
+ * Karcher K（K 曲面）：3 权重
+ * 0.3·w0·(cosx + cosy + cosz) + 0.3·w1·(cosx cosy + cosy cosz + cosz cosx) − 0.4·w2·(cos2x + cos2y + cos2z) + 0.2
+ */
+const karcher: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * 0.3 * (Math.cos(mx) + Math.cos(my) + Math.cos(mz)) +
+  w[1] * 0.3 * (Math.cos(mx) * Math.cos(my) + Math.cos(my) * Math.cos(mz) + Math.cos(mz) * Math.cos(mx)) -
+  w[2] * 0.4 * (Math.cos(2 * mx) + Math.cos(2 * my) + Math.cos(2 * mz)) + 0.2;
+
+/**
+ * Fischer-Koch S：3 权重（三循环 2 倍频项）
+ * w0·cos2x·siny·cosz + w1·cosx·cos2y·sinz + w2·sinx·cosy·cos2z
+ */
+const fks: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * Math.cos(2 * mx) * Math.sin(my) * Math.cos(mz) +
+  w[1] * Math.cos(mx) * Math.cos(2 * my) * Math.sin(mz) +
+  w[2] * Math.sin(mx) * Math.cos(my) * Math.cos(2 * mz);
+
+/**
+ * Fischer-Koch Y：2 权重（低谐波对 + 2 倍频组）
+ * w0·(cosx cosy cosz + sinx siny sinz) +
+ * w1·(sin2x·siny + sin2y·sinz + sinx·sin2z + sin2x·cosz + cosx·sin2y + cosy·sin2z)
+ */
+const fky: TpmsFunction = (mx, my, mz, w) => {
+  const S2x = Math.sin(2 * mx), S2y = Math.sin(2 * my), S2z = Math.sin(2 * mz);
+  return w[0] * (Math.cos(mx) * Math.cos(my) * Math.cos(mz) + Math.sin(mx) * Math.sin(my) * Math.sin(mz)) +
+    w[1] * (S2x * Math.sin(my) + S2y * Math.sin(mz) + Math.sin(mx) * S2z +
+      S2x * Math.cos(mz) + Math.cos(mx) * S2y + Math.cos(my) * S2z);
+};
+
+/**
+ * G′（G-prime）：1 权重（三循环 2 倍频项 + 常偏置）
+ * w0·(sin2x·cosy·sinz + sin2y·cosz·sinx + sin2z·cosx·siny) + 0.32
+ */
+const gprime: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * (Math.sin(2 * mx) * Math.cos(my) * Math.sin(mz) +
+    Math.sin(2 * my) * Math.cos(mz) * Math.sin(mx) +
+    Math.sin(2 * mz) * Math.cos(mx) * Math.sin(my)) + 0.32;
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
-  gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp,
+  gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -98,6 +148,9 @@ export function getWeightCount(type: TpmType): number {
     case 'lidinoid': return 2;
     case 'splitp': return 3;
     case 'diamond': return 4;
+    case 'octo': return 2;
+    case 'karcher': case 'fks': case 'fky': return 3;
+    case 'gprime': return 1;
     case 'custom': return 4;
     default: return 3;
   }

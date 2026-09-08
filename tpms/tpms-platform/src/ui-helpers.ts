@@ -14,6 +14,11 @@ export const LABEL: Record<string, string> = {
   frd: 'F-RD',
   lidinoid: 'Lidinoid',
   splitp: 'Split-P',
+  octo: 'O,C-TO',
+  karcher: 'K',
+  fks: 'Fischer-Koch S',
+  fky: 'Fischer-Koch Y',
+  gprime: 'G′',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -32,6 +37,11 @@ export const FORMULA: Record<string, string> = {
   frd: '4 cos x cos y cos z − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x)',
   lidinoid: '0.5(2 sin x cos x cos y sin z + 2 sin y cos y cos z sin x + 2 sin z cos z cos x sin y) − 0.5(cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x)',
   splitp: '1.1(2 sin x cos x cos y sin z + 2 sin x sin y cos y cos z + 2 cos x sin y sin z cos z) − 0.2(cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x) − 0.4(cos 2x + cos 2y + cos 2z)',
+  octo: '0.6(cos x cos y + cos y cos z + cos z cos x) − 0.4(cos x + cos y + cos z) + 0.25',
+  karcher: '0.3(cos x + cos y + cos z) + 0.3(cos x cos y + cos y cos z + cos z cos x) − 0.4(cos 2x + cos 2y + cos 2z) + 0.2',
+  fks: 'cos 2x sin y cos z + cos x cos 2y sin z + sin x cos y cos 2z',
+  fky: 'cos x cos y cos z + sin x sin y sin z + sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z',
+  gprime: 'sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y + 0.32',
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
@@ -43,6 +53,11 @@ export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
   frd:     [['4 cos x cos y cos z', 'a', 1], ['cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x', 'b', -1]],
   lidinoid: [['2 sin x cos x cos y sin z + 2 sin y cos y cos z sin x + 2 sin z cos z cos x sin y', 'a', 0.5], ['cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x', 'b', -0.5]],
   splitp:  [['2 sin x cos x cos y sin z + 2 sin x sin y cos y cos z + 2 cos x sin y sin z cos z', 'a', 1.1], ['cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x', 'b', -0.2], ['cos 2x + cos 2y + cos 2z', 'c', -0.4]],
+  octo:    [['cos x cos y + cos y cos z + cos z cos x', 'a', 0.6], ['cos x + cos y + cos z', 'b', -0.4]],
+  karcher: [['cos x + cos y + cos z', 'a', 0.3], ['cos x cos y + cos y cos z + cos z cos x', 'b', 0.3], ['cos 2x + cos 2y + cos 2z', 'c', -0.4]],
+  fks:     [['cos 2x sin y cos z', 'a', 1], ['cos x cos 2y sin z', 'b', 1], ['sin x cos y cos 2z', 'c', 1]],
+  fky:     [['cos x cos y cos z + sin x sin y sin z', 'a', 1], ['sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z', 'b', 1]],
+  gprime:  [['sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y', 'a', 1]],
 };
 
 export const MODEL_DESC: Record<string, string> = {
