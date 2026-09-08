@@ -72,3 +72,4 @@ tpms/agent/*.stl
 # Agent iso* 确定性缓存（本机派生数据，可随时重算）
 tpms/agent/.iso-cache.json
 tpms/agent/.iso-cache.json.tmp
+audit_ubuntu/
