@@ -37,6 +37,7 @@
           "resolution": { "type": "integer", "minimum": 48, "maximum": 96, "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 96 对齐平台缓冲池 N³≤1e6 约束；越高孔隙率偏差越小" },
           "container": { "type": "string", "enum": ["cube", "cylinder"], "description": "容器形状，默认 cube。注意：cylinder 因归一化域内固相体素密度更低，薄壁自触 fail-closed 工况比 cube 收敛更慢（diamond p0.6 R96 仍有残余 nm=164 拒产，bugs.md）；cube+cylinder 的容器面本身不是缺陷源（nm 边全域分布已实证）" },
           "mode": { "type": "string", "enum": ["solid_network", "shell", "gradient_shell"], "description": "结构拓扑模式，默认 solid_network" },
+          "isoGrad": { "type": "object", "description": "C1 渐变等值场（z 向三区平台+过渡带）：{ values: [v0,v1,...] 各平台 iso 偏移（2~6 个有限数字），band?: 过渡带宽（默认 0.4，0≤b≤2）}。仅 solid_network；与 targetPorosity 二分互斥（显式 iso 求根基准）。R48 低分辨率下过渡带可能薄壁自触 fail-closed，建议 R≥96。", "additionalProperties": false, "properties": { "values": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 6 }, "band": { "type": "number", "minimum": 0, "maximum": 2 } } },
           "out": { "type": "string", "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl" },
           "json": { "type": "boolean", "description": "输出机器可读 JSON" }
         }

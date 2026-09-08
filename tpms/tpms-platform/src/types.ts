@@ -211,6 +211,13 @@ export interface BuildParams {
   hybrid: AppState['hybrid'];
   customFormula: string;
   preview: boolean;
+  /**
+   * 【C1 渐变等值场】solid_network 专属：基准 iso 沿指定轴分段线性渐变（phys 域 [-1,1]），
+   * 零面连续 ⇒ 水密性天然保持。stops 为 [phys 坐标, iso 偏移] 折线（≥2 点，坐标升序，
+   * 端点外钳制）。与 targetPorosity 二分互斥（传入时 targetPorosity 路径显式抛错）。
+   * 仅 solid_network 支持（壳类平方场的渐变语义需另定案）。
+   */
+  isoGrad?: { dir: 'x' | 'y' | 'z'; stops: [number, number][] };
   /** 主线程按 UI 合法性校验后下发的着色模式；缺省或 'none' 时 Worker 不产颜色 */
   coloring?: ColoringMode;
   /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */

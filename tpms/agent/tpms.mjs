@@ -19,13 +19,61 @@ import { createHash } from 'node:crypto';
 let _lcg = 0x9e3779b9;
 function _rnd() { _lcg = (_lcg * 1664525 + 1013904223) >>> 0; return _lcg / 4294967296; }
 
-function porAnalytic(core, type, iso, W, N = 200000) {
+function porAnalytic(core, type, iso, W, N = 200000, isoGrad = null) {
   const f = core.getTpmsFunction(type);
+  // C1 渐变等值场：bias 基准沿 z 分段线性偏移（与 surface-nets biasAt 同语义，形状固定求根 biasBase）
+  let biasAt = () => iso;
+  if (isoGrad) {
+    const stops = isoGrad.stops; // [z, off] 折线（与 surface-nets biasAt 同源结构）
+    biasAt = (px, py, pz) => {
+      let off;
+      if (pz <= stops[0][0]) off = stops[0][1];
+      else if (pz >= stops[stops.length - 1][0]) off = stops[stops.length - 1][1];
+      else {
+        let i = 0;
+        while (i < stops.length - 2 && pz > stops[i + 1][0]) i++;
+        const [x0, y0] = stops[i], [x1, y1] = stops[i + 1];
+        off = y0 + (y1 - y0) * ((pz - x0) / (x1 - x0));
+      }
+      return iso + off;
+    };
+  }
   let solid = 0;
   for (let i = 0; i < N; i++) {
-    if (f((_rnd() * 2 - 1) * Math.PI, (_rnd() * 2 - 1) * Math.PI, (_rnd() * 2 - 1) * Math.PI, W) < iso) solid++;
+    const px = (_rnd() * 2 - 1) * Math.PI, py = (_rnd() * 2 - 1) * Math.PI, pz = (_rnd() * 2 - 1) * Math.PI;
+    if (f(px, py, pz, W) < biasAt(px / Math.PI, py / Math.PI, pz / Math.PI)) solid++;
   }
   return 1 - solid / N;
+}
+
+/** C1 三区平台折线：values → [z, off] stops（n 平台等距中心 + 过渡带 half=band/2 线性过渡，z 域 [-1,1]）。
+ *  例 values=[-0.1,0,0.1] band=0.4 → 平台 0（z∈[-1,-0.2]）→ 过渡 → 平台 0.6 带宽 → 过渡 → 平台 a2。
+ *  折线点恒升序（边界钳制后可能产生相邻等值点，插值区间不存在除零）。 */
+function gradStops(values, band) {
+  const n = values.length;
+  const half = Math.max(0, Math.min(band / 2, 1 / (n - 1)));
+  const stops = [[-1, values[0]]];
+  for (let i = 1; i < n; i++) {
+    const c = -1 + (2 * i) / (n - 1);
+    const lo = Math.max(-1, c - half), hi = Math.min(1, c + half);
+    if (lo > stops[stops.length - 1][0]) stops.push([lo, values[i - 1]]);
+    if (hi > stops[stops.length - 1][0]) stops.push([hi, values[i]]);
+  }
+  if (1 > stops[stops.length - 1][0]) stops.push([1, values[n - 1]]);
+  return stops;
+}
+
+/** 解析 --iso-grad 参数："<v0,v1,...>[@band]"（z 向三区平台+过渡带；band 默认 0.4）。
+ *  返回 buildSurface/porAnalytic 同构的 { dir:'z', stops } 结构。 */
+function parseIsoGrad(str, usage) {
+  const m = String(str ?? '').match(/^(-?[\d.]+(?:\s*,\s*-?[\d.]+)+)(?:@([\d.]+))?$/);
+  if (!m) die(`--iso-grad 格式须为 "<v0,v1,...>[@band]"，如 -0.1,0,0.1@0.4（z 向梯度，值=各平台 iso 偏移）`, usage);
+  const values = m[1].split(',').map(Number);
+  if (values.some((v) => !Number.isFinite(v))) die('--iso-grad 值须全为有限数字', usage);
+  if (values.length < 2 || values.length > 6) die('--iso-grad 须 2~6 个平台值（1 值无梯度意义；>6 超出支架语义）', usage);
+  const band = m[2] !== undefined ? Number(m[2]) : 0.4;
+  if (!Number.isFinite(band) || band < 0 || band > 2) die('--iso-grad 过渡带 band 须 0 ≤ b ≤ 2', usage);
+  return { dir: 'z', stops: gradStops(values, band), values, band };
 }
 
 // iso* 跨进程缓存：固定种子 + 固定样本数下 iso*(type,pf) 是确定值，按 key 落盘复用
@@ -44,19 +92,20 @@ function formulaFingerprint() {
   } catch { _formulaFp = 'nosrc'; }
   return _formulaFp;
 }
-function solveIsoAnalytic(core, type, target, W) {
-  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}`;
+function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
+  const gradKey = isoGrad ? 'G' + JSON.stringify(isoGrad.stops) : '';
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}${gradKey}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
   let lo = -1.6, hi = 1.6;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
-    if (porAnalytic(core, type, mid, W, MC_BISECT_N) > target) lo = mid; else hi = mid;
+    if (porAnalytic(core, type, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid; else hi = mid;
   }
   const iso = (lo + hi) / 2;
   const d = 0.02;
-  const slope = (porAnalytic(core, type, iso + d, W, 40000) - porAnalytic(core, type, iso - d, W, 40000)) / (2 * d);
+  const slope = (porAnalytic(core, type, iso + d, W, 40000, isoGrad) - porAnalytic(core, type, iso - d, W, 40000, isoGrad)) / (2 * d);
   const result = { iso, slope };
   cache[key] = result;
   // 原子写（终审：直写被并发/中断截断会丢整个缓存）：temp + rename
@@ -69,10 +118,10 @@ function solveIsoAnalytic(core, type, target, W) {
  * 已知物理边界（实测登记）：R48 网格对 iso 的响应含不可约非线性（顶点投影
  * 混沌敏感性），单轮后 diamond ~5pp / gyroid ~2pp；R96 ≤0.1pp。
  */
-function solveExactPorosity(core, type, pf, R, buildOnce) {
+function solveExactPorosity(core, type, pf, R, buildOnce, isoGrad = null) {
   const W = [1, 1, 1, 1];
   _lcg = 0x9e3779b9; // 每次求解重置种子：确定性
-  const { iso, slope } = solveIsoAnalytic(core, type, pf, W);
+  const { iso, slope } = solveIsoAnalytic(core, type, pf, W, isoGrad);
   let cur = iso;
   let res = buildOnce(cur);
   let est = res.porosityEstimate;
@@ -267,6 +316,9 @@ function cmdSolve(a, json) {
   if (!Number.isFinite(tolerance) || tolerance <= 0 || tolerance > 0.2) die('tolerance 须为 0 < t ≤ 0.2', usage);
   const maxRounds = a['max-rounds'] === undefined ? 5 : Number(a['max-rounds']);
   if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 8) die('max-rounds 须为 1~8 整数', usage);
+  const isoGrad = a['iso-grad'] !== undefined ? parseIsoGrad(a['iso-grad'], usage) : null;
+  const isoGrad0 = isoGrad ? { dir: 'z', stops: isoGrad.stops } : null;
+  if (isoGrad && mode !== 'solid_network') die('--iso-grad 暂仅支持 solid_network 模式', usage);
 
   const buildOnce = (iso) => {
     core.globalBufferPool.reset();
@@ -275,13 +327,13 @@ function cmdSolve(a, json) {
       weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
       thickness: 1.0, gradientDir: 'z',
       hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
-      customFormula: '', preview: false,
+      customFormula: '', preview: false, isoGrad,
     }, core.globalBufferPool);
   };
 
   _lcg = 0x9e3779b9;
   const W = [1, 1, 1, 1];
-  const { iso: iso0, slope } = solveIsoAnalytic(core, type, pf, W);
+  const { iso: iso0, slope } = solveIsoAnalytic(core, type, pf, W, isoGrad0);
 
   const trace = [];
   let iso = iso0, est = NaN, res = null, audit = null, best = null;
@@ -361,6 +413,7 @@ function cmdSolve(a, json) {
   const out = {
     command: 'solve', type, porosity: pf, periods, resolution, container, mode,
     tolerance, maxRounds, rounds: trace.length,
+    isoGrad: isoGrad ? { values: isoGrad.values, band: isoGrad.band } : undefined,
     reachable: !unreachable,
     unreachable: unreachable ?? undefined,
     best, trace,
@@ -410,6 +463,8 @@ function cmdMesh(a, json) {
   if (!CONTAINER_SHAPES.includes(container)) die(`未知容器 "${container}"，可选: ${CONTAINER_SHAPES.join(' ')}`, usage);
   const mode = String(a.mode ?? 'solid_network');
   if (!STRUCTURE_MODES.includes(mode)) die(`未知结构模式 "${mode}"，可选: ${STRUCTURE_MODES.join(' ')}`, usage);
+  const isoGradM = a['iso-grad'] !== undefined ? parseIsoGrad(a['iso-grad'], usage) : null;
+  if (isoGradM && mode !== 'solid_network') die('--iso-grad 暂仅支持 solid_network 模式', usage);
 
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
@@ -417,6 +472,7 @@ function cmdMesh(a, json) {
     thickness: 1.0, gradientDir: 'z',
     hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     customFormula: '', preview: false,
+    isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
   };
   const solver = String(a['porosity-solver'] ?? 'exact');
   if (!['exact', 'legacy'].includes(solver)) die(`未知求解器 "${solver}"，可选 exact|legacy`, usage);
@@ -430,7 +486,7 @@ function cmdMesh(a, json) {
         core.globalBufferPool.reset();
         return core.buildSurface({ ...params, iso, targetPorosity: undefined }, core.globalBufferPool);
       };
-      const solved = solveExactPorosity(core, type, pf, resolution, buildOnce);
+      const solved = solveExactPorosity(core, type, pf, resolution, buildOnce, isoGradM ? { dir: 'z', stops: isoGradM.stops } : null);
       res = solved.res;
       porTrace = solved.trace;
     } else {
@@ -534,6 +590,20 @@ function cmdVerify(core, a, json) {
   if (R < 48) R = 48;
   if (R > 96) R = 96;
 
+  // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）
+  let isoGradD = null;
+  if (design.isoGrad) {
+    const g = design.isoGrad;
+    if (!Array.isArray(g.values) || g.values.length < 2 || g.values.some((v) => !Number.isFinite(v))) {
+      paramErrors.push('isoGrad.values 须为 ≥2 个有限数字数组');
+    } else {
+      const band = g.band === undefined ? 0.4 : Number(g.band);
+      if (!Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须 0 ≤ b ≤ 2');
+      else isoGradD = { dir: 'z', stops: gradStops(g.values, band) };
+    }
+    if (design.mode && design.mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
+  }
+
   const W = [1, 1, 1, 1];
   const attempts = [];
   let verdict = 'fail', finalStage = '', res = null, audit = null, est = NaN, isoUsed = NaN;
@@ -544,7 +614,7 @@ function cmdVerify(core, a, json) {
   // （此前在循环内每轮重算：缓存未命中场景下每轮全量 34 轮 MC 二分，纯浪费；
   //   _lcg 仅被 porAnalytic 消耗、buildSurface 确定性，外提不影响轮次间行为。）
   _lcg = 0x9e3779b9; // 重置 LCG：确定性
-  const { iso: isoStar, slope: slopeAnalytic } = solveIsoAnalytic(core, type, pf, W);
+  const { iso: isoStar, slope: slopeAnalytic } = solveIsoAnalytic(core, type, pf, W, isoGradD);
 
   for (let round = 1; round <= maxRounds; round++) {
     const attempt = { round, resolution: R, iso: iso === null ? null : +iso.toFixed(4), checks: {} };
@@ -558,7 +628,7 @@ function cmdVerify(core, a, json) {
         weights: W, structureMode: mode, containerShape: container,
         thickness: 1.0, gradientDir: 'z',
         hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
-        customFormula: '', preview: false,
+        customFormula: '', preview: false, isoGrad: isoGradD,
       }, core.globalBufferPool);
     } catch (e) { buildErr = String(e?.message ?? e); }
     if (buildErr || !built?.positions) {
@@ -715,6 +785,20 @@ function cmdScenario(a, json) {
   const sigmaBandMPa = [0.23 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material], 0.3 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material]];
 
   // ── 3. exact 孔隙率求解（解析求根 + 网格实测割线校正）──
+  // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）。
+  // INP 体素模型暂不支持渐变——isoGrad 存在时 INP 跳过，报告如实注明。
+  let isoGradS = null;
+  if (design.isoGrad) {
+    const g = design.isoGrad;
+    if (!Array.isArray(g.values) || g.values.length < 2 || g.values.some((v) => !Number.isFinite(v))) {
+      paramErrors.push('isoGrad.values 须为 ≥2 个有限数字数组');
+    } else {
+      const band = g.band === undefined ? 0.4 : Number(g.band);
+      if (!Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须 0 ≤ b ≤ 2');
+      else isoGradS = { dir: 'z', stops: gradStops(g.values, band) };
+    }
+    if (mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
+  }
   const buildOnce = (iso) => {
     core.globalBufferPool.reset();
     return core.buildSurface({
@@ -722,12 +806,12 @@ function cmdScenario(a, json) {
       weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
       thickness: 1.0, gradientDir: 'z',
       hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
-      customFormula: '', preview: false,
+      customFormula: '', preview: false, isoGrad: isoGradS,
     }, core.globalBufferPool);
   };
   _lcg = 0x9e3779b9;
   let solved;
-  try { solved = solveExactPorosity(core, type, pf, resolution, buildOnce); } catch (e) {
+  try { solved = solveExactPorosity(core, type, pf, resolution, buildOnce, isoGradS); } catch (e) {
     console.error(`✗ scenario 构建失败: ${e?.message ?? e}`);
     process.exit(3);
   }
@@ -747,26 +831,33 @@ function cmdScenario(a, json) {
   const stlFile = `${outPrefix}.stl`;
   writeFileSync(stlFile, Buffer.from(stlBuf));
 
-  const voxel = core.buildVoxelModel({
-    type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
-    thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
-  }, resolution);
-  const { text: inpText, nodeCount, elemCount } = core.buildAbaqusInp(voxel, {
-    youngModulusMPa: matGPa * 1000, poisson, nominalStrain, specimenSizeMm,
-  });
-  const inpFile = `${outPrefix}.inp`;
-  writeFileSync(inpFile, inpText, 'utf8');
-  const voxelPorosity = 1 - voxel.solidCount / (resolution * resolution * resolution); // 全包络口径
+  let inpText = null, nodeCount = 0, elemCount = 0, voxelPorosity = NaN;
+  let voxel = null;
+  if (!isoGradS) {
+    voxel = core.buildVoxelModel({
+      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
+    }, resolution);
+    const inp = core.buildAbaqusInp(voxel, {
+      youngModulusMPa: matGPa * 1000, poisson, nominalStrain, specimenSizeMm,
+    });
+    inpText = inp.text; nodeCount = inp.nodeCount; elemCount = inp.elemCount;
+    const inpFile = `${outPrefix}.inp`;
+    writeFileSync(inpFile, inpText, 'utf8');
+    voxelPorosity = 1 - voxel.solidCount / (resolution * resolution * resolution); // 全包络口径
+  }
 
   // ── 5. 验证报告（MD + JSON）──
   const sha16 = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 16);
   const reportJson = {
     command: 'scenario', scenario: 'bone-scaffold-template (M5)',
     design: { type, porosity: pf, material, materialLabel: MATERIAL_LABELS[material], resolution, periods, container, mode, tolerance, nominalStrain, specimenSizeMm },
+    isoGrad: isoGradS ? { values: design.isoGrad.values, band: design.isoGrad.band === undefined ? 0.4 : Number(design.isoGrad.band), dir: 'z' } : undefined,
     geometry: {
       isoUsed: +isoUsed.toFixed(6), rounds: solved.trace.length, porosityTrace: solved.trace,
       meshPorosity: +meshPorosity.toFixed(6), meshPorosityDeviation: +(Math.abs(meshPorosity - pf)).toFixed(6),
-      voxelPorosity: +voxelPorosity.toFixed(6), voxelSolidCount: voxel.solidCount,
+      voxelPorosity: Number.isFinite(voxelPorosity) ? +voxelPorosity.toFixed(6) : null,
+      voxelSolidCount: Number.isFinite(voxelPorosity) ? voxel.solidCount : null,
       watertight: { openEdges: audit.openEdges, nonManifoldEdges: audit.nonManifoldEdges, degenTris: audit.degenTris },
       vertCount: res.vertCount, triCount: res.triCount,
     },
@@ -782,9 +873,11 @@ function cmdScenario(a, json) {
     },
     files: [
       { path: stlFile, bytes: stlBuf.byteLength, sha256_16: sha16(Buffer.from(stlBuf)), role: '水密网格（mm，打印/CFD）' },
-      { path: inpFile, bytes: Buffer.byteLength(inpText), sha256_16: sha16(inpText), role: 'Abaqus 体素压缩模型（C3D8+PBC）', nodeCount, elemCount },
+      ...(inpText !== null ? [{ path: `${outPrefix}.inp`, bytes: Buffer.byteLength(inpText), sha256_16: sha16(inpText), role: 'Abaqus 体素压缩模型（C3D8+PBC）', nodeCount, elemCount }] : []),
     ],
-    boundary: '报告口径：孔隙率双口径（网格实测/体素分位）随分辨率收敛；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准',
+    boundary: isoGradS
+      ? '报告口径：渐变等值场模式下 INP 体素模型暂不支持（体素二分无渐变语义）已跳过——渐变工况的仿真交付待扩展；力学预测为解析估算非仿真结果'
+      : '报告口径：孔隙率双口径（网格实测/体素分位）随分辨率收敛；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准',
     elapsedMs: Date.now() - t0,
   };
   const md = [
@@ -805,10 +898,15 @@ function cmdScenario(a, json) {
     `- 水密三硬指标：开放边 ${audit.openEdges} / 非流形边 ${audit.nonManifoldEdges} / 退化面 ${audit.degenTris}（全零通过）`,
     `- 顶点 ${res.vertCount} / 三角 ${res.triCount}`,
     '',
-    '## 3. 仿真交付（Abaqus INP）',
-    `- 体素模型 R=${resolution}（C3D8 单元 ${elemCount} 个 / 节点 ${nodeCount} 个，含 PBC 周期边界集与 BOTTOM/TOP 压缩面集）`,
-    `- 体素孔隙率 ${(voxelPorosity * 100).toFixed(2)}%（体素分位二分口径；与网格口径的差随 R 收敛，双口径并列披露）`,
-    `- 工况：单轴压缩名义应变 ${nominalStrain}（TOP 面位移/L），E=${matGPa * 1000} MPa，ν=${poisson}`,
+    ...(inpText !== null ? [
+      '## 3. 仿真交付（Abaqus INP）',
+      `- 体素模型 R=${resolution}（C3D8 单元 ${elemCount} 个 / 节点 ${nodeCount} 个，含 PBC 周期边界集与 BOTTOM/TOP 压缩面集）`,
+      `- 体素孔隙率 ${(voxelPorosity * 100).toFixed(2)}%（体素分位二分口径；与网格口径的差随 R 收敛，双口径并列披露）`,
+      `- 工况：单轴压缩名义应变 ${nominalStrain}（TOP 面位移/L），E=${matGPa * 1000} MPa，ν=${poisson}`,
+    ] : [
+      '## 3. 仿真交付（Abaqus INP）',
+      `- 渐变等值场（isoGrad ${JSON.stringify(design.isoGrad)}）模式下 INP 体素模型暂不支持（体素二分无渐变语义），本报告跳过 INP 交付`,
+    ]),
     '',
     '## 4. 力学预测（Gibson-Ashby 解析口径，非 FEA）',
     '| 量 | 平台预测 | 文献带 | 带内 |',
@@ -820,11 +918,11 @@ function cmdScenario(a, json) {
     '## 5. 交付物',
     '| 文件 | 字节 | sha256(16) | 用途 |', '|---|---|---|---|',
     `| ${stlFile} | ${stlBuf.byteLength} | \`${sha16(Buffer.from(stlBuf))}\` | 水密网格（打印/CFD） |`,
-    `| ${inpFile} | ${Buffer.byteLength(inpText)} | \`${sha16(inpText)}\` | Abaqus 体素压缩模型 |`,
+    ...(inpText !== null ? [`| ${outPrefix}.inp | ${Buffer.byteLength(inpText)} | \`${sha16(inpText)}\` | Abaqus 体素压缩模型 |`] : []),
     '',
     '## 6. 边界与限制（诚实声明）',
     '- 力学预测为 Gibson-Ashby 解析工程估算，非仿真结果；压缩响应以 Abaqus 实跑为准',
-    '- STL（网格）与 INP（体素）是同一 iso 的两种离散表示，孔隙率口径差随分辨率收敛',
+    ...(inpText !== null ? ['- STL（网格）与 INP（体素）是同一 iso 的两种离散表示，孔隙率口径差随分辨率收敛'] : ['- 渐变等值场模式下 INP 体素模型暂不支持（已跳过）']),
     '- 高谐波曲面族（iwp/frd/lidinoid/splitp）低分辨率下网格表示物理受限，偏差 >2pp 时建议 R=96',
     '',
   ].join('\n');
@@ -837,16 +935,18 @@ function cmdScenario(a, json) {
   console.log('TPMS 场景交付（M5 骨支架模板：设计 → 求解 → STL+INP → 验证报告）');
   console.log('  ───────────────────────────────');
   console.log(`  方案         ${type} / ${(pf * 100).toFixed(1)}% / ${MATERIAL_LABELS[material]} / R=${resolution} × ${periods} 周期`);
-  console.log(`  网格实测孔隙率 ${(meshPorosity * 100).toFixed(2)}%（偏差 ${(Math.abs(meshPorosity - pf) * 100).toFixed(2)}pp）｜体素口径 ${(voxelPorosity * 100).toFixed(2)}%`);
+  const voxelTxt = inpText !== null ? `｜体素口径 ${(voxelPorosity * 100).toFixed(2)}%` : '｜渐变模式（INP 跳过）';
+  console.log(`  网格实测孔隙率 ${(meshPorosity * 100).toFixed(2)}%（偏差 ${(Math.abs(meshPorosity - pf) * 100).toFixed(2)}pp）${voxelTxt}`);
   console.log(`  E* 预测      ${eStarGPa.toFixed(3)} GPa（文献带 [${eBandGPa[0].toFixed(3)}, ${eBandGPa[1].toFixed(3)}]）`);
-  console.log(`  交付         ${stlFile} + ${inpFile}（C3D8×${elemCount}）+ ${mdFile} + ${reportJsonFile}`);
+  const inpTxt = inpText !== null ? ` + ${outPrefix}.inp（C3D8×${elemCount}）` : '（渐变模式 INP 跳过）';
+  console.log(`  交付         ${stlFile}${inpTxt} + ${mdFile} + ${reportJsonFile}`);
 }
 
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'out', 'json', 'help'],
-  solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'out', 'json', 'help'],
+  solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
 };
