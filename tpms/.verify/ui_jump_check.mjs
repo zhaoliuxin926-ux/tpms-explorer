@@ -39,14 +39,15 @@ ok('跳转导航 4 键', btnCount === 4, `got ${btnCount}`);
 await page.evaluate(() => document.querySelector('[data-jump="grp-sim"]').click());
 // smooth-scroll 时序抖动：轮询等待滚动到位（≤3s），同时取高亮
 let after = null;
-for (let t = 0; t < 12; t++) {
+for (let t = 0; t < 20; t++) {
   await page.waitForTimeout(250);
   after = await page.evaluate(() => {
     const rail = document.querySelector('.panel.controls');
     const on = document.querySelector('.ls-jump button.on');
     return { scrollTop: rail.scrollTop, onLabel: on?.textContent?.trim() };
   });
-  if (after.scrollTop > 50) break;
+  // 语义终点：高亮真迁移到目标组（scrollTop>50 只证明开始滚，构型组变长后远未到位——ubuntu R1 实测漂移）
+  if (after.onLabel === '仿真' && after.scrollTop > 50) break;
 }
 ok('点击仿真后 rail 滚动', after.scrollTop > 50, `scrollTop=${after.scrollTop}`);
 ok('高亮迁移到仿真', after.onLabel === '仿真', `on=${after.onLabel}`);

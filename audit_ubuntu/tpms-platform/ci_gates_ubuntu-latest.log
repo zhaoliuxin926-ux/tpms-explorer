@@ -1,0 +1,1442 @@
+
+> tpms-platform@0.0.0 test:all
+> node ../.verify/run_ci_suite.mjs
+
+══════ TPMS 全量 CI 套件 ══════ 9/8/2026, 8:25:25 PM · 并发 4
+  ✓ 成功响应 resolve
+  ✓ 新请求淘汰旧 Promise
+  ✓ Worker error reject
+  ✓ 超时 reject 且不挂起
+  ✓ 超时推进请求世代并丢弃晚到响应
+  ✓ 超时后新请求仍可正常 resolve
+  ✓ invalidate 释放 legacy listener
+  ✓ terminate 转发到底层 worker
+  ✓ Worker runtime error 立即 reject
+  ✓ runtime error 回调/legacy listener 去重且阻止默认处理
+  ✓ Worker messageerror 立即 reject
+
+RESULT: 11 PASS / 0 FAIL
+✓ Worker生命周期审计 — 11 PASS / 0 FAIL（0.3s）
+  ✓ getState 深拷贝 weights
+  ✓ getState 深拷贝 hybrid
+  ✓ getState 深拷贝 neural.z
+  ✓ 嵌套 partial 合并
+  ✓ Undo 可用
+  ✓ Undo 恢复深层快照
+  ✓ Redo 恢复最新状态
+  ✓ URL 恢复态成为 Undo 基线
+  ✓ URL 基线之后的编辑可 Redo
+  ✓ 分享链接恢复 coloring
+  ✓ 分享链接恢复 GPU 偏好
+  ✓ 分享链接恢复 manifold 全参数
+
+RESULT: 12 PASS / 0 FAIL
+✓ 状态与分享审计 — 12 PASS / 0 FAIL（0.3s）
+slabX sin(x) 50%: tris=27072 | 开放边=0 非流形=0 定向错=0 退化面=0 零法线=0 | 网格固相=3.979mm³ 参照=4.012mm³ 偏差=-0.83%
+PASS gyroid: 四区块齐备 wall=26701 inlet=660 outlet=598 sides=2473
+slabY sin(y) 50%: tris=27072 | 开放边=0 非流形=0 定向错=0 退化面=0 零法线=0 | 网格固相=3.979mm³ 参照=4.012mm³ 偏差=-0.83%
+slabZ sin(z) 50%: tris=27072 | 开放边=0 非流形=0 定向错=0 退化面=0 零法线=0 | 网格固相=3.979mm³ 参照=4.012mm³ 偏差=-0.83%
+PASS diamond: 四区块齐备 wall=33064 inlet=596 outlet=664 sides=2564
+PASS gyroid solid75 k3 cube ep1.0 · 水密/定向 — nm=6 miso=184≤512
+PASS gyroid solid75 k3 cube ep1.0 · 体积增量 ≤3% — 13.46 vs 理论 13.59 mm³ (0.93%)
+PASS gyroid solid75 k3 cube ep1.0 · top 满填充 90.3% — 裙边=467
+PASS gyroid solid75 k3 cube ep1.0 · bot 满填充 90.3% — 裙边=467
+PASS schwarz: 四区块齐备 wall=21153 inlet=45 outlet=39 sides=171
+PASS neovius: 四区块齐备 wall=15716 inlet=365 outlet=350 sides=1425
+gyroid solid75 k3 R61: tris=98964 | 开放边=0 非流形=24 定向错=240 退化面=0 零法线=0 | 网格固相=6.593mm³ 参照=6.699mm³ 偏差=-1.58%
+PASS gyroid solid75 k3 cube ep1.0 · CFD 四区块兼容 — wall=39164 inlet=7200 outlet=7200
+PASS iwp: 四区块齐备 wall=30045 inlet=1266 outlet=1276 sides=5093
+PASS schwarz shell74 k3 cube ep1.4 · 水密/定向 — nm=0 miso=16≤512
+diamond solid75 k3 R61: tris=120048 | 开放边=0 非流形=78 定向错=48 退化面=0 零法线=0 | 网格固相=6.523mm³ 参照=6.932mm³ 偏差=-5.90%
+PASS schwarz shell74 k3 cube ep1.4 · 体积增量 ≤5% — 15.96 vs 理论 16.19 mm³ (1.44%)
+PASS schwarz shell74 k3 cube ep1.4 · top 满填充 90.3% — 裙边=467
+PASS schwarz shell74 k3 cube ep1.4 · bot 满填充 90.3% — 裙边=465
+PASS frd: 四区块齐备 wall=39190 inlet=575 outlet=668 sides=2671
+PASS schwarz shell74 k3 cube ep1.4 · CFD 四区块兼容 — wall=24813 inlet=7200 outlet=7200
+schwarz shell70 k3 R61: tris=110976 | 开放边=0 非流形=0 定向错=48 退化面=0 零法线=0 | 网格固相=8.049mm³ 参照=7.989mm³ 偏差=0.76%
+PASS lidinoid: 四区块齐备 wall=50130 inlet=413 outlet=384 sides=1657
+PASS gyroid gradZ70 k3 cube ep0.8 · 水密/定向 — nm=58 miso=370≤512
+
+parity_math: 232 PASS / 0 FAIL
+✓ 数学同源 — exit=0（9.6s）
+PASS gyroid gradZ70 k3 cube ep0.8 · 体积增量 ≤5% — 10.69 vs 理论 10.87 mm³ (1.66%)
+PASS gyroid gradZ70 k3 cube ep0.8 · top 满填充 90.3% — 裙边=467
+PASS gyroid gradZ70 k3 cube ep0.8 · bot 满填充 90.3% — 裙边=467
+PASS splitp: 四区块齐备 wall=43397 inlet=900 outlet=896 sides=3599
+gyroid shell80 k5 R89: tris=473544 | 开放边=0 非流形=588 定向错=2106 退化面=0 零法线=0 | 网格固相=23.521mm³ 参照=24.522mm³ 偏差=-4.08%
+PASS gyroid gradZ70 k3 cube ep0.8 · CFD 四区块兼容 — wall=72966 inlet=7200 outlet=7200
+PASS 曲率无 NaN/Inf · gyroid solid k3 · mean
+PASS 曲率无 NaN/Inf · gyroid solid k3 · gauss
+PASS 曲率无 NaN/Inf · gradient radial shell · gauss
+PASS gyroid 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS gyroid 对称模量偏差 0.000% · Zener A=1.0000 
+PASS 曲率无 NaN/Inf · hybrid sigmoid diamond · mean
+schwarz solid50 k1 R33: tris=17808 | 开放边=0 非流形=0 定向错=0 退化面=0 零法线=0 | 网格固相=0.517mm³ 参照=0.534mm³ 偏差=-3.10%
+PASS 曲率无 NaN/Inf · aliasing sin(x*40) · gauss
+
+== RESULT: 13 PASS / 0 FAIL ==
+✓ 仿真导出校验 — 13 PASS / 0 FAIL（11.2s）
+PASS diamond 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS diamond 对称模量偏差 0.000% · Zener A=1.0000 
+PASS gyroid solid75 k3 cyl ep1.0 · 水密/定向 — nm=32 miso=142≤512
+PASS gyroid solid75 k3 cyl ep1.0 · 体积增量 ≤3% — 10.86 vs 理论 10.63 mm³ (2.11%)
+PASS gyroid solid75 k3 cyl ep1.0 · top 满填充 94.2% — 裙边=384
+PASS gyroid solid75 k3 cyl ep1.0 · bot 满填充 93.8% — 裙边=419
+gyroid solid75 k3 R61 CYLINDER: tris=81420 | 开放边=0 非流形=110 定向错=196 退化面=0 零法线=0 | 网格固相=5.318mm³ 参照=5.152mm³ 偏差=3.21%
+PASS schwarz 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS schwarz 对称模量偏差 0.000% · Zener A=1.0000 
+PASS gyroid solid75 k3 cyl ep1.0 · CFD 四区块兼容 — wall=47049 inlet=5834 outlet=5870
+PASS Gyroid+Diamond sigmoid-z · 水密 
+PRESET bone gyroid gradZ cyl p84 t1.3: tris=83412 | 开放边=0 非流形=119 定向错=276 退化面=0 零法线=0 | 网格固相=4.216mm³ 参照=4.158mm³ 偏差=1.40%
+PASS neovius 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS neovius 对称模量偏差 0.000% · Zener A=1.0000 
+PRESET cyl×shell70 k3: tris=130704 | 开放边=0 非流形=90 定向错=532 退化面=0 零法线=0 | 网格固相=6.256mm³ 参照=6.289mm³ 偏差=-0.53%
+PASS Schwarz P+Gyroid linear-x · 水密 
+PASS diamond solid75 k3 ep2.5(clamp1.2) · 水密/定向 — nm=8 miso=184≤512
+PASS diamond solid75 k3 ep2.5(clamp1.2) · 体积增量 ≤3% — 16.10 vs 理论 16.31 mm³ (1.27%)
+PASS diamond solid75 k3 ep2.5(clamp1.2) · top 满填充 90.3% — 裙边=467
+PASS diamond solid75 k3 ep2.5(clamp1.2) · bot 满填充 90.3% — 裙边=469
+hybrid gyroid+diamond solid75: tris=108508 | 开放边=0 非流形=75 定向错=280 退化面=0 零法线=0 | 网格固相=6.561mm³ 参照=NaNmm³(格子MC) 偏差=NaN%
+PASS diamond solid75 k3 ep2.5(clamp1.2) · CFD 四区块兼容 — wall=30152 inlet=7200 outlet=7200
+PASS iwp 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS iwp 对称模量偏差 0.000% · Zener A=1.0000 
+PASS Gyroid+IWP sigmoid-radial · 水密 
+PASS 极限逼近（两端 ≈ 单一曲面板） — relΔ_A=5.67e-6 relΔ_B=5.67e-6
+PASS py/TS 混合公式残差 ≤1e-6（1000 点） — maxΔ=1.06e-12
+
+== RESULT: 5 PASS / 0 FAIL ==
+✓ 混合审计 — 5 PASS / 0 FAIL（4.9s）
+gyroid gradient_shell75 k3 R61: tris=124832 | 开放边=0 非流形=100 定向错=424 退化面=0 零法线=0 | 网格固相=6.756mm³ 参照=6.833mm³ 偏差=-1.12%
+PASS frd 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS ep=0 幂等回归 
+
+== RESULT: 26 PASS / 0 FAIL ==
+✓ 端板审计 — 26 PASS / 0 FAIL（16.6s）
+
+[A] 语法容错与安全面
+  ✓ 拒绝 [sin(x]（未闭括号）
+  ✓ 拒绝 [x++*y]（双运算符）
+  ✓ 拒绝 [foo(x)]（未知函数）
+  ✓ 拒绝 [x @ y]（非法字符）
+  ✓ 拒绝 ['']（空串）
+  ✓ 拒绝 [   ]（纯空白）
+  ✓ 拒绝 [2x]（隐式乘法（拒绝））
+  ✓ 拒绝 [constructor]（原型链载荷）
+  ✓ 拒绝 [x.constructor]（属性访问逃逸）
+  ✓ 拒绝 [__proto__]（原型链载荷）
+  ✓ 拒绝 [eval(x)]（eval 载荷）
+  ✓ 拒绝 [Function(x)]（Function 载荷）
+  ✓ 拒绝 [import(x)]（import 载荷）
+  ✓ 拒绝 [process]（全局对象载荷）
+  ✓ 拒绝 [min(x)]（参数个数错误）
+  ✓ 拒绝 [pow(x, y, z)]（参数个数错误）
+  ✓ 拒绝 [1.2.3]（多小数点）
+  ✓ 拒绝 [x ^]（悬空幂）
+  ✓ 出错位置捕获 18/18（≥16）
+  ✓ 放行合法标识 [r + theta + phi]
+  ✓ 放行合法标识 [k*t*iso]
+  ✓ 放行合法标识 [PI*E + pi*e]
+
+[B] 值正确性（10,000 随机点/公式）
+  ✓ 镜像一致 [sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x…] — maxΔ=0.0e+0
+  ✓ 镜像一致 [cos(x) + cos(y) + cos(z)] — maxΔ=0.0e+0
+  ✓ 镜像一致 [sin(z) - sinh(x)*sinh(y)] — maxΔ=0.0e+0
+  ✓ 镜像一致 [exp(z)*cos(x) - cos(y)] — maxΔ=0.0e+0
+  ✓ 镜像一致 [0.5*(2*sin(x)*cos(x)*cos(y)*sin(z) + 2*sin(y…] — maxΔ=0.0e+0
+PASS GLB magic/version/长度 — magic=0x46546c67 v=2
+PASS JSON chunk 解析 
+PASS POSITION/NORMAL/COLOR_0 齐备 
+PASS COLOR_0 值域 [0,1] — 36754 顶点 ×3
+PASS GLB 顶点/面数守恒 — 36754v / 220932t
+PASS mm 尺度声明（asset.extras） 
+  ✓ 全部 28 公式 × 10000 点无异常、无 NaN/Inf
+  · 求值总耗时 0.26s（280000 点）
+  ✓ 预设样例库 8/8 全部可编译
+
+[C] 梯度 AD vs 中心差分
+  ✓ ∇ [sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x…] — worst=2.1e-11 (tol 0.0001) n=2000
+  ✓ ∇ [cos(x) + cos(y) + cos(z)] — worst=3.1e-11 (tol 0.0001) n=2000
+  ✓ ∇ [sin(z) - sinh(x)*sinh(y)] — worst=4.7e-10 (tol 0.0001) n=2000
+  ✓ ∇ [exp(z)*cos(x) - cos(y)] — worst=1.2e-10 (tol 0.0001) n=2000
+  ✓ ∇ [0.5*(2*sin(x)*cos(x)*cos(y)*sin(z) + 2*sin(y…] — worst=5.1e-11 (tol 0.0001) n=2000
+  ✓ ∇ [sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x…] — worst=5.0e-11 (tol 0.0001) n=2000
+  ✓ ∇ [cos(x) + cos(y) + cos(z) + 0.4*cos(2*r)] — worst=5.8e-11 (tol 0.0001) n=1999
+  ✓ ∇ [sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x…] — worst=2.4e-11 (tol 0.0001) n=2000
+  ✓ ∇ [cos(x) + iso*0.5*cos(2*x)] — worst=2.3e-11 (tol 0.0001) n=2000
+  ✓ ∇ [x^2*y^3 - x/y*z] — worst=4.4e-9 (tol 0.0001) n=1889
+  ✓ ∇ [pow(1 + x*x, 2.5) - y*y*z] — worst=2.2e-9 (tol 0.0001) n=2000
+  ✓ ∇ [sqrt(1 + x*x + y*y)*sin(2*z)] — worst=6.3e-11 (tol 0.0001) n=2000
+  ✓ ∇ [abs(sin(x)*cos(y))*sign(z) + 0.3] — worst=1.7e-11 (tol 0.05) n=1987
+gyroid gradshell RADIAL k3 R96(补偿): tris=214016 | 开放边=0 非流形=20 定向错=616 退化面=0 零法线=0 | 网格固相=3.416mm³ 参照=3.673mm³ 偏差=-7.01%
+  ✓ ∇ [atan2(y, x)*cos(z)] — worst=2.4e-9 (tol 0.0001) n=1997
+  ✓ ∇ [min(sin(x), cos(y))*max(cos(y), sin(z))] — worst=3.9e-11 (tol 0.05) n=1936
+  ✓ ∇ [log(2 + sin(x)*sin(y)*sin(z))] — worst=2.1e-11 (tol 0.0001) n=2000
+  ✓ ∇ [tanh(2*x)*cosh(0.5*y) - sinh(0.3*z)] — worst=1.1e-10 (tol 0.0001) n=2000
+  ✓ ∇ [exp(-x*x - y*y - z*z)*2 - 1] — worst=5.3e-11 (tol 0.0001) n=2000
+  ✓ ∇ [sin(3*x)*sin(3*y)*sin(3*z)*0.5 + cos(x)*cos(…] — worst=1.2e-10 (tol 0.0001) n=2000
+  ✓ ∇ [floor(2*x)*0.25 + ceil(2*y)*0.25 + 0.5*cos(z…] — worst=2.0e-11 (tol 0.05) n=1782
+  ✓ ∇ [tan(x)*0.1 + tan(y)*0.1 + tan(z)*0.1] — worst=3.0e-10 (tol 0.05) n=2000
+  ✓ ∇ [cbrt(x*y*z + 0.1) + 0.5*sin(2*x)] — worst=7.1e-6 (tol 0.05) n=1991
+  ✓ ∇ [asin(0.5*sin(x)*sin(y)) + acos(0.5*cos(y)*co…] — worst=2.9e-11 (tol 0.0001) n=2000
+  ✓ ∇ [sin(x + t*0.5)*cos(y - iso*0.3) + sin(y)*cos…] — worst=2.0e-11 (tol 0.0001) n=2000
+  ✓ ∇ [phi/(2*PI)*cos(theta) + 0.5*sin(2*theta)*0.1] — worst=2.3e-9 (tol 0.0001) n=1998
+  ✓ ∇ [log10(3 + x*x) - log2(2 + y*y) + log(4 + z*z…] — worst=3.4e-11 (tol 0.0001) n=2000
+  ✓ ∇ [trunc(0.4*sin(x))*0.2 + round(0.4*cos(y))*0.…] — worst=2.7e-11 (tol 0.05) n=1784
+  ✓ ∇ [PI*x*E*y*0.01 + sin(PI*z*0.5)] — worst=2.9e-11 (tol 0.0001) n=2000
+
+[D] Hessian AD（解析锚点 + FD 交叉）
+  ✓ 解析锚点 x²y³−xz/y 六分量 — maxΔ=7.1e-15
+  ✓ 解析锚点 Gyroid 六分量 — maxΔ=0.0e+0
+PASS lidinoid 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+  ✓ FD 交叉 17 公式（rel ≤5e-3） — worst=1.8e-6 @cbrt(x*y*z + 0.1) + 0.5*sin(2*
+
+[E] 代码生成 NumPy/MATLAB
+  ✓ NumPy 实跑等价（11 公式 × 300 点） — maxRel=5.7e-11
+  ✓ MATLAB 生成含向量化点运算（.* ./ .^）
+  ✓ MATLAB 无裸标量运算符（防矩阵语义）
+  ✓ MATLAB cbrt 负数安全翻译（sign.*abs.^）
+  ✓ MATLAB 常量翻译（PI→pi、E→exp(1)）
+
+[F] 几何集成
+PASS 无色导出不写 COLOR_0 
+gyroid gradshell SPHERICAL k3 R96(补偿): tris=215400 | 开放边=0 非流形=144 定向错=750 退化面=0 零法线=0 | 网格固相=3.115mm³ 参照=3.424mm³ 偏差=-9.01%
+PASS splitp 迂曲度 τ=(1.000, 1.000, 1.000) 全贯通 
+PASS 刚度组装自洽（对称迂曲） — C11 偏差 2.2e-14% · C44 偏差 0.0e+0%
+  ✓ custom Gyroid 表达式 solid_network 水密+体积 — open=0 · 37272 tri · volDev=4.13% (tol 6%)
+PASS gyroid ep0 · ZIP 三成员齐全（STORED） 
+PASS gyroid ep0 · XML 守恒 — 49350v/98964t · millimeter
+PASS 高密度几何正确性（p45） — fluid=40.8% τ=1.000,1.000,1.000
+PASS 渗流阈值以下未贯通（τ=∞） — fluid=2.0%
+gyroid solid75 k3 R28 PREVIEW: tris=18888 | 开放边=0 非流形=48 定向错=12 退化面=0 零法线=0 | 网格固相=6.096mm³ 参照=6.761mm³ 偏差=-9.83%
+PASS 端板封堵语义（z=∞ / x·y 贯通） — τz=∞, τx=1.000, τy=1.000
+
+== RESULT: 17 PASS / 0 FAIL ==
+✓ 微物理审计 — 17 PASS / 0 FAIL（10.9s）
+  ✓ custom r 变量调制 shell 水密+体积 — open=0 · 49980 tri · volDev=8.42% (tol 12%)
+
+[A] Voigt–Reuss 解析界（E0=1、ν=0.3）
+  ✓ φ=1 Voigt = C0 精确 — cV11=1.346153846
+  ✓ φ=1 k_V=k0、g_V=μ0 精确 — kv=0.833333333
+  ✓ φ=0.5 Voigt 线性标度 + 真孔隙 Reuss=0
+  ✓ φ=0 Voigt = 0（边界退化）
+  ✓ Voigt 随 φ 严格线性（5 点）
+
+[B] 方向模量 E(n)
+  ✓ 各向同性基体 E(n) ≡ E0（7 方向精确） — maxΔ=6.7e-16
+  ✓ 正交各向异性主轴 E 精确（1.0/1.2/0.9）
+  ✓ 立方等价方向 E 一致
+
+[C] E(n) 球面采样
+  ✓ 采样器尺寸与值域 — E∈[0.900, 1.200]
+  ✓ 各向同性采样极值恒定
+  ✓ 采样网格覆盖主轴值（E1、E3 极点）
+
+[D] UI 数据源一致性（estimateAnisotropicStiffness → E(n)）
+  ✓ UI 张量→E(n) 主轴一致 — E=0.024/0.024/0.024
+  ✓ gyroid ρ=0.25 E* 量级合理（Gibson-Ashby 带） — E*=0.0238
+
+== RESULT: 13 PASS / 0 FAIL ==
+✓ 均质化审计 — 13 PASS / 0 FAIL（0.3s）
+PASS gyroid ep1.2 · ZIP 三成员齐全（STORED） 
+PASS gyroid ep1.2 · XML 守恒 — 32183v/64432t · millimeter
+PASS 端板元数据标记 
+
+== RESULT: 12 PASS / 0 FAIL ==
+✓ 工业格式审计 — 12 PASS / 0 FAIL（4.7s）
+
+[A] identity 恒等
+  ✓ identity 恒等映射
+
+[B] 雅可比行列式 > 0（无折叠）
+  ✓ cylinder det(J) > 0 全域（min=1.86e+0）
+  ✓ torus det(J) > 0 全域（min=1.09e+1）
+  ✓ hyperbolic det(J) > 0 全域（min=5.19e-1）
+  ✓ metric det(J) > 0 全域（min=1.40e+0）
+
+[C] 映射后网格拓扑（水密继承 + 无退化）
+
+[1] 孔隙率极端 × 8 曲面 × 3 模式（cube）
+  ✓ RT[gyroid/p0.01/solid_network] 水密+nm哨兵+无退化 — 6348 tri nm=0/1429
+  ✓ RT[gyroid/p0.01/shell] 水密+nm哨兵+无退化 — 7440 tri nm=0/1674
+  ✓ cylinder 水密 open=0 · 体积>0 · 三角数不变 — vol=487.3 · 18600 tri
+  ✓ torus 水密 open=0 · 体积>0 · 三角数不变 — vol=2325.6 · 18600 tri
+  ✓ hyperbolic 水密 open=0 · 体积>0 · 三角数不变 — vol=78.0 · 18600 tri
+  ✓ metric 水密 open=0 · 体积>0 · 三角数不变 — vol=167.4 · 18600 tri
+
+[D] cylinder 域两端周期对齐（θ 差 = 2π）
+  ✓ 域两端映射到同一截面（零裂缝） — Δ=1.6e-15
+  ✓ torus u/v 两端周期对齐 — Δu=8.3e-16 Δv=6.6e-16
+
+[E] 映射后三角形质量（最小角分布）
+neovius solid75 k3 R96(倍频补偿): tris=206400 | 开放边=0 非流形=0 定向错=756 退化面=0 零法线=0 | 网格固相=6.838mm³ 参照=6.687mm³ 偏差=2.25%
+  ✓ RT[gyroid/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 14288 tri nm=1180/3215
+  ✓ custom 参数响应 t gradient_shell 水密+体积 — open=0 · 57508 tri · volDev=3.35% (tol 12%)
+
+[G] 适配层与缓存
+  ✓ 动态参数 t 注入（t=2−t=1 场差恰为 0.2·sss 项） — maxΔ=1.3e-16
+  ✓ evaluateField 适配层一致
+  ✓ evaluateGradient AD 精确（∂cos = −sin）
+  ✓ 编译缓存命中/区分
+  ✓ 引擎源码静态扫描：无 eval / new Function / with 调用
+
+== RESULT: 73 PASS / 0 FAIL ==
+✓ 自定义公式审计 — 73 PASS / 0 FAIL（5.2s）
+  ✓ RT[gyroid/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 7024 tri nm=24/1581
+  ✓ RT[diamond/p0.01/solid_network] 水密+nm哨兵+无退化 — 9036 tri nm=384/2034
+  ✓ 四类映射最小角 > 0.057° — min=0.07°
+
+[F] 主线程缓存保持未映射规范几何
+
+[A] opcode 后端完备性
+  ✓ JS/WGSL 双后端 opcode 实现完备
+
+[B] WGSL 静态健全性 + 模板文件同步
+  ✓ gyroid: @compute/storage/配平/无 JS 残留
+  ✓ diamond: @compute/storage/配平/无 JS 残留
+  ✓ schwarz: @compute/storage/配平/无 JS 残留
+  ✓ neovius: @compute/storage/配平/无 JS 残留
+  ✓ iwp: @compute/storage/配平/无 JS 残留
+  ✓ frd: @compute/storage/配平/无 JS 残留
+  ✓ lidinoid: @compute/storage/配平/无 JS 残留
+  ✓ splitp: @compute/storage/配平/无 JS 残留
+  ✓ wgsl 模板含唯一占位符
+  ✓ wgsl 模板与 TS 内联模板逐字同步（头/尾锚定）
+  ✓ WGSL 网格坐标起点与 CPU [-π,+π] 约定一致
+
+[D] 内置 TPMS：模拟 GPU 内核 vs CPU 权威公式（10,000 格点 ≤1e-6）
+  ✓ RT[diamond/p0.01/shell] 水密+nm哨兵+无退化 — 23184 tri nm=2874/5217
+  ✓ gyroid: max 相对误差 0.00e+0 ≤1e-6
+  ✓ diamond: max 相对误差 0.00e+0 ≤1e-6
+  ✓ schwarz: max 相对误差 0.00e+0 ≤1e-6
+  ✓ neovius: max 相对误差 0.00e+0 ≤1e-6
+  ✓ RT[diamond/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 23184 tri nm=2874/5217
+  ✓ 流形缓存 round-trip 不二次映射 — replay=0.0e+0 · double=1.4e+1
+  ✓ applyGeometry 映射副本，Worker/LRU 原始数组不变
+
+== RESULT: 14 PASS / 0 FAIL ==
+✓ 流形映射审计 — 14 PASS / 0 FAIL（1.9s）
+  ✓ iwp: max 相对误差 0.00e+0 ≤1e-6
+  ✓ RT[diamond/p0.99/solid_network] 水密+nm哨兵+无退化 — 3072 tri nm=384/1024
+  ✓ frd: max 相对误差 0.00e+0 ≤1e-6
+  ✓ lidinoid: max 相对误差 0.00e+0 ≤1e-6
+  ✓ splitp: max 相对误差 0.00e+0 ≤1e-6
+
+[D2] 非单位权重：模拟 GPU 内核 vs CPU 权威公式
+  ✓ gyroid: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ RT[diamond/p0.99/shell] 水密+nm哨兵+无退化 — 6144 tri nm=768/1383
+  ✓ diamond: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ schwarz: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ neovius: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ iwp: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ frd: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ RT[diamond/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 6620 tri nm=128/1490
+  ✓ lidinoid: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+  ✓ splitp: 非单位权重 max 相对误差 0.00e+0 ≤1e-6
+
+[E] 自定义方程：desugar+参数烘焙 vs CPU evaluate（10,000 格点 ≤1e-6）
+  ✓ RT[schwarz/p0.01/solid_network] 水密+nm哨兵+无退化 — 7128 tri nm=0/1604
+  ✓ "sin(x)*cos(y) + sin(y)*cos(z…" (k=2,t=1,iso=0): 0.00e+0 ≤1e-6
+  ✓ "cos(k*x) + cos(k*y) - 0.4*(c…" (k=3,t=1.2,iso=0.1): 0.00e+0 ≤1e-6
+
+[A-D] 周期单胞拓扑 + 3×3×3 拼接水密 + PBC 配对（8 类 × 2 模式）
+  ✓ "sqrt(x*x + y*y + z*z) - iso…" (k=1,t=0.8,iso=2): 0.00e+0 ≤1e-6
+  ✓ RT[schwarz/p0.01/shell] 水密+nm哨兵+无退化 — 17868 tri nm=1344/4021
+  ✓ "sin(x)*sin(y)*sin(z) + cos(x…" (k=2,t=1.5,iso=-0.2): 0.00e+0 ≤1e-6
+
+[F] Hybrid 混合场：波前×混合函数 vs createHybridField（10,000 格点 ≤1e-6）
+  ✓ hybrid gyroid→diamond sigmoid-x: 0.00e+0 ≤1e-6
+  ✓ RT[schwarz/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 17868 tri nm=1344/4021
+  ✓ hybrid schwarz→iwp linear-radial: 0.00e+0 ≤1e-6
+  ✓ hybridWeightReference 径向波前可调用
+
+[G] 端到端：gpuVField 注入 → 水密 + 体积一致性
+  ✓ RT[schwarz/p0.99/solid_network] 水密+nm哨兵+无退化 — 1248 tri nm=0/1024
+  ✓ RT[schwarz/p0.99/shell] 水密+nm哨兵+无退化 — 1764 tri nm=0/1024
+  ✓ RT[schwarz/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 2960 tri nm=0/1024
+  ✓ gyroid/solid: 开放边全在域平面（open=744, 非平面=0, nm=0）
+  ✓ RT[neovius/p0.01/solid_network] 水密+nm哨兵+无退化 — 7128 tri nm=0/1604
+  ✓ RT[neovius/p0.01/shell] 水密+nm哨兵+无退化 — 21708 tri nm=1344/4885
+  ✓ RT[neovius/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 21708 tri nm=1344/4885
+  ✓ RT[neovius/p0.99/solid_network] 水密+nm哨兵+无退化 — 1248 tri nm=0/1024
+  ✓ RT[neovius/p0.99/shell] 水密+nm哨兵+无退化 — 1764 tri nm=0/1024
+  ✓ RT[neovius/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 2272 tri nm=0/1024
+  ✓ RT[iwp/p0.01/solid_network] 水密+nm哨兵+无退化 — 6348 tri nm=0/1429
+  ✓ RT[iwp/p0.01/shell] 水密+nm哨兵+无退化 — 14796 tri nm=384/3330
+  ✓ RT[iwp/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 14796 tri nm=384/3330
+  ✓ RT[iwp/p0.99/solid_network] 水密+nm哨兵+无退化 — 2616 tri nm=0/1024
+  ✓ RT[iwp/p0.99/shell] 水密+nm哨兵+无退化 — 2616 tri nm=0/1024
+  ✓ RT[iwp/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 5804 tri nm=0/1306
+iwp solid75 k3 R96(倍频补偿): tris=301104 | 开放边=0 非流形=0 定向错=1908 退化面=0 零法线=0 | 网格固相=6.824mm³ 参照=7.188mm³ 偏差=-5.05%
+  ✓ RT[frd/p0.01/solid_network] 水密+nm哨兵+无退化 — 12252 tri nm=288/2757
+  ✓ gyroid solid: GPU 注入路径水密 open=0
+  ✓ gyroid solid: 固相分数偏差 0.000% ≤0.5%
+  ✓ RT[frd/p0.01/shell] 水密+nm哨兵+无退化 — 10572 tri nm=0/2379
+  ✓ gyroid solid: 长度校验守卫（错误长度显式抛错）
+  ✓ RT[frd/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 10572 tri nm=0/2379
+  ✓ RT[frd/p0.99/solid_network] 水密+nm哨兵+无退化 — 2856 tri nm=0/1024
+  ✓ RT[frd/p0.99/shell] 水密+nm哨兵+无退化 — 2856 tri nm=0/1024
+  ✓ RT[frd/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 2448 tri nm=0/1024
+  ✓ RT[lidinoid/p0.01/solid_network] 水密+nm哨兵+无退化 — 6348 tri nm=0/1429
+  ✓ gyroid/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ gyroid/solid: PBC 面配对 100% 覆盖
+  ✓ gyroid/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ gyroid/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ RT[lidinoid/p0.01/shell] 水密+nm哨兵+无退化 — 20460 tri nm=0/4604
+  ✓ RT[lidinoid/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 20460 tri nm=0/4604
+  ✓ RT[lidinoid/p0.99/solid_network] 水密+nm哨兵+无退化 — 1092 tri nm=0/1024
+  ✓ RT[lidinoid/p0.99/shell] 水密+nm哨兵+无退化 — 1092 tri nm=0/1024
+  ✓ RT[lidinoid/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 8400 tri nm=16/1890
+  ✓ gyroid/shell: 开放边全在域平面（open=1056, 非平面=0, nm=0）
+  ✓ RT[splitp/p0.01/solid_network] 水密+nm哨兵+无退化 — 7884 tri nm=0/1774
+  ✓ RT[splitp/p0.01/shell] 水密+nm哨兵+无退化 — 9516 tri nm=0/2142
+  ✓ RT[splitp/p0.01/gradient_shell] 水密+nm哨兵+无退化 — 9516 tri nm=0/2142
+  ✓ RT[splitp/p0.99/solid_network] 水密+nm哨兵+无退化 — 3780 tri nm=378/1024
+  ✓ RT[splitp/p0.99/shell] 水密+nm哨兵+无退化 — 4932 tri nm=0/1110
+  ✓ RT[splitp/p0.99/gradient_shell] 水密+nm哨兵+无退化 — 7116 tri nm=28/1602
+
+[2] cylinder 容器极端
+  ✓ RT[cyl/gyroid/p0.01/solid_network] 水密+nm哨兵+无退化 — 5980 tri nm=0/1346
+  ✓ RT[cyl/gyroid/p0.01/shell] 水密+nm哨兵+无退化 — 6880 tri nm=0/1548
+  ✓ RT[cyl/diamond/p0.01/solid_network] 水密+nm哨兵+无退化 — 7860 tri nm=0/1769
+  ✓ RT[cyl/diamond/p0.01/shell] 水密+nm哨兵+无退化 — 19920 tri nm=2496/4482
+  ✓ RT[cyl/diamond/p0.99/solid_network] 水密+nm哨兵+无退化 — 2464 tri nm=0/1024
+  ✓ RT[cyl/diamond/p0.99/shell] 水密+nm哨兵+无退化 — 4800 tri nm=576/1080
+  ✓ RT[cyl/schwarz/p0.01/solid_network] 水密+nm哨兵+无退化 — 6360 tri nm=0/1431
+  ✓ RT[cyl/schwarz/p0.01/shell] 水密+nm哨兵+无退化 — 14748 tri nm=1064/3319
+  ✓ RT[cyl/schwarz/p0.99/solid_network] 水密+nm哨兵+无退化 — 864 tri nm=0/1024
+  ✓ RT[cyl/schwarz/p0.99/shell] 水密+nm哨兵+无退化 — 1332 tri nm=0/1024
+  ✓ RT[cyl/neovius/p0.01/solid_network] 水密+nm哨兵+无退化 — 6360 tri nm=0/1431
+  ✓ RT[cyl/neovius/p0.01/shell] 水密+nm哨兵+无退化 — 17948 tri nm=1064/4039
+  ✓ RT[cyl/neovius/p0.99/solid_network] 水密+nm哨兵+无退化 — 864 tri nm=0/1024
+  ✓ RT[cyl/neovius/p0.99/shell] 水密+nm哨兵+无退化 — 1332 tri nm=0/1024
+  ✓ RT[cyl/iwp/p0.01/solid_network] 水密+nm哨兵+无退化 — 5980 tri nm=0/1346
+  ✓ RT[cyl/iwp/p0.01/shell] 水密+nm哨兵+无退化 — 12572 tri nm=400/2829
+  ✓ RT[cyl/iwp/p0.99/solid_network] 水密+nm哨兵+无退化 — 1912 tri nm=0/1024
+  ✓ RT[cyl/iwp/p0.99/shell] 水密+nm哨兵+无退化 — 1912 tri nm=0/1024
+  ✓ diamond shell: GPU 注入路径水密 open=0
+  ✓ diamond shell: 固相分数偏差 0.000% ≤0.5%
+  ✓ RT[cyl/frd/p0.01/solid_network] 水密+nm哨兵+无退化 — 10796 tri nm=228/2430
+  ✓ diamond shell: 长度校验守卫（错误长度显式抛错）
+
+[H] 无 GPU 环境优雅降级
+  ✓ evaluateFieldGPU 无 navigator.gpu 返回 null（不抛错）
+  ✓ probeGpuAvailability 无 navigator.gpu 返回 false
+
+RESULT: 43 PASS / 0 FAIL
+  ✓ RT[cyl/frd/p0.01/shell] 水密+nm哨兵+无退化 — 9340 tri nm=0/2102
+  ✓ RT[cyl/frd/p0.99/solid_network] 水密+nm哨兵+无退化 — 2216 tri nm=0/1024
+  ✓ RT[cyl/frd/p0.99/shell] 水密+nm哨兵+无退化 — 2216 tri nm=0/1024
+  ✓ RT[cyl/lidinoid/p0.01/solid_network] 水密+nm哨兵+无退化 — 5980 tri nm=0/1346
+  ✓ RT[cyl/lidinoid/p0.01/shell] 水密+nm哨兵+无退化 — 17748 tri nm=12/3994
+  ✓ RT[cyl/lidinoid/p0.99/solid_network] 水密+nm哨兵+无退化 — 900 tri nm=0/1024
+  ✓ RT[cyl/lidinoid/p0.99/shell] 水密+nm哨兵+无退化 — 900 tri nm=0/1024
+  ✓ RT[cyl/splitp/p0.01/solid_network] 水密+nm哨兵+无退化 — 7164 tri nm=16/1612
+  ✓ RT[cyl/splitp/p0.01/shell] 水密+nm哨兵+无退化 — 8828 tri nm=32/1987
+  ✓ RT[cyl/splitp/p0.99/solid_network] 水密+nm哨兵+无退化 — 3036 tri nm=354/1024
+✓ WebGPU 同源审计 — 43 PASS / 0 FAIL（4.6s）
+  ✓ RT[cyl/splitp/p0.99/shell] 水密+nm哨兵+无退化 — 4068 tri nm=0/1024
+
+[3] 长宽比极端（periods 各向组合）
+  ✓ gyroid/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ gyroid/shell: PBC 面配对 100% 覆盖
+  ✓ gyroid/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ gyroid/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ diamond/solid: 开放边全在域平面（open=480, 非平面=0, nm=0）
+
+[A] Abaqus INP（gyroid solid / diamond shell / cylinder 容器）
+  ✓ gyroid solid: 单元数 == 固相体素数 (2096)
+  ✓ gyroid solid: 文件结构（*NODE/*ELEMENT/*NSET/*ELASTIC/*STEP 齐备）
+  ✓ gyroid solid: 解析节点 3169 == 报告 3169
+  ✓ gyroid solid: 解析单元 2096 == 报告 2096
+  ✓ gyroid solid: 面闭合（无非流形面）
+  ✓ gyroid solid: C3D8 Jacobian = h³（524 抽样，异常 0，ratio 1.0 ≥0.8）
+  ✓ gyroid solid: 体积守恒（固相 51.17% ∈ 合理带）
+  ✓ gyroid solid: PBC_X0/X1 非空且不交（169/171）
+  ✓ RT[aspect/k10] 水密+nm哨兵+无退化 — 44040 tri nm=5928/9909
+  ✓ diamond shell: 单元数 == 固相体素数 (960)
+  ✓ diamond shell: 文件结构（*NODE/*ELEMENT/*NSET/*ELASTIC/*STEP 齐备）
+  ✓ diamond shell: 解析节点 2330 == 报告 2330
+  ✓ diamond shell: 解析单元 960 == 报告 960
+  ✓ diamond shell: 面闭合（无非流形面）
+  ✓ diamond shell: C3D8 Jacobian = h³（960 抽样，异常 0，ratio 1.0 ≥0.8）
+  ✓ diamond shell: 体积守恒（固相 23.44% ∈ 合理带）
+  ✓ diamond shell: PBC_X0/X1 非空且不交（128/128）
+  ✓ gyroid cylinder: 单元数 == 固相体素数 (1340)
+  ✓ gyroid cylinder: 文件结构（*NODE/*ELEMENT/*NSET/*ELASTIC/*STEP 齐备）
+  ✓ gyroid cylinder: 解析节点 2242 == 报告 2242
+  ✓ gyroid cylinder: 解析单元 1340 == 报告 1340
+  ✓ gyroid cylinder: 面闭合（无非流形面）
+  ✓ gyroid cylinder: C3D8 Jacobian = h³（670 抽样，异常 0，ratio 1.0 ≥0.8）
+  ✓ gyroid cylinder: 体积守恒（固相 32.71% ∈ 合理带）
+  ✓ gyroid cylinder: PBC_X0/X1 非空且不交（66/53）
+
+[B] OpenFOAM polyMesh（gyroid solid p=0.5 / cylinder）
+  ✓ RT[aspect/k10] 水密+nm哨兵+无退化 — 44040 tri nm=5928/9909
+  ✓ gyroid cube: 五件套齐备
+  ✓ gyroid cube: 流体 cell 数 2000 == 空隙体素数 2000
+  ✓ gyroid cube: faces/owner 等长 (6972)
+  ✓ gyroid cube: neighbour == 内部面数 (5028)
+  ✓ gyroid cube: 内部面 owner < neighbour
+  ✓ gyroid cube: cell-face 关联守恒（12000 == 6·cells = 12000）
+  ✓ gyroid cube: 内部面法线 owner→neighbour（419 抽样，反向 0）
+  ✓ gyroid cube: patch 区间连续覆盖边界段（inlet:126/outlet:126/wall:1692）
+  ✓ gyroid cube: 体积守恒（48.83% 孔隙带）
+  ✓ RT[aspect/k10] 水密+nm哨兵+无退化 — 44040 tri nm=5928/9909
+  ✓ gyroid cylinder: 五件套齐备
+  ✓ gyroid cylinder: 流体 cell 数 2756 == 空隙体素数 2756
+  ✓ gyroid cylinder: faces/owner 等长 (9520)
+  ✓ gyroid cylinder: neighbour == 内部面数 (7016)
+  ✓ gyroid cylinder: 内部面 owner < neighbour
+  ✓ gyroid cylinder: cell-face 关联守恒（16536 == 6·cells = 16536）
+  ✓ gyroid cylinder: 内部面法线 owner→neighbour（413 抽样，反向 0）
+  ✓ gyroid cylinder: patch 区间连续覆盖边界段（inlet:168/outlet:172/wall:2164）
+  ✓ gyroid cylinder: 体积守恒（67.29% 孔隙带）
+
+[C] ZIP 容器完整性（STORED + CRC32）
+  ✓ RT[aspect/k10] 水密+nm哨兵+无退化 — 44040 tri nm=5928/9909
+  ✓ EOCD 签名 + 条目数
+  ✓ 本地头链完整 + CRC32 逐条目通过（5/5）
+  ✓ 中央目录首条目签名
+  ✓ 已知 CRC 向量（"123456789" → 0xCBF43926）
+
+RESULT: 46 PASS / 0 FAIL
+  ✓ RT[aspect/k1] 水密+nm哨兵+无退化 — 8076 tri nm=0/1818
+✓ CAE体网格审计 — 46 PASS / 0 FAIL（1.1s）
+  ✓ RT[aspect/k10] 水密+nm哨兵+无退化 — 44040 tri nm=5928/9909
+
+[4] 极高频扰动 + 零厚度鞍点
+  ✓ diamond/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ diamond/solid: PBC 面配对 100% 覆盖
+  ✓ diamond/solid: v_right − v_left = (L,0,0)（max 1.55e-6 ≤1e-5）
+  ✓ diamond/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+frd solid75 k3 R96(倍频补偿): tris=376032 | 开放边=0 非流形=5184 定向错=1968 退化面=0 零法线=0 | 网格固相=6.750mm³ 参照=6.976mm³ 偏差=-3.24%
+
+[A] 分级网格水密性（macro×micro × solid/shell）
+  ✓ diamond/shell: 开放边全在域平面（open=960, 非平面=0, nm=0）
+  ✓ gyroid+diamond/solid: open=0
+  ✓ gyroid+diamond/shell: open=0
+  ✓ schwarz+gyroid/solid: open=0
+  ✓ schwarz+gyroid/shell: open=0
+  ✓ RT[hf/gyroid] 水密+nm哨兵+无退化 — 136800 tri nm=0/30780
+  ✓ diamond+iwp/solid: open=0
+  ✓ diamond+iwp/shell: open=0
+  ✓ neovius+schwarz/solid: open=0
+  ✓ neovius+schwarz/shell: open=0
+
+[B] λ=0 退化为宏观单一尺度
+lidinoid solid75 k2 R61: tris=120216 | 开放边=0 非流形=96 定向错=1056 退化面=0 零法线=0 | 网格固相=1.924mm³ 参照=1.974mm³ 偏差=-2.58%
+  ✓ RT[hf/schwarz] 水密+nm哨兵+无退化 — 118800 tri nm=0/26730
+  ✓ RT[saddle/schwarz] 水密+nm哨兵+无退化 — 18060 tri nm=0/4064
+  ✓ RT[saddle/diamond] 水密+nm哨兵+无退化 — 26256 tri nm=1698/5908
+  ✓ RT[saddle/gyroid] 水密+nm哨兵+无退化 — 18624 tri nm=0/4191
+  ✓ λ=0 固相分数偏差 0.0003% ≤0.5%
+
+[C] 微孔连通率（微场空隙最大 6 连通簇占比 ≥95%）
+  ✓ RT[iso0/gyroid] 水密+nm哨兵+无退化 — 6240 tri nm=0/1404
+  ✓ RT[iso0/schwarz] 水密+nm哨兵+无退化 — 3552 tri nm=0/1024
+
+[5] 极端权重
+  ✓ RT[weight/w负值] 水密+nm哨兵+无退化 — 12312 tri nm=0/2771
+  ✓ gyroid+diamond: 微孔连通率 100.0% ≥95%
+  ✓ RT[weight/w大幅值] 水密+nm哨兵+无退化 — 11232 tri nm=0/2528
+  ✓ diamond/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ diamond/shell: PBC 面配对 100% 覆盖
+  ✓ diamond/shell: v_right − v_left = (L,0,0)（max 3.58e-7 ≤1e-5）
+  ✓ diamond/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ RT[weight/w微小] 水密+nm哨兵+无退化 — 12448 tri nm=0/2801
+  ✓ schwarz+gyroid: 微孔连通率 100.0% ≥95%
+  ✓ RT[weight/w单相] 水密+nm哨兵+无退化 — 10096 tri nm=0/2272
+  ✓ RT[weight/w交替] 水密+nm哨兵+无退化 — 12312 tri nm=0/2771
+
+== 矩阵断言计数: 99 PASS / 0 FAIL ==
+
+[perf] 80³ 全量重建延迟（Node 直跑，非 UI 路径）
+  ✓ gyroid+schwarz: 微孔连通率 100.0% ≥95%
+
+[D] 双重比表面积分离（coarea MC）
+  ✓ schwarz/solid: 开放边全在域平面（open=816, 非平面=0, nm=0）
+  ✓ 微孔附加比表面积 0.457 > 0
+  ✓ 总面积 1.627 > 宏观 1.170
+  ✓ S 随 N 增长（N8 2.600 > N4 1.627）
+
+[E] 应力-相对密度单调性（bending 壳 β=0.5，vm 五分桶体素 MC）
+splitp solid75 k2 R61: tris=112152 | 开放边=0 非流形=0 定向错=516 退化面=0 零法线=0 | 网格固相=1.994mm³ 参照=2.072mm³ 偏差=-3.79%
+  ✓ vm 分桶固相分数递增 [0.335, 0.394, 0.512, 0.518, 0.628]
+
+[F] 应力变换完整性
+  ✓ schwarz/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ schwarz/solid: PBC 面配对 100% 覆盖
+  ✓ schwarz/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ schwarz/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ schwarz/shell: 开放边全在域平面（open=624, 非平面=0, nm=0）
+  ✓ anisotropy 改变几何（5.16% > 1%）
+  ✓ cantilever 水密 open=0
+
+RESULT: 18 PASS / 0 FAIL
+✓ 分级TPMS审计 — 18 PASS / 0 FAIL（3.9s）
+  ✓ schwarz/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ schwarz/shell: PBC 面配对 100% 覆盖
+  ✓ schwarz/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ schwarz/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ neovius/solid: 开放边全在域平面（open=720, 非平面=0, nm=0）
+  · R=80: 1698ms, 158520 tri, vert=79208
+  ✓ 80³ 重建哨兵（≤3s） — 1698ms
+
+== RESULT: 100 PASS / 0 FAIL ==
+
+[A] 逆向犯罪测试（10 组目标，前向误差 ≤3%）
+✓ 红队矩阵审计 — 100 PASS / 0 FAIL（10.9s）
+  ✓ gyroid P=0.78: 前向误差 0.0000% ≤3% 且收敛
+  ✓ diamond P=0.5: 前向误差 0.0000% ≤3% 且收敛
+  ✓ schwarz P=0.25: 前向误差 0.0000% ≤3% 且收敛
+  ✓ iwp P=0.6: 前向误差 0.0000% ≤3% 且收敛
+  ✓ frd P=0.35: 前向误差 0.0001% ≤3% 且收敛
+  ✓ lidinoid P=0.82: 前向误差 0.0000% ≤3% 且收敛
+  ✓ neovius P=0.65: 前向误差 0.0000% ≤3% 且收敛
+  ✓ splitp P=0.45: 前向误差 0.0001% ≤3% 且收敛
+  ✓ gyroid P=0.3: 前向误差 0.0001% ≤3% 且收敛
+  ✓ diamond P=0.9: 前向误差 0.0001% ≤3% 且收敛
+  ✓ 收敛率 10/10 = 100%
+  ✓ 全局最大前向误差 0.0001%
+
+[B] 解剖/工程预设
+  ✓ cortical: 参数在可行域内且目标有限（J=0.00e+0）
+  ✓ cortical: 存在命中约束 ≤3%
+  ✓ trabecular: 参数在可行域内且目标有限（J=0.00e+0）
+  ✓ trabecular: 存在命中约束 ≤3%
+  ✓ heatsink: 参数在可行域内且目标有限（J=0.00e+0）
+  ✓ heatsink: 存在命中约束 ≤3%
+
+[C] 类型枚举与解完整性
+  ✓ 返回 8 类型解
+  ✓ 全部类型合法
+  ✓ J 升序排列
+
+[D] 确定性
+  ✓ 同输入两次求解逐位一致
+
+[E] LM 精化不劣性
+  ✓ J_LM 3.956e-13 ≤ J_NM 3.956e-13 + 1e-12
+
+RESULT: 23 PASS / 0 FAIL
+
+[A] det(J) > 0 全域采样
+✓ 逆向设计审计 — 23 PASS / 0 FAIL（0.7s）
+  ✓ det(J) > 0（18000 采样，异常 0）
+
+[B] 径向映射单射性（含线性延拓段）
+  ✓ 映射半径严格递增（3×R₀ × 2000 采样）
+  ✓ 射线方向保持（cos = 1）
+
+[C] 映射后网格完整性
+  ✓ neovius/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ neovius/solid: PBC 面配对 100% 覆盖
+  ✓ neovius/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ neovius/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+diamond w=[1,1.2,0.8,1] solid75: tris=118868 | 开放边=0 非流形=122 定向错=131 退化面=0 零法线=0 | 网格固相=6.525mm³ 参照=6.900mm³ 偏差=-5.45%
+  ✓ 水密 open=0（拓扑继承，三角数 10212 == 10212）
+  ✓ 映射后包围半径 14.63 > 原域
+  ✓ 发散体积 > 0（vol=1338.9）
+  ✓ 零退化三角（0）
+
+[A] 求解脚本语法（python ast 解析）
+  ✓ abaqus_auto_runner.py: ast.parse 通过
+  ✓ 有向边配对完整（misoriented=0）
+
+[E] 度规一致性（G⁻¹ = 1/s²，s = 2R₀²/(R₀²−r²)）
+  ✓ 双曲段映射 = 解析 2R0²r/(R0²−r²)（平台实现对拍 39 点）
+  ✓ 延拓段线性（二阶差分 = 0）
+  ✓ 延拓段单调（单射）
+  ✓ 延拓斜率 = 平台 fpC 公式（数值差分对拍）
+
+[F] py 脚本同源静态断言
+  ✓ neovius/shell: 开放边全在域平面（open=576, 非平面=0, nm=0）
+  ✓ py 脚本含庞加莱逐式翻译块
+  ✓ py 脚本含截断延拓斜率式（C¹ 真导数）
+
+RESULT: 14 PASS / 0 FAIL
+✓ 庞加莱映射审计 — 14 PASS / 0 FAIL（0.9s）
+  ✓ openfoam_auto_runner.py: ast.parse 通过
+
+[B] 求解脚本内容完备性
+  ✓ Abaqus: noGUI 用法 + JobFromInputFile 提交
+  ✓ Abaqus: NSET_TOP 反力提取 + 曲线 CSV
+  ✓ Abaqus: E_FEM 线性拟合 + sigma_peak + sigma_pl(5~25%)
+  ✓ OpenFOAM: simpleFoam + controlDict 构建
+  ✓ OpenFOAM: flowRatePatch + wallShearStress 后处理
+  ✓ OpenFOAM: Darcy 公式 κ = Q·μ·L/(A·Δp)
+
+[C] runner 期望 ↔ 导出器输出交叉核对
+  ✓ Abaqus runner 依赖节点集 NSET_TOP 存在于 INP
+  ✓ Abaqus runner 依赖节点集 NSET_BOTTOM 存在于 INP
+  ✓ OpenFOAM runner 依赖 patch inlet 存在于 boundary
+  ✓ OpenFOAM runner 的 0/U 边界含 inlet
+  ✓ OpenFOAM runner 依赖 patch outlet 存在于 boundary
+  ✓ OpenFOAM runner 的 0/U 边界含 outlet
+  ✓ OpenFOAM runner 依赖 patch wall 存在于 boundary
+  ✓ OpenFOAM runner 的 0/U 边界含 wall
+
+[D] 导出网格 CAE 解析规范
+  ✓ INP 节点行 4 字段（id, x, y, z）
+  ✓ INP 单元行 9 字段（id + 8 节点）
+  ✓ INP 步定义含 *STATIC + *BOUNDARY + *END STEP
+  ✓ polyMesh 面点索引全部在界内（points=3061）
+  ✓ 五件套 FoamFile class/object 声明齐全
+
+[E] 验证包 ZIP 完整性
+  ✓ 6 文件齐备
+  ✓ 壳脚本引用 runner 文件名
+
+[F] 理论-仿真对比矩阵模板
+  ✓ 7 项指标字段齐备（力学/流体/冲击/模态）
+  ✓ 验收口径声明（≤15% 解析代理 PASS）
+
+RESULT: 25 PASS / 0 FAIL
+✓ CAE验证链审计 — 25 PASS / 0 FAIL（0.6s）
+
+[A] SEA ∈ [5, 60] J/g（8 类 × 3 密度）
+  ✓ SEA 合区间 24/24
+
+[B] 密实化应变 ε_d = 1 − 1.4ρ̄
+  ✓ 解析一致 + 单调递减
+
+[C] 吸能效率与平台应力
+  ✓ η(ε_d) ∈ (0,1]（0.990）
+  ✓ σ_pl 同源（43.38 vs 43.38 MPa）
+  ✓ η(0.3) 有限正值（0.981）
+
+[D] 前 6 阶模态 + 正交对称性
+  ✓ 8 类曲面：6 阶升序全正
+  ✓ 正交简并对（最大重根数 2 ≥ 2）
+  ✓ f1 随 ρ̄ 递增（12112 → 20978 Hz）
+  ✓ √(E/ρ) 标度（比值 1.7321 ≈ √3 = 1.7321）
+
+[E] 峰值压溃应力一致性
+  ✓ σ_peak = 1.2·σ_pl（52.1 vs 43.4）
+
+[F] 对比矩阵字段兼容
+  ✓ 模板含 sea 与 f1_Hz 字段（与本模块单位 J/g、Hz 一致）
+
+RESULT: 11 PASS / 0 FAIL
+✓ 冲击模态审计 — 11 PASS / 0 FAIL（0.3s）
+
+[A] Otsu 自动阈值
+  ✓ 双峰谷区阈值 40 ∈ [40, 200]
+  ✓ 常数输入不崩溃（返回有限值）
+
+[B] 精确 EDT（5³ vs 暴力枚举）
+  ✓ 逐体素与暴力枚举一致（125 体素，异常 0）
+
+[C] 演示 CT 全管线（注入 bias=0.25mm / roughness=0.15）
+
+[A] Micro-FEA 全实心块 patch test（ν=0.2）
+  ✓ C11 = λ+2μ（1.111111 vs 1.111111）
+  ✓ C12 = λ（0.277778 vs 0.277778）
+  ✓ C44 = μ（0.416667 vs 0.416667）
+  ✓ 对称度 0.00e+0 ≤1e-12
+  ✓ Zener = 1（1.000000）
+
+[B] Micro-FEA gyroid（KUBC 法向模量口径）
+  ✓ neovius/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ neovius/shell: PBC 面配对 100% 覆盖
+  ✓ neovius/shell: v_right − v_left = (L,0,0)（max 3.58e-7 ≤1e-5）
+  ✓ neovius/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ Otsu 阈值有限（86）
+  ✓ 偏差顶点数 3268 == 3268
+  ✓ 均值偏差 0.3282 ≈ +bias 0.25（|Δ|≤0.1mm）
+  ✓ RMS 0.5105 ≥ |mean| 0.3282
+  ✓ 最大正偏差有限正（1.881）
+  ✓ 最大负偏差有限负（-0.156）
+  ✓ 偏差着色值域 [0,1]（9804 = 3×3268）
+
+[F] 偏差符号约定
+  ✓ EDT 特征体素距离为 0（SDF 符号通路的基准）
+
+RESULT: 11 PASS / 0 FAIL
+gyroid w=[1.3,0.7,1.1] shell70: tris=157024 | 开放边=0 非流形=86 定向错=586 退化面=0 零法线=0 | 网格固相=7.917mm³ 参照=8.017mm³ 偏差=-1.25%
+✓ CT重构审计 — 11 PASS / 0 FAIL（0.8s）
+  ✓ 求解完备（iters 0,0,0,0,0,0；0 迭代 = 仿射场离散平衡平凡工况，合法）
+  ✓ 立方对称 C11=C22=C33（0.515556/0.515556/0.515556）
+  ✓ 正定（对角全正）
+  ✓ 对称度 0.00e+0 ≤1e-9
+  ✓ C44 = φ·μ Voigt 口径（0.1933 vs 0.1933，偏差 0.0% ≤15%）
+  ✓ 非贯通固相（悬浮球）显式抛错
+
+[D] FD-Darcy 单管解析锚点
+  ✓ 单管 κ = 1/R²（0.006944 vs 0.006944）
+  ✓ 收敛 1 iters
+  ✓ 双管 κ 加倍（0.013889 = 2×）
+  ✓ 空流体域显式抛错
+  ✓ 管截面 4× → κ 4×（0.00694 → 0.02778，比值 4.000）
+  ✓ iwp/solid: 开放边全在域平面（open=816, 非平面=0, nm=0）
+  ✓ 通道加宽 κ 增大（0.1667 → 0.2500）
+
+RESULT: 17 PASS / 0 FAIL
+✓ 原生CAE审计 — 17 PASS / 0 FAIL（0.7s）
+RT 全零权重→必须抛错: 已抛错 『曲面场退化为常数：权重不能全为 0，公式不能与坐标无关』
+PASS  RT 全零权重→必须抛错
+RT NaN 公式→必须抛错: 已抛错 『公式结果含 74088 个非有限值（NaN/Inf），请检查公式定义域（如 sqrt 的负数输入、除零）』
+PASS  RT NaN 公式→必须抛错
+RT 除零公式→必须抛错: 已抛错 『公式结果含 74088 个非有限值（NaN/Inf），请检查公式定义域（如 sqrt 的负数输入、除零）』
+PASS  RT 除零公式→必须抛错
+RT 超容量 R140→必须抛错: 已抛错 『分辨率 140³ 超出缓冲池容量（2803221 > 1,000,000 采样点），请降低周期数或分辨率』
+PASS  RT 超容量 R140→必须抛错
+
+[A] 法向角区域生长（顶面种子，25° 阈值）
+  ✓ 顶面 2 三角全覆盖（0,1）
+  ✓ 零越界（不含底面/侧壁）
+
+[E] 阈值单调性（90° 时顶+底贯通? 否——法向相反 dot=−1 < cos90=0）
+  ✓ 89° 阈值不跨反面（法向 dot=−1 被拒）
+  ✓ 5° 阈值仍覆盖共面顶面
+
+[B] 映射守恒（gyroid R=12 真实网格）
+  ✓ 顶盖区域生长非空（3 面）
+  ✓ 节点映射守恒（5 == 5）
+  ✓ 节点在界内
+  ✓ 区域非退化
+
+[C] INP 注入
+  ✓ BC_TOP_FIX *NSET 存在
+  ✓ FIXED *BOUNDARY 语法
+  ✓ PRESSURE *DSLOAD 语法（负值压强）
+  ✓ *STEP 仍在注入块之后
+
+[D] FOAM boundary 注入
+  ✓ BC_LOAD 条目注入
+  ✓ 类型条目随注入增加（base +1）
+
+RESULT: 14 PASS / 0 FAIL
+✓ 边界拾取审计 — 14 PASS / 0 FAIL（0.4s）
+
+[A] DICOM 解析（手工构造 explicit VR LE）
+  ✓ DICM 魔数识别
+  ✓ Rows/Cols = 16/16
+  ✓ SliceThickness = 0.5
+  ✓ PixelSpacing = [0.1, 0.1]
+  ✓ RescaleSlope/Intercept = 2/-100
+  ✓ 像素解码 256 项（0~255 值域）
+  ✓ 非 DICM 抛错
+
+[B] TIFF 基线解析（手工构造未压缩 8bit 双页）
+  ✓ 双页解析（2 页）
+  ✓ 页宽高 8×8
+  ✓ 页像素值正确（30/220）
+  ✓ 非 TIFF 抛错
+
+[C] 骨形态计量（gyroid 体素化）
+  ✓ BV/TV = 0.500 ∈ [0.3, 0.7]
+  ✓ Tb.Th = 2.2651 mm > 0
+  ✓ Tb.Sp = 2.2651 mm > 0
+  ✓ Tb.N = 0.221 ≈ BV/TV/Tb.Th
+
+[D] SMI 拓扑判别
+
+[A-C] 单位立方体（1×1×1 mm，层高 0.2）
+  ✓ 层数 10（实际 10）
+  ✓ G-code 含 G28
+  ✓ G-code 含 G21/G90/M83
+  ✓ G-code 含 M104/M109 加热
+  ✓ G-code 含 M84 末尾
+  ✓ 有效覆盖体积偏差 4.0% ≤10%
+  ✓ 回抽 1 > 0
+  ✓ 挤出路径 30 > 10
+
+[D] 机型预设差异
+  ✓ bambu 含 M73
+  ✓ klipper 含 QUAD_GANTRY_LEVEL
+  ✓ reprap 含 G29
+
+[E] gyroid 真实网格（R=16）
+  ✓ gyroid 壳 SMI = 0.213 < 1.5（板状口径）
+
+[E] Otsu 二值化（装配栈 + Otsu）
+  ✓ assembleStack 长度
+  ✓ 层序正确（前 64 = 40）
+
+RESULT: 18 PASS / 0 FAIL
+✓ 骨计量审计 — 18 PASS / 0 FAIL（0.7s）
+  ✓ gyroid 切片层数 > 5
+  ✓ gyroid 挤出路径 312 > 100
+
+RESULT: 13 PASS / 0 FAIL
+✓ G-code切片审计 — 13 PASS / 0 FAIL（0.6s）
+
+[A-B] MLP 训练 + 推理
+  ✓ iwp/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ iwp/solid: PBC 面配对 100% 覆盖
+  ✓ iwp/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ iwp/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ MSE 下降 2.77e+0 → 2.81e-7（≥10×）
+  ✓ 训练后 MSE 2.805e-7 < 0.1
+
+[C-D] Pareto 非支配排序
+  ✓ Pareto 前沿 3 点 > 0
+  ✓ 前沿点非支配
+  ✓ 被支配点已排除
+
+RESULT: 5 PASS / 0 FAIL
+✓ ML Pareto审计 — 5 PASS / 0 FAIL（0.4s）
+  ✓ iwp/shell: 开放边全在域平面（open=1248, 非平面=0, nm=0）
+
+[A] 主应变特征值解析基准
+  ✓ 对角张量主值=排序对角元
+  ✓ 纯剪主值 ±Γ/2、0
+  ✓ 静水三重根
+  ✓ 主值和=迹
+
+[B] Gibson-Ashby 公式一致性
+  ✓ C2·(1-0.6)^1.5 = 0.07589
+  ✓ C2·(1-0.7)^1.5 = 0.04930
+  ✓ C2·(1-0.8)^1.5 = 0.02683
+
+[C] 数字孪生压溃（R=6 · σy/E=0.008 · 2.5%）
+
+[A] von Mises 解析基准
+  ✓ 单轴 σv = σ
+  ✓ 纯剪 σv = √3·τ
+  ✓ 静水 σv = 0
+  ✓ StVK 弹性 S11 = (λ+2μ)·ε（C:E 口径）
+
+[B] J2 径向返回
+  ✓ 返回后 |f| ≤ 1e-12·σy
+  ✓ dPEEQ = dγ = f/(3μ+H)
+  ✓ 塑性应变不可压缩（tr ≈ 0）
+  ✓ 弹性域 dPEEQ = 0
+  ✓ 弹性域塑性应变不变
+  ✓ 同应变重入 dPEEQ ≤ 1e-15（塑性应变-应力自洽）
+  ✓ 二次返回流动应力硬化递增
+  ✓ 二次返回后 |f| ≤ 1e-12·σy
+  ✓ 单轴 εp11 = ε̄p
+
+[C] 静水 KUBC（全边界仿射）
+  ✓ iwp/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ iwp/shell: PBC 面配对 100% 覆盖
+  ✓ iwp/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ iwp/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ frd/solid: 开放边全在域平面（open=672, 非平面=0, nm=0）
+  ✓ 全部载荷步收敛
+  ✓ 能量漂移 ≤ 1e-6（实测 1.93e-9）
+  ✓ 静水无塑性 PEEQ = 0
+  ✓ 外功为正（受压做功）
+  ✓ 内功 = 外功（虚功恒等）
+  ✓ 单单元静水反力量级合理
+
+[D] Gyroid 格构压溃（R=8 · σy/E=0.01 · H/E=0.05 · 压至 3%）
+  ✓ 体素固相率 ∈ [0.32, 0.38]
+  ✓ frd/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ frd/solid: PBC 面配对 100% 覆盖
+  ✓ frd/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ frd/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ frd/shell: 开放边全在域平面（open=2016, 非平面=0, nm=0）
+RT 混叠公式(守卫后): tris=734400 | 开放边=0 非流形=196020 定向错=0 退化面=0 零法线=0 | 网格固相=62.332mm³ 参照=63.204mm³ 偏差=-1.38%
+PASS  slabX sin(x) 50%
+PASS  slabY sin(y) 50%
+PASS  slabZ sin(z) 50%
+PASS  gyroid solid75 k3 R61
+PASS  diamond solid75 k3 R61
+PASS  schwarz shell70 k3 R61
+PASS  gyroid shell80 k5 R89
+PASS  schwarz solid50 k1 R33
+PASS  gyroid solid75 k3 R61 CYLINDER
+PASS  PRESET bone gyroid gradZ cyl p84 t1.3
+PASS  PRESET cyl×shell70 k3
+PASS  hybrid gyroid+diamond solid75
+PASS  gyroid gradient_shell75 k3 R61
+PASS  gyroid gradshell RADIAL k3 R96(补偿)
+PASS  gyroid gradshell SPHERICAL k3 R96(补偿)
+PASS  gyroid solid75 k3 R28 PREVIEW
+PASS  neovius solid75 k3 R96(倍频补偿)
+PASS  iwp solid75 k3 R96(倍频补偿)
+PASS  frd solid75 k3 R96(倍频补偿)
+PASS  lidinoid solid75 k2 R61
+PASS  splitp solid75 k2 R61
+PASS  diamond w=[1,1.2,0.8,1] solid75
+PASS  gyroid w=[1.3,0.7,1.1] shell70
+PASS  RT 全零权重→必须抛错
+PASS  RT NaN 公式→必须抛错
+PASS  RT 除零公式→必须抛错
+PASS  RT 超容量 R140→必须抛错
+PASS  RT 混叠公式(守卫后)
+
+=== 全部通过 ===
+✓ 几何质量门 — exit=0（39.3s）
+  ✓ frd/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ frd/shell: PBC 面配对 100% 覆盖
+  ✓ frd/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ frd/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ lidinoid/solid: 开放边全在域平面（open=1200, 非平面=0, nm=0）
+
+[A] Poiseuille 平面槽道（解析锚点）
+  ✓ lidinoid/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ lidinoid/solid: PBC 面配对 100% 覆盖
+  ✓ lidinoid/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ lidinoid/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ lidinoid/shell: 开放边全在域平面（open=1872, 非平面=0, nm=0）
+  ✓ lidinoid/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ lidinoid/shell: PBC 面配对 100% 覆盖
+  ✓ lidinoid/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ lidinoid/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ splitp/solid: 开放边全在域平面（open=1392, 非平面=0, nm=0）
+  ✓ 槽道收敛
+  ✓ 速度剖面解析误差 ≤1.5%（实测 0.002%）
+  ✓ κ vs H²/12 ≤10%（实测 7.69%）
+  ✓ 壁面无滑移（墙格速度=0）
+  ✓ 横向速度为零（单向流）
+
+[B] Gyroid 多孔周期渗流（κ 交叉验证）
+  ✓ 多孔域收敛
+  ✓ κ > 0（贯通渗流）
+  ✓ κ 与 FD-Darcy 同量级（NS=1.919e+0 FD=6.183e-1 比值=3.104）
+  ✓ FD-Darcy 参考自身收敛
+
+[C] 稳态与无滑移守恒
+  ✓ 收敛步容差内
+  ✓ 固体格速度恒零（无滑移）
+  ✓ 均值速度合理（ū < G·R²）
+
+[D] WASM 加速档实验件
+  ✓ WAT 实验件保留
+  ✓ 手工汇编器保留
+  ✓ 降级口径已在源码披露
+
+[E] 网格收敛 + 通道不变性
+  ✓ splitp/solid: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ splitp/solid: PBC 面配对 100% 覆盖
+  ✓ splitp/solid: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ splitp/solid: 棱等价类 ≤12 且角类 ≤8（合规结构）
+  ✓ splitp/shell: 开放边全在域平面（open=1776, 非平面=0, nm=0）
+  ✓ splitp/shell: 3×3×3 拼接内部缝合水密（缺陷=0, nm=0）
+  ✓ splitp/shell: PBC 面配对 100% 覆盖
+  ✓ splitp/shell: v_right − v_left = (L,0,0)（max 1.75e-7 ≤1e-5）
+  ✓ splitp/shell: 棱等价类 ≤12 且角类 ≤8（合规结构）
+
+[E] 周期可行性守卫（显式抛错）
+  ✓ cylinder 容器 显式抛错
+  ✓ gradient_shell 模式 显式抛错
+  ✓ 异构混合 显式抛错
+  ✓ 加载端板 显式抛错
+  ✓ 低分辨率 R=4 显式抛错
+
+[F] 孔隙率二分收敛
+  ✓ gyroid p=0.75: 固相分数偏差 0.38pp ≤4pp
+  ✓ diamond p=0.5: 固相分数偏差 3.41pp ≤4pp
+  ✓ schwarz p=0.8: 固相分数偏差 0.07pp ≤4pp
+
+RESULT: 88 PASS / 0 FAIL
+✓ 周期RVE审计 — 88 PASS / 0 FAIL（24.2s）
+
+[A+B] 能量守恒与熔化（200W · 0.8m/s · N=32）
+  ✓ 能量台账平衡 ≤0.5%（实测 0.0000%）
+  ✓ 峰值温度达熔点以上（3600K ≥ 1933K）
+  ✓ 熔池非空（77 体素）
+  ✓ 沸点封顶生效（3600K ≤ 3600K）
+  ✓ CFL 稳定
+
+[C] 冷却参数文献带
+  ✓ 冷却速率 R ∈ [1e6, 1e9] K/s（实测 5.94e+7）
+  ✓ G×R ∈ [1e14, 1e17] K²/s（实测 3.65e+15）
+  ✓ 热梯度为正
+
+[D] 残余应力与翘曲
+  ✓ 残余应力 ≤ σy（880 ≤ 880 MPa）
+  ✓ 残余应力非负
+  ✓ 残余应力公式精确核对
+  ✓ 翘曲在工程区间 [0.01µm, 0.5mm]（实测 2.17µm）
+
+[E] 工艺窗口评估
+  ✓ 200W → 键合良好
+  ✓ 60W → 能量不足
+  ✓ 500W/0.3 → 能量过高
+  ✓ 结果内窗口与参数自洽
+
+[F] 网格无关性
+  ✓ N=20 能量平衡同样 ≤0.5%（实测 0.0000%）
+  ✓ 沸点封顶跨网格稳定（ΔT=0.0K）
+
+== RESULT: 18 PASS / 0 FAIL ==
+✓ LPBF审计 — 18 PASS / 0 FAIL（0.6s）
+
+[A] 中文多参数指令
+  ✓ 孔隙率 75
+  ✓ 类型 Gyroid
+  ✓ 端板 2mm
+  ✓ 动作 export-3mf
+  ✓ 骨支架预设
+  ✓ kind=action
+  ✓ 日志条数 ≥3（参数项）
+  ✓ 置信度 ∈ (0,1]
+
+[B] 英文指令
+  ✓ 孔隙率 60
+  ✓ 材料 tc4
+  ✓ 类型 diamond
+  ✓ 容器圆柱
+  ✓ 动作 export-stl
+  ✓ 单元尺寸 2.5
+  ✓ 壁厚 0.8
+  ✓ 梯度壳
+
+[C] 边界钳制与 unknown
+  ✓ 孔隙率钳制 ≤95
+  ✓ 端板钳制 ≤10
+  ✓ unknown 不臆造参数
+  ✓ unknown 引导帮助
+  ✓ 空输入处理
+
+[D] 帮助/重置/仿真/预设
+  ✓ help 意图
+  ✓ reset 动作
+  ✓ 仿真动作
+  ✓ 骨支架口径
+
+[E] 毒化回归
+  ✓ E1 endplate 不误配材料（pla 子串缺陷回归）
+  ✓ E2 分数孔隙率 0.75 → 75%
+  ✓ E3 非法容器 sphere 不产出 patch
+  ✓ E4 裸"钛"识别为 tc4
+  ✓ E5 真 PLA 仍识别
+  ✓ E6 I-WP 连字符识别
+  ✓ E7 原型链载荷 unknown
+
+== RESULT: 32 PASS / 0 FAIL ==
+✓ NL代理审计 — 32 PASS / 0 FAIL（0.3s）
+
+[A] 蒸馏保真度（RMSE vs 解析教师，16³）
+  ✓ gyroid 锚点混合权重主导 1.000000 > 0.999
+  ✓ gyroid RMSE 0.0093 ≤ 0.03
+  ✓ diamond 锚点混合权重主导 1.000000 > 0.999
+  ✓ diamond RMSE 0.0103 ≤ 0.03
+  ✓ lidinoid 锚点混合权重主导 1.000000 > 0.999
+  ✓ lidinoid RMSE 0.0328 ≤ 0.05
+  ✓ schwarz 锚点混合权重主导 1.000000 > 0.999
+  ✓ schwarz RMSE 0.0069 ≤ 0.03
+  ✓ trabecular 锚点混合权重主导 1.000000 > 0.999
+  ✓ trabecular RMSE 0.0804 ≤ 0.1
+
+[B] 精确 2π 周期性（水密构造保证）
+  ✓ 500 随机点周期偏差 max 2.16e-15 ≤ 1e-12
+
+[C] Lipschitz 乘积界 vs 采样梯度上界
+  ✓ gyroid 谱乘积界 601.17 有限且 < 1e4
+  ✓ gyroid 采样梯度上界 1.222 ≤ 乘积界 ×1.05
+  ✓ diamond 谱乘积界 678.12 有限且 < 1e4
+  ✓ diamond 采样梯度上界 1.286 ≤ 乘积界 ×1.05
+  ✓ lidinoid 谱乘积界 1079.25 有限且 < 1e4
+  ✓ lidinoid 采样梯度上界 1.909 ≤ 乘积界 ×1.05
+  ✓ schwarz 谱乘积界 787.47 有限且 < 1e4
+  ✓ schwarz 采样梯度上界 0.605 ≤ 乘积界 ×1.05
+  ✓ trabecular 谱乘积界 1595.91 有限且 < 1e4
+  ✓ trabecular 采样梯度上界 2.553 ≤ 乘积界 ×1.05
+
+[D] 潜在流形插值（混合权重归一 + 路径 Lipschitz）
+  ✓ 50 随机 z 混合权重归一（max |Σ−1| 3.3e-16 ≤ 1e-12）
+  ✓ 插值路径全有限
+  ✓ 路径 Lipschitz 斜率 4.238 ≤ 6.0（z 单位）
+  ✓ 插值终点 = 目标锚点场（Δ 0.0e+0 ≤ 1e-12）
+
+[E] buildSurface 集成（锚点态 + 流形中点态）
+  ✓ 锚点 gyroid：水密 open=0 = 0
+  ✓ 锚点 gyroid：非退化（顶点 2148 > 0 · 固相分数 0.285 ∈ (0.02, 0.9)）
+  ✓ 锚点 gyroid：孔隙率二分收敛（目标 70% 实测 71.5%，偏差 ≤ 10pp）
+  ✓ 锚点 trabecular：水密 open=0 = 0
+  ✓ 锚点 trabecular：非退化（顶点 2200 > 0 · 固相分数 0.283 ∈ (0.02, 0.9)）
+  ✓ 锚点 trabecular：孔隙率二分收敛（目标 70% 实测 71.7%，偏差 ≤ 10pp）
+  ✓ 流形中点 gyroid↔diamond：水密 open=0 = 0
+  ✓ 流形中点 gyroid↔diamond：非退化（顶点 2555 > 0 · 固相分数 0.289 ∈ (0.02, 0.9)）
+  ✓ 流形中点 gyroid↔diamond：孔隙率二分收敛（目标 70% 实测 71.1%，偏差 ≤ 10pp）
+  ✓ 流形中点 schwarz↔trabecular：水密 open=0 = 0
+  ✓ 流形中点 schwarz↔trabecular：非退化（顶点 2574 > 0 · 固相分数 0.302 ∈ (0.02, 0.9)）
+  ✓ 流形中点 schwarz↔trabecular：孔隙率二分收敛（目标 70% 实测 69.8%，偏差 ≤ 10pp）
+
+[F] 非法潜在码显式拒绝
+  ✓ NaN/Inf/长度错误 3 例全部抛错（实际 3）
+  ✓ 越界值钳制到 ±3
+  ✓ createNeuralField 非法输入抛错
+
+[G] 零依赖静态 + 生成器锚定
+  ✓ 求值器仅依赖权重/类型模块（实际 imports: ./neural-implicit-weights）
+  ✓ 权重文件为生成器锚定产物（头注含 gen_neural_weights）
+  ✓ 权重文件记录蒸馏终评 RMSE
+
+RESULT: 43 PASS / 0 FAIL
+✓ 神经场审计 — 43 PASS / 0 FAIL（2.8s）
+
+[A] Hill-48 各向异性准则
+  ✓ 单轴 X 锚点：r(x̂)=42
+  ✓ 单轴 Y 锚点：r(ŷ)=33
+  ✓ 单轴 Z 锚点：r(ẑ)=27
+  ✓ 凸性中点检验 200 对（max fq−1 = -1.07e-4 ≤ 1e-9）
+  ✓ 静水帽域内（max |σm|−capM = 0.00e+0 ≤ 1e-9）
+  ✓ 各向同性置换对称（max Δ = 1.42e-14 ≤ 1e-9）
+  ✓ 300 随机方向射线距离全有限（静水帽封闭）
+
+[B] Tsai-Wu 拉压不对称准则
+  ✓ 拉伸锚点：r(+x̂)=Xt=30
+  ✓ 压缩锚点：r(−x̂)=Xc=60
+  ✓ 凸性中点检验 200 对（max f_mid = -1.92e-3 ≤ 1e-9）
+  ✓ 原点严格内含（f(0)=−1）
+
+[C] Gurson 多孔压溃准则
+  ✓ 静水极点解析命中（r/√3 = 537.5572 vs 537.5572）
+  ✓ f 沿射线严格单调（40 方向 × 20 步）
+  ✓ 轴对称 120° 旋转（max rel Δ = 2.67e-16 ≤ 1e-6）
+  ✓ q→1 退化近零强度（r = 7.24e-1 < 1 MPa）
+  ✓ 凸性中点检验 200 对（max f_mid = -2.37e-3 ≤ 1e-6）
+
+[D] Drucker-Prager 圆锥准则
+  ✓ 拉伸锚点：r(+x̂)=σyt=21
+  ✓ 压缩锚点：r(−x̂)=σyc=30
+  ✓ 压缩帽封闭（300 方向全有限）
+  ✓ 凸性中点检验 150 对
+
+[E] 包络网格封闭性 + 体积
+  ✓ hill48：open=0=0 · 体积 982211 MPa³ > 0 · rMin 21.70 > 0
+  ✓ tsaiwu：open=0=0 · 体积 317249 MPa³ > 0 · rMin 17.83 > 0
+  ✓ gurson：open=0=0 · 体积 730555054 MPa³ > 0 · rMin 431.11 > 0
+  ✓ drucker-prager：open=0=0 · 体积 149208 MPa³ > 0 · rMin 19.57 > 0
+
+[F] 脚手架工程推导
+  ✓ σ_pl 与冲击吸能同源（43.38 vs 43.38）
+  ✓ Hill 方向强度全正（X=43.38 Y=43.38 Z=43.38）
+  ✓ 各向同性退化：gyroid E 三向相等 ⇒ X=Y=Z
+  ✓ 拉压不对称口径（σyt=0.7σ_pl）
+  ✓ Gurson q 钳制（0.99 → 0.9）
+  ✓ auto 材质回退 TC4（σys=880）
+
+[G] 安全系数与临界模式
+  ✓ hill48：半程应力 SF=2.000000 = 2.0
+  ✓ tsaiwu：半程应力 SF=2.000000 = 2.0
+  ✓ gurson：半程应力 SF=2.000000 = 2.0
+  ✓ drucker-prager：半程应力 SF=2.000000 = 2.0
+  ✓ 多准则竞争取最小（0.9835 vs min 0.9835）
+
+RESULT: 35 PASS / 0 FAIL
+✓ 屈服面审计 — 35 PASS / 0 FAIL（0.3s）
+  ✓ E1 剖面误差 ny=10/18 均 ≤1.5%（0.002%/0.002%）
+
+[A-C] gyroid 能带：Γ 零模态 + 声速自洽 + 谱合法性
+  ✓ E2 κ 通道数不变 ≤2%（实测 0.0000%）
+
+== RESULT: 17 PASS / 0 FAIL ==
+✓ 微流体审计 — 17 PASS / 0 FAIL（18.3s）
+
+[A-G] 高孔隙率 vs 密实支架对照模拟
+  ✓ 高孔隙质量守恒残差 0.000% ≤ 2%
+  ✓ 密实质量守恒残差 0.000% ≤ 2%
+  ✓ 核心氧输运：高孔隙 0.053 > 密实 0.048
+  ✓ 核心/表层氧比：高孔隙 0.06 > 密实 0.05
+  ✓ 氧浓度全域非负
+  ✓ 细胞密度 ≤ ρmax（Logistic 上界）
+  ✓ 绝对存活细胞质量：高孔隙 6509.2 > 密实 3127.6
+  ✓ 矿化体积单调非降（终态 78.3% > 0）
+  ✓ 低氧区 ρ̄ 0.547 < 供氧良好区 ρ̄ 1.000（H 门控生效）
+  ✓ 同输入两次模拟逐位一致（确定性）
+  ✓ 快照结构：15 帧（0~28 天每 2 天）= 15 = stats-1
+
+RESULT: 11 PASS / 0 FAIL
+✓ 组织长入审计 — 11 PASS / 0 FAIL（5.5s）
+
+[A] 刚度驱动：柔度单调 + 体积约束
+  ✓ Γ 点前 3 支严格为零（实测 3 支）
+  ✓ Γ 点第 4 支非零（4852.6 > 0）
+  ✓ 声速自洽 |c_meas/c_target − 1| = 0.0218 ≤ 0.05
+  ✓ ω ≥ 0 全域（无负频）
+  ✓ 每个 k 点处支升序（实化配对展开保序）
+  ✓ 零模态计数 = 3（连通网络 PBC 口径）
+
+[B2] diamond 声速自洽交叉验证
+  ✓ diamond 声速比 1.1413 ∈ [0.85, 1.20]（kL 有限色散带）
+  ✓ diamond Γ 零模态 = 3
+
+[D] 时间反演对称 ω(k) = ω(−k)
+  ✓ 前 6 支 ω(k) vs ω(−k) 相对偏差 max 9.77e-14 ≤ 1e-2
+
+[E] 禁带识别器：双原子链解析谱
+  ✓ 识别到 1 条禁带（实测 1）
+  ✓ 禁带下缘 √(2K/m2) 偏差 2.57e-4 ≤ 0.05
+  ✓ 禁带上缘 √(2K/m1) 偏差 6.42e-5 ≤ 0.05
+  ✓ BG% 公式自洽（66.70 vs 66.67）
+  ✓ 连续谱（带间交叠）无误报（实测 0 = 0）
+
+[F] 报告禁带与 bands 重算一致
+  ✓ 柔度单调不增（0.5%/步容差：2.92e+2 → 2.92e+2 → 2.91e+2 → 2.91e+2 → 2.92e+2 → 2.91e+2 → 2.90e+2 → 2.89e+2）
+  ✓ 体积约束：固相 0.499 → 0.504（偏差 0.006 ≤ 0.1）
+  ✓ 柔度降幅 0.75% > 0.5%（非平凡优化）
+
+[B] 流阻驱动：渗透率提升
+  ✓ 重算条数一致（0 = 0）
+  ✓ 逐条 lower/upper 一致
+  · 当前构型无路径禁带（如实上报，不伪造）
+  ✓ 无禁带时如实上报空列表
+
+[G] 双孤岛掩码零模态
+  ✓ 双孤岛零模态 4 > 3（连通口径）
+
+RESULT: 18 PASS / 0 FAIL
+✓ 声子能带审计 — 18 PASS / 0 FAIL（81.1s）
+PASS 跳转导航 4 键
+PASS 点击仿真后 rail 滚动
+FAIL 高亮迁移到仿真 on=构型
+PASS 分组计数 11/8/1/5 = 25
+PASS 9 个关键控件均在侧栏内
+PASS 分组头点击 → 视图高亮
+PASS 0 pageerror/console.error
+RESULT: 6 PASS / 1 FAIL
+GUARD FAIL: 断言执行数 6 < 基线 7（恒真/集体跳过防护，2026-09-04 审查纳管）
+✗ 分组导航快检 — 6 PASS / 1 FAIL（31.4s）
+[服务] 4814(docs/platform) 与 8125(docs) 已就绪
+[OK ] evaluator（求值器安全 37 项） — 37 PASS / 0 FAIL
+  ✓ 渗透率增益 κ ×1.504 > 1.05
+  ✓ 固相分数 0.216 ∈ 保护带 [0.05, 0.95]
+
+[C] 水密提取（gpuVField 注入）
+  ✓ 演化终态网格水密 open=0=0（顶点 1252）
+
+[D] 再初始化质量
+  ✓ 终态界面 |∇Φ| 均值 1.149 ∈ [0.85, 1.3]
+
+[E] 确定性
+  ✓ 全步收敛
+  ✓ 能量漂移 ≤0.5%（实测 0.182%）
+  ✓ 载荷曲线单调递增
+  ✓ 平台应力有限且>0
+  ✓ GA 预测一致（ρ̄=0.35 → GA=0.06212）
+  ✓ 同输入两次演化柔度序列逐位一致
+
+RESULT: 8 PASS / 0 FAIL
+✓ 水平集审计 — 8 PASS / 0 FAIL（189.6s）
+[OK ] fix_check（工程版接线 23 项） — 23 PASS / 0 FAIL
+[OK ] verify_fixes（红队复验 10 项） — 10 PASS / 0 FAIL
+  ✓ 平台应力比跨工况稳定 ≤10%（0.1042 vs 0.0993）
+  ✓ DT/GA 标定比在披露带内 [1.2, 3.0]（实测 1.677）
+  ✓ 塑性韧性耗散非负
+
+[D] 渐进压溃失效（failureStrain=0.02）
+[OK ] verify_followups（遗留修复 10 项） — 10 PASS / 0 FAIL
+[OK ] verify_tip_toggle（tip 收纳 10 项） — 10 PASS / 0 FAIL
+  ✓ 全部载荷步收敛
+  ✓ 终态能量漂移 ≤ 0.5%（实测 0.290%）
+  ✓ 屈服激活 maxPEEQ > 1e-4（实测 4.857e-2）
+  ✓ 反力单调递增（载荷平台前段）
+  ✓ 终态 von Mises 超过初始屈服（流动应力 ≥ σy）
+  ✓ 塑性耗散非负且 ≤ 内功
+  ✓ 平台段刚度远低于弹性段（屈服后硬化折减）
+
+[E] elastic vs geo 切线口径解一致性
+  ✓ 渐进死亡触发（≥1 单元）
+  ✓ 死亡渐进（时间线多步或有界）
+  ✓ 坍塌被检测并截断（报告 collapsed）
+  ✓ 坍塌应变在窗口内 [0.01, 0.04]（实测 0.0180）
+  ✓ 载荷全程有界（截断后无垃圾）
+  ✓ 活性单元数随死亡递减（或坍塌截断于死亡步）
+
+[E] 主应变不变量 fuzz
+  ✓ E1 迹不变量 ≤1e-9（实测 6.81e-14）
+  ✓ E2 行列式不变量 ≤1e-7（实测 3.97e-14）
+  ✓ E3 主值降序
+
+== RESULT: 24 PASS / 0 FAIL ==
+✓ 数字孪生审计 — 24 PASS / 0 FAIL（454.4s）
+  ✓ 两口径终态反力一致 ≤1%（e=3.5753e-2 g=3.5753e-2）
+  ✓ geo 口径全步收敛
+
+[F] 单元生死（onStep 失效回调）
+  ✓ 失效回调杀死 ≥1 单元
+  ✓ 杀死后求解继续收敛
+  ✓ activeVoxels 反映生死掩码
+
+[G] WGSL 同步锚定
+  ✓ shaders/plasticity.wgsl 存在且非空
+  ✓ TS 内联模板 ≡ .wgsl 文件（逐字）
+  ✓ WGSL 锚点 "vonMises6"
+  ✓ WGSL 锚点 "Prandtl-Reuss"
+  ✓ WGSL 锚点 "dGamma"
+  ✓ WGSL 锚点 "workgroup_size(64)"
+  ✓ WGSL 锚点 "ioPeek"
+  ✓ GPU 运行时暴露 runPlasticityConstitutiveGPU
+  ✓ GPU 运行时暴露顶点色映射
+
+[H] WGSL 静态健全性
+  ✓ H1 括号配平
+  ✓ H2 六个 binding 齐备
+  ✓ H3 compute 入口 + workgroup
+  ✓ H4 无 JS/TS 残留语法
+  ✓ H5 张量空间口径锚（应力剪切不减半）
+  ✓ H6 径向返回核心算子
+
+[I] 径向返回模糊测试
+  ✓ I1 屈服态归面 ≤1e-11·σy（2552 态）
+  ✓ I2 弹性态留在面内（2448 态）
+  ✓ I3 塑性增量无迹 ≤1e-12
+  ✓ I4 重入幂等 ≤1e-15
+
+[J] Ke 刚体零空间
+  ✓ J1 六刚体模零力 ≤1e-12（实测 1.77e-16）
+
+[K] 静水 KUBC 格构
+  ✓ K1 格构静水全收敛
+  ✓ K2 格构静水台账 ≤0.5%（实测 0.0001%）
+  ✓ K3 格构静水无塑性
+
+== RESULT: 55 PASS / 0 FAIL ==
+✓ 弹塑性审计 — 55 PASS / 0 FAIL（475.7s）
+[OK ] verify（单文件版 18 项） — 22 / 22 全过
+
+===== 全量回归汇总 =====
+✓ evaluator（求值器安全 37 项）
+✓ fix_check（工程版接线 23 项）
+✓ verify_fixes（红队复验 10 项）
+✓ verify_followups（遗留修复 10 项）
+✓ verify_tip_toggle（tip 收纳 10 项）
+✓ verify（单文件版 18 项）
+共 6 套，失败 0 套
+✓ UI 回归 — exit=0（696.7s）
+
+╔══════════════════════════════════════╗
+║          测 试 结 果 汇 总           ║
+╠══════════════════════════════════════╣
+║ ✓ mesh_audit 几何质量门（28 案例）                       
+║ ✓ parity_math 数学同源（185 断言）                      
+║ ✓ state_url_audit 状态隔离+分享恢复（门37）                
+║ ✓ worker_bridge_audit Worker生命周期（门38，11断言）      
+║ ✓ sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）         
+║ ✓ endplate_audit 端板专项（水密/满填/体积增量）               
+║ ✓ micro_physics_audit 迂曲度+各向异性刚度                
+║ ✓ hybrid_audit 多相混合（水密/极限/双语言残差）                
+║ ✓ industrial_export_audit 工业格式（GLB+3MF）         
+║ ✓ custom_equation_audit 自定义公式沙箱（AST+AD+代码生成）    
+║ ✓ homogenization_audit RVE 均质化+方向模量             
+║ ✓ manifold_audit 非欧度规空间映射                       
+║ ✓ redteam_matrix_audit 红队极端工况矩阵                 
+║ ✓ webgpu_parity_audit WebGPU 数学同源（门13）          
+║ ✓ periodic_rve_audit 周期性RVE/PBC（门14）            
+║ ✓ cae_mesh_audit Abaqus/OpenFOAM体网格（门15）        
+║ ✓ hierarchical_audit 多级分形+应力单调性（门16）            
+║ ✓ inverse_design_audit 逆向设计引擎（门17）              
+║ ✓ poincare_metric_audit 庞加莱双曲映射（门18）            
+║ ✓ cae_verification_audit CAE验证链（门19）            
+║ ✓ impact_modal_audit 冲击吸能与模态（门20）               
+║ ✓ ct_reconstruction_audit CT重构偏差（门21）           
+║ ✓ native_cae_solver_audit 原生CAE求解器（门22）         
+║ ✓ boundary_picker_audit 边界拾取器（门23）              
+║ ✓ bone_morphometry_audit DICOM与骨计量（门24）         
+║ ✓ gcode_slicer_audit G-code切片引擎（门25）            
+║ ✓ ml_pareto_audit ML代理Pareto（门26）               
+║ ✓ gpu_plasticity_audit WebGPU弹塑性大变形（门27）        
+║ ✓ digital_twin_compression_audit 数字孪生压溃失效（门28）  
+║ ✓ wasm_navier_stokes_audit Navier-Stokes微流体（门29）
+║ ✓ lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）   
+║ ✓ nl_agent_audit 自然语言CAD代理（门31）                 
+║ ✓ neural_implicit_audit 隐式神经场SIREN（门32）         
+║ ✓ yield_surface_audit 多轴屈服包络面（门33）              
+║ ✓ phononic_bandgap_audit 声子能带与禁带（门34）           
+║ ✓ tissue_growth_audit 组织长入反应扩散（门35）             
+║ ✓ levelset_optimizer_audit 水平集拓扑优化（门36）         
+║ ✗ ui_jump_check 控制台分组导航（UI 重组回归）                  ← FAILED
+║ ✓ run_all UI 回归（6 套件）                           
+╠══════════════════════════════════════╣
+║ 失败 1/39
+║   ✗ ui_jump_check 控制台分组导航（UI 重组回归）
+╚══════════════════════════════════════╝
+
