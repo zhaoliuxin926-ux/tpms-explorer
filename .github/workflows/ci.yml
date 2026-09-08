@@ -66,7 +66,9 @@ jobs:
 
       - name: Run 39-gate suite
         working-directory: tpms/tpms-platform
-        run: npm run test:all
+        run: |
+          npm run test:all 2>&1 | tee ci_gates_${{ matrix.os }}.log
+          exit ${PIPESTATUS[0]}
 
       - name: Upload audit artifacts
         if: always()
@@ -75,5 +77,6 @@ jobs:
           name: audit-${{ matrix.os }}
           path: |
             tpms/agent_memory/progress.md
+            tpms/tpms-platform/ci_gates_${{ matrix.os }}.log
           if-no-files-found: ignore
           retention-days: 7
