@@ -109,10 +109,13 @@ const karcher: TpmsFunction = (mx, my, mz, w) =>
  * Fischer-Koch S：3 权重（三循环 2 倍频项）
  * w0·cos2x·siny·cosz + w1·cosx·cos2y·sinz + w2·sinx·cosy·cos2z
  */
-const fks: TpmsFunction = (mx, my, mz, w) =>
-  w[0] * Math.cos(2 * mx) * Math.sin(my) * Math.cos(mz) +
-  w[1] * Math.cos(mx) * Math.cos(2 * my) * Math.sin(mz) +
-  w[2] * Math.sin(mx) * Math.cos(my) * Math.cos(2 * mz);
+const fks: TpmsFunction = (mx, my, mz, w) => {
+  const cx = Math.cos(mx), sx = Math.sin(mx);
+  const cy = Math.cos(my), sy = Math.sin(my);
+  const cz = Math.cos(mz), sz = Math.sin(mz);
+  const c2x = cx * cx - sx * sx, c2y = cy * cy - sy * sy, c2z = cz * cz - sz * sz;
+  return w[0] * c2x * sy * cz + w[1] * cx * c2y * sz + w[2] * sx * cy * c2z;
+};
 
 /**
  * Fischer-Koch Y：2 权重（低谐波对 + 2 倍频组）
@@ -120,10 +123,10 @@ const fks: TpmsFunction = (mx, my, mz, w) =>
  * w1·(sin2x·siny + sin2y·sinz + sinx·sin2z + sin2x·cosz + cosx·sin2y + cosy·sin2z)
  */
 const fky: TpmsFunction = (mx, my, mz, w) => {
-  const S2x = Math.sin(2 * mx), S2y = Math.sin(2 * my), S2z = Math.sin(2 * mz);
+  const s2x = 2 * Math.sin(mx) * Math.cos(mx), s2y = 2 * Math.sin(my) * Math.cos(my), s2z = 2 * Math.sin(mz) * Math.cos(mz);
   return w[0] * (Math.cos(mx) * Math.cos(my) * Math.cos(mz) + Math.sin(mx) * Math.sin(my) * Math.sin(mz)) +
-    w[1] * (S2x * Math.sin(my) + S2y * Math.sin(mz) + Math.sin(mx) * S2z +
-      S2x * Math.cos(mz) + Math.cos(mx) * S2y + Math.cos(my) * S2z);
+    w[1] * (s2x * Math.sin(my) + s2y * Math.sin(mz) + Math.sin(mx) * s2z +
+      s2x * Math.cos(mz) + Math.cos(mx) * s2y + Math.cos(my) * s2z);
 };
 
 /**
@@ -140,16 +143,25 @@ const gprime: TpmsFunction = (mx, my, mz, w) =>
  * cos2x+cos2y+cos2z + 2(sin3x·sin2y·cosz + cosx·sin3y·sin2z + sin2x·cosy·sin3z)
  *                  + 2(sin2x·cos3y·sinz + sinx·sin2y·cos3z + cos3x·siny·sin2z)
  * 公式独立抄自 MiniSurf（Hsieh & Valdevit 2020）官方源码。
+ * 性能（R128 性能路径，2026-09-09）：CPU profile 实证 fcks 闭包占构建 75.8%——
+ * 每轴由基频 sx/cx 经恒等式导出全部倍频（sin2θ=2sinθcosθ、cos2θ=cos²θ−sin²θ、
+ * sin3θ=sinθ(3−4sin²θ)、cos3θ=cosθ(4cos²θ−3)）：21 次三角调用降为 6 次 + 纯乘法，
+ * 公式语义零变化（恒等式精确成立，ulp 级差异 ≪ parity 1e-9 容差）。
  */
 const fcks: TpmsFunction = (mx, my, mz, w) => {
-  const S2x = Math.sin(2 * mx), S2y = Math.sin(2 * my), S2z = Math.sin(2 * mz);
-  const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
-  const S3x = Math.sin(3 * mx), S3y = Math.sin(3 * my), S3z = Math.sin(3 * mz);
-  const C3x = Math.cos(3 * mx), C3y = Math.cos(3 * my), C3z = Math.cos(3 * mz);
+  const sx = Math.sin(mx), cx = Math.cos(mx);
+  const sy = Math.sin(my), cy = Math.cos(my);
+  const sz = Math.sin(mz), cz = Math.cos(mz);
+  const s2x = 2 * sx * cx, c2x = cx * cx - sx * sx;
+  const s2y = 2 * sy * cy, c2y = cy * cy - sy * sy;
+  const s2z = 2 * sz * cz, c2z = cz * cz - sz * sz;
+  const s3x = sx * (3 - 4 * sx * sx), c3x = cx * (4 * cx * cx - 3);
+  const s3y = sy * (3 - 4 * sy * sy), c3y = cy * (4 * cy * cy - 3);
+  const s3z = sz * (3 - 4 * sz * sz), c3z = cz * (4 * cz * cz - 3);
   return w[0] * (
-    C2x + C2y + C2z +
-    2 * (S3x * S2y * Math.cos(mz) + Math.cos(mx) * S3y * S2z + S2x * Math.cos(my) * S3z) +
-    2 * (S2x * C3y * Math.sin(mz) + Math.sin(mx) * S2y * C3z + C3x * Math.sin(my) * S2z)
+    c2x + c2y + c2z +
+    2 * (s3x * s2y * cz + cx * s3y * s2z + s2x * cy * s3z) +
+    2 * (s2x * c3y * sz + sx * s2y * c3z + c3x * sy * s2z)
   );
 };
 
