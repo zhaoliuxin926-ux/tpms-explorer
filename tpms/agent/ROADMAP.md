@@ -67,6 +67,10 @@
 
 ---
 
+## 能力对齐轮（2026-09-09 · 渐变等值场 UI 全链）
+
+CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架（C1）」控件组（开关+底部/顶部偏移+过渡带三滑条），state.isoGrad 全套（clone/setState Patch/DEFAULT）、main.ts 构建 params 映射（core/iso-grad.ts 共享折线语义单一来源）+ cacheKey 纳入渐变形状 + syncUI 控件同步 + url-params 分享序列化/恢复（ig/igH/igS/igB 全 clamp）+ 声子/组织/渗透禁用集扩展。开启时 targetPorosity 二分停用（互斥守卫），iso 走 baseIso 基准。验证：ui_jump 7/7（高亮迁移修复后计数 25→26 同步）、state_url 12/12、39/39 门绿、CI success（1237bbd）。
+
 ## 三阶段计划（结合 M0-M5）
 
 ### 阶段 A · 巩固与门面（现在 ~ 2 周）
