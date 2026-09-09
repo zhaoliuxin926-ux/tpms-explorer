@@ -36,6 +36,13 @@ export interface NLIntent {
 }
 
 const TYPE_WORDS: Array<[RegExp, string, string]> = [
+  // 【2026-09-10 红队 MAJOR 修复】新类型词表必须先于 gyroid/diamond 等子串模式：
+  // "Double Diamond" 含 "diamond" 子串，若后置会被 first-match 静默路由到 diamond；
+  // \bdouble-?\s*d\b 的尾 \b 在全名 "Double Diamond"（d|i 无边界）结构性必败，需显式全名变体
+  [/d[\s-]?prime|d′|d撇/i, 'dprime', "D'"],
+  [/double[\s-]?(p(rimitive)?\b)|\bdp\b|双p/i, 'dp', 'Double P'],
+  [/double[\s-]?(d(iamond)?\b)|\bdd\b|双d/i, 'dd', 'Double D'],
+  [/double[\s-]?(g(yroid)?\b)|\bdg\b|双g/i, 'dg', 'Double G'],
   [/gyroid|吉罗伊德|螺旋|gyroid结构/i, 'gyroid', 'Gyroid'],
   [/diamond|金刚石|钻石/i, 'diamond', 'Diamond'],
   [/schwarz\s*p|施瓦兹|p曲面|schwarzp/i, 'schwarz', 'Schwarz P'],

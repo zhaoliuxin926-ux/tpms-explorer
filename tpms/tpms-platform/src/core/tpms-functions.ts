@@ -165,9 +165,57 @@ const fcks: TpmsFunction = (mx, my, mz, w) => {
   );
 };
 
+// ── C2 曲面库扩展第三批（2026-09-10）：D′ + Double 族三曲面（D/P/G） ──
+// 出处：MiniSurf 官方源码 mengtinh/MiniSurf document.xml（Hsieh & Valdevit 2020 Software Impacts），
+// 行 328-363 原文逐字转录，循环对称性已人工验证。坐标约定：MiniSurf 的 n·2π·x 对应平台 n·k·X（k=周期数，X∈[−πk,πk]）。
+// 与 gprime 同模式：仅 w[0] 乘整体（常偏置在权重外）；含 2 倍频谐波 → 实时求值路径。
+
+/**
+ * D′（Diamond-prime）：1 权重
+ * w0·(0.5·(cx·cy·cz + cx·sy·sz + sx·cy·sz + sx·sy·cz)
+ *    − 0.5·(sin2x·sin2y + sin2y·sin2z + sin2z·sin2x)) − 0.2
+ */
+const dprime: TpmsFunction = (mx, my, mz, w) => {
+  const sx = Math.sin(mx), cx = Math.cos(mx);
+  const sy = Math.sin(my), cy = Math.cos(my);
+  const sz = Math.sin(mz), cz = Math.cos(mz);
+  return w[0] * (
+    0.5 * (cx * cy * cz + cx * sy * sz + sx * cy * sz + sx * sy * cz) -
+    0.5 * (Math.sin(2 * mx) * Math.sin(2 * my) + Math.sin(2 * my) * Math.sin(2 * mz) + Math.sin(2 * mz) * Math.sin(2 * mx))
+  ) - 0.2;
+};
+
+/**
+ * Double P（Double Diamond 族 P 型双胞）：1 权重
+ * w0·(0.5·(cx·cy + cy·cz + cz·cx) + 0.2·(cos2x + cos2y + cos2z))
+ */
+const dp: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * (0.5 * (Math.cos(mx) * Math.cos(my) + Math.cos(my) * Math.cos(mz) + Math.cos(mz) * Math.cos(mx)) +
+    0.2 * (Math.cos(2 * mx) + Math.cos(2 * my) + Math.cos(2 * mz)));
+
+/**
+ * Double D（Double Diamond 族 D 型双胞）：1 权重
+ * w0·(0.5·(sx·sy + sy·sz + sz·sx) + 0.5·cx·cy·cz)
+ */
+const dd: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * (0.5 * (Math.sin(mx) * Math.sin(my) + Math.sin(my) * Math.sin(mz) + Math.sin(mz) * Math.sin(mx)) +
+    0.5 * Math.cos(mx) * Math.cos(my) * Math.cos(mz));
+
+/**
+ * Double G（Double Gyroid 族 G 型双胞）：1 权重
+ * w0·(2.75·(sin2x·sinz·cosy + sin2y·sinx·cosz + sin2z·siny·cosx)
+ *    − 1.0·(cos2x·cos2y + cos2y·cos2z + cos2z·cos2x)) − 0.95
+ */
+const dg: TpmsFunction = (mx, my, mz, w) =>
+  w[0] * (2.75 * (Math.sin(2 * mx) * Math.sin(mz) * Math.cos(my) +
+      Math.sin(2 * my) * Math.sin(mx) * Math.cos(mz) +
+      Math.sin(2 * mz) * Math.sin(my) * Math.cos(mx)) -
+    1.0 * (Math.cos(2 * mx) * Math.cos(2 * my) + Math.cos(2 * my) * Math.cos(2 * mz) + Math.cos(2 * mz) * Math.cos(2 * mx))) - 0.95;
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
   gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
+  dprime, dp, dd, dg,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -180,7 +228,7 @@ export function getWeightCount(type: TpmType): number {
     case 'diamond': return 4;
     case 'octo': return 2;
     case 'karcher': case 'fks': case 'fky': return 3;
-    case 'gprime': case 'fcks': return 1;
+    case 'gprime': case 'fcks': case 'dprime': case 'dp': case 'dd': case 'dg': return 1;
     case 'custom': return 4;
     default: return 3;
   }

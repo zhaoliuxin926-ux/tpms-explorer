@@ -18,6 +18,11 @@ const C1_MAP: Record<string, number> = {
   fky: 0.38,
   gprime: 0.38,
   fcks: 0.38, // 谐波 3× 带内估值
+  // C2 扩展第三批：文献带内估值（0.38 ≈ 带 [0.35,0.44] 中值），非实验标定
+  dprime: 0.38,
+  dp: 0.38,
+  dd: 0.38,
+  dg: 0.38,
   custom: 0.38,  // default to gyroid value
 };
 
@@ -49,6 +54,11 @@ const ANISOTROPY_MAP: Record<string, number> = {
   fky: 1.32,
   gprime: 1.32,
   fcks: 1.36, // 谐波 3× 非立方
+  // C2 扩展第三批：Double 族立方对称取立方族近值，D′ 沿 Diamond 族口径
+  dprime: 1.42,
+  dp: 1.28,
+  dd: 1.45,
+  dg: 1.32,
   custom: 1.30,
 };
 

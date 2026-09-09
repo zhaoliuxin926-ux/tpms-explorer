@@ -82,8 +82,8 @@ function mulberry32(seed) {
   };
 }
 
-// C2 两批扩容曲面全量纳入万点对拍（此前清单停留 8 族致 GPU IR 未被守门——fcks IR sin³ bug 即由此漏检，2026-09-09 修复）
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks'];
+// C2 三批扩容曲面全量纳入万点对拍（此前清单停留 8 族致 GPU IR 未被守门——fcks IR sin³ bug 即由此漏检，2026-09-09 修复）
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg'];
 const HALF = Math.PI;
 const N_POINTS = 10000;
 
@@ -298,7 +298,7 @@ console.log('\n[H] 无 GPU 环境优雅降级');
 
 // ── 汇总 ──
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 43) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 43（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 73) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 73（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-10 C2 第三批实测上移 → 73）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

@@ -148,6 +148,25 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
         return (w[0]*(np.sin(2*kk*X)*np.cos(kk*Y)*np.sin(kk*Z)
                       + np.sin(2*kk*Y)*np.cos(kk*Z)*np.sin(kk*X)
                       + np.sin(2*kk*Z)*np.cos(kk*X)*np.sin(kk*Y)) + 0.32)
+    elif t == 'dprime':
+        return (w[0]*(0.5*(np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z)
+                           + np.cos(kk*X)*np.sin(kk*Y)*np.sin(kk*Z)
+                           + np.sin(kk*X)*np.cos(kk*Y)*np.sin(kk*Z)
+                           + np.sin(kk*X)*np.sin(kk*Y)*np.cos(kk*Z))
+                - 0.5*(np.sin(2*kk*X)*np.sin(2*kk*Y) + np.sin(2*kk*Y)*np.sin(2*kk*Z) + np.sin(2*kk*Z)*np.sin(2*kk*X)))
+                - 0.2)
+    elif t == 'dp':
+        return (w[0]*(0.5*(np.cos(kk*X)*np.cos(kk*Y) + np.cos(kk*Y)*np.cos(kk*Z) + np.cos(kk*Z)*np.cos(kk*X))
+                + 0.2*(np.cos(2*kk*X) + np.cos(2*kk*Y) + np.cos(2*kk*Z))))
+    elif t == 'dd':
+        return (w[0]*(0.5*(np.sin(kk*X)*np.sin(kk*Y) + np.sin(kk*Y)*np.sin(kk*Z) + np.sin(kk*Z)*np.sin(kk*X))
+                + 0.5*np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z)))
+    elif t == 'dg':
+        return (w[0]*(2.75*(np.sin(2*kk*X)*np.sin(kk*Z)*np.cos(kk*Y)
+                            + np.sin(2*kk*Y)*np.sin(kk*X)*np.cos(kk*Z)
+                            + np.sin(2*kk*Z)*np.sin(kk*Y)*np.cos(kk*X))
+                - 1.0*(np.cos(2*kk*X)*np.cos(2*kk*Y) + np.cos(2*kk*Y)*np.cos(2*kk*Z) + np.cos(2*kk*Z)*np.cos(2*kk*X)))
+                - 0.95)
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -565,6 +584,23 @@ elseif strcmp(tpms_type, 'gprime')
     V = weights(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
                     + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...
                     + sin(2*kk*Z).*cos(kk*X).*sin(kk*Y)) + 0.32;
+elseif strcmp(tpms_type, 'dprime')
+    V = weights(1)*(0.5*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) ...
+                         + cos(kk*X).*sin(kk*Y).*sin(kk*Z) ...
+                         + sin(kk*X).*cos(kk*Y).*sin(kk*Z) ...
+                         + sin(kk*X).*sin(kk*Y).*cos(kk*Z)) ...
+              - 0.5*(sin(2*kk*X).*sin(2*kk*Y) + sin(2*kk*Y).*sin(2*kk*Z) + sin(2*kk*Z).*sin(2*kk*X))) - 0.2;
+elseif strcmp(tpms_type, 'dp')
+    V = weights(1)*(0.5*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+              + 0.2*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z)));
+elseif strcmp(tpms_type, 'dd')
+    V = weights(1)*(0.5*(sin(kk*X).*sin(kk*Y) + sin(kk*Y).*sin(kk*Z) + sin(kk*Z).*sin(kk*X)) ...
+              + 0.5*cos(kk*X).*cos(kk*Y).*cos(kk*Z));
+elseif strcmp(tpms_type, 'dg')
+    V = weights(1)*(2.75*(sin(2*kk*X).*sin(kk*Z).*cos(kk*Y) ...
+                          + sin(2*kk*Y).*sin(kk*X).*cos(kk*Z) ...
+                          + sin(2*kk*Z).*sin(kk*Y).*cos(kk*X)) ...
+              - 1.0*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X))) - 0.95;
 else
     error('Unsupported TPMS type');
 end
@@ -622,11 +658,37 @@ if ${safeId(state.hybrid.enabled)}
             + weights_b(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
                             + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
     elseif strcmp(type_b, 'fcks')
-        error('Unsupported hybrid TPMS type'); % C(S) 谐波 3× 暂不开放 B 侧混合
+        % C(S) 谐波 3× B 侧（2026-09-10 补齐：TS/Python 均已支持，MATLAB 分支对齐；
+        % 变量加 b 后缀避免与主类型段的 S2x_ 等中间量冲突）
+        S2xb = sin(2*kk*X); S2yb = sin(2*kk*Y); S2zb = sin(2*kk*Z);
+        C2xb = cos(2*kk*X); C2yb = cos(2*kk*Y); C2zb = cos(2*kk*Z);
+        S3xb = sin(3*kk*X); S3yb = sin(3*kk*Y); S3zb = sin(3*kk*Z);
+        C3xb = cos(3*kk*X); C3yb = cos(3*kk*Y); C3zb = cos(3*kk*Z);
+        V_b = weights_b(1)*(C2xb + C2yb + C2zb ...
+            + 2*(S3xb.*S2yb.*cos(kk*Z) + cos(kk*X).*S3yb.*S2zb + S2xb.*cos(kk*Y).*S3zb) ...
+            + 2*(S2xb.*C3yb.*sin(kk*Z) + sin(kk*X).*S2yb.*C3zb + C3xb.*sin(kk*Y).*S2zb));
     elseif strcmp(type_b, 'gprime')
         V_b = weights_b(1)*(sin(2*kk*X).*cos(kk*Y).*sin(kk*Z) ...
                             + sin(2*kk*Y).*cos(kk*Z).*sin(kk*X) ...
                             + sin(2*kk*Z).*cos(kk*X).*sin(kk*Y)) + 0.32;
+    elseif strcmp(type_b, 'dprime')
+        % C2 扩展第三批 B 侧（与主类型段同公式，照 fcks B 侧先例）
+        V_b = weights_b(1)*(0.5*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) ...
+                                 + cos(kk*X).*sin(kk*Y).*sin(kk*Z) ...
+                                 + sin(kk*X).*cos(kk*Y).*sin(kk*Z) ...
+                                 + sin(kk*X).*sin(kk*Y).*cos(kk*Z)) ...
+                      - 0.5*(sin(2*kk*X).*sin(2*kk*Y) + sin(2*kk*Y).*sin(2*kk*Z) + sin(2*kk*Z).*sin(2*kk*X))) - 0.2;
+    elseif strcmp(type_b, 'dp')
+        V_b = weights_b(1)*(0.5*(cos(kk*X).*cos(kk*Y) + cos(kk*Y).*cos(kk*Z) + cos(kk*Z).*cos(kk*X)) ...
+                      + 0.2*(cos(2*kk*X) + cos(2*kk*Y) + cos(2*kk*Z)));
+    elseif strcmp(type_b, 'dd')
+        V_b = weights_b(1)*(0.5*(sin(kk*X).*sin(kk*Y) + sin(kk*Y).*sin(kk*Z) + sin(kk*Z).*sin(kk*X)) ...
+                      + 0.5*cos(kk*X).*cos(kk*Y).*cos(kk*Z));
+    elseif strcmp(type_b, 'dg')
+        V_b = weights_b(1)*(2.75*(sin(2*kk*X).*sin(kk*Z).*cos(kk*Y) ...
+                                  + sin(2*kk*Y).*sin(kk*X).*cos(kk*Z) ...
+                                  + sin(2*kk*Z).*sin(kk*Y).*cos(kk*X)) ...
+                      - 1.0*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X))) - 0.95;
     else
         error('Unsupported hybrid TPMS type');
     end

@@ -37,12 +37,16 @@ const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 
 // 合法边界通过
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 上限 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
   ['porosity 0.05 参数层接受+构建层 fail-closed', ['--type', 'gyroid', '--porosity', '0.05', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 3 && (r.stderr || '').includes('水密门')],
   ['periods 上限 12 通过', ['--type', 'gyroid', '--porosity', '0.6', '--periods', '12', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
+  // cylinder+diamond 可用域钉住（2026-09-10 取证）：R48-R128 全拒产且非单调不收敛
+  //（123/1940/164/624/786），k2 R96（84）与 p0.65 R96（248）同样拒产——与 cube 族
+  // "随分辨率收敛"定性不同，降周期数不可避，容器截断深水区（bugs.md）
+  ['cylinder+diamond p0.6 R96 已登记 fail-closed（容器深水区，可用域）', ['--type', 'diamond', '--porosity', '0.6', '--container', 'cylinder', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 3 && (r.stderr || '').includes('水密门')],
 ]) {
   const r = run('mesh', ...args, '--json');
   check(r) ? ok(label) : bad(label, (r.stderr || '').slice(-80));
@@ -52,9 +56,12 @@ for (const [label, args, check] of [
 //（nm 20736/3840，随分辨率收敛、R96 可构建）——体素场拓扑极限，fail-closed 是正确行为。
 // 对 frd 钉住 R48 结构化拒产（exit3+水密门）+ R96 可构建；其余 7 类型维持 R48 可构建。
 // lidinoid 例外（2026-09-08 诊断轮定案，bugs.md）：p≥0.7 薄壁自触同族——R48/R64 拒产
-//（nm 28512/8640@p0.7）、R96 可产（拓扑自愈，旧登记 R96 nm=10368 已过时）；p0.9 R48 可产
+//（nm 28512/8640@p0.7）、R96 可产（拓扑自愈）；p0.9 R48 可产
 // 但 exact 求解孔隙率偏差大（薄壁区 iso 响应混沌）。nudge（iso 微调避坑）已被探针证伪：
 // nm 在 iso 邻域呈平台状（±0.02 内无归零点）——fail-closed + 可用域声明为定案路线。
+// 【2026-09-10 勘误】旧登记"R96 nm=10368 已过时"归因有误：k6 标定轮实测 p0.75 k6 R96
+// 恰为 nm=10368——旧记录是 k6+p0.75 口径（当时正确），p0.7 与 p0.75 在默认周期数下
+// 行为相反（拓扑自愈有 p 域边界）。已补 p0.75 k6 R96 拒产 + k2 可产双钉。
 // fks/fky 例外（2026-09-08 C2 扩展实测）：p0.6 R48 薄壁自触（nm 9504/4752）、R96 可产
 //（nm=0，孔隙率偏差 0.2/0.6pp）——与 frd 同族钉住。
 // fcks 例外（2026-09-09 C2 第二批实测）：谐波 3× R48 拒产；R96 nm=10368 拒产（表示极限
@@ -62,7 +69,18 @@ for (const [label, args, check] of [
 // gprime 例外（2026-09-10 周期域钉住，B5 基准实测）：默认周期数 k=6 时 R96 p0.6 薄壁自触
 // 拒产（nm 19080，与 BENCHMARKS.md 一致）；k=2 R96 可产（nm=0，偏差 0.2pp）——"择 band 可避"
 // 量化为降周期数可避。高 k=高频相对体素网格→特征更薄，与薄壁自触族根因一致。
+// dprime 例外（2026-09-10 C2 第三批实测）：p0.6 R48 薄壁自触（nm 18252）、R96 可产
+//（nm=0，孔隙率偏差 0.13pp）——与 frd/fks/fky 同族钉住。
 for (const ty of TYPES) {
+  if (ty === 'dprime') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 3 && (r48.stderr || '').includes('水密门')
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 第三批实测）`)
+      : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
+    const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    continue;
+  }
   if (ty === 'fcks') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     r48.status === 3 && (r48.stderr || '').includes('水密门')
@@ -99,6 +117,17 @@ for (const ty of TYPES) {
       : bad('type enum lidinoid p0.7 R64 行为漂移', `exit=${r64.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok('type enum 值 lidinoid p0.7 可构建（R96，拓扑自愈）') : bad('type enum lidinoid p0.7 R96', (r96.stderr || '').slice(-60));
+    // 默认周期数（k=6）+ p0.75 + R96：高孔隙×高周期叠加薄壁自触，结构化拒产
+    //（2026-09-10 k6 标定轮实测 nm=10368——与"旧登记 nm=10368"精确同源，证旧记录
+    // 系 k6 口径而非"k 修复前过时口径"）；k2 同参可产（dev 0.4pp）
+    const r96p75 = run('mesh', '--type', ty, '--porosity', '0.75', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    const p75Ok = r96p75.status === 3 && (r96p75.stderr || '').includes('水密门')
+      && (() => { try { return JSON.parse(r96p75.stdout).lastAuditCounts?.nonManifoldEdges === 10368; } catch { return false; } })();
+    p75Ok
+      ? ok('type enum 值 lidinoid p0.75 k6 R96 已登记 fail-closed（默认周期数路径，nm=10368 数值钉住）')
+      : bad('type enum lidinoid p0.75 k6 R96 行为漂移', `exit=${r96p75.status}`);
+    const r96p75k2 = run('mesh', '--type', ty, '--porosity', '0.75', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96p75k2.status === 0 ? ok('type enum 值 lidinoid p0.75 k2 R96 可构建（降周期数避坑锚点）') : bad('type enum lidinoid p0.75 k2 R96', (r96p75k2.stderr || '').slice(-60));
     continue;
   }
   if (ty === 'gprime') {
@@ -222,5 +251,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 53) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 53`); process.exit(1); }
+if (pass < 62) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 62`); process.exit(1); }
 process.exit(fail ? 1 : 0);

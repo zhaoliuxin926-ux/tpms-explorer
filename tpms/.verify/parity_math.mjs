@@ -129,6 +129,24 @@ const LIT = {
       2 * (S2x * C3y * Math.sin(z) + Math.sin(x) * S2y * C3z + C3x * Math.sin(y) * S2z)
     );
   },
+  // ── C2 第三批（D′ + Double 族，公式独立抄自 MiniSurf 官方源码 mengtinh/MiniSurf document.xml 行 328-363）──
+  dprime: (x, y, z, w) =>
+    w[0] * (
+      0.5 * (Math.cos(x) * Math.cos(y) * Math.cos(z) + Math.cos(x) * Math.sin(y) * Math.sin(z) +
+        Math.sin(x) * Math.cos(y) * Math.sin(z) + Math.sin(x) * Math.sin(y) * Math.cos(z)) -
+      0.5 * (Math.sin(2 * x) * Math.sin(2 * y) + Math.sin(2 * y) * Math.sin(2 * z) + Math.sin(2 * z) * Math.sin(2 * x))
+    ) - 0.2,
+  dp: (x, y, z, w) =>
+    w[0] * (0.5 * (Math.cos(x) * Math.cos(y) + Math.cos(y) * Math.cos(z) + Math.cos(z) * Math.cos(x)) +
+      0.2 * (Math.cos(2 * x) + Math.cos(2 * y) + Math.cos(2 * z))),
+  dd: (x, y, z, w) =>
+    w[0] * (0.5 * (Math.sin(x) * Math.sin(y) + Math.sin(y) * Math.sin(z) + Math.sin(z) * Math.sin(x)) +
+      0.5 * Math.cos(x) * Math.cos(y) * Math.cos(z)),
+  dg: (x, y, z, w) =>
+    w[0] * (2.75 * (Math.sin(2 * x) * Math.sin(z) * Math.cos(y) +
+        Math.sin(2 * y) * Math.sin(x) * Math.cos(z) +
+        Math.sin(2 * z) * Math.sin(y) * Math.cos(x)) -
+      1.0 * (Math.cos(2 * x) * Math.cos(2 * y) + Math.cos(2 * y) * Math.cos(2 * z) + Math.cos(2 * z) * Math.cos(2 * x))) - 0.95,
 };
 
 // 确定性伪随机（可复现）
@@ -191,6 +209,23 @@ for (const type of Object.keys(LIT)) {
   check('解析锚点 fcks 原点值 3', near(F.fcks(0, 0, 0, W), 3), String(F.fcks(0, 0, 0, W)));
   check('解析锚点 fcks 偶对称', near(F.fcks(p, q, r, W), F.fcks(-p, -q, -r, W), 1e-9));
   check('解析锚点 fcks 循环置换不变', near(F.fcks(p, q, r, W), F.fcks(q, r, p, W)) && near(F.fcks(p, q, r, W), F.fcks(r, p, q, W)));
+
+  // ── C2 第三批锚点（期望值从平台实现数值求值取，2026-09-10；循环置换 5 点采样 f(x,y,z)=f(y,z,x)=f(z,x,y)）──
+  const cycPts = [[1.1, -0.7, 2.3], [0.4, 0.9, -1.6], [-2.0, 0.3, 1.1], [0.7, 0.7, 0.7], [-0.9, -1.2, 0.5]];
+  const cycOk = (fn) => cycPts.every(([a, b, c]) =>
+    near(fn(a, b, c, W), fn(b, c, a, W), 1e-9) && near(fn(a, b, c, W), fn(c, a, b, W), 1e-9));
+  // dprime：原点值 = 0.5·1 − 0 − 0.2 = 0.3（仅 ccc 项存活，2 倍频组为 0）
+  check('解析锚点 dprime 原点值 0.3', near(F.dprime(0, 0, 0, W), 0.3), String(F.dprime(0, 0, 0, W)));
+  check('解析锚点 dprime 循环置换不变（5 点）', cycOk(F.dprime));
+  // dp：原点值 = 0.5·3 + 0.2·3 = 2.1
+  check('解析锚点 dp 原点值 2.1', near(F.dp(0, 0, 0, W), 2.1), String(F.dp(0, 0, 0, W)));
+  check('解析锚点 dp 循环置换不变（5 点）', cycOk(F.dp));
+  // dd：原点值 = 0 + 0.5·1 = 0.5（sin 组为 0，仅 ccc 项存活）
+  check('解析锚点 dd 原点值 0.5', near(F.dd(0, 0, 0, W), 0.5), String(F.dd(0, 0, 0, W)));
+  check('解析锚点 dd 循环置换不变（5 点）', cycOk(F.dd));
+  // dg：原点值 = 0 − 1.0·3 − 0.95 = −3.95（sin 组为 0，cos2 组全 1）
+  check('解析锚点 dg 原点值 -3.95', near(F.dg(0, 0, 0, W), -3.95), String(F.dg(0, 0, 0, W)));
+  check('解析锚点 dg 循环置换不变（5 点）', cycOk(F.dg));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -672,7 +707,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 229) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 184（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 264) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 264（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-10 C2 第三批实测上移 229→264）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
