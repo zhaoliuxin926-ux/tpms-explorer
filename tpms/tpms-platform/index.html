@@ -851,6 +851,26 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
 
+      <details class="sect">
+        <summary class="sect-h">渐变支架（C1）</summary>
+        <div class="field">
+          <div class="lbl"><span>渐变等值场</span><span class="val" id="iso-grad-value">关闭</span></div>
+          <button class="opt" id="iso-grad-toggle" style="width:100%">开启 z 向三平台渐变</button>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>底部偏移（偏实）</span><span class="val" id="ig-hard-value">-0.12</span></div>
+          <input type="range" id="ig-hard" min="-40" max="0" value="-12" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>顶部偏移（偏疏）</span><span class="val" id="ig-soft-value">+0.12</span></div>
+          <input type="range" id="ig-soft" min="0" max="40" value="12" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>过渡带宽</span><span class="val" id="ig-band-value">0.4</span></div>
+          <input type="range" id="ig-band" min="0" max="200" value="40" step="5">
+        </div>
+      </details>
+
       <details class="sect" open>
         <summary class="sect-h">结构参数</summary>
         <div class="field">

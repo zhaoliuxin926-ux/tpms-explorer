@@ -105,6 +105,13 @@ export interface AppState {
     blendWidth: number;
     axis: BlendAxis;
   };
+  /** C1 渐变等值场（z 向三平台：底部偏实 hard / 基准 0 / 顶部偏疏 soft + 过渡带 band） */
+  isoGrad: {
+    enabled: boolean;
+    hard: number;
+    soft: number;
+    band: number;
+  };
   /** 【阶段 IV】非欧度规空间映射（identity = 关闭） */
   manifold: ManifoldConfig;
   /** 【v3.0 阶段 I】WebGPU 场计算加速（自动探测不可用时无感回退 CPU Worker） */
@@ -136,6 +143,7 @@ export const DEFAULT_STATE: AppState = {
   endplateMm: 0,
   sliceAxis: 'z',
   sliceInvert: false,
+  isoGrad: { enabled: false, hard: -0.12, soft: 0.12, band: 0.4 },
   hybrid: {
     enabled: false,
     typeB: 'diamond',
@@ -217,7 +225,7 @@ export interface BuildParams {
    * 端点外钳制）。与 targetPorosity 二分互斥（传入时 targetPorosity 路径显式抛错）。
    * 仅 solid_network 支持（壳类平方场的渐变语义需另定案）。
    */
-  isoGrad?: { dir: 'x' | 'y' | 'z'; stops: [number, number][] };
+  isoGrad?: import('./core/iso-grad').IsoGradSpec;
   /** 主线程按 UI 合法性校验后下发的着色模式；缺省或 'none' 时 Worker 不产颜色 */
   coloring?: ColoringMode;
   /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */

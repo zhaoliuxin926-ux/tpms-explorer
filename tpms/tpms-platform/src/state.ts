@@ -20,6 +20,7 @@ function cloneState(state: AppState): AppState {
     ...state,
     weights: [...state.weights] as AppState['weights'],
     hybrid: { ...state.hybrid },
+    isoGrad: { ...state.isoGrad },
     manifold: { ...state.manifold },
     stress: { ...state.stress },
     hierarchical: { ...state.hierarchical },
@@ -40,6 +41,7 @@ export type AppStatePatch = Omit<Partial<AppState>,
   'hybrid' | 'manifold' | 'stress' | 'hierarchical' | 'neural'
 > & {
   hybrid?: Partial<AppState['hybrid']>;
+  isoGrad?: Partial<AppState['isoGrad']>;
   manifold?: Partial<AppState['manifold']>;
   stress?: Partial<AppState['stress']>;
   hierarchical?: Partial<AppState['hierarchical']>;
@@ -191,6 +193,12 @@ export function buildShareURL(): string {
     params.set('hybridCenter', String(s.hybrid.blendCenter));
     params.set('hybridWidth', String(s.hybrid.blendWidth));
     params.set('hybridAxis', s.hybrid.axis);
+  }
+  if (s.isoGrad.enabled) {
+    params.set('ig', '1');
+    params.set('igH', String(s.isoGrad.hard));
+    params.set('igS', String(s.isoGrad.soft));
+    params.set('igB', String(s.isoGrad.band));
   }
   if (s.customFormula) params.set('formula', s.customFormula);
   // 颜色与 GPU 只是渲染偏好，但也属于可复现实验配置；仅写非默认值，

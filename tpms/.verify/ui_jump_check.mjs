@@ -60,7 +60,7 @@ const counts = await page.evaluate(() => ({
   view: document.querySelectorAll('#grp-view .sect').length,
   total: document.querySelectorAll('.panel.controls .sect').length,
 }));
-ok('分组计数 11/8/1/5 = 25', counts.geometry === 11 && counts.sim === 8 && counts.optimize === 1 && counts.view === 5 && counts.total === 25, JSON.stringify(counts));
+ok('分组计数 12/8/1/5 = 26（渐变支架 sect 纳入构型组）', counts.geometry === 12 && counts.sim === 8 && counts.optimize === 1 && counts.view === 5 && counts.total === 26, JSON.stringify(counts));
 
 // 4. 关键交互元素仍在 controls 内（CI 兼容抽查）
 const probes = await page.evaluate(() => ['btn-plasticity', 'btn-lpbf', 'btn-yield', 'btn-phonon', 'btn-tissue', 'btn-ls-evolve', 'neural-enabled', 'inv-preset', 'custom-formula']
