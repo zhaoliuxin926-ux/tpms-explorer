@@ -59,6 +59,9 @@ for (const [label, args, check] of [
 //（nm=0，孔隙率偏差 0.2/0.6pp）——与 frd 同族钉住。
 // fcks 例外（2026-09-09 C2 第二批实测）：谐波 3× R48 拒产；R96 nm=10368 拒产（表示极限
 // 实锤）；R128 档位为目标场景但 exact 求解构建耗时实测 >15 分钟（待性能路径），如实登记。
+// gprime 例外（2026-09-10 周期域钉住，B5 基准实测）：默认周期数 k=6 时 R96 p0.6 薄壁自触
+// 拒产（nm 19080，与 BENCHMARKS.md 一致）；k=2 R96 可产（nm=0，偏差 0.2pp）——"择 band 可避"
+// 量化为降周期数可避。高 k=高频相对体素网格→特征更薄，与薄壁自触族根因一致。
 for (const ty of TYPES) {
   if (ty === 'fcks') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
@@ -96,6 +99,19 @@ for (const ty of TYPES) {
       : bad('type enum lidinoid p0.7 R64 行为漂移', `exit=${r64.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok('type enum 值 lidinoid p0.7 可构建（R96，拓扑自愈）') : bad('type enum lidinoid p0.7 R96', (r96.stderr || '').slice(-60));
+    continue;
+  }
+  if (ty === 'gprime') {
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 0 ? ok('type enum 值 gprime R48 可构建') : bad('type enum gprime R48', (r48.stderr || '').slice(-60));
+    // 默认周期数（k=6）R96：结构化拒产
+    const r96k6 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96k6.status === 3 && (r96k6.stderr || '').includes('水密门')
+      ? ok('type enum 值 gprime k6 R96 已登记 fail-closed（薄壁自触 nm 19080，B5 基准）')
+      : bad('type enum gprime k6 R96 行为漂移', `exit=${r96k6.status}`);
+    // 降周期数 k=2 R96：可产对照（择 band 可避的量化锚点）
+    const r96k2 = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96k2.status === 0 ? ok('type enum 值 gprime k2 R96 可构建（降周期数避坑锚点）') : bad('type enum gprime k2 R96', (r96k2.stderr || '').slice(-60));
     continue;
   }
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');

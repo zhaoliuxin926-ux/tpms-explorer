@@ -207,6 +207,23 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 教训沉淀：①本机全绿 + CI 全红可共存数日——内核/门禁改动后必须在真 CI 上复验；②node 门禁链路里每一个 python/平台假设（路径分隔符、命令存在性、解释器版本、行尾）都是潜在 CI 假红；③条件等待必须按测试语义选目标（onboarding 等卡、渲染等 stats），固定 sleep 在 2 核慢机上是抛硬币；④逐字比较文件前先归一化行尾；⑤失败输出别过滤太狠（崩溃栈不在 FAIL 行里）。
 
+## 登记缺陷清欠轮（2026-09-10）
+- **R128 容差标定收官**：官方容差矩阵标定域 k≤5/R≤96 → **正式延伸至 k≤5/R128**。新探针
+  `.verify/r128_tolerance_probe.mjs`（独立运行不进 CI，同 volume_loss 先例）：12 代表族案例
+  （gyroid k{1,2,3,5}/diamond/schwarz shell/gradshell z/倍频三族/lidinoid/splitp）在 mesh_audit
+  相对容差外推下 12/12 PASS——最紧 frd 定向错 4230/阈 7562（44% 余量）、体积最差 iwp −4.53%/阈 12%；
+  R128 单案例构建仅 1.6~4.4s。数据表 r128_tolerance_table.json。
+- **gprime 拒产域钉住**：默认周期数 k=6 R96 p0.6 fail-closed（nm 19080，B5 基准一致）；k=2 R96
+  可产（nm=0，偏差 0.2pp）——"择 band 可避"量化为**降周期数可避**。schema_check 55 断言
+  （+3 gprime 案例）+ tools.schema.json 量化声明。
+- **C-9 修正**（digital_twin 门禁）：D 节坍塌断言二择一 `collapsed||allConverged` 收紧为严格
+  `collapsed===true`（场景实测确定性坍塌 strain=0.018；旧写法放过"坍塌停止发生"回归），
+  坍塌应变窗口断言改无条件执行。
+- **C-7 修正**（hierarchical 门禁）：E 节 vm/壁厚因子改用平台导出 stressAt/stressThicknessScale
+  （旧本地复刻=冻结副本，平台公式漂移审计仍绿）；变异测试实证有牙（平台公式反向→17/1 红）。
+- **bugs.md 过时条目清理**：poincare 斜率公式/stl 定向传播/Tb.Th 头注/buffer-pool normals 四项
+  实为 2026-09-05 轮已修，登记滞后。
+
 ## 下一步（更新）
 1. **用户操作**：署名三项（作者拼写/单位/LICENSE 版权行）→ Editorial Manager 注册提交 → 回填投稿号。
 2. B-t3 LLM 接入（等 key）。

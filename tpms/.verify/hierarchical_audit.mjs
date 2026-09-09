@@ -5,7 +5,8 @@
  * B. λ=0 退化：分级构建 ≈ 宏观单一构建（固相分数偏差 ≤0.5%，查表/实时路径差内）
  * C. 微孔连通率 ≥95%（微场空隙 6 连通最大簇占比，32³ 采样）
  * D. 双重比表面积：微孔附加 > 0；总面积 > 宏观面积；S 随 N 增长
- * E. 【阶段 IV】应力单调性：bending 壳 β>0 时，vm 分桶固相分数随 vm 严格递增
+ * E. 【阶段 IV】应力单调性：bending 壳 β>0 时，vm 分桶固相分数随 vm 单调不减
+ *    （非递减；2026-09-10 头注对齐——原「严格递增」实际断言允许相邻桶相等）
  * F. 【阶段 IV】应力变换完整性：anisotropy 改变几何；cantilever 水密
  *
  * 运行：node hierarchical_audit.mjs
@@ -27,14 +28,14 @@ const BUNDLE = join(tmpdir(), 'tpms_hier_audit_bundle.mjs');
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
     `export { analyzeHierarchical } from ${JSON.stringify(join(PLATFORM, 'src/core/hierarchical-functions.ts'))};`,
     `export { getTpmsFunction, evaluateField } from ${JSON.stringify(join(PLATFORM, 'src/core/tpms-functions.ts'))};`,
-    `export { stressAt } from ${JSON.stringify(join(PLATFORM, 'src/core/stress-driven-field.ts'))};`,
+    `export { stressAt, stressThicknessScale } from ${JSON.stringify(join(PLATFORM, 'src/core/stress-driven-field.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildSurface, analyzeHierarchical, getTpmsFunction } = await import(pathToFileURL(BUNDLE));
+const { buildSurface, analyzeHierarchical, getTpmsFunction, stressAt, stressThicknessScale } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -124,18 +125,21 @@ console.log('\n[E] 应力-相对密度单调性（bending 壳 β=0.5，vm 五分
   const tEff = isoUsed * 2;
   const bias = 0;
   const tpms = getTpmsFunction('gyroid', '', { k: 1, t: 1, iso: 0 });
+  // 【2026-09-10 C-7 修正】vm 与壁厚因子改用平台导出（stressAt/stressThicknessScale）——
+  // 旧本地复刻 `|pz|`/`max(0.1,1−0.5·vm)` 是冻结副本，平台公式漂移时审计仍绿（自证）
+  const stressCfg = { preset: 'bending', strength: 0.5, anisotropy: 1 };
   const BINS = 5;
   const solidCnt = new Float64Array(BINS), totalCnt = new Float64Array(BINS);
   let seed = 987654321;
-  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0x7fffffff; };
   const samples = 60000;
   for (let i = 0; i < samples; i++) {
     const px = rnd() * 2 - 1, py = rnd() * 2 - 1, pz = rnd() * 2 - 1;
     const mx = px * Math.PI, my = py * Math.PI, mz = pz * Math.PI;
     const v = tpms(mx, my, mz, [1, 1, 1, 1]);
-    const vm = Math.min(1, Math.abs(pz));       // bending: vm = |pz|
+    const vm = stressAt(stressCfg, px, py, pz).vm;                  // 平台应力场（bending: |pz|）
     const dv = v - bias;
-    const tLoc = tEff * Math.max(0.1, 1 - 0.5 * vm);  // 与平台 stressThicknessScale 同式（β=0.5，孔隙板收窄）
+    const tLoc = tEff * stressThicknessScale(stressCfg, px, py, pz); // 平台壁厚调制（surface-nets 同式）
     const solid = dv * dv - (tLoc / 2) * (tLoc / 2) > 0;
     const bin = Math.min(BINS - 1, Math.floor(vm * BINS));
     totalCnt[bin]++;

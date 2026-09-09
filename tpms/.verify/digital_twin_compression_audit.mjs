@@ -5,7 +5,8 @@
  * B. Gibson-Ashby 公式一致性（gaPrediction = C2·ρ̄^1.5）
  * C. 数字孪生压溃（R=6 gyroid · σy/E=0.008 · 压至 2.5%）：全步收敛 + 能量漂移 ≤0.5%
  *    + 曲线单调 + 平台应力-屈服比与 GA 标定比稳定（跨切线口径 ≤10%）
- * D. 渐进压溃失效（failureStrain=0.02）：单元死亡渐进触发、求解继续收敛、载荷有界
+ * D. 渐进压溃失效（failureStrain=0.012）：单元死亡渐进触发、坍塌被检测并截断
+ *    （collapsed 严格断言 + 坍塌应变窗口 [0.01,0.04]，2026-09-10 C-9 收紧）、载荷有界
  *
  * 诚实边界：全积分六面体体素 FEM 的平台应力相对 GA 文献经验式存在系统性标定比
  * （实测 ≈1.6-2.0，粗分辨率偏刚），门禁守标定比的跨口径稳定性而非裸 ±10% 一致——§27 披露。
@@ -107,7 +108,7 @@ console.log('\n[C] 数字孪生压溃（R=6 · σy/E=0.008 · 2.5%）');
 }
 
 // ══ D. 渐进压溃失效（单元生死）══
-console.log('\n[D] 渐进压溃失效（failureStrain=0.02）');
+console.log('\n[D] 渐进压溃失效（failureStrain=0.012）');
 {
   const solid = voxelizeGyroid(6, 0.35);
   const res = dt.runCompressionDigitalTwin({
@@ -118,11 +119,11 @@ console.log('\n[D] 渐进压溃失效（failureStrain=0.02）');
   check('渐进死亡触发（≥1 单元）', res.totalDead >= 1, String(res.totalDead));
   check('死亡渐进（时间线多步或有界）', res.deathTimeline.length >= 1);
   // 坍塌检测：发散步=结构失稳，孪生截断曲线并上报坍塌应变（失效预测口径）
-  check('坍塌被检测并截断（报告 collapsed）', res.collapsed === true || res.allConverged === true, `collapsed=${res.collapsed}`);
-  if (res.collapsed) {
-    check(`坍塌应变在窗口内 [0.01, 0.04]（实测 ${res.collapseStrain?.toFixed(4)}）`,
-      res.collapseStrain !== null && res.collapseStrain >= 0.01 && res.collapseStrain <= 0.04, String(res.collapseStrain));
-  }
+  // 【2026-09-10 C-9 修正】场景确定性坍塌（实测 collapsed=true/collapseStrain=0.018），
+  // 旧二择一 `collapsed || allConverged` 会放过「坍塌停止发生」的回归——收紧为严格断言
+  check('坍塌被检测并截断（报告 collapsed）', res.collapsed === true, `collapsed=${res.collapsed} allConverged=${res.allConverged}`);
+  check(`坍塌应变在窗口内 [0.01, 0.04]（实测 ${res.collapseStrain?.toFixed(4)}）`,
+    res.collapseStrain !== null && res.collapseStrain >= 0.01 && res.collapseStrain <= 0.04, String(res.collapseStrain));
   const fMax = Math.max(...res.curve.map((c) => c.reaction));
   const fLast = res.curve[res.curve.length - 1].reaction;
   check('载荷全程有界（截断后无垃圾）', fMax < 3 * Math.max(fLast, 1e-6) && isFinite(fMax) && fLast > 0, `max=${fMax.toExponential(3)} last=${fLast.toExponential(3)}`);

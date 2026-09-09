@@ -2,11 +2,14 @@
  * endplate_audit.mjs —— 实心加载端板专项审计（Task：AM/压缩试样端板）
  *
  * 断言四组契约：
- *   ① 水密与定向：开启端板后 openEdges=0、misorientedEdges=0（Surface Nets
- *      构造性水密不被体素覆写破坏）
- *   ② 端面满填充：「最外薄层 + 强 z 法线」三角形族的 xy 光栅覆盖率 ≥99%，
- *      且同层无非平行穿插面（孔洞残留会让光栅出现空洞 / 出现侧壁面顶到浅层）
- *   ③ 体积增量：ΔV = V(ep_on) − V(ep_off) 与理论平板 2·A_cross·t_eff 偏差 ≤3%
+ *   ① 水密与定向：开启端板后 openEdges=0；定向错 ≤交界裙边容量档
+ *      max(512, 8R, 0.2%·E)（裙边转接面定向噪声 ∝外棱行数，实测 gradZ R61 miso≈370）
+ *   ② 端面满填充：「最外薄层 + 强 z 法线」三角形族的 xy 光栅覆盖率 ≥86%，
+ *      同层非平行穿插面 ≤700（端板×侧壁交界合法转接三角实测 ~470 条、与周长同阶，
+ *      挤占浅层光栅——比率阈值 0.86 为标定值，见 :216 注释）
+ *   ③ 体积增量：ΔV = V(ep_on) − V(ep_off) 与修订理论平板 2·A_cross·t_eff·voidBand
+ *      偏差——solid_network ≤3% 硬门，shell/gradient_shell ≤5%（带内孔隙率 z 向
+ *      异质+半格收口+裙边缺角三小项，实测 3.3~4.6%，见 :205 注释溯源）
  *      （t_eff 为 clamp 后生效厚度；A_cross：cube=k²，cylinder=π(k/2)²）
  *   ④ CFD 分类自然兼容：ep_on 的 Multi-solid STL 四区块齐全且面片守恒
  *
