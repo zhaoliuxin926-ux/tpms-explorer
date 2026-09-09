@@ -4,8 +4,9 @@
  * 断言：
  *   ① 水密：典型混合组合（Gyroid+Diamond sigmoid-z、Schwarz P+Gyroid linear-x、
  *      Gyroid+IWP sigmoid-radial）网格开放边 = 0
- *   ② 极限逼近：波前参数偏离中心 ≥3×宽度处（sigmoid 渐近误差 ~2e-16），
- *      混合场与主导单一曲面场的偏差 ≤ 1e-6 —— 即「两端几何分别逼近 A/B」
+ *   ② 极限逼近：波前参数偏离中心 ≥3×宽度处，混合场与主导单一曲面场的
+ *      相对残差 ≤1e-5——绝对残差数学下界 ~1.4e-5 = sigmoid 渐近极限
+ *      exp(−12)≈6e-6 × 场幅值 O(2.5)，非实现误差。即「两端几何分别逼近 A/B」
  *   ③ 双语言残差：混合公式 Python 实现与平台 TS 实现（createHybridField）
  *      在 1000 个随机采样点上的残差 ≤ 1e-6（公式双实现漂移守门）
  *

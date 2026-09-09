@@ -9,8 +9,9 @@
  * 指标（对 buildSurface 返回的三角网格）：
  *  - degenTris       零面积/重复顶点三角形（应为 0）
  *  - openEdges       仅被 1 个三角形引用的边（裂缝边界，应为 0 = 水密）
- *  - nonManifoldEdges 被超过 2 个三角形引用的边（应为 0）
- *  - misorientedEdges 被两边共享但两条有向边同向（定向不一致，应为 0）
+ *  - nonManifoldEdges 被超过 2 个三角形引用的边（理想 0；门禁容差档 max(256, 0.2%·E)、
+ *    倍频族 0.8%·E——dual 面提取鞍点掐捏已知极限）
+ *  - misorientedEdges 被两边共享但两条有向边同向（定向不一致；理想 0，容差 0.4%·E）
  *  - volRelErr       发散定理体积 vs Monte Carlo 孔隙率推算固相体积的相对误差
  *
  * 运行：node mesh_audit.mjs [--json out.json]
@@ -225,6 +226,10 @@ for (const r of results) {
   //  · 固相体积 vs 连续公式 MC：≤6%（hybrid 8%）。这是采样格距下的弦切离散极限
   //    （diamond 高曲率细杆 raw 即 −6.4%；壳类壁厚接近格距时 ±5%），
   //    壁厚 <2 格的结构应提高分辨率（与文献「壁厚≥4 体素」建议一致）
+  //  · 【2026-09-10 R128 标定】相对容差规则（6%/12% 倍频/0.2%nm/0.4%定向）的标定域
+  //    由 k≤5/R≤96 正式延伸至 k≤5/R128：12 代表族案例实测全部在外推容差内
+  //    （最紧 frd 定向错 4230/阈 7562、体积最差 iwp −4.53%/阈 12%）——
+  //    标定数据 .verify/r128_tolerance_table.json，复跑 node r128_tolerance_probe.mjs
   const edgeTotal = r.triCount * 3;
   const isHybrid = !!r.hybrid?.enabled;
   // preview(R≤32) 是屏幕预览，导出走 HD 锁（R≥~50），粗格离散偏差放宽到 8%
