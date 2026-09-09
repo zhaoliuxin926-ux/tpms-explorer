@@ -20,6 +20,10 @@ export const LABEL: Record<string, string> = {
   fky: 'Fischer-Koch Y',
   gprime: 'G′',
   fcks: 'Fisher-Koch C(S)',
+  dprime: 'D′',
+  dp: 'Double P',
+  dd: 'Double D',
+  dg: 'Double G',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -44,6 +48,10 @@ export const FORMULA: Record<string, string> = {
   fky: 'cos x cos y cos z + sin x sin y sin z + sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z',
   gprime: 'sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y + 0.32',
   fcks: 'cos 2x + cos 2y + cos 2z + 2(sin 3x sin 2y cos z + cos x sin 3y sin 2z + sin 2x cos y sin 3z) + 2(sin 2x cos 3y sin z + sin x sin 2y cos 3z + cos 3x sin y sin 2z)',
+  dprime: '0.5(cos x cos y cos z + cos x sin y sin z + sin x cos y sin z + sin x sin y cos z) − 0.5(sin 2x sin 2y + sin 2y sin 2z + sin 2z sin 2x) − 0.2',
+  dp: '0.5(cos x cos y + cos y cos z + cos z cos x) + 0.2(cos 2x + cos 2y + cos 2z)',
+  dd: '0.5(sin x sin y + sin y sin z + sin z sin x) + 0.5 cos x cos y cos z',
+  dg: '2.75(sin 2x sin z cos y + sin 2y sin x cos z + sin 2z sin y cos x) − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x) − 0.95',
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
@@ -61,6 +69,10 @@ export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
   fky:     [['cos x cos y cos z + sin x sin y sin z', 'a', 1], ['sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z', 'b', 1]],
   gprime:  [['sin 2x cos y sin z + sin 2y cos z sin x + sin 2z cos x sin y', 'a', 1]],
   fcks:    [['cos 2x + cos 2y + cos 2z + 2(六项 3×2×1 谐波积)', 'a', 1]],
+  dprime:  [['0.5(cos x cos y cos z + cos x sin y sin z + sin x cos y sin z + sin x sin y cos z − sin 2x sin 2y − sin 2y sin 2z − sin 2z sin 2x)', 'a', 1]],
+  dp:      [['0.5(cos x cos y + cos y cos z + cos z cos x) + 0.2(cos 2x + cos 2y + cos 2z)', 'a', 1]],
+  dd:      [['0.5(sin x sin y + sin y sin z + sin z sin x) + 0.5 cos x cos y cos z', 'a', 1]],
+  dg:      [['2.75(sin 2x sin z cos y + sin 2y sin x cos z + sin 2z sin y cos x) − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x)', 'a', 1]],
 };
 
 export const MODEL_DESC: Record<string, string> = {

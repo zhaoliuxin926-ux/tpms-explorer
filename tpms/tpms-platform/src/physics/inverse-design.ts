@@ -5,7 +5,7 @@
  *
  * 前向代理模型（解析式，零几何构建成本）：
  *   E*(p)  = C1(type)·(1−P)²·E0·α          —— Gibson-Ashby 开孔近似 + 方向模量因子 α
- *   κ*(p)  = ε³ / (C_k·Sv²·(1−ε)²)         —— Kozeny-Carman（mm² → m²）
+ *   κ*(p)  = ε³ / (C_k·Sv²)                  —— Kozeny-Carman（bulk Sv 口径，2026-09-10 量纲修正，mm² → m²）
  *   Sv(p)  = cArea(type)/cellSize          —— 单胞解析面积密度（mm⁻¹）
  *   P(p)   = porosity
  * 诚实边界：这是解析代理口径（与平台 UI 的 GA/κ 面板同源同量级），非 FEA；
@@ -28,6 +28,7 @@ const C1_MAP: Record<string, number> = {
   gyroid: 0.3, diamond: 0.35, schwarz: 0.3, neovius: 0.35,
   iwp: 0.38, frd: 0.4, lidinoid: 0.32, splitp: 0.33,
   octo: 0.33, karcher: 0.33, fks: 0.32, fky: 0.32, gprime: 0.32, fcks: 0.32, // C2 扩展：带内估值
+  dprime: 0.36, dp: 0.35, dd: 0.36, dg: 0.33, // C2 扩展第三批：带内估值
 };
 
 /** 单胞解析面积密度 cArea（mm⁻¹ @ cellSize=1；Schwarz P 2.31 引自极小曲面经典面积，其余同量级标定） */
@@ -35,6 +36,7 @@ const C_AREA: Record<string, number> = {
   gyroid: 3.09, diamond: 3.83, schwarz: 2.31, neovius: 3.0,
   iwp: 3.2, frd: 3.4, lidinoid: 3.3, splitp: 3.2,
   octo: 3.2, karcher: 3.2, fks: 3.3, fky: 3.3, gprime: 3.2, // C2 扩展：同量级估值
+  dprime: 3.8, dp: 3.3, dd: 3.8, dg: 3.2, // C2 扩展第三批：同量级估值（D 系面积密度沿 Diamond 口径）
 };
 
 const KOZENY_C = 5;
@@ -75,7 +77,9 @@ export function forwardModel(type: TpmType, porosity: number, cellSize: number, 
   const rho = 1 - eps;
   const sv = (C_AREA[type] ?? 3.0) / Math.max(0.5, cellSize);
   const eGPa = (C1_MAP[type] ?? 0.3) * rho * rho * E0_GPA * anisotropy;
-  const kappaM2 = Math.pow(eps, 3) / (KOZENY_C * sv * sv * Math.pow(rho, 2)) * 1e-6;   // mm² → m²
+  // bulk Sv 口径（sv=每 Bulk 体积面积）：无 (1−ε)² 因子——该因子属每固相 S_s 约定
+  // （Sv = S_s·(1−ε)），混用会低估 κ 达 (1−ε)² 倍；门禁 22 E 节 FD 对拍守护
+  const kappaM2 = Math.pow(eps, 3) / (KOZENY_C * sv * sv) * 1e-6;   // mm² → m²
   return { EGPa: eGPa, kappaM2, porosity: eps, svRatio: sv };
 }
 

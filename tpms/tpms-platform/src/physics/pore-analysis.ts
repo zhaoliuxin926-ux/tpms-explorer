@@ -30,6 +30,11 @@ const PORE_FACTOR: Record<string, number> = {
   fky: 0.57,
   gprime: 0.57,
   fcks: 0.55, // 谐波 3× 估值
+  // C2 扩展第三批：同量级估值（custom 回退口径一致）
+  dprime: 0.54,
+  dp: 0.58,
+  dd: 0.53,
+  dg: 0.57,
   custom: 0.58,
 };
 

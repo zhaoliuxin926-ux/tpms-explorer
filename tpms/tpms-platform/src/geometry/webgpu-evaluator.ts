@@ -286,6 +286,61 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       ]);
       return sumChain(b, [mulChain(b, [wreg(0), t]), b.load(0.32)]);
     }
+    // ── C2 扩展第三批：D′ + Double 族（公式与 tpms-functions.ts 逐项对应）──
+    case 'dprime': {
+      const low = sumChain(b, [
+        mulChain(b, [cos(mx), cos(my), cos(mz)]),
+        mulChain(b, [cos(mx), sin(my), sin(mz)]),
+        mulChain(b, [sin(mx), cos(my), sin(mz)]),
+        mulChain(b, [sin(mx), sin(my), cos(mz)]),
+      ]);
+      const hi = sumChain(b, [
+        mulChain(b, [sin2(b, mx), sin2(b, my)]),
+        mulChain(b, [sin2(b, my), sin2(b, mz)]),
+        mulChain(b, [sin2(b, mz), sin2(b, mx)]),
+      ]);
+      const core = b.binary('sub', mulChain(b, [b.load(0.5), low]), mulChain(b, [b.load(0.5), hi]));
+      return sumChain(b, [mulChain(b, [wreg(0), core]), b.load(-0.2)]);
+    }
+    case 'dp': {
+      const pairSum = sumChain(b, [
+        mulChain(b, [cos(mx), cos(my)]),
+        mulChain(b, [cos(my), cos(mz)]),
+        mulChain(b, [cos(mz), cos(mx)]),
+      ]);
+      const c2Sum = sumChain(b, [cos2(b, mx), cos2(b, my), cos2(b, mz)]);
+      const core = sumChain(b, [
+        mulChain(b, [b.load(0.5), pairSum]),
+        mulChain(b, [b.load(0.2), c2Sum]),
+      ]);
+      return mulChain(b, [wreg(0), core]);
+    }
+    case 'dd': {
+      const pairSum = sumChain(b, [
+        mulChain(b, [sin(mx), sin(my)]),
+        mulChain(b, [sin(my), sin(mz)]),
+        mulChain(b, [sin(mz), sin(mx)]),
+      ]);
+      const core = sumChain(b, [
+        mulChain(b, [b.load(0.5), pairSum]),
+        mulChain(b, [b.load(0.5), cos(mx), cos(my), cos(mz)]),
+      ]);
+      return mulChain(b, [wreg(0), core]);
+    }
+    case 'dg': {
+      const g = sumChain(b, [
+        mulChain(b, [sin2(b, mx), sin(mz), cos(my)]),
+        mulChain(b, [sin2(b, my), sin(mx), cos(mz)]),
+        mulChain(b, [sin2(b, mz), sin(my), cos(mx)]),
+      ]);
+      const c2Pair = sumChain(b, [
+        mulChain(b, [cos2(b, mx), cos2(b, my)]),
+        mulChain(b, [cos2(b, my), cos2(b, mz)]),
+        mulChain(b, [cos2(b, mz), cos2(b, mx)]),
+      ]);
+      const core = b.binary('sub', mulChain(b, [b.load(2.75), g]), mulChain(b, [b.load(1.0), c2Pair]));
+      return sumChain(b, [mulChain(b, [wreg(0), core]), b.load(-0.95)]);
+    }
   }
 }
 

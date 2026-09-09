@@ -230,6 +230,10 @@ for (const r of results) {
   //    由 k≤5/R≤96 正式延伸至 k≤5/R128：12 代表族案例实测全部在外推容差内
   //    （最紧 frd 定向错 4230/阈 7562、体积最差 iwp −4.53%/阈 12%）——
   //    标定数据 .verify/r128_tolerance_table.json，复跑 node r128_tolerance_probe.mjs
+  //  · 【2026-09-10 k=6 标定】k=6（CLI 默认周期数）11 案例实测 4 超阈
+  //    （lidinoid k6 R96 nm=10368、lidinoid k6 R128 体积 −8.83%、diamond R96 体积 −6.22%、
+  //    gyroid R48 历史锚点复现 −9.03%+miso 超阈）——
+  //    k=6 维持非标定域：官方矩阵口径 k≤5，CLI 文档建议降周期数。数据 k6_tolerance_table.json
   const edgeTotal = r.triCount * 3;
   const isHybrid = !!r.hybrid?.enabled;
   // preview(R≤32) 是屏幕预览，导出走 HD 锁（R≥~50），粗格离散偏差放宽到 8%

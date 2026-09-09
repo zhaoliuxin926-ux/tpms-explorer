@@ -108,10 +108,22 @@ console.log('\n[E] 毒化回归');
   check('E6 I-WP 连字符识别', e6.patches.type === 'iwp', String(e6.patches.type));
   const e7 = parseNL('constructor eval process');
   check('E7 原型链载荷 unknown', e7.kind === 'unknown');
+  // E8 C2 第三批全名路由（2026-09-10 红队 MAJOR 回归钉）：新类型全名必须先于
+  // diamond/gyroid 子串模式匹配——"Double Diamond" 曾被静默误路由到 diamond
+  const w1 = parseNL('用 Double Diamond 做一个支架');
+  check('E8a 全名 Double Diamond → dd（不被 diamond 子串劫持）', w1.patches.type === 'dd', String(w1.patches.type));
+  const w2 = parseNL('Double Primitive 支架');
+  check('E8b 全名 Double Primitive → dp', w2.patches.type === 'dp', String(w2.patches.type));
+  const w3 = parseNL('Double Gyroid 骨支架');
+  check('E8c 全名 Double Gyroid → dg（不被 gyroid 子串劫持）', w3.patches.type === 'dg', String(w3.patches.type));
+  const w4 = parseNL('d prime 曲面');
+  check('E8d 分写 d prime → dprime', w4.patches.type === 'dprime', String(w4.patches.type));
+  const w5 = parseNL('用 diamond 重建');
+  check('E9 裸 diamond 不被新词表劫持', w5.patches.type === 'diamond', String(w5.patches.type));
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
-  if (passCount < 32) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 32（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 37) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 37（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

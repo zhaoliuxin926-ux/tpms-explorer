@@ -11,8 +11,8 @@
  *    双管加倍；空域抛错
  * E. 管径线性标度 + 孔隙率单调性：管截面 4× → κ 4×（比值偏差 ≤5%）；
  *    通道加宽 κ 严格增大。
- *    【2026-09-10 头注对齐】原宣称的「Kozeny-Carman 物理区间 [0.3,3] 对拍」
- *    在本文件中不存在（K-C 经验式对拍未实现）——如实登记，不做临场造断言。
+ * F. Kozeny-Carman 对拍（2026-09-10 补齐）：gyroid 三孔隙率 FD-Darcy vs 平台
+ *    estimatePermeability（bulk Sv 口径，同轮量纲修正）比值 ∈ [0.3, 3]
  *
  * 运行：node native_cae_solver_audit.mjs
  */
@@ -32,13 +32,14 @@ const BUNDLE = join(tmpdir(), 'tpms_ncs_audit_bundle.mjs');
   writeFileSync(entry, [
     `export { solveMicroFEA } from ${JSON.stringify(join(PLATFORM, 'src/physics/micro-fea-solver.ts'))};`,
     `export { solveDarcyPermeability } from ${JSON.stringify(join(PLATFORM, 'src/physics/lbm-permeability.ts'))};`,
+    `export { estimatePermeability } from ${JSON.stringify(join(PLATFORM, 'src/physics/permeability.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { solveMicroFEA, solveDarcyPermeability } = await import(pathToFileURL(BUNDLE));
+const { solveMicroFEA, solveDarcyPermeability, estimatePermeability } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -164,10 +165,39 @@ console.log('\n[D] FD-Darcy 单管解析锚点');
   check(`通道加宽 κ 增大（${kA.toFixed(4)} → ${kB.toFixed(4)}）`, kB > kA);
 }
 
+// ── F. Kozeny-Carman 对拍（FD-Darcy vs 平台 K-C 经验式，bulk Sv 口径）──
+//【2026-09-10 补齐】原头注宣称的 K-C 区间对拍此前不存在；同轮修复 estimatePermeability
+// 的量纲混用（(1−ε)² 因子属每固相 S_s 约定，误用于 bulk Sv 入参 → 低估 κ 达 (1−ε)² 倍）。
+// 实测（本文件 F 节配置）：φ=0.44/0.50/0.54 → 比 1.385/1.284/1.218，钉入 [0.3,3]（双侧 ≥2× 余量）
+console.log('\n[F] FD-Darcy vs Kozeny-Carman 物理区间');
+{
+  const R = 16;
+  for (const iso of [-0.15, 0, 0.2]) {
+    const solid = voxelGyroid(R, iso);
+    let solidCnt = 0;
+    for (let i = 0; i < R ** 3; i++) solidCnt += solid[i];
+    const phi = 1 - solidCnt / R ** 3;
+    // 界面面积：固-空相邻面计数 / bulk 体积（a=1 → Sv 单位 1/a）
+    const idx = (x, y, z) => x + y * R + z * R * R;
+    let faces = 0;
+    for (let z = 0; z < R; z++) for (let y = 0; y < R; y++) for (let x = 0; x < R; x++) {
+      const s = solid[idx(x, y, z)];
+      if (x + 1 < R && solid[idx(x + 1, y, z)] !== s) faces++;
+      if (y + 1 < R && solid[idx(x, y + 1, z)] !== s) faces++;
+      if (z + 1 < R && solid[idx(x, y, z + 1)] !== s) faces++;
+    }
+    const sv = faces / R ** 3;
+    const kFD = solveDarcyPermeability({ R, solid, tol: 1e-9, maxIter: 30000 }).kappaLU;
+    const kKC = estimatePermeability(phi * 100, sv);
+    const ratio = kFD / kKC;
+    check(`φ=${phi.toFixed(2)} FD/K-C 比 ${ratio.toFixed(3)} ∈ [0.3, 3]`, ratio >= 0.3 && ratio <= 3, `kFD=${kFD.toExponential(3)} kKC=${kKC.toExponential(3)} Sv=${sv.toFixed(3)}`);
+  }
+}
+
 
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 17) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 17（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 20) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 20（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
