@@ -231,12 +231,11 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const cSum = sumChain(b, [cos(mx), cos(my), cos(mz)]);
       const pSum = sumChain(b, [mulChain(b, [cos(mx), cos(my)]), mulChain(b, [cos(my), cos(mz)]), mulChain(b, [cos(mz), cos(mx)])]);
       const c2Sum = sumChain(b, [cos2(b, mx), cos2(b, my), cos2(b, mz)]);
-      return sumChain(b, [
-        mulChain(b, [wreg(0), b.load(0.3)]), cSum,
-        mulChain(b, [wreg(1), b.load(0.3)]), pSum,
-        mulChain(b, [wreg(2), b.load(-0.4)]), c2Sum,
-        b.load(0.2),
-      ]);
+      // 系数必须与括号和连乘（此前误写为 sumChain 加项——单位权重下恰巧凑对、非单位权重即暴露）
+      const t1 = mulChain(b, [wreg(0), b.load(0.3), cSum]);
+      const t2 = mulChain(b, [wreg(1), b.load(0.3), pSum]);
+      const t3 = mulChain(b, [wreg(2), b.load(-0.4), c2Sum]);
+      return sumChain(b, [t1, t2, t3, b.load(0.2)]);
     }
     case 'fks': {
       const t1 = mulChain(b, [wreg(0), cos2(b, mx), sin(my), cos(mz)]);
@@ -253,23 +252,31 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       return sumChain(b, [mulChain(b, [wreg(0), low]), mulChain(b, [wreg(1), hi])]);
     }
     case 'fcks': {
-      // 谐波 3×：IR 无 sin3/cos3 原语 → 用乘法链组合（与 CPU 逐项对应，万点对拍守门）
-      const sin3 = (r: number) => b.binary('mul', b.binary('mul', sin(r), sin(r)), sin(r));
-      const cos3 = (r: number) => b.binary('mul', b.binary('mul', cos(r), cos(r)), cos(r));
+      // 谐波 3×：恒等式 sin3θ=sinθ(3−4sin²θ)、cos3θ=cosθ(4cos²θ−3)（与 CPU 恒等式重写逐项对应）
+      // 【bug 修复】此前误用 sin³/cos³ 乘法链（sin(3θ)≠sin³θ）——万点对拍清单未含 C2 曲面致漏检，
+      // 清单扩容后本分支被对拍覆盖。
+      const s3 = (r: number) => {
+        const sx2 = mulChain(b, [sin(r), sin(r)]);
+        return b.binary('mul', sin(r), b.binary('sub', b.load(3), b.binary('mul', b.load(4), sx2)));
+      };
+      const c3 = (r: number) => {
+        const cx2 = mulChain(b, [cos(r), cos(r)]);
+        return b.binary('mul', cos(r), b.binary('sub', b.binary('mul', b.load(4), cx2), b.load(3)));
+      };
       const c2 = (r: number) => cos2(b, r);
       const s2 = (r: number) => sin2(b, r);
       const base = sumChain(b, [c2(mx), c2(my), c2(mz)]);
       const g1 = sumChain(b, [
-        mulChain(b, [sin3(mx), s2(my), cos(mz)]),
-        mulChain(b, [cos(mx), sin3(my), s2(mz)]),
-        mulChain(b, [s2(mx), cos(my), sin3(mz)]),
+        mulChain(b, [s3(mx), s2(my), cos(mz)]),
+        mulChain(b, [cos(mx), s3(my), s2(mz)]),
+        mulChain(b, [s2(mx), cos(my), s3(mz)]),
       ]);
       const g2 = sumChain(b, [
-        mulChain(b, [s2(mx), cos3(my), sin(mz)]),
-        mulChain(b, [sin(mx), s2(my), cos3(mz)]),
-        mulChain(b, [cos3(mx), sin(my), s2(mz)]),
+        mulChain(b, [s2(mx), c3(my), sin(mz)]),
+        mulChain(b, [sin(mx), s2(my), c3(mz)]),
+        mulChain(b, [c3(mx), sin(my), s2(mz)]),
       ]);
-      return sumChain(b, [base, mulChain(b, [wreg(0), b.load(2), g1]), mulChain(b, [wreg(0), b.load(2), g2])]);
+      return sumChain(b, [mulChain(b, [wreg(0), base]), mulChain(b, [wreg(0), b.load(2), g1]), mulChain(b, [wreg(0), b.load(2), g2])]);
     }
     case 'gprime': {
       const t = sumChain(b, [

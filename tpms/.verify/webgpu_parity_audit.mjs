@@ -82,7 +82,8 @@ function mulberry32(seed) {
   };
 }
 
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp'];
+// C2 两批扩容曲面全量纳入万点对拍（此前清单停留 8 族致 GPU IR 未被守门——fcks IR sin³ bug 即由此漏检，2026-09-09 修复）
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks'];
 const HALF = Math.PI;
 const N_POINTS = 10000;
 
