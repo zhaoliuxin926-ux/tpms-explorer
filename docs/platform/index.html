@@ -710,7 +710,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-DuoI7ebw.js"></script>
+  <script type="module" crossorigin src="./assets/index-XwbGuzUd.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -850,6 +850,26 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-type="fky" data-color="fky">FK-Y<span class="o-sub">Fischer-Koch Y</span></button>
           <button class="opt" data-type="gprime" data-color="gprime">G′<span class="o-sub">G-prime</span></button>
           <button class="opt" data-type="fcks" data-color="fcks">FK-C(S)<span class="o-sub">谐波3×</span></button>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">渐变支架（C1）</summary>
+        <div class="field">
+          <div class="lbl"><span>渐变等值场</span><span class="val" id="iso-grad-value">关闭</span></div>
+          <button class="opt" id="iso-grad-toggle" style="width:100%">开启 z 向三平台渐变</button>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>底部偏移（偏实）</span><span class="val" id="ig-hard-value">-0.12</span></div>
+          <input type="range" id="ig-hard" min="-40" max="0" value="-12" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>顶部偏移（偏疏）</span><span class="val" id="ig-soft-value">+0.12</span></div>
+          <input type="range" id="ig-soft" min="0" max="40" value="12" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>过渡带宽</span><span class="val" id="ig-band-value">0.4</span></div>
+          <input type="range" id="ig-band" min="0" max="200" value="40" step="5">
         </div>
       </details>
 

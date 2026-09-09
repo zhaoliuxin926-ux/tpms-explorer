@@ -151,6 +151,16 @@ export function parseURLParams(search: string): Partial<AppState> {
     };
   }
 
+  // C1 渐变等值场（恶意 URL 数值全过 clamp 钳制）
+  if (q.get('ig') === '1') {
+    state.isoGrad = {
+      enabled: true,
+      hard: clamp(q.get('igH'), -1.5, 0, -0.12),
+      soft: clamp(q.get('igS'), 0, 1.5, 0.12),
+      band: clamp(q.get('igB'), 0, 2, 0.4),
+    };
+  }
+
   // 自定义公式（URLSearchParams 已自动编解码，无需再包一层）
   if (q.has('formula')) {
     state.customFormula = q.get('formula') ?? '';

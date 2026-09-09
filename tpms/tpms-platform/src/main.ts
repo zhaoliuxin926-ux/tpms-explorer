@@ -14,6 +14,7 @@ import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './ty
 import type { ColoringMode, SliceAxis } from './types';
 import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH } from './physics/gibson-ashby';
 import { analyzeTortuosity3D } from './physics/tortuosity';
+import { makeZGrad } from './core/iso-grad';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './geometry/webgpu-evaluator';
@@ -128,7 +129,7 @@ const MAX_GEO_CACHE = 12;
 
 function cacheKey(s: Readonly<AppState>, R: number): string {
   const m = s.manifold;
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.isoGrad.enabled ? `IG${s.isoGrad.hard}/${s.isoGrad.soft}b${s.isoGrad.band}` : ''}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
 }
 
 // ── 多级分形统计（v3.0 阶段 V）：双重比表面积 + 微孔连通率 ──
@@ -841,7 +842,7 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
   const out = document.getElementById('phonon-result');
   const canvas = document.getElementById('phonon-canvas') as HTMLCanvasElement | null;
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled || s.isoGrad.enabled;
   if (unsupported) {
     if (out) { out.style.display = 'block'; out.textContent = '声子能带暂不支持 custom/lidinoid/splitp/C2扩展5族/混合场（固相判定语义源限制）'; }
     return;
@@ -953,7 +954,7 @@ function tissueShowStat(): void {
 document.getElementById('btn-tissue')?.addEventListener('click', () => {
   const out = document.getElementById('tissue-result');
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled || s.isoGrad.enabled;
   if (unsupported) {
     if (out) { out.style.display = 'block'; out.textContent = '组织长入暂不支持 custom/lidinoid/splitp/C2扩展5族/混合场（固相判定语义源限制）'; }
     return;
@@ -1054,7 +1055,7 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
     lsAccumSteps = 0;
     if (btnApply) btnApply.style.display = 'none';
   }
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled || s.structureMode !== 'solid_network';
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.hybrid.enabled || s.isoGrad.enabled || s.structureMode !== 'solid_network';
   if (unsupported && !lsPhi) {
     if (out) { out.style.display = 'block'; out.textContent = '水平集演化需 solid_network + 内置曲面类型（custom/lidinoid/splitp/混合/壳模式不支持的语义源限制）'; }
     return;
@@ -1253,7 +1254,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     iso,
     periods: s.cellSize,
     resolution: R,
-    targetPorosity: s.porosity / 100,
+    targetPorosity: s.isoGrad.enabled ? (undefined as unknown as number) : s.porosity / 100,
     weights: s.weights,
     structureMode: s.structureMode,
     containerShape: s.containerShape,
@@ -1267,6 +1268,11 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     stress: s.stress,
     hierarchical: s.hierarchical,
     neural: s.neural,
+    // C1 渐变等值场：开启时 targetPorosity 二分必须停用（surface-nets 互斥守卫），
+    // iso 采用 baseIso 基准 + z 向三平台偏移（底 hard / 基准 0 / 顶 soft）。
+    isoGrad: s.isoGrad.enabled
+      ? makeZGrad(s.isoGrad.hard, s.isoGrad.soft, s.isoGrad.band)
+      : undefined,
   };
 
   const completion = dispatchFullBuild(params, buildRequestKey(s, R), waitForResult);
@@ -2012,6 +2018,7 @@ export function bindUIEvents(): void {
   bindViewerExtras();
   bindInverseCtHierStress();
   bindNeuralManifold();
+  bindIsoGrad();
   bindHybridCustom();
   bindKeyboardUndo();
 }
@@ -2627,6 +2634,33 @@ function bindNeuralManifold(): void { // 神经场锚点与流形映射
   });
 }
 
+function bindIsoGrad(): void { // C1 渐变等值场（三平台 + 过渡带）
+  const toggle = document.getElementById('iso-grad-toggle') as HTMLButtonElement;
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      const turningOn = !getState().isoGrad.enabled;
+      setState({ isoGrad: { ...getState().isoGrad, enabled: turningOn } });
+      syncUI(getState());
+      scheduleRebuild(false);
+    });
+  }
+  const bindSlider = (id: string, valId: string, key: 'hard' | 'soft' | 'band', fmt: (v: number) => string) => {
+    const el = document.getElementById(id) as HTMLInputElement;
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const v = +el.value / (key === 'band' ? 100 : 100);
+      setState({ isoGrad: { ...getState().isoGrad, [key]: key === 'band' ? v : (id === 'ig-hard' ? -Math.abs(v) : Math.abs(v)) } });
+      const lab = document.getElementById(valId);
+      if (lab) lab.textContent = fmt(key === 'band' ? v : (id === 'ig-hard' ? -Math.abs(v) : Math.abs(v)));
+      scheduleRebuild(true);
+    });
+    el.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
+  };
+  bindSlider('ig-hard', 'ig-hard-value', 'hard', (v) => v.toFixed(2));
+  bindSlider('ig-soft', 'ig-soft-value', 'soft', (v) => '+' + v.toFixed(2));
+  bindSlider('ig-band', 'ig-band-value', 'band', (v) => v.toFixed(2));
+}
+
 function bindHybridCustom(): void { // 多相混合与自定义公式
 
   // 过渡中心 / 宽度滑块（拖动 preview，松手 HD）
@@ -3089,6 +3123,24 @@ function syncUI(s: AppState): void {
   document.querySelectorAll('[data-blend]').forEach(el => {
     el.classList.toggle('active', (s as any).hybrid.blendFunction === el.getAttribute('data-blend'));
   });
+
+  // C1 渐变等值场控件态同步（URL 恢复/undo 后经 syncUI）
+  const igToggle = document.getElementById('iso-grad-toggle') as HTMLButtonElement | null;
+  if (igToggle) igToggle.textContent = s.isoGrad.enabled ? '关闭 z 向三平台渐变' : '开启 z 向三平台渐变';
+  const igHard = document.getElementById('ig-hard') as HTMLInputElement | null;
+  const igSoft = document.getElementById('ig-soft') as HTMLInputElement | null;
+  const igBand = document.getElementById('ig-band') as HTMLInputElement | null;
+  if (igHard) igHard.value = String(Math.round(Math.abs(s.isoGrad.hard) * 100));
+  if (igSoft) igSoft.value = String(Math.round(s.isoGrad.soft * 100));
+  if (igBand) igBand.value = String(Math.round(s.isoGrad.band * 100));
+  const igHv = document.getElementById('ig-hard-value');
+  if (igHv) igHv.textContent = s.isoGrad.hard.toFixed(2);
+  const igSv = document.getElementById('ig-soft-value');
+  if (igSv) igSv.textContent = '+' + s.isoGrad.soft.toFixed(2);
+  const igBv = document.getElementById('ig-band-value');
+  if (igBv) igBv.textContent = s.isoGrad.band.toFixed(2);
+  const igVal = document.getElementById('iso-grad-value');
+  if (igVal) igVal.textContent = s.isoGrad.enabled ? '渐变中' : '关闭';
 
   // 混合轴向按钮态 + 中心/宽度滑块值同步（URL 恢复/undo 后经 syncUI）
   document.querySelectorAll('[data-hybrid-axis]').forEach(el => {
