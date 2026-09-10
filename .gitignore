@@ -68,6 +68,10 @@ tpms/agent/tpms-diamond-verified.stl
 tpms/agent/*-verified.stl
 # agent 探针/求解产物 STL
 tpms/agent/*.stl
+# 【2026-09-10 补防】门禁/探针散落 STL（98MB 误提交事故：.verify/ 与 tpms/ 根不在旧模式内）
+tpms/.verify/*.stl
+tpms/*.stl
+/*.stl
 
 # Agent iso* 确定性缓存（本机派生数据，可随时重算）
 tpms/agent/.iso-cache.json
