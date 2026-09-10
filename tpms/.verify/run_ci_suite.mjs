@@ -1,6 +1,6 @@
 // run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6 → 2026-09-06 并行化）
 //
-// 调度：39 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
+// 调度：41 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
 //       结果按原序汇报。并发度 CI_JOBS 可调（默认 4；18 核机器实测安全）。
 // 用法：
 //   cd tpms/tpms-platform && npm run test:all
@@ -134,6 +134,10 @@ const SCHEDULE = [
   ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['run_all UI 回归（6 套件）', 'UI 回归', 'run_all.mjs'],
+  // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
+  // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
+  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],
+  ['schema_check 契约与可用域（64 断言）', 'Schema 契约', '../agent/schema_check.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));

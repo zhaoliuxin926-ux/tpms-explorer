@@ -519,8 +519,11 @@ function cmdMesh(a, json) {
       res = core.buildSurface(params, core.globalBufferPool); // legacy：平台体素分位二分
     }
   } catch (e) {
-    // 平台几何失败全部走 throw（容量/非有限场/退化场），统一转 CLI 语义
-    die('网格构建失败: ' + (e?.message ?? String(e)));
+    // 平台几何失败全部走 throw（容量/非有限场/退化场），统一转 CLI 语义。
+    // 【2026-09-10 B-1 修复】构建失败属「3=构建/水密门失败」而非 die 的参数语义 2
+    //（与 solve 的 build_throw→exit 3 对齐，见下方退出码约定注释）
+    console.error('✗ 网格构建失败: ' + (e?.message ?? String(e)));
+    process.exit(3);
   }
 
   const audit = auditMeshIndices(res.positions, res.indices);
