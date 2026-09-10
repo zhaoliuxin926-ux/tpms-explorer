@@ -585,6 +585,11 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         }
 
         const i3 = vertCount * 3;
+        // 【2026-09-10 容量守卫】与 pushTri 同不变量：顶点池 OOB 写是静默截断，
+        // vertCount 与返回 buffer 脱钩会让下游 audit/STL 全部错位（红队 A-1 实锤）
+        if (i3 + 2 >= positions.length) {
+          throw new Error(`顶点池溢出：需要第 ${vertCount + 1} 个顶点 > 容量 ${positions.length / 3 | 0}（该曲面族在当前分辨率下顶点过多）`);
+        }
         positions[i3] = vx;
         positions[i3 + 1] = vy;
         positions[i3 + 2] = vz;
@@ -610,6 +615,13 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const indices = pool.indices;
 
   const pushTri = (a: number, b: number, c: number) => {
+    // 【2026-09-10 容量守卫】TypedArray OOB 写是静默截断：截断后 indexCount 继续膨胀，
+    // 边键构建阶段 OOB 读出 undefined → NaN 键 → 分组循环 NaN!==NaN 死循环
+    // （fcks R120 曾据此挂死 4.5h 被误判为重计算）。溢出必须显式抛错（fail-closed，
+    // 与池的「超容量必须抛错」红队不变量一致）。
+    if (indexCount + 3 > indices.length) {
+      throw new Error(`索引池溢出：需要 ${(indexCount + 3).toLocaleString()} > 容量 ${indices.length.toLocaleString()}（该曲面族在当前分辨率下三角面过多，请提高 periods 域下的分辨率预算或降低分辨率）`);
+    }
     indices[indexCount++] = a;
     indices[indexCount++] = b;
     indices[indexCount++] = c;
@@ -783,13 +795,18 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       for (const r of ring) { gx += positions[r * 3]; gy += positions[r * 3 + 1]; gz += positions[r * 3 + 2]; }
       const m = ring.length;
       gx /= m; gy /= m; gz /= m;
-      if (indexCount + m * 3 > indices.length) continue;   // 容量护栏
-      const cIdx = vertCount++;
-      if (cIdx * 3 + 2 < positions.length) {
-        positions[cIdx * 3] = gx; positions[cIdx * 3 + 1] = gy; positions[cIdx * 3 + 2] = gz;
-        frozen[cIdx] = 1;
-        frozenCap[cIdx] = 1;
+      // 【2026-09-10 A-2/A-3 守卫统一】旧逻辑：索引溢出静默跳环（留开放边）、
+      // 顶点溢出半吊子跳写但仍发射扇面（引用陈旧坐标）——均改为分配前显式抛错
+      if (indexCount + m * 3 > indices.length) {
+        throw new Error(`索引池溢出（封盖扇面需 ${m * 3}）：${(indexCount + m * 3).toLocaleString()} > 容量 ${indices.length.toLocaleString()}`);
       }
+      if ((vertCount + 1) * 3 > positions.length) {
+        throw new Error(`顶点池溢出（封盖质心）：第 ${vertCount + 1} 个顶点 > 容量 ${positions.length / 3 | 0}`);
+      }
+      const cIdx = vertCount++;
+      positions[cIdx * 3] = gx; positions[cIdx * 3 + 1] = gy; positions[cIdx * 3 + 2] = gz;
+      frozen[cIdx] = 1;
+      frozenCap[cIdx] = 1;
       for (let i = 0; i < m; i++) {
         pushTri(cIdx, ring[(i + 1) % m], ring[i]);
       }

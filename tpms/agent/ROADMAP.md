@@ -92,7 +92,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 - [x] C1 第一批（2026-09-08，渐变等值场 isoGrad）：solid_network + z 向分段线性 iso 场（n 平台 + 过渡带，`--iso-grad "v0,v1,...@band"`）——**三区梯度支架验收达标：gyroid R96 三区（±0.12@0.4）水密 nm=0 且解析/实测偏差 0.09pp（≤2pp 线）；R48 dev 0.34pp**；R64 过渡带薄壁自触 nm=56 fail-closed（敏感，与 frd 族同性质）。实现：surface-nets biasAt 逐点偏置（四调用点+投影判据）、exact 求解链透传（缓存 key 掺渐变形状指纹）、scenario design JSON isoGrad 字段（INP 体素模型暂不支持渐变→诚实跳过+报告声明）。语义决策：连续渐变（水密天然保持）优先于 RegionTPMS 式硬拼接（异族界面非水密风险，留第二批）
 - [x] C1 第二批（2026-09-09，异族拼接 CLI 化）：跨族水密缝合定案=**复用 Hybrid 凸组合平滑过渡**（F=w·F_A+(1−w)·F_B，linear 权重即两区平台+过渡带，场连续⇒零面闭合），零新机制、纯 CLI 暴露：mesh/solve --hybrid "typeB[:blend[:center[:width[:axis]]]]"（parseHybrid 守卫 + 与 isoGrad/legacy 互斥声明）。验收：GyroidIWP R96 linear 两区拼接 nm=0 水密（dev 0.35pp）；R64 过渡带薄壁自触 fail-closed（同族定性）。异族硬拼接（无过渡）语义已否决——非水密缝合不可行
 - [x] C2 第一批（2026-09-08，8→13）：新增 **octo（O,C-TO，Schoen 立方四大族补缺）/ karcher（K）/ fks（Fischer-Koch S）/ fky（Fischer-Koch Y）/ gprime（G′）**——level-set 公式独立抄自 MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方源码 mengtinh/MiniSurf；全部低谐波（≤2 倍频）健壮族。四方同源同步：权威库/渲染实时求值守卫（防 diamond 梯度静默回退，历史 bug 同款形态）/GPU IR（parity 万点对拍守门）/script-exporter Python+MATLAB A/B 双语；解析锚点断言 8 条（原点精确值+对称性，parity_math 184→223+守卫 223）；schema枚举/CLI/UI 按钮/词表/常数表全链 13 文件。实测：R96 全部水密且孔隙率 ≤0.6pp；fks/fky R48 薄壁自触拒产（nm 9504/4752）已照 frd 同族钉住（schema_check 42→49+守卫 49）
-- [x] C2 第二批（2026-09-09，场离散补偿=R128 档位扩容）：BufferPool 场缓冲 1M→2.5M 采样点（+24MB）、RES_CAP_HD 96→128 全链（units 单一来源/CLI 三处/schema maximum/surface-nets 容量闸/mesh_audit 超池红队案例 R110→R140 同步上移）。**Fisher-Koch C(S) 落地**（谐波 3×，四方同源 13 文件+IR sin3/cos3 乘法链+解析锚点 3 条：原点 3/偶对称/循环置换）；parity_math 223→232+守卫、schema_check 49→53+守卫、selftest list 14。实测：fcks R96 nm=10368 拒产（表示极限实锤）、**R128 单次构建探针实测 >36 分钟纯 CPU 仍未完成**（谐波 3× × O(R³) 场+投影差分的本质成本，非微优化量级）——fcks 定案为**预注册曲面**（公式/锚点/IR/schema 描述就绪、R48/R96/R128 均无实用可产分辨率，求解器级性能路径<并行/查表/legacy R128>后开放）；R128 档位的现实受益者=低谐波族高保真交付（gyroid/iwp R128 水密已验证）
+- [x] C2 第二批（2026-09-09，场离散补偿=R128 档位扩容）：BufferPool 场缓冲 1M→2.5M 采样点（+24MB）、RES_CAP_HD 96→128 全链（units 单一来源/CLI 三处/schema maximum/surface-nets 容量闸/mesh_audit 超池红队案例 R110→R140 同步上移）。**Fisher-Koch C(S) 落地**（谐波 3×，四方同源 13 文件+IR sin3/cos3 乘法链+解析锚点 3 条：原点 3/偶对称/循环置换）；parity_math 223→232+守卫、schema_check 49→53+守卫、selftest list 14。实测：fcks R96 nm=10368 拒产（表示极限实锤）、**R128 单次构建探针实测 >36 分钟纯 CPU 仍未完成**（谐波 3× × O(R³) 场+投影差分的本质成本，非微优化量级）——fcks 定案为**预注册曲面**（公式/锚点/IR/schema 描述就绪、R48/R96/R128 均无实用可产分辨率，求解器级性能路径<并行/查表/legacy R128>后开放）；R128 档位的现实受益者=低谐波族高保真交付（gyroid/iwp R128 水密已验证） **【2026-09-10 翻转：本节 fcks 裁决已被证伪——「>36 分钟」实为索引池溢出 NaN 死循环，修复后 R120 水密可产，见下方 fcks 死循环根因轮】**
 - [ ] C2 剩余差集：C(D)（谐波 3×，待 R128 性能路径后与 C(S) 同批价值化）、D′、Double 系列（官方源码语法 bug 须文献校正）、Slotted P、F、Q*、W——R128 实用性依赖求解性能优化
 - [ ] C3 与实验数据闭环：micro-CT/力学实验数据接入 ct_reconstruction 与 impact 模块做对比基准——验证：对比报告一键产出
 - [ ] C4 社区机制：Discussions、案例 showcase、 CONTRIBUTING——验证：外部 issue 可_triage_
@@ -206,6 +206,12 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 收官证据：**run 45 三平台全 success**（ubuntu/windows/macos）https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34025777466 。本机每步均有对应套件复验（run_all 6/6、verify 22/22、fix_check 23/23、webgpu_parity 43/43、ui_jump 7/7）。
 
 教训沉淀：①本机全绿 + CI 全红可共存数日——内核/门禁改动后必须在真 CI 上复验；②node 门禁链路里每一个 python/平台假设（路径分隔符、命令存在性、解释器版本、行尾）都是潜在 CI 假红；③条件等待必须按测试语义选目标（onboarding 等卡、渲染等 stats），固定 sleep 在 2 核慢机上是抛硬币；④逐字比较文件前先归一化行尾；⑤失败输出别过滤太狠（崩溃栈不在 FAIL 行里）。
+
+## fcks 死循环根因轮（2026-09-10 深夜，P3 悬崖取证）
+- **根因铁证（相位桩+子相位桩+进度桩三级定位）**：fcks R119+ 构建挂死非「谐波 3× × O(R³) 本质成本」，而是 **BufferPool MAX_INDICES=6M 溢出**——R128 扩容轮只扩场缓冲漏了索引/顶点池。fcks R120 需 6.174M 索引：pushTri OOB 写静默截断（TypedArray 无越界错）→ 8c 边键构建 OOB 读 undefined→NaN → 分组 while NaN!==NaN 永假 → i 冻结在 6,000,000 整数死循环（~2500 万转/秒纯烧 CPU）。
+- **修复**：MAX_INDICES 6M→9M（覆盖 3M 三角）+ pushTri 显式容量守卫（溢出抛结构化错误，fail-closed 与池不变量一致）。
+- **裁决翻转**：fcks R120 p0.6 实测 **水密可产 nm=0，偏差 0.35pp，端到端 21.6s**——「预注册曲面/无实用可产分辨率/求解器级性能路径挂起」三项裁决全部作废；新可用域=R48/R96(nm 10368)/R128(nm 4896) 拒产夹 R120 中段孔隙率可产带（红队复测 p0.5/0.6/0.7 均 nm=0）。schema_check +R120 修正钉；tools.schema/BENCHMARKS 同步。
+- **教训**：①「CPU 时间增长=在计算」判别法对无限循环失效（死循环也烧 CPU）——挂死鉴别须加相位桩；②TypedArray OOB 写零告警是静默截断源，容量类守卫必须覆盖全部池数组而非只 field。
 
 ## 登记缺陷清欠轮（2026-09-10）
 - **R128 容差标定收官**：官方容差矩阵标定域 k≤5/R≤96 → **正式延伸至 k≤5/R128**。新探针

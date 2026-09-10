@@ -84,8 +84,13 @@ for (const ty of TYPES) {
   if (ty === 'fcks') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     r48.status === 3 && (r48.stderr || '').includes('水密门')
-      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（谐波 3× 表示极限，R128 档位待性能路径）`)
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（谐波 3× 薄壁自触）`)
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
+    // 【2026-09-10 修正钉】索引池 6M→9M + pushTri 守卫修复后：R120 可产（nm=0，dev 0.35pp，
+    // ~22s）——推翻「预注册曲面无实用可产分辨率」旧裁决（其依据 R128 ">36 分钟"实为
+    // 索引池溢出 NaN 死循环）；R96/R128 仍拒产（nm 10368/4896），可产域=R120 中段孔隙率（红队实测 p0.5/0.6/0.7）
+    const r120 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '120', '--out', join(tmpOut()), '--json');
+    r120.status === 0 ? ok(`type enum 值 ${ty} R120 可构建（修正钉：p0.6 可产锚点）`) : bad(`type enum ${ty} R120`, (r120.stderr || '').slice(-60));
     continue;
   }
   if (ty === 'fks' || ty === 'fky') {
@@ -251,5 +256,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 62) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 62`); process.exit(1); }
+if (pass < 64) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 64`); process.exit(1); }
 process.exit(fail ? 1 : 0);

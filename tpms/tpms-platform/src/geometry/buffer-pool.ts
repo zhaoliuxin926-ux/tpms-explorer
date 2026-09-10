@@ -6,7 +6,12 @@
 
 /** 缓冲池配置 */
 const MAX_VERTICES = 1_500_000;   // R=88 时约 ~120 万顶点，留 25% 余量
-const MAX_INDICES = 6_000_000;    // 每个顶点约 4-5 个三角面索引
+// 【2026-09-10 扩容 6M→9M】R128 档位扩容轮（C2 第二批）只扩了场缓冲，漏了索引池：
+// fcks（表面积最大族）R119+ 需 6.17M 索引 > 6M，pushTri OOB 写静默截断后
+// 边键数组 OOB 读 undefined → NaN 键 → NaN!==NaN 分组死循环
+// （曾误登记为「fcks R128 单次构建 >36 分钟本质成本」，实为无限循环）。
+// 9M 覆盖 3M 三角（fcks R128 实测 ~2.4M 三角），并在 pushTri 侧加显式容量守卫兜底。
+const MAX_INDICES = 9_000_000;
 const MAX_FIELDS = 2_500_000;     // N³ 场值 (89³ ≈ 704K)
 
 export class BufferPool {

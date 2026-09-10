@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-09-09T18:17:32.811Z",
+ "generatedAt": "2026-09-09T23:57:49.630Z",
  "porosity": 0.6,
  "rows": [
   {
@@ -11,7 +11,7 @@
    "devPP": 0.59,
    "tris": 133920,
    "stlBytes": 6696084,
-   "wallMs": 2518,
+   "wallMs": 2577,
    "rejected": false,
    "err": ""
   },
@@ -24,7 +24,7 @@
    "devPP": 0.09,
    "tris": 536904,
    "stlBytes": 26845284,
-   "wallMs": 7429,
+   "wallMs": 9401,
    "rejected": false,
    "err": ""
   },
@@ -37,7 +37,7 @@
    "devPP": 0.09,
    "tris": 139896,
    "stlBytes": 6994884,
-   "wallMs": 2797,
+   "wallMs": 3593,
    "rejected": false,
    "err": ""
   },
@@ -50,7 +50,7 @@
    "devPP": 0.13,
    "tris": 662904,
    "stlBytes": 33145284,
-   "wallMs": 9109,
+   "wallMs": 10301,
    "rejected": false,
    "err": ""
   },
@@ -63,7 +63,7 @@
    "devPP": 0.05,
    "tris": 89424,
    "stlBytes": 4471284,
-   "wallMs": 1908,
+   "wallMs": 2452,
    "rejected": false,
    "err": ""
   },
@@ -76,7 +76,7 @@
    "devPP": 0.05,
    "tris": 416016,
    "stlBytes": 20800884,
-   "wallMs": 3948,
+   "wallMs": 5045,
    "rejected": false,
    "err": ""
   },
@@ -89,7 +89,7 @@
    "devPP": 0.18,
    "tris": 133848,
    "stlBytes": 6692484,
-   "wallMs": 2388,
+   "wallMs": 3091,
    "rejected": false,
    "err": ""
   },
@@ -102,7 +102,7 @@
    "devPP": 0.22,
    "tris": 524664,
    "stlBytes": 26233284,
-   "wallMs": 5210,
+   "wallMs": 5732,
    "rejected": false,
    "err": ""
   },
@@ -115,7 +115,7 @@
    "devPP": 0.16,
    "tris": 155592,
    "stlBytes": 7779684,
-   "wallMs": 2724,
+   "wallMs": 3501,
    "rejected": false,
    "err": ""
   },
@@ -128,7 +128,7 @@
    "devPP": 0.02,
    "tris": 607752,
    "stlBytes": 30387684,
-   "wallMs": 7870,
+   "wallMs": 10082,
    "rejected": false,
    "err": ""
   },
@@ -141,7 +141,7 @@
    "devPP": 5.35,
    "tris": 199224,
    "stlBytes": null,
-   "wallMs": 2377,
+   "wallMs": 3428,
    "rejected": true,
    "err": ""
   },
@@ -154,7 +154,7 @@
    "devPP": 0.04,
    "tris": 761976,
    "stlBytes": 38098884,
-   "wallMs": 9524,
+   "wallMs": 11863,
    "rejected": false,
    "err": ""
   },
@@ -167,7 +167,7 @@
    "devPP": 0.28,
    "tris": 243516,
    "stlBytes": 12175884,
-   "wallMs": 4001,
+   "wallMs": 5087,
    "rejected": false,
    "err": ""
   },
@@ -180,7 +180,7 @@
    "devPP": 0.08,
    "tris": 1047900,
    "stlBytes": 52395084,
-   "wallMs": 14667,
+   "wallMs": 18710,
    "rejected": false,
    "err": ""
   },
@@ -193,7 +193,7 @@
    "devPP": 0.55,
    "tris": 203772,
    "stlBytes": 10188684,
-   "wallMs": 3388,
+   "wallMs": 4591,
    "rejected": false,
    "err": ""
   },
@@ -206,7 +206,7 @@
    "devPP": 0.33,
    "tris": 887196,
    "stlBytes": 44359884,
-   "wallMs": 16010,
+   "wallMs": 16731,
    "rejected": false,
    "err": ""
   },
@@ -219,7 +219,7 @@
    "devPP": 7.06,
    "tris": 124056,
    "stlBytes": 6202884,
-   "wallMs": 2368,
+   "wallMs": 3082,
    "rejected": false,
    "err": ""
   },
@@ -232,7 +232,7 @@
    "devPP": 0.32,
    "tris": 640152,
    "stlBytes": 32007684,
-   "wallMs": 7189,
+   "wallMs": 9094,
    "rejected": false,
    "err": ""
   },
@@ -245,7 +245,7 @@
    "devPP": 0.51,
    "tris": 177192,
    "stlBytes": 8859684,
-   "wallMs": 3022,
+   "wallMs": 3712,
    "rejected": false,
    "err": ""
   },
@@ -258,7 +258,7 @@
    "devPP": 0.23,
    "tris": 728136,
    "stlBytes": 36406884,
-   "wallMs": 10069,
+   "wallMs": 12648,
    "rejected": false,
    "err": ""
   },
@@ -271,7 +271,7 @@
    "devPP": 7.36,
    "tris": 228960,
    "stlBytes": null,
-   "wallMs": 2813,
+   "wallMs": 3469,
    "rejected": true,
    "err": ""
   },
@@ -284,7 +284,7 @@
    "devPP": 0.19,
    "tris": 884088,
    "stlBytes": 44204484,
-   "wallMs": 8136,
+   "wallMs": 10255,
    "rejected": false,
    "err": ""
   },
@@ -297,7 +297,7 @@
    "devPP": 0.07,
    "tris": 210816,
    "stlBytes": null,
-   "wallMs": 2943,
+   "wallMs": 3882,
    "rejected": true,
    "err": ""
   },
@@ -310,7 +310,7 @@
    "devPP": 0.58,
    "tris": 889344,
    "stlBytes": 44467284,
-   "wallMs": 12515,
+   "wallMs": 15439,
    "rejected": false,
    "err": ""
   },
@@ -323,7 +323,7 @@
    "devPP": 1.12,
    "tris": 184896,
    "stlBytes": 9244884,
-   "wallMs": 3573,
+   "wallMs": 4411,
    "rejected": false,
    "err": ""
   },
@@ -336,7 +336,7 @@
    "devPP": 0.34,
    "tris": 976320,
    "stlBytes": null,
-   "wallMs": 6600,
+   "wallMs": 8326,
    "rejected": true,
    "err": ""
   },
@@ -349,7 +349,7 @@
    "devPP": 5.3,
    "tris": 278208,
    "stlBytes": null,
-   "wallMs": 3371,
+   "wallMs": 4350,
    "rejected": true,
    "err": ""
   },
@@ -362,7 +362,7 @@
    "devPP": 0.03,
    "tris": 1270080,
    "stlBytes": null,
-   "wallMs": 13584,
+   "wallMs": 17360,
    "rejected": true,
    "err": ""
   },
@@ -375,7 +375,7 @@
    "devPP": 0.19,
    "tris": 240120,
    "stlBytes": null,
-   "wallMs": 3835,
+   "wallMs": 4226,
    "rejected": true,
    "err": ""
   },
@@ -388,7 +388,7 @@
    "devPP": 0.13,
    "tris": 918936,
    "stlBytes": 45946884,
-   "wallMs": 15424,
+   "wallMs": 19062,
    "rejected": false,
    "err": ""
   },
@@ -401,7 +401,7 @@
    "devPP": 2.94,
    "tris": 193536,
    "stlBytes": 9676884,
-   "wallMs": 3259,
+   "wallMs": 4141,
    "rejected": false,
    "err": ""
   },
@@ -414,7 +414,7 @@
    "devPP": 0.27,
    "tris": 806976,
    "stlBytes": 40348884,
-   "wallMs": 7330,
+   "wallMs": 9375,
    "rejected": false,
    "err": ""
   },
@@ -427,7 +427,7 @@
    "devPP": 1.31,
    "tris": 157176,
    "stlBytes": 7858884,
-   "wallMs": 2912,
+   "wallMs": 3888,
    "rejected": false,
    "err": ""
   },
@@ -440,7 +440,7 @@
    "devPP": 0.22,
    "tris": 628632,
    "stlBytes": 31431684,
-   "wallMs": 5855,
+   "wallMs": 8063,
    "rejected": false,
    "err": ""
   },
@@ -453,7 +453,7 @@
    "devPP": 8.52,
    "tris": 224508,
    "stlBytes": 11225484,
-   "wallMs": 4722,
+   "wallMs": 6281,
    "rejected": false,
    "err": ""
   },
@@ -466,7 +466,7 @@
    "devPP": 7.92,
    "tris": 949692,
    "stlBytes": 47484684,
-   "wallMs": 17320,
+   "wallMs": 22748,
    "rejected": false,
    "err": ""
   }
