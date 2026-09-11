@@ -88,9 +88,18 @@ for (const ty of TYPES) {
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     // 【2026-09-10 修正钉】索引池 6M→9M + pushTri 守卫修复后：R120 可产（nm=0，dev 0.35pp，
     // ~22s）——推翻「预注册曲面无实用可产分辨率」旧裁决（其依据 R128 ">36 分钟"实为
-    // 索引池溢出 NaN 死循环）；R96/R128 仍拒产（nm 10368/4896），可产域=R120 中段孔隙率（红队实测 p0.5/0.6/0.7）
+    // 索引池溢出 NaN 死循环）。
+    // 【2026-09-11 再修正】R128 端到端仅 ~14s（k6）/~9s（k2）——**性能不是瓶颈**；
+    // k6 R128 仍 fail-closed（nm 4896，薄壁自触），但 **k2 R128 水密可产**（nm=0，dev 0.13pp，
+    // ~9s）——与 gprime/lidinoid 同族「降周期数避坑」。可产域 = R120 k6 ∪ R128 k2。
     const r120 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '120', '--out', join(tmpOut()), '--json');
     r120.status === 0 ? ok(`type enum 值 ${ty} R120 可构建（修正钉：p0.6 可产锚点）`) : bad(`type enum ${ty} R120`, (r120.stderr || '').slice(-60));
+    const r128k2 = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '128', '--out', join(tmpOut()), '--json');
+    r128k2.status === 0 ? ok(`type enum 值 ${ty} R128 k2 可构建（降周期数避坑锚点，2026-09-11）`) : bad(`type enum ${ty} R128 k2`, (r128k2.stderr || '').slice(-60));
+    const r128k6 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '128', '--out', join(tmpOut()), '--json');
+    r128k6.status === 3 && (r128k6.stderr || '').includes('水密门')
+      ? ok(`type enum 值 ${ty} R128 k6 已登记 fail-closed（薄壁自触 nm 4896）`)
+      : bad(`type enum ${ty} R128 k6 行为漂移`, `exit=${r128k6.status}`);
     continue;
   }
   if (ty === 'fks' || ty === 'fky') {
@@ -256,5 +265,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 67) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 67`); process.exit(1); }
+if (pass < 69) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 69`); process.exit(1); }
 process.exit(fail ? 1 : 0);
