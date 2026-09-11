@@ -48,6 +48,7 @@
 |---|---|---|
 | **定位** | 主交付 · 双击即开 | 进阶研究 / 批量导出 |
 | **在线** | 站点首页 | `platform/` 子路径（落地页有入口） |
+| **曲面族** | 8 类经典（教学聚焦） | **20 类**（C2 扩展含 Fischer-Koch / Double / Complementary D 等） |
 | **构建** | 无（纯 HTML + 本地 vendor bundle） | `npm install && npm run dev` |
 | **导出** | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / Python / MATLAB / BibTeX / JSON |
 | **性能** | 拖动低清预览、松手高清 + 按需渲染 | Web Worker 并行 + 多级 LOD + 按需渲染 |
