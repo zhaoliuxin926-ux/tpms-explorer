@@ -347,7 +347,6 @@ function cmdSolve(a, json) {
       type, iso, periods, resolution, targetPorosity: undefined,
       weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
       thickness: 1.0, gradientDir: 'z',
-      hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
       customFormula: '', preview: false, isoGrad,
       hybrid: hybridS ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     }, core.globalBufferPool);
@@ -495,7 +494,6 @@ function cmdMesh(a, json) {
     type, iso: 0, periods, resolution, targetPorosity: pf,
     weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
     thickness: 1.0, gradientDir: 'z',
-    hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     customFormula: '', preview: false,
     hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
