@@ -246,7 +246,7 @@ if ${state.hybrid.enabled ? 'True' : 'False'}:
         # 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
         V_b = ${customPyExpr(state)}
     else:
-        V_b = tpms_field(X, Y, Z, weights_b, type_b)
+        V_b = tpms_field(Xs, Ys, Zs, weights_b, type_b)  # 与 A 侧同坐标（应力×hybrid 组合 B 侧漏传变换坐标，红队 B F1）
     blend_center = ${safeId(state.hybrid.blendCenter)}
     blend_width = ${safeId(state.hybrid.blendWidth)}
     # 波前投影（与平台 hybrid-functions wavefrontCoord 同源）：radial=球面半径
@@ -539,7 +539,9 @@ else
 end
 
 % 应力变换后坐标就地替换（红队 A MAJOR：此前 Xs/Ys/Zs 算完未被曲面分支读取，
-% Python 侧正确传 Xs/Ys/Zs——两侧几何不一致；现统一为替换后 kk*X 语义）
+% Python 侧正确传 Xs/Ys/Zs——两侧几何不一致；现统一为替换后 kk*X 语义。
+% 原始坐标保留给波前/容器 SDF：平台语义中两者都在物理空间取点，不经应力变换）
+X0 = X; Y0 = Y; Z0 = Z;
 X = Xs; Y = Ys; Z = Zs;
 
 % 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
@@ -740,7 +742,8 @@ if ${safeId(state.hybrid.enabled)}
     end
     blend_center = ${safeId(state.hybrid.blendCenter)};
     blend_width = ${safeId(state.hybrid.blendWidth)};
-    px_ = X / pi; py_ = Y / pi; pz_ = Z / pi;
+    % 波前在物理空间取点（与平台 wavefrontCoord 同源），不经应力变换
+    px_ = X0 / pi; py_ = Y0 / pi; pz_ = Z0 / pi;
     switch blend_axis
         case 'y', t_wave = py_;
         case 'z', t_wave = pz_;
@@ -758,9 +761,10 @@ if ${safeId(state.hybrid.enabled)}
 end
 
 % 容器边界场（SDF：外部 >= 0 = 固相包裹，与平台 max(f, bound) 一致；不用 NaN）
-px = X / pi;
-py = Y / pi;
-pz = Z / pi;
+% 容器在物理空间取点，不经应力变换（X0/Y0/Z0 为替换前原始坐标）
+px = X0 / pi;
+py = Y0 / pi;
+pz = Z0 / pi;
 if strcmp(container, 'cylinder')
     bound = max(px.^2 + py.^2 - 1, abs(pz) - 1);
 else

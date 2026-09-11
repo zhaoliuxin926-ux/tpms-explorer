@@ -43,6 +43,14 @@ function runCli(toolName, args) {
   if (!cmd) return { status: 2, stdout: '', stderr: `未知工具 ${toolName}` };
   const cliArgs = [TPMS, cmd];
   for (const [k, v] of Object.entries(args)) {
+    if (k === 'isoGrad') {
+      // schema 对象槽位 → CLI kebab flag "<v0,v1,...>[@band]"（band 缺省 0.4 与 CLI 同默认）
+      if (v && typeof v === 'object') {
+        const band = v.band ?? 0.4;
+        cliArgs.push('--iso-grad', `${v.values.join(',')}@${band}`);
+      }
+      continue;
+    }
     if (v === true) cliArgs.push(`--${k}`);
     else if (v !== false && v !== undefined && v !== null) cliArgs.push(`--${k}`, String(v));
   }
@@ -69,6 +77,11 @@ async function main() {
 
   let provider;
   if (a.provider === 'mock') {
+    // 铁律守卫：mock 是回归测试装置，不带 --dry-run 会真实执行 CLI 写盘（红队 A-6）——默认拒绝
+    if (!a.dryRun) {
+      console.error('✗ mock provider 仅限 --dry-run 回归（不落盘）；真实执行请用 --provider ollama');
+      process.exit(2);
+    }
     // Mock：从 stdin 或环境读预设 toolCalls（回归测试用）
     const preset = process.env.TPMS_MOCK_TOOLCALLS
       ? JSON.parse(process.env.TPMS_MOCK_TOOLCALLS)

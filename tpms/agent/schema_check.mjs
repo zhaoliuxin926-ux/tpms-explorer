@@ -75,11 +75,21 @@ for (const [label, args, check] of [
 for (const ty of TYPES) {
   if (ty === 'dprime' || ty === 'cdd') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
-    r48.status === 3 && (r48.stderr || '').includes('水密门')
-      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 扩展实测）`)
+    const r48Ok = r48.status === 3 && (r48.stderr || '').includes('水密门')
+      && (() => { try { return JSON.parse(r48.stdout).lastAuditCounts?.nonManifoldEdges === 18252; } catch { return false; } })();
+    r48Ok
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触 nm=18252 数值钉住，红队 B F3）`)
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    continue;
+  }
+  if (ty === 'fcky') {
+    // 红队 B F2：fcky「R48/R96 可产（偏差 0.26pp）」宣称补双钉（此前落默认分支只钉 R48）
+    const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    r48.status === 0 ? ok(`type enum 值 fcky R48 可构建（比 fky/fks 更健壮锚点）`) : bad(`type enum fcky R48`, (r48.stderr || '').slice(-60));
+    const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r96.status === 0 ? ok(`type enum 值 fcky 可构建（R96，BENCHMARKS 宣称同步钉）`) : bad(`type enum fcky R96`, (r96.stderr || '').slice(-60));
     continue;
   }
   if (ty === 'fcks') {
@@ -95,6 +105,11 @@ for (const ty of TYPES) {
     // ~9s）——与 gprime/lidinoid 同族「降周期数避坑」。可产域 = R120 k6 ∪ R128 k2。
     const r120 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '120', '--out', join(tmpOut()), '--json');
     r120.status === 0 ? ok(`type enum 值 ${ty} R120 可构建（修正钉：p0.6 可产锚点）`) : bad(`type enum ${ty} R120`, (r120.stderr || '').slice(-60));
+    // 红队 B F3：tools.schema 宣称「R120 p0.5/0.6/0.7 均 nm=0」——补 p0.5/p0.7 两端钉（p0.6 上行已钉）
+    for (const pEdge of ['0.5', '0.7']) {
+      const rE = run('mesh', '--type', ty, '--porosity', pEdge, '--resolution', '120', '--out', join(tmpOut()), '--json');
+      rE.status === 0 ? ok(`type enum 值 ${ty} R120 p${pEdge} 可构建（宣称带端点钉，红队 B F3）`) : bad(`type enum ${ty} R120 p${pEdge}`, (rE.stderr || '').slice(-60));
+    }
     const r128k2 = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '128', '--out', join(tmpOut()), '--json');
     r128k2.status === 0 ? ok(`type enum 值 ${ty} R128 k2 可构建（降周期数避坑锚点，2026-09-11）`) : bad(`type enum ${ty} R128 k2`, (r128k2.stderr || '').slice(-60));
     const r128k6 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '128', '--out', join(tmpOut()), '--json');

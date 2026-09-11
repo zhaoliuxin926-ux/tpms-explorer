@@ -25,6 +25,54 @@ export function loadToolsSchema() {
 }
 
 // ── 输出拦截器：LLM 产出 → schema 钳制 ──────────────────────────
+const SAFE_PATH_RE = /^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$/;
+
+/** 递归校验单值：number/integer 严格类型，string 支持 enum/pattern（路径狱），object/array 递归子 schema */
+function validateValue(toolName, key, spec, v, errors) {
+  if (spec.type === 'number' || spec.type === 'integer') {
+    if (typeof v !== 'number') { errors.push(`tool ${toolName}.${key}: 须为 JSON number（收到 ${v === null ? 'null' : typeof v}）`); return; }
+    if (!Number.isFinite(v)) { errors.push(`tool ${toolName}.${key}: 非有限数字`); return; }
+    if (spec.minimum !== undefined && v < spec.minimum) { errors.push(`tool ${toolName}.${key}: ${v} < minimum ${spec.minimum}`); return; }
+    if (spec.maximum !== undefined && v > spec.maximum) { errors.push(`tool ${toolName}.${key}: ${v} > maximum ${spec.maximum}`); return; }
+    if (spec.exclusiveMinimum !== undefined && v <= spec.exclusiveMinimum) { errors.push(`tool ${toolName}.${key}: ${v} ≤ exclusiveMinimum ${spec.exclusiveMinimum}`); return; }
+    if (spec.exclusiveMaximum !== undefined && v >= spec.exclusiveMaximum) { errors.push(`tool ${toolName}.${key}: ${v} ≥ exclusiveMaximum ${spec.exclusiveMaximum}`); return; }
+    if (spec.type === 'integer' && !Number.isInteger(v)) { errors.push(`tool ${toolName}.${key}: ${v} 非整数`); return; }
+    return v;
+  }
+  if (spec.type === 'string') {
+    if (typeof v !== 'string') { errors.push(`tool ${toolName}.${key}: 须为 string（收到 ${v === null ? 'null' : typeof v}）`); return; }
+    if (spec.enum && !spec.enum.includes(v)) { errors.push(`tool ${toolName}.${key}: "${v}" 不在 enum [${spec.enum.join(',')}]`); return; }
+    if (spec.pattern && !SAFE_PATH_RE.test(v)) { errors.push(`tool ${toolName}.${key}: 路径须为单段安全文件名（^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$，禁分隔符/..）`); return; }
+    return v;
+  }
+  if (spec.type === 'boolean') {
+    if (typeof v !== 'boolean') { errors.push(`tool ${toolName}.${key}: 须为 boolean（收到 ${v === null ? 'null' : typeof v}）`); return; }
+    return v;
+  }
+  if (spec.type === 'array') {
+    if (!Array.isArray(v)) { errors.push(`tool ${toolName}.${key}: 须为 array`); return; }
+    if (spec.minItems !== undefined && v.length < spec.minItems) { errors.push(`tool ${toolName}.${key}: 元素数 ${v.length} < minItems ${spec.minItems}`); return; }
+    if (spec.maxItems !== undefined && v.length > spec.maxItems) { errors.push(`tool ${toolName}.${key}: 元素数 ${v.length} > maxItems ${spec.maxItems}`); return; }
+    return v.map((item, i) => validateValue(toolName, `${key}[${i}]`, spec.items ?? {}, item, errors));
+  }
+  if (spec.type === 'object') {
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) { errors.push(`tool ${toolName}.${key}: 须为 object`); return; }
+    const props = spec.properties ?? {};
+    if (spec.additionalProperties === false) {
+      for (const k of Object.keys(v)) {
+        if (!Object.hasOwn(props, k)) errors.push(`tool ${toolName}.${key}: 未知属性 "${k}"`);
+      }
+    }
+    const out = {};
+    for (const [k, sub] of Object.entries(props)) {
+      if (!Object.hasOwn(v, k)) continue;
+      out[k] = validateValue(toolName, `${key}.${k}`, sub, v[k], errors);
+    }
+    return out;
+  }
+  return v; // 未声明类型的槽位：原样放行（schema 不应有此类槽位）
+}
+
 /**
  * 验证 LLM 返回的 toolCalls 是否只填了 schema 允许的槽位且数值在界内。
  * @returns {{ ok: true, calls: Array } | { ok: false, errors: string[] }}
@@ -45,6 +93,11 @@ export function validateToolCalls(toolCalls, schema) {
       errors.push(`tool ${name}: arguments 非法 JSON — ${e.message}`);
       continue;
     }
+    // 标量/数组 arguments（畸形 LLM 产出）结构化拒绝，不得静默吞成空参数或裸崩
+    if (typeof args !== 'object' || args === null || Array.isArray(args)) {
+      errors.push(`tool ${name}: arguments 须为 JSON object（收到 ${args === null ? 'null' : typeof args}）`);
+      continue;
+    }
 
     const tool = toolsByName[name];
     if (!tool) {
@@ -55,60 +108,29 @@ export function validateToolCalls(toolCalls, schema) {
     const props = tool.parameters?.properties ?? {};
     const required = tool.parameters?.required ?? [];
     const additional = tool.parameters?.additionalProperties;
+    const errBefore = errors.length;
 
-    // 未知属性拒绝
+    // 未知属性拒绝（Object.hasOwn 防原型链键名绕过）
     if (additional === false) {
       for (const k of Object.keys(args)) {
-        if (!(k in props)) errors.push(`tool ${name}: 未知属性 "${k}"`);
+        if (!Object.hasOwn(props, k)) errors.push(`tool ${name}: 未知属性 "${k}"`);
       }
     }
     // 必填检查
     for (const k of required) {
-      if (!(k in args)) errors.push(`tool ${name}: 缺必填 "${k}"`);
+      if (!Object.hasOwn(args, k)) errors.push(`tool ${name}: 缺必填 "${k}"`);
     }
 
-    // 逐属性类型/范围钳制
+    // 逐属性递归钳制
     const clamped = {};
     for (const [k, spec] of Object.entries(props)) {
-      if (!(k in args)) continue;
-      let v = args[k];
-      if (spec.type === 'number' || spec.type === 'integer') {
-        v = Number(v);
-        if (!Number.isFinite(v)) { errors.push(`tool ${name}.${k}: 非有限数字`); continue; }
-        if (spec.minimum !== undefined && v < spec.minimum) {
-          errors.push(`tool ${name}.${k}: ${v} < minimum ${spec.minimum}`);
-          continue;
-        }
-        if (spec.maximum !== undefined && v > spec.maximum) {
-          errors.push(`tool ${name}.${k}: ${v} > maximum ${spec.maximum}`);
-          continue;
-        }
-        if (spec.exclusiveMinimum !== undefined && v <= spec.exclusiveMinimum) {
-          errors.push(`tool ${name}.${k}: ${v} ≤ exclusiveMinimum ${spec.exclusiveMinimum}`);
-          continue;
-        }
-        if (spec.exclusiveMaximum !== undefined && v >= spec.exclusiveMaximum) {
-          errors.push(`tool ${name}.${k}: ${v} ≥ exclusiveMaximum ${spec.exclusiveMaximum}`);
-          continue;
-        }
-        if (spec.type === 'integer' && !Number.isInteger(v)) {
-          errors.push(`tool ${name}.${k}: ${v} 非整数`);
-          continue;
-        }
-      } else if (spec.type === 'string' && spec.enum) {
-        if (!spec.enum.includes(v)) {
-          errors.push(`tool ${name}.${k}: "${v}" 不在 enum [${spec.enum.join(',')}]`);
-          continue;
-        }
-      } else if (spec.type === 'boolean') {
-        v = !!v;
-      }
-      clamped[k] = v;
+      if (!Object.hasOwn(args, k)) continue;
+      const v = validateValue(name, k, spec, args[k], errors);
+      if (errors.length === errBefore) clamped[k] = v;
     }
 
-    if (errors.length === 0 || Object.keys(clamped).length > 0) {
-      cleaned.push({ name, arguments: clamped });
-    }
+    // 逐调用错误归属：本调用无新错误才放行执行
+    if (errors.length === errBefore) cleaned.push({ name, arguments: clamped });
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned };
@@ -125,13 +147,14 @@ export class LLMProvider {
 // ── Ollama 本地 Provider ─────────────────────────────────────────
 export class OllamaProvider extends LLMProvider {
   /**
-   * @param {{ baseUrl?: string, model?: string, temperature?: number }} opts
+   * @param {{ baseUrl?: string, model?: string, temperature?: number, timeoutMs?: number }} opts
    */
   constructor(opts = {}) {
     super();
     this.baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:11434').replace(/\/$/, '');
     this.model = opts.model ?? 'qwen2.5:7b';
     this.temperature = opts.temperature ?? 0;
+    this.timeoutMs = opts.timeoutMs ?? 120_000; // 无超时=对不响应的服务端永久挂起（红队 A-2）
   }
 
   async complete(messages, tools) {
@@ -143,11 +166,19 @@ export class OllamaProvider extends LLMProvider {
       options: { temperature: this.temperature },
       ...(tools?.length ? { tools } : {}),
     };
-    const res = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    let res;
+    try {
+      res = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (e) {
+      throw new Error(e.name === 'TimeoutError'
+        ? `Ollama ${this.timeoutMs}ms 无响应（timeout）`
+        : `Ollama 连接失败: ${e.message}`);
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Ollama ${res.status}: ${text.slice(0, 200)}`);
