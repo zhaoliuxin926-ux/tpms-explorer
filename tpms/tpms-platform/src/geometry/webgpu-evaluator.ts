@@ -350,6 +350,28 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       ]);
       return sumChain(b, [b.unary('neg', mulChain(b, [wreg(0), low])), mulChain(b, [wreg(1), hi])]);
     }
+    // ── C2 扩展第五批：Complementary D（谐波 3× 混合角展开，与 tpms-functions.ts 逐项对应）──
+    case 'cdd': {
+      const s3 = (r: number) => {
+        const sx = sin(r);
+        return b.binary('mul', sx, b.binary('sub', b.load(3), b.binary('mul', b.load(4), mulChain(b, [sx, sx]))));
+      };
+      const c3 = (r: number) => {
+        const cx = cos(r);
+        return b.binary('mul', cx, b.binary('sub', b.binary('mul', b.load(4), mulChain(b, [cx, cx])), b.load(3)));
+      };
+      const sx = sin(mx), cx = cos(mx), sy = sin(my), cy = cos(my), sz = sin(mz), cz = cos(mz);
+      const s3x = s3(mx), c3x = c3(mx), s3y = s3(my), c3y = c3(my), s3z = s3(mz), c3z = c3(mz);
+      const core = sumChain(b, [
+        mulChain(b, [c3x, cy, cz]), b.unary('neg', mulChain(b, [s3x, sy, cz])),
+        b.unary('neg', mulChain(b, [s3x, cy, sz])), mulChain(b, [c3x, sy, sz]),
+        mulChain(b, [cx, c3y, cz]), b.unary('neg', mulChain(b, [sx, s3y, cz])),
+        mulChain(b, [sx, c3y, sz]), b.unary('neg', mulChain(b, [cx, s3y, sz])),
+        mulChain(b, [cx, cy, c3z]), mulChain(b, [sx, sy, c3z]),
+        b.unary('neg', mulChain(b, [sx, cy, s3z])), b.unary('neg', mulChain(b, [cx, sy, s3z])),
+      ]);
+      return mulChain(b, [wreg(0), core]);
+    }
   }
 }
 

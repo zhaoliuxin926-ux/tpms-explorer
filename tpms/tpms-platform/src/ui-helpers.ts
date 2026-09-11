@@ -25,6 +25,7 @@ export const LABEL: Record<string, string> = {
   dd: 'Double D',
   dg: 'Double G',
   fcky: 'Fisher-Koch C(Y)',
+  cdd: 'Complementary D',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -54,6 +55,7 @@ export const FORMULA: Record<string, string> = {
   dd: '0.5(sin x sin y + sin y sin z + sin z sin x) + 0.5 cos x cos y cos z',
   dg: '2.75(sin 2x sin z cos y + sin 2y sin x cos z + sin 2z sin y cos x) − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x) − 0.95',
   fcky: '−(cos x cos y cos z + sin x sin y sin z) + sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z',
+  cdd: 'cos(3x+y)cos z − sin(3x−y)sin z + cos(x+3y)cos z + sin(x−3y)sin z + cos(x−y)cos 3z − sin(x+y)sin 3z',
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
@@ -76,6 +78,7 @@ export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
   dd:      [['0.5(sin x sin y + sin y sin z + sin z sin x) + 0.5 cos x cos y cos z', 'a', 1]],
   dg:      [['2.75(sin 2x sin z cos y + sin 2y sin x cos z + sin 2z sin y cos x) − (cos 2x cos 2y + cos 2y cos 2z + cos 2z cos 2x)', 'a', 1]],
   fcky:    [['−(cos x cos y cos z + sin x sin y sin z)', 'a', 1], ['sin 2x sin y + sin 2y sin z + sin x sin 2z + sin 2x cos z + cos x sin 2y + cos y sin 2z', 'b', 1]],
+  cdd:     [['cos(3x+y)cos z − sin(3x−y)sin z + cos(x+3y)cos z + sin(x−3y)sin z + cos(x−y)cos 3z − sin(x+y)sin 3z', 'a', 1]],
 };
 
 export const MODEL_DESC: Record<string, string> = {

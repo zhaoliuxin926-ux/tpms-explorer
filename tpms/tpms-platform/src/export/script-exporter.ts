@@ -171,6 +171,16 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
         return (-w[0]*(np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z) + np.sin(kk*X)*np.sin(kk*Y)*np.sin(kk*Z))
                 + w[1]*(np.sin(2*kk*X)*np.sin(kk*Y) + np.sin(2*kk*Y)*np.sin(kk*Z) + np.sin(kk*X)*np.sin(2*kk*Z)
                         + np.sin(2*kk*X)*np.cos(kk*Z) + np.cos(kk*X)*np.sin(2*kk*Y) + np.cos(kk*Y)*np.sin(2*kk*Z)))
+    elif t == 'cdd':
+        C3x = np.cos(3*kk*X); S3x = np.sin(3*kk*X)
+        C3y = np.cos(3*kk*Y); S3y = np.sin(3*kk*Y)
+        C3z = np.cos(3*kk*Z); S3z = np.sin(3*kk*Z)
+        return (w[0]*(C3x*np.cos(kk*Y)*np.cos(kk*Z) - S3x*np.sin(kk*Y)*np.cos(kk*Z)
+                      - S3x*np.cos(kk*Y)*np.sin(kk*Z) + C3x*np.sin(kk*Y)*np.sin(kk*Z)
+                      + np.cos(kk*X)*C3y*np.cos(kk*Z) - np.sin(kk*X)*S3y*np.cos(kk*Z)
+                      + np.sin(kk*X)*C3y*np.sin(kk*Z) - np.cos(kk*X)*S3y*np.sin(kk*Z)
+                      + np.cos(kk*X)*np.cos(kk*Y)*C3z + np.sin(kk*X)*np.sin(kk*Y)*C3z
+                      - np.sin(kk*X)*np.cos(kk*Y)*S3z - np.cos(kk*X)*np.sin(kk*Y)*S3z))
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -609,6 +619,16 @@ elseif strcmp(tpms_type, 'fcky')
     V = -weights(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
       + weights(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
                     + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+elseif strcmp(tpms_type, 'cdd')
+    C3x_ = cos(3*kk*X); S3x_ = sin(3*kk*X);
+    C3y_ = cos(3*kk*Y); S3y_ = sin(3*kk*Y);
+    C3z_ = cos(3*kk*Z); S3z_ = sin(3*kk*Z);
+    V = weights(1)*(C3x_.*cos(kk*Y).*cos(kk*Z) - S3x_.*sin(kk*Y).*cos(kk*Z) ...
+                  - S3x_.*cos(kk*Y).*sin(kk*Z) + C3x_.*sin(kk*Y).*sin(kk*Z) ...
+                  + cos(kk*X).*C3y_.*cos(kk*Z) - sin(kk*X).*S3y_.*cos(kk*Z) ...
+                  + sin(kk*X).*C3y_.*sin(kk*Z) - cos(kk*X).*S3y_.*sin(kk*Z) ...
+                  + cos(kk*X).*cos(kk*Y).*C3z_ + sin(kk*X).*sin(kk*Y).*C3z_ ...
+                  - sin(kk*X).*cos(kk*Y).*S3z_ - cos(kk*X).*sin(kk*Y).*S3z_);
 else
     error('Unsupported TPMS type');
 end
@@ -701,6 +721,16 @@ if ${safeId(state.hybrid.enabled)}
         V_b = -weights_b(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
             + weights_b(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
                             + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
+    elseif strcmp(type_b, 'cdd')
+        C3xb2 = cos(3*kk*X); S3xb2 = sin(3*kk*X);
+        C3yb2 = cos(3*kk*Y); S3yb2 = sin(3*kk*Y);
+        C3zb2 = cos(3*kk*Z); S3zb2 = sin(3*kk*Z);
+        V_b = weights_b(1)*(C3xb2.*cos(kk*Y).*cos(kk*Z) - S3xb2.*sin(kk*Y).*cos(kk*Z) ...
+                          - S3xb2.*cos(kk*Y).*sin(kk*Z) + C3xb2.*sin(kk*Y).*sin(kk*Z) ...
+                          + cos(kk*X).*C3yb2.*cos(kk*Z) - sin(kk*X).*S3yb2.*cos(kk*Z) ...
+                          + sin(kk*X).*C3yb2.*sin(kk*Z) - cos(kk*X).*S3yb2.*sin(kk*Z) ...
+                          + cos(kk*X).*cos(kk*Y).*C3zb2 + sin(kk*X).*sin(kk*Y).*C3zb2 ...
+                          - sin(kk*X).*cos(kk*Y).*S3zb2 - cos(kk*X).*sin(kk*Y).*S3zb2);
     else
         error('Unsupported hybrid TPMS type');
     end

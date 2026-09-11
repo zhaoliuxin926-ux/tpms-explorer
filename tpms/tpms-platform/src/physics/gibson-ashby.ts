@@ -24,6 +24,7 @@ const C1_MAP: Record<string, number> = {
   dd: 0.38,
   dg: 0.38,
   fcky: 0.38, // C2 扩展第四批：沿 fky 口径
+  cdd: 0.38, // C2 扩展第五批：文献带内估值
   custom: 0.38,  // default to gyroid value
 };
 
@@ -61,6 +62,7 @@ const ANISOTROPY_MAP: Record<string, number> = {
   dd: 1.45,
   dg: 1.32,
   fcky: 1.32, // C2 扩展第四批：沿 fky 口径
+  cdd: 1.42, // C2 扩展第五批：沿 Diamond 族口径
   custom: 1.30,
 };
 

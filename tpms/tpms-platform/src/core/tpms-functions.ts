@@ -229,10 +229,35 @@ const fcky: TpmsFunction = (mx, my, mz, w) => {
       s2x * Math.cos(mz) + Math.cos(mx) * s2y + Math.cos(my) * s2z);
 };
 
+// ── C2 曲面库扩展第五批（2026-09-11）：Complementary D ──
+// 出处：MiniSurf 官方源码 mengtinh/MiniSurf document.xml 行 225-227 / 345-348。
+// 谐波 3×（cos(3x±y) 等混合角项展开为 1×·3× 乘积），与 fcks 同表示域（R120 可产场景）。
+
+/**
+ * Complementary D：1 权重（谐波 3× 混合角展开）
+ * cos(3x+y)cosz − sin(3x−y)sinz + cos(x+3y)cosz + sin(x−3y)sinz + cos(x−y)cos3z − sin(x+y)sin3z
+ * = cos3x·cosy·cosz − sin3x·siny·cosz − sin3x·cosy·sinz + cos3x·siny·sinz
+ * + cosx·cos3y·cosz − sinx·sin3y·cosz + sinx·cos3y·sinz − cosx·sin3y·sinz
+ * + cosx·cosy·cos3z + sinx·siny·cos3z − sinx·cosy·sin3z − cosx·siny·sin3z
+ */
+const cdd: TpmsFunction = (mx, my, mz, w) => {
+  const sx = Math.sin(mx), cx = Math.cos(mx);
+  const sy = Math.sin(my), cy = Math.cos(my);
+  const sz = Math.sin(mz), cz = Math.cos(mz);
+  const s3x = sx * (3 - 4 * sx * sx), c3x = cx * (4 * cx * cx - 3);
+  const s3y = sy * (3 - 4 * sy * sy), c3y = cy * (4 * cy * cy - 3);
+  const s3z = sz * (3 - 4 * sz * sz), c3z = cz * (4 * cz * cz - 3);
+  return w[0] * (
+    c3x * cy * cz - s3x * sy * cz - s3x * cy * sz + c3x * sy * sz +
+    cx * c3y * cz - sx * s3y * cz + sx * c3y * sz - cx * s3y * sz +
+    cx * cy * c3z + sx * sy * c3z - sx * cy * s3z - cx * sy * s3z
+  );
+};
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
   gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
-  dprime, dp, dd, dg, fcky,
+  dprime, dp, dd, dg, fcky, cdd,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -247,6 +272,7 @@ export function getWeightCount(type: TpmType): number {
     case 'karcher': case 'fks': case 'fky': return 3;
     case 'gprime': case 'fcks': case 'dprime': case 'dp': case 'dd': case 'dg': return 1;
     case 'fcky': return 2; // 与 fky 公式同构（w0 低频 + w1 2 倍频组）；fky 登记为 3 为历史口径
+    case 'cdd': return 1;
     case 'custom': return 4;
     default: return 3;
   }

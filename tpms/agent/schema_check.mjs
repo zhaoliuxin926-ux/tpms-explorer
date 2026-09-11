@@ -37,7 +37,7 @@ const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 
 // 合法边界通过
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 上限 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
@@ -69,13 +69,13 @@ for (const [label, args, check] of [
 // gprime 例外（2026-09-10 周期域钉住，B5 基准实测）：默认周期数 k=6 时 R96 p0.6 薄壁自触
 // 拒产（nm 19080，与 BENCHMARKS.md 一致）；k=2 R96 可产（nm=0，偏差 0.2pp）——"择 band 可避"
 // 量化为降周期数可避。高 k=高频相对体素网格→特征更薄，与薄壁自触族根因一致。
-// dprime 例外（2026-09-10 C2 第三批实测）：p0.6 R48 薄壁自触（nm 18252）、R96 可产
-//（nm=0，孔隙率偏差 0.13pp）——与 frd/fks/fky 同族钉住。
+// dprime/cdd 例外（2026-09-10/11 实测）：p0.6 R48 薄壁自触（nm 18252）、R96 可产
+//（dprime 偏差 0.13pp / cdd 0.16pp）——与 frd/fks/fky 同族钉住。
 for (const ty of TYPES) {
-  if (ty === 'dprime') {
+  if (ty === 'dprime' || ty === 'cdd') {
     const r48 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     r48.status === 3 && (r48.stderr || '').includes('水密门')
-      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 第三批实测）`)
+      ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 扩展实测）`)
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
@@ -256,5 +256,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 65) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 65`); process.exit(1); }
+if (pass < 67) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 67`); process.exit(1); }
 process.exit(fail ? 1 : 0);
