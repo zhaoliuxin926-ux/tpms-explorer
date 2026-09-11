@@ -567,6 +567,12 @@ export function renderWgslFieldFn(instrs: Instr[], result: number): string {
       lines.push(`  let ${regName(ins.dst)} = clamp(${regName(ins.a!)}, ${regName(ins.b!)}, ${regName(ins.c!)});`);
       continue;
     }
+    if (ins.op === 'neg') {
+      // WGSL 无 neg() 函数——必须发射一元负号（红队 A CRITICAL：曾发射 neg(t) 导致
+      // fcky/cdd/自定义公式一元负号在真实 GPU 路径 createShaderModule 静默失败回退 CPU）
+      lines.push(`  let ${regName(ins.dst)} = -${regName(ins.a!)};`);
+      continue;
+    }
     if (UNARY_OPS.has(ins.op)) {
       lines.push(`  let ${regName(ins.dst)} = ${ins.op}(${regName(ins.a!)});`);
       continue;

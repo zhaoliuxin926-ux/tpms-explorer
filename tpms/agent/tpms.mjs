@@ -489,6 +489,7 @@ function cmdMesh(a, json) {
   const hybridM = a.hybrid !== undefined ? parseHybrid(a.hybrid, usage) : null;
   if (hybridM && isoGradM) die('--hybrid 与 --iso-grad 暂不支持组合（渐变基准下的异族拼接待定案）', usage);
   if (hybridM && a['porosity-solver'] === 'legacy') die('--hybrid 需 exact 求解器（legacy 体素二分无混合语义）', usage);
+  if (hybridM && mode !== 'solid_network') die('--hybrid 暂仅支持 solid_network 模式', usage);
 
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
