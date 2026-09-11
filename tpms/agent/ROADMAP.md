@@ -18,9 +18,9 @@
 - 口径事实（实测登记 bugs.md）：目标孔隙率（体素分位二分）与网格实测（发散体积）存在口径差，随分辨率收敛（gyroid R48 5.4pp→R96 1.0pp；倍频谐波曲面 diamond/splitp 在 R48 达 24-28pp）。CLI 如实报告偏差，>5pp 时提示提高 resolution；线性外推迭代校正因 iso 响应非线性不收敛，未采用
 - 边界：misorientedEdges（定向错）为 mesh_audit 容差项非硬门，CLI 内建自检未复刻该指标（与 mesh_audit ok 判定的三硬指标口径一致）
 
-### M2 工具注册层 — 未开始
-- 目标：CLI 命令整理为 agent tool schema（JSON Schema，含各参数钳制范围，来源 nl-agent 钳制表）
-- 成功标准：schema 覆盖 nl_agent_audit 现有 32 断言的意图类型；每个数值参数都有硬边界
+### M2 工具注册层 — ✅ 已完成（2026-09-05；本节 2026-09-12 状态修正，原"未开始"为过时口径）
+- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario 四工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐）+ `schema_check.mjs`（现 72 断言）
+- 验收：nl-agent 参数类意图 100% 覆盖；每个数值参数都有硬边界；schema_check+selftest 自 2026-09-10 起转正进 run_ci_suite 调度（39→41 门）。过程与口径详见下方 B-t2
 
 ### M3 LLM 接入 — 🔶 Provider 层已交付（2026-09-11），待真实模型回归
 - **已交付**：`llm-provider.mjs`（LLMProvider 抽象 + OllamaProvider + MockProvider + validateToolCalls 拦截器）+ `llm-agent.mjs`（自然语言 → tool calling → CLI 执行循环）+ `llm_provider_selftest.mjs`（15/15，离线不依赖 Ollama）
@@ -115,7 +115,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 > 审稿要求恰好倒逼可复现性补全）与 **Agent 双轨 M2/M3/M4**（求职作品集主线，M2 无需 key 可立即开工）。
 
 ### B-t1 投稿包（第 1~2 周，最高优先）
-- [ ] B1.1 **LICENSE 文件**（当前缺失 = 法律上保留所有权利，投稿硬阻断）：选 MIT 或 CC-BY-4.0+MIT 双许可——验证：根目录 LICENSE 存在且 README 徽章更新
+- [x] B1.1 **LICENSE 文件** ✅（2026-09-05 已入库 MIT；本行 2026-09-12 核验补勾——根目录 LICENSE 存在，README 许可行+投稿清单均链接）
 - [ ] B1.2 手稿更新到当前事实：MANUSCRIPT/main.tex 停在 v5 口径——补 exact 孔隙率求解器（0.26pp@R96）、全局定向传播（misoriented=0 由构造）、39 门禁/1000+ 断言验证体系、CLM 与 tsc/vite 工具链；补"诚实边界"节（网格体积损耗数据、高谐波曲面 R48 极限）——验证：稿件中每个数字可溯源到门禁或审计脚本
 - [ ] B1.3 可复现包：一条命令复跑（`npm run test:all` 已满足）+ 数据/图生成脚本清单——验证：干净 clone → install → test:all 绿（CI 三平台即证据）
 - [ ] B1.4 投稿提交——验证：拿到投稿号
@@ -132,7 +132,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 - [x] B4.0 mesh 内环自校正 `solve` 命令 ✅（2026-09-05，B4.1 的第一块）：解析求根起点 → 网格实测 → 两点割线（数值历史）→ 收敛 ≤tol 交付 / 不可达时结构化诊断 exit 3（stall/iso_boundary/non_manifold 三类原因 + suggestions 升分辨率建议 + best 备选）。实测：diamond R48 p0.65 三轮收敛 0.05pp；splitp R48 tol=0.05pp 触发 stall 判定输出 best=0.18pp 备选而非静默放弃。selftest 34/34（收敛/产出/不可达诊断/2 项防呆）。
 - [x] B4.1 跨门禁 verify-loop ✅（2026-09-05，147814b）：`verify` 命令——设计方案 JSON → 四道检查（参数合法性/构建水密/孔隙率偏差/物理合理性）→ 失败按有限策略自动修复（孔隙率偏差升分辨率 R48→64→96 优先、已达上限用解析斜率割线微调；水密失败升档）→ pass 必伴随 STL+指标交付 / fail 必伴随结构化诊断+suggestions（exit 0/3 语义分层）。实测：diamond p0.65 R48 起步 5 轮升档收敛 PASS；porosity=1.5 坏方案参数层结构化拒绝。对标确认：text-to-CAD 生态 generate→execute→verify→fix 模式已在领域内落地
 - [x] B4.2 不可达判定显式用例 ✅（2026-09-05）：iwp R48 tol=0.0005 → stall 于 4 轮（≤max-rounds），best=23.1pp 表示极限如实报告；verify 的水密检查补 misoriented 观测字段。selftest 35/35→execute→verify→fix 循环（读门禁 RESULT/GUARD 结构化输出，对标 text-to-CAD verify-loop）——验证：注入带缺陷初始方案（如孔隙率偏差超限、水密门失败），N≤5 轮自动收敛全绿（B4.0 已覆盖 mesh 内环；剩余为跨门禁 verify-loop）
-- [ ] B4.2 失败升级语义：不可收敛时输出结构化诊断报告（非静默放弃）——验证：注入不可达目标（如 p=0.999@R48）能在 2 轮内判定并报告
+- [x] B4.2 失败升级语义 ✅（2026-09-12 定案并入上条：不可收敛的结构化诊断已由 solve exit-3（stall/iso_boundary/non_manifold + suggestions + best 备选）与 verify 三类检查覆盖，iwp R48 tol=0.0005 stall 诊断即显式用例。原验收示例"p=0.999@R48 不可达"不当——实测 2 轮 PASS（99.95% 可达），该目标并非不可达）
 
 ### B-t5 质量债穿插清偿（不占主线，随审随修）
 - [x] B5.1 体积损耗量化审计 ✅（2026-09-05）：`tpms/.verify/volume_loss_audit.mjs`（8 曲面 × R{48,64,96} × p 4 档 = 32 组合，独立运行不进 CI 调度）。**量化发现**：损耗 iwp R48 p0.65 最差 18.5pp、gyroid/lidinoid 最优 0~0.4pp，总体随 R 收敛；单胞/多周期解析口径差 1.7pp、网格与解析差 9~11pp（R48）——根因（场采样域一致性/投影体积收缩）登记 bugs.md 待平台级深挖
