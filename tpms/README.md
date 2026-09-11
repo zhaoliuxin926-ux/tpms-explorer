@@ -145,7 +145,7 @@ node parity_math.mjs                     # 数学/导出一致性（纯 Node，�
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 串联 38 道正式门禁（其中第 12 门为 `run_all` UI 聚合）；另有 `ui_jump_check` 顶层快检与 agent selftest/schema_check 两项 CLI 门，最终调度汇总显示 41/41（2026-09-10 起 selftest/schema_check 转正进调度——此前两者均有静默红事故史）。
+> CI 数量口径：`run_ci_suite.mjs` 串联 38 道正式门禁（`run_all` UI 聚合为其中一门）；另有 `ui_jump_check` 顶层快检与 agent selftest/schema_check 两项 CLI 门，最终调度汇总显示 41/41（2026-09-10 起 selftest/schema_check 转正进调度——此前两者均有静默红事故史）。
 
 ### 工程版部署到 GitHub Pages
 ```bash

@@ -16,7 +16,7 @@ Personal, independently maintained open-source project.
 | Install | None — open `index.html`, works offline | `npm install && npm run dev` (Vite 8 + TS + Three.js + WebGPU) |
 | Audience | Teaching, demos, quick exploration | Research, batch generation, CAE export, CLI automation |
 | Surface families | 8 canonical | **20** (canonical + C2: Fischer-Koch / Double / Complementary D …) |
-| Export | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / 3MF / GLB / Abaqus INP / OpenFOAM polyMesh / G-code / Python (PyVista) / MATLAB scripts |
+| Export | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / 3MF / GLB / Abaqus INP / OpenFOAM polyMesh / Python (PyVista) / MATLAB scripts |
 
 ## Highlights
 

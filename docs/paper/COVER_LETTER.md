@@ -28,7 +28,7 @@ dynamics.
    address adjacent stages of the same workflow and share the 1-period-equals-1-mm convention for
    interoperability.
 2. **Verification culture as the core differentiator.** Every headline claim in the manuscript is
-   re-executable: a 39-item CI suite (38 formal gates + navigation quick-check, >1,000 assertions
+   re-executable: a 41-item CI suite (38 formal gates + navigation quick-check + CLI selftest + schema contract, >1,000 assertions
    under strict per-line accounting, each gate carrying a minimum-assertion guard) runs on a
    three-platform GitHub Actions matrix; a clean clone reproduces all claims via
    `npm install && npm run test:all`.
