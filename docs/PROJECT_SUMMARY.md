@@ -8,8 +8,9 @@
 
 ## 一、项目定位
 
-交互式**三重周期极小曲面（TPMS）**参数探索与多物理场数字孪生平台。8 类经典曲面
-（Gyroid / Diamond / Schwarz P / Neovius / I-WP / F-RD / Lidinoid / Split-P）实时重建，
+交互式**三重周期极小曲面（TPMS）**参数探索与多物理场数字孪生平台。教学版 8 类经典曲面
+（Gyroid / Diamond / Schwarz P / Neovius / I-WP / F-RD / Lidinoid / Split-P）实时重建；
+工程版扩至 **20 族**（+Octo / Karcher / Fischer-Koch S·Y·C(S)·C(Y) / G′ / D′ / Double P·D·G / Complementary D）。
 覆盖「设计 → 仿真 → 打印 → 验证」全链路。个人独立开源项目，面向初学者与科研复现。
 
 ## 二、仓库顶层结构
