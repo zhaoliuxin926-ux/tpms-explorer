@@ -22,9 +22,11 @@
 - 目标：CLI 命令整理为 agent tool schema（JSON Schema，含各参数钳制范围，来源 nl-agent 钳制表）
 - 成功标准：schema 覆盖 nl_agent_audit 现有 32 断言的意图类型；每个数值参数都有硬边界
 
-### M3 LLM 接入 — 未开始（需先选定 API provider 并提供 key）
-- 目标：LLM tool calling → 只填意图槽位，数值全部落 schema 钳制
-- 成功标准：≥30 条中英文设计指令回归，无一处 LLM 直写数值；越界意图 100% 被钳制或拒绝
+### M3 LLM 接入 — 🔶 Provider 层已交付（2026-09-11），待真实模型回归
+- **已交付**：`llm-provider.mjs`（LLMProvider 抽象 + OllamaProvider + MockProvider + validateToolCalls 拦截器）+ `llm-agent.mjs`（自然语言 → tool calling → CLI 执行循环）+ `llm_provider_selftest.mjs`（15/15，离线不依赖 Ollama）
+- 铁律落地：LLM 产出逐槽位过 schema 钳制（enum/minimum/maximum/未知属性/未知工具/缺必填全拦截）；拦截失败 exit 2
+- 用法：`node llm-agent.mjs --provider ollama --model qwen2.5:7b "设计一个孔隙率 75% 的 Gyroid 骨支架"`（需本地 ollama serve）
+- 剩余：≥30 条中英文设计指令真实模型回归（需 Ollama 进程）；越界意图 100% 钳制验证
 
 ### M4 闭环驱动器 — 未开始
 - 目标：propose → 执行 → 读门禁/审计结构化输出（CI RESULT 行）→ 修正重跑 循环
