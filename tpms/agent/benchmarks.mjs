@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// benchmarks.mjs —— B5 公开基准采集：18 曲面 × R{48,96} × p0.6 矩阵
+// benchmarks.mjs —— B5 公开基准采集：20 曲面 × R{48,96} × p0.6 矩阵
 // 每格：退出码/水密三硬指标/解析-实测孔隙率偏差/构建耗时/交付物
 // 用法: node tpms/agent/benchmarks.mjs [--md 仓库根/BENCHMARKS.md] [--json 路径] [--quick(R48-only)]
 // 诚实口径：拒产/超时如实记录（fail-closed 是平台行为的一部分）；fcks 可产域=R120 中段孔隙率（p0.5-0.7 实测可产）。
@@ -72,8 +72,8 @@ if (mdPath) {
     '| 曲面 | R48 可产 | R96 可产 | 备注 |', '|---|---|---|---|',
     ...TYPES.map((t) => {
       const g = (R) => { const r = rows.find((x) => x.type === t && x.R === R); return r?.watertight ? '✅' : '⛔'; };
-      const note = t === 'fcks' ? '谐波 3×：R120 中段孔隙率可产（实测 p0.5/0.6/0.7 均 nm=0）；R48/R96/R128 薄壁自触 fail-closed（R128 旧「>36 分钟」实为索引池溢出死循环，2026-09-10 已修）'
-        : t === 'dprime' ? '低分辨率薄壁自触 fail-closed，R96 可产（C2 第三批实测 nm 18252@R48）'
+      const note = t === 'fcks' ? '谐波 3×：可产域=R120 k6（p0.5-0.7 nm=0）∪ R128 k2（nm=0，偏差 0.13pp，~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避'
+        : t === 'dprime' || t === 'cdd' ? '低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48）'
         : t === 'dg' ? 'p0.6 iso 触求解域下界 −1.6：偏差 ~8pp 为可用域事实（nm=0 可产，如实报告）'
         : t === 'gprime' ? '默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产'
         : ['frd', 'lidinoid', 'fks', 'fky'].includes(t) ? '低分辨率薄壁自触 fail-closed，R96 可产' : '';
@@ -86,7 +86,7 @@ if (mdPath) {
     '## 4. 对标（开源生态）', '',
     '| 能力 | 本项目 | RegionTPMS | MiniSurf | microgen |', '|---|---|---|---|---|',
     '| 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |',
-    '| 曲面族 | 18 | 4 | 19 | 8+ |',
+    '| 曲面族 | 20 | 4 | 19 | 8+ |',
     '| 验证门禁 | 39 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |',
     '| 孔隙率求解 | exact 解析求根+网格实测校正（R96 0.26pp） | 解析 NIntegrate | level-set 近似 | 数值 |',
     '| 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |',
@@ -96,7 +96,7 @@ if (mdPath) {
     '- 高谐波族（iwp/frd/lidinoid/splitp/fks/fky/gprime/dprime）低分辨率下网格表示物理受限：偏差与拒产随分辨率收敛',
     '- 孔隙率偏差为网格实测口径 vs 目标，含场离散项（exact 求解器已作割线校正）',
     '- 力学口径为 Gibson-Ashby 解析估算，非 FEA；压缩响应以 Abaqus 实跑为准',
-    '- fcks 可产域=R120 中段孔隙率：p0.5-0.7 实测 nm=0 水密，R48/R96/R128 薄壁自触拒产（旧「R128 >36 分钟」实为索引池溢出死循环，2026-09-10 已修）',
+    '- fcks 可产域=R120 k6 ∪ R128 k2（~9s，偏差 0.13pp）；k6 R48/R96/R128 薄壁自触拒产（旧「R128 >36 分钟」实为索引池溢出死循环，2026-09-10 已修；性能路径 2026-09-11 退役）',
   ].join('\n');
   writeFileSync(mdPath, lines);
   console.log(`MD 已写 ${mdPath}`);
