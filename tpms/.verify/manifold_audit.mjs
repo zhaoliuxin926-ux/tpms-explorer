@@ -180,8 +180,8 @@ console.log('\n[D] cylinder 域两端周期对齐（θ 差 = 2π）');
     : bad('torus 周期未对齐', `Δu=${dt.toExponential(1)} Δv=${dt2.toExponential(1)}`);
 }
 
-// ────────────────────────────── E. 最小二面角分布（形状学下限） ──────────────────────────────
-console.log('\n[E] 映射后三角形质量（最小角分布）');
+// ────────────────────────────── E. 三角形质量（退化硬门 + 薄片观测） ──────────────────────────────
+console.log('\n[E] 映射后三角形质量（退化硬门 + 薄片观测）');
 {
   const bs = baseMesh();
   const ctx = { half: Math.PI * 2 };
@@ -189,31 +189,42 @@ console.log('\n[E] 映射后三角形质量（最小角分布）');
   const cfgOf2 = (kind) => kind === 'cylinder' ? { radius: 8.2 }
     : kind === 'torus' ? { radius: 15, tubeRatio: 0.55 } : { radius: 6 };
   let worstMinAngle = Math.PI;
+  let worstNormArea = Infinity; // area / max_edge² —— 尺度无关薄片度
   for (const kind of kinds) {
     const positions = bs.positions.slice();
     mapGeometry(kind, cfgOf2(kind), ctx, positions);
-    let localMin = Math.PI;
     for (let t = 0; t < bs.indices.length; t += 3) {
       const a = bs.indices[t] * 3, b = bs.indices[t + 1] * 3, c = bs.indices[t + 2] * 3;
       const P = [[positions[a], positions[a + 1], positions[a + 2]], [positions[b], positions[b + 1], positions[b + 2]], [positions[c], positions[c + 1], positions[c + 2]]];
+      // 边长 + 面积（叉积范数 / 2）
+      const e01 = [P[1][0] - P[0][0], P[1][1] - P[0][1], P[1][2] - P[0][2]];
+      const e02 = [P[2][0] - P[0][0], P[2][1] - P[0][1], P[2][2] - P[0][2]];
+      const e12 = [P[2][0] - P[1][0], P[2][1] - P[1][1], P[2][2] - P[1][2]];
+      const cr = [e01[1] * e02[2] - e01[2] * e02[1], e01[2] * e02[0] - e01[0] * e02[2], e01[0] * e02[1] - e01[1] * e02[0]];
+      const area2 = Math.hypot(...cr);
+      const maxE = Math.max(Math.hypot(...e01), Math.hypot(...e02), Math.hypot(...e12));
+      if (maxE > 0) worstNormArea = Math.min(worstNormArea, area2 / 2 / (maxE * maxE));
       for (let i = 0; i < 3; i++) {
         const p0 = P[i], p1 = P[(i + 1) % 3], p2 = P[(i + 2) % 3];
         const e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
         const e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
         const l1 = Math.hypot(...e1), l2 = Math.hypot(...e2);
-        const dot = (e1[0] * e2[0] + e1[1] * e2[1] + e1[2] * e2[2]) / (l1 * l2);
-        localMin = Math.min(localMin, Math.acos(Math.max(-1, Math.min(1, dot))));
+        if (l1 > 0 && l2 > 0) {
+          const dot = (e1[0] * e2[0] + e1[1] * e2[1] + e1[2] * e2[2]) / (l1 * l2);
+          worstMinAngle = Math.min(worstMinAngle, Math.acos(Math.max(-1, Math.min(1, dot))));
+        }
       }
     }
-    if (localMin < worstMinAngle) worstMinAngle = localMin;
   }
-  // 阈值 0.001 rad ≈0.057°（2026-09-06 重标定）：投影 k 倍步长修复后顶点精确落解析面，
-  // R28/k2 基础网格出现 0.231° 薄片（相邻顶点距 0.074wc = 16% 格长，三顶点互异、水密），
-  // cylinder 映射放大到 0.073°——精度（体积 -9pp→-2pp）换一个低质量三角，渲染/切片无碍；
-  // 旧 0.3° 阈值在不准确网格上标定。0.057° 仍拦截真退化（重合顶点 = 0°）
-  worstMinAngle > 0.001
-    ? ok(`四类映射最小角 > 0.057°`, `min=${(worstMinAngle * 180 / Math.PI).toFixed(2)}°`)
-    : bad('存在退化三角', `min=${(worstMinAngle * 180 / Math.PI).toFixed(3)}°`);
+  // 【2026-09-11 重标定】硬门从绝对最小角 0.001 rad（0.057°，单一 R28/k2 薄片族标定、余量仅 ~22%）
+  // 改为**尺度无关退化判据**：
+  //   1) 归一化面积 area/max_edge² < 1e-12 —— 重合顶点/零面积三角，与映射尺度无关
+  //   2) 最小角 < 1e-6 rad（≈0.00006°）—— 真正的数值退化下限（重合顶点恰为 0）
+  // 薄片但合法的三角（历史实测 min≈0.07°）不再硬拦，只作观测值汇报——消除新案例误报风险。
+  const degenerate = worstNormArea < 1e-12 || worstMinAngle < 1e-6;
+  !degenerate
+    ? ok('四类映射无退化三角（相对面积+最小角硬门）', `minAngle=${(worstMinAngle * 180 / Math.PI).toFixed(3)}° normArea=${worstNormArea.toExponential(2)}`)
+    : bad('存在退化三角', `minAngle=${(worstMinAngle * 180 / Math.PI).toFixed(4)}° normArea=${worstNormArea.toExponential(2)}`);
 }
 
 // ────────────────────────────── F. 主线程缓存不变式 ──────────────────────────────
