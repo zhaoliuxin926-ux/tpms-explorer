@@ -101,7 +101,7 @@ cd tpms/tpms-platform && npm install && npm run dev   # http://localhost:5173
 ## 第 4 阶 · 进阶（按需）：直接当生产工具用
 
 - **《TPMS 科研与增材制造实战指南》**（[WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md)，35 章）：端板压缩试验、snappyHexMesh 配置、RVE 均质化、红队极端工况、DICOM 骨计量、G-code 直出——专业流程逐章可查；
-- **验证文化**：本项目 39 道 CI 门禁、1000+ 断言守着每条公式与导出——你改参数不必怀疑"算得对不对"，先例见 `tpms/.verify/`；
+- **验证文化**：本项目 41 道 CI 门禁、1000+ 断言守着每条公式与导出——你改参数不必怀疑"算得对不对"，先例见 `tpms/.verify/`；
 - **逆向设计**：知道目标模量/渗透率，让引擎反解最优构型（工程版）。
 
 **自检** ✅：能用 WORKFLOW_GUIDE 独立跑通一次"设计 → 仿真 → 对比文献"的完整验证。

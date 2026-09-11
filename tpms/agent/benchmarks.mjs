@@ -87,7 +87,7 @@ if (mdPath) {
     '| 能力 | 本项目 | RegionTPMS | MiniSurf | microgen |', '|---|---|---|---|---|',
     '| 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |',
     '| 曲面族 | 20 | 4 | 19 | 8+ |',
-    '| 验证门禁 | 39 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |',
+    '| 验证门禁 | 41 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |',
     '| 孔隙率求解 | exact 解析求根+网格实测校正（R96 0.26pp） | 解析 NIntegrate | level-set 近似 | 数值 |',
     '| 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |',
     '| 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |',

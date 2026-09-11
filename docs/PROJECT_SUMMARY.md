@@ -148,5 +148,5 @@ shaders/navier-stokes.wat——wabt.js/V8 编码分歧降级披露）。
 cd tpms/tpms-platform
 npm run dev          # 开发
 npm run build        # 构建（dist → docs/platform 同步）
-npm run test:all     # 39 门 CI（本机约 6 分钟）
+npm run test:all     # 41 门 CI（本机约 6-10 分钟）
 ```
