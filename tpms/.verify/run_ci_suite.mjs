@@ -95,8 +95,8 @@ function runStep(name, script) {
 
 // ── 调度清单（[汇报名, 步骤名, 脚本]；顺序 = 历史顺序，执行 = 并发池）──
 const SCHEDULE = [
-  ['mesh_audit 几何质量门（28 案例）', '几何质量门', 'mesh_audit.mjs'],
-  ['parity_math 数学同源（185 断言）', '数学同源', 'parity_math.mjs'],
+  ['mesh_audit 几何质量门（30 案例）', '几何质量门', 'mesh_audit.mjs'],
+  ['parity_math 数学同源（282 断言）', '数学同源', 'parity_math.mjs'],
   ['state_url_audit 状态隔离+分享恢复（门37）', '状态与分享审计', 'state_url_audit.mjs'],
   ['worker_bridge_audit Worker生命周期（门38，11断言）', 'Worker生命周期审计', 'worker_bridge_audit.mjs'],
   ['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', '仿真导出校验', 'sim_export_check.mjs'],
@@ -137,7 +137,7 @@ const SCHEDULE = [
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],
-  ['schema_check 契约与可用域（64 断言）', 'Schema 契约', '../agent/schema_check.mjs'],
+  ['schema_check 契约与可用域（69 断言）', 'Schema 契约', '../agent/schema_check.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));
