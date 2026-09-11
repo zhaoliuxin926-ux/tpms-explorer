@@ -103,6 +103,15 @@ for (const type of TYPES) {
   check(`${type}: @compute/storage/配平/无 JS 残留`, body.includes('@compute') && body.includes('@workgroup_size(4, 4, 4)')
     && body.includes('var<storage, read_write>') && bal && !body.includes('Math.')
     && !/let t\d+ = -?\d+;/.test(body));
+  // WGSL stdlib 无 neg()——发射为一元负号（红队 A CRITICAL 回归钉）
+  check(`${type}: WGSL 无 neg() 函数调用`, !/\bneg\s*\(/.test(body), body.match(/neg\s*\(/g)?.join(',') ?? '');
+}
+{
+  // fcky/cdd/custom 一元负号必须发射为 `-reg` 而非 neg(reg)
+  for (const t of ['fcky', 'cdd']) {
+    const k = compileFieldKernel(mkCfg(t));
+    check(`${t}: WGSL 含一元负号发射`, /let t\d+ = -t\d+;/.test(k.wgsl) || k.wgsl.includes(' = -t'), k.wgsl.slice(0, 200));
+  }
 }
 {
   const k = compileFieldKernel(mkCfg('gyroid'));

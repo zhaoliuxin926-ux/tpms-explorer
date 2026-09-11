@@ -526,7 +526,7 @@ if ~strcmp(stress_preset, 'none')
     clear idx
 end
 
-% von Mises 应力（归一化；壳壁厚调制用）
+% von Mises 应力（归一化；壳壁厚调制用）——用原始坐标，不被应力变换污染
 px = X / pi; py = Y / pi; pz = Z / pi;
 if strcmp(stress_preset, 'bending')
     vm = abs(pz);
@@ -537,6 +537,10 @@ elseif strcmp(stress_preset, 'torsion')
 else
     vm = zeros(size(X));
 end
+
+% 应力变换后坐标就地替换（红队 A MAJOR：此前 Xs/Ys/Zs 算完未被曲面分支读取，
+% Python 侧正确传 Xs/Ys/Zs——两侧几何不一致；现统一为替换后 kk*X 语义）
+X = Xs; Y = Ys; Z = Zs;
 
 % 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
 if strcmp(tpms_type, 'custom')
@@ -638,7 +642,7 @@ blend_function = '${safeId(state.hybrid.blendFunction)}';
 blend_axis = '${safeId(state.hybrid.axis ?? 'x')}';
 if ${safeId(state.hybrid.enabled)}
     type_b = '${safeId(state.hybrid.typeB)}';
-    weights_b = [${state.weights.join(', ')}]  # 与平台同源（平台 B 场复用主权重，非默认权重）;
+    weights_b = [${state.weights.join(', ')}];  % 与平台同源（平台 B 场复用主权重，非默认权重）
     if strcmp(type_b, 'custom')
         % 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
         V_b = ${customMlExpr(state)};

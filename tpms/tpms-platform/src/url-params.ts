@@ -143,20 +143,22 @@ export function parseURLParams(search: string): Partial<AppState> {
     const rawBlend = q.get('hybridBlend');
     state.hybrid = {
       enabled: true,
-      typeB: rawTypeB && VALID.type.includes(rawTypeB as TpmType) ? (rawTypeB as TpmType) : 'diamond',
+      // hybridType 剔除 custom：UI 无该按钮；curvature 路径 typeB=custom 会因空公式抛错（红队 D）
+      typeB: rawTypeB && rawTypeB !== 'custom' && VALID.type.includes(rawTypeB as TpmType) ? (rawTypeB as TpmType) : 'diamond',
       blendFunction: rawBlend === 'linear' || rawBlend === 'sigmoid' ? rawBlend : 'sigmoid',
-      blendCenter: clamp(q.get('hybridCenter'), -2, 2, 0),
-      blendWidth: clamp(q.get('hybridWidth'), 0.1, 5, 1.0),
+      // clamp 与 UI 滑块同域（红队 D：曾 [-2,2]/[0.1,5] 宽于 UI [-1,1]/[0.1,2]，分享链可产出面板不可回拨状态）
+      blendCenter: clamp(q.get('hybridCenter'), -1, 1, 0),
+      blendWidth: clamp(q.get('hybridWidth'), 0.1, 2.0, 1.0),
       axis: (['x','y','z','radial'].includes(q.get('hybridAxis') || '') ? q.get('hybridAxis') : 'x') as BlendAxis,
     };
   }
 
-  // C1 渐变等值场（恶意 URL 数值全过 clamp 钳制）
+  // C1 渐变等值场（恶意 URL 数值全过 clamp 钳制；clamp 与 UI 滑块同域）
   if (q.get('ig') === '1') {
     state.isoGrad = {
       enabled: true,
-      hard: clamp(q.get('igH'), -1.5, 0, -0.12),
-      soft: clamp(q.get('igS'), 0, 1.5, 0.12),
+      hard: clamp(q.get('igH'), -0.4, 0, -0.12),
+      soft: clamp(q.get('igS'), 0, 0.4, 0.12),
       band: clamp(q.get('igB'), 0, 2, 0.4),
     };
   }

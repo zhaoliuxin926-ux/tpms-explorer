@@ -40,7 +40,8 @@ const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
-  ['resolution 上限 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
+  ['resolution 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
+  ['hybrid × shell 模式参数层拒绝 [exit2]', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--hybrid', 'diamond', '--mode', 'shell', '--out', join(tmpOut())], (r) => r.status === 2 && (r.stderr || '').includes('solid_network')],
   ['porosity 0.05 参数层接受+构建层 fail-closed', ['--type', 'gyroid', '--porosity', '0.05', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 3 && (r.stderr || '').includes('水密门')],
   ['periods 上限 12 通过', ['--type', 'gyroid', '--porosity', '0.6', '--periods', '12', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
   // cylinder+diamond 可用域钉住（2026-09-10 取证）：R48-R128 全拒产且非单调不收敛
@@ -200,6 +201,12 @@ for (const [label, args] of [
     ? ok('estimate material enum 与平台材料表一致') : bad('material enum');
   JSON.stringify(t.type.enum.slice().sort()) === typeEnum
     ? ok('estimate/mesh type enum 相互一致') : bad('type enum 不一致');
+  // 【红队 B】schema enum ≡ CLI BUILTIN_TYPES 交叉比对（第三份硬编码 TYPES 与两者对拍）
+  const cliSrc = readFileSync(join(HERE, 'tpms.mjs'), 'utf8');
+  const m = cliSrc.match(/const BUILTIN_TYPES = \[([^\]]+)\]/);
+  const cliTypes = m ? m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).sort() : [];
+  JSON.stringify(cliTypes) === JSON.stringify(props.type.enum.slice().sort())
+    ? ok('CLI BUILTIN_TYPES ≡ schema type enum') : bad('CLI/schema enum 不一致', `cli=${cliTypes.length} schema=${props.type.enum.length}`);
 }
 
 // ── 3b. tpms_scenario（M5 场景模板）schema ↔ CLI 行为对拍 ──
@@ -265,5 +272,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 69) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 69`); process.exit(1); }
+if (pass < 71) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 71`); process.exit(1); }
 process.exit(fail ? 1 : 0);
