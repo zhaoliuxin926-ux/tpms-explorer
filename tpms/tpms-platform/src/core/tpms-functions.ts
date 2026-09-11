@@ -212,10 +212,27 @@ const dg: TpmsFunction = (mx, my, mz, w) =>
       Math.sin(2 * mz) * Math.sin(my) * Math.cos(mx)) -
     1.0 * (Math.cos(2 * mx) * Math.cos(2 * my) + Math.cos(2 * my) * Math.cos(2 * mz) + Math.cos(2 * mz) * Math.cos(2 * mx))) - 0.95;
 
+// ── C2 曲面库扩展第四批（2026-09-11）：Fisher-Koch C(Y) ──
+// 出处：MiniSurf 官方源码 mengtinh/MiniSurf document.xml 行 254-257（展示方程，与 fky 同口径；
+// 生成段行 379 为另一 4 项简式，与展示方程不一致——本项目对 fky 已采展示方程，C(Y) 同规约）。
+// 与 fky 的关系：低频 (ccc+sss) 项反号，2 倍频组不变。
+
+/**
+ * Fisher-Koch C(Y)：2 权重（低谐波对反号 + 2 倍频组，与 fky 同构）
+ * −w0·(cosx cosy cosz + sinx siny sinz) +
+ *  w1·(sin2x·siny + sin2y·sinz + sinx·sin2z + sin2x·cosz + cosx·sin2y + cosy·sin2z)
+ */
+const fcky: TpmsFunction = (mx, my, mz, w) => {
+  const s2x = 2 * Math.sin(mx) * Math.cos(mx), s2y = 2 * Math.sin(my) * Math.cos(my), s2z = 2 * Math.sin(mz) * Math.cos(mz);
+  return -w[0] * (Math.cos(mx) * Math.cos(my) * Math.cos(mz) + Math.sin(mx) * Math.sin(my) * Math.sin(mz)) +
+    w[1] * (s2x * Math.sin(my) + s2y * Math.sin(mz) + Math.sin(mx) * s2z +
+      s2x * Math.cos(mz) + Math.cos(mx) * s2y + Math.cos(my) * s2z);
+};
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
   gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
-  dprime, dp, dd, dg,
+  dprime, dp, dd, dg, fcky,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -229,6 +246,7 @@ export function getWeightCount(type: TpmType): number {
     case 'octo': return 2;
     case 'karcher': case 'fks': case 'fky': return 3;
     case 'gprime': case 'fcks': case 'dprime': case 'dp': case 'dd': case 'dg': return 1;
+    case 'fcky': return 2; // 与 fky 公式同构（w0 低频 + w1 2 倍频组）；fky 登记为 3 为历史口径
     case 'custom': return 4;
     default: return 3;
   }

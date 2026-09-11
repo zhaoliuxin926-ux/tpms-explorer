@@ -29,6 +29,7 @@ const C1_MAP: Record<string, number> = {
   iwp: 0.38, frd: 0.4, lidinoid: 0.32, splitp: 0.33,
   octo: 0.33, karcher: 0.33, fks: 0.32, fky: 0.32, gprime: 0.32, fcks: 0.32, // C2 扩展：带内估值
   dprime: 0.36, dp: 0.35, dd: 0.36, dg: 0.33, // C2 扩展第三批：带内估值
+  fcky: 0.32, // C2 扩展第四批：沿 fky 口径
 };
 
 /** 单胞解析面积密度 cArea（mm⁻¹ @ cellSize=1；Schwarz P 2.31 引自极小曲面经典面积，其余同量级标定） */
@@ -37,6 +38,7 @@ const C_AREA: Record<string, number> = {
   iwp: 3.2, frd: 3.4, lidinoid: 3.3, splitp: 3.2,
   octo: 3.2, karcher: 3.2, fks: 3.3, fky: 3.3, gprime: 3.2, // C2 扩展：同量级估值
   dprime: 3.8, dp: 3.3, dd: 3.8, dg: 3.2, // C2 扩展第三批：同量级估值（D 系面积密度沿 Diamond 口径）
+  fcky: 3.3, // C2 扩展第四批：沿 fky 口径
 };
 
 const KOZENY_C = 5;

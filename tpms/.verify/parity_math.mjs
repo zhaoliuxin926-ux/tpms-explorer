@@ -147,6 +147,11 @@ const LIT = {
         Math.sin(2 * y) * Math.sin(x) * Math.cos(z) +
         Math.sin(2 * z) * Math.sin(y) * Math.cos(x)) -
       1.0 * (Math.cos(2 * x) * Math.cos(2 * y) + Math.cos(2 * y) * Math.cos(2 * z) + Math.cos(2 * z) * Math.cos(2 * x))) - 0.95,
+  // ── C2 第四批（Fisher-Koch C(Y)，MiniSurf 展示方程；低频项相对 fky 反号）──
+  fcky: (x, y, z, w) =>
+    -w[0] * (Math.cos(x) * Math.cos(y) * Math.cos(z) + Math.sin(x) * Math.sin(y) * Math.sin(z)) +
+    w[1] * (Math.sin(2 * x) * Math.sin(y) + Math.sin(2 * y) * Math.sin(z) + Math.sin(x) * Math.sin(2 * z) +
+      Math.sin(2 * x) * Math.cos(z) + Math.cos(x) * Math.sin(2 * y) + Math.cos(y) * Math.sin(2 * z)),
 };
 
 // 确定性伪随机（可复现）
@@ -226,6 +231,11 @@ for (const type of Object.keys(LIT)) {
   // dg：原点值 = 0 − 1.0·3 − 0.95 = −3.95（sin 组为 0，cos2 组全 1）
   check('解析锚点 dg 原点值 -3.95', near(F.dg(0, 0, 0, W), -3.95), String(F.dg(0, 0, 0, W)));
   check('解析锚点 dg 循环置换不变（5 点）', cycOk(F.dg));
+  // fcky：原点值 = −(1+0) + 0 = −1（仅 ccc 项存活，2 倍频组为 0）；与 fky 低频反号
+  check('解析锚点 fcky 原点值 -1', near(F.fcky(0, 0, 0, W), -1), String(F.fcky(0, 0, 0, W)));
+  check('解析锚点 fcky 循环置换不变（5 点）', cycOk(F.fcky));
+  check('解析锚点 fcky 与 fky 低频反号（原点）', near(F.fcky(0, 0, 0, W), -F.fky(0, 0, 0, W)));
+  check('解析锚点 fcky (π/2,0,0) 为 0', near(F.fcky(Math.PI / 2, 0, 0, W), 0, 1e-12), String(F.fcky(Math.PI / 2, 0, 0, W)));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -707,7 +717,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 264) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 264（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-10 C2 第三批实测上移 229→264）'); process.exit(1); }
+  if (pass < 268) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 268（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-10 C2 第三批实测上移 229→264；2026-09-11 fcky 锚点 +4）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

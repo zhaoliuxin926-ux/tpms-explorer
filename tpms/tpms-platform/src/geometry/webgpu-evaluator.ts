@@ -341,6 +341,15 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const core = b.binary('sub', mulChain(b, [b.load(2.75), g]), mulChain(b, [b.load(1.0), c2Pair]));
       return sumChain(b, [mulChain(b, [wreg(0), core]), b.load(-0.95)]);
     }
+    // ── C2 扩展第四批：Fisher-Koch C(Y)（与 fky 同构，低频项反号）──
+    case 'fcky': {
+      const low = sumChain(b, [mulChain(b, [cos(mx), cos(my), cos(mz)]), mulChain(b, [sin(mx), sin(my), sin(mz)])]);
+      const hi = sumChain(b, [
+        mulChain(b, [sin2(b, mx), sin(my)]), mulChain(b, [sin2(b, my), sin(mz)]), mulChain(b, [sin(mx), sin2(b, mz)]),
+        mulChain(b, [sin2(b, mx), cos(mz)]), mulChain(b, [cos(mx), sin2(b, my)]), mulChain(b, [cos(my), sin2(b, mz)]),
+      ]);
+      return sumChain(b, [b.unary('neg', mulChain(b, [wreg(0), low])), mulChain(b, [wreg(1), hi])]);
+    }
   }
 }
 

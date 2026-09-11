@@ -57,6 +57,7 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/fischer-?koch-?y|fk-?y\b/i, 'fky', 'Fischer-Koch Y'],
   [/g-?prime|g′|g撇/i, 'gprime', "G'"],
   [/c\(?s\)?|fischer-?koch-?c-?s/i, 'fcks', 'Fisher-Koch C(S)'],
+  [/fischer-?koch-?c-?\(?y\)?|fk-?c-?\(?y\)?|c\(y\)/i, 'fcky', 'Fisher-Koch C(Y)'],
 ];
 
 const MATERIAL_WORDS: Array<[RegExp, string, string]> = [

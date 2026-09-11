@@ -167,6 +167,10 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
                             + np.sin(2*kk*Z)*np.sin(kk*Y)*np.cos(kk*X))
                 - 1.0*(np.cos(2*kk*X)*np.cos(2*kk*Y) + np.cos(2*kk*Y)*np.cos(2*kk*Z) + np.cos(2*kk*Z)*np.cos(2*kk*X)))
                 - 0.95)
+    elif t == 'fcky':
+        return (-w[0]*(np.cos(kk*X)*np.cos(kk*Y)*np.cos(kk*Z) + np.sin(kk*X)*np.sin(kk*Y)*np.sin(kk*Z))
+                + w[1]*(np.sin(2*kk*X)*np.sin(kk*Y) + np.sin(2*kk*Y)*np.sin(kk*Z) + np.sin(kk*X)*np.sin(2*kk*Z)
+                        + np.sin(2*kk*X)*np.cos(kk*Z) + np.cos(kk*X)*np.sin(2*kk*Y) + np.cos(kk*Y)*np.sin(2*kk*Z)))
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -601,6 +605,10 @@ elseif strcmp(tpms_type, 'dg')
                           + sin(2*kk*Y).*sin(kk*X).*cos(kk*Z) ...
                           + sin(2*kk*Z).*sin(kk*Y).*cos(kk*X)) ...
               - 1.0*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X))) - 0.95;
+elseif strcmp(tpms_type, 'fcky')
+    V = -weights(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
+      + weights(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
+                    + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
 else
     error('Unsupported TPMS type');
 end
@@ -689,6 +697,10 @@ if ${safeId(state.hybrid.enabled)}
                                   + sin(2*kk*Y).*sin(kk*X).*cos(kk*Z) ...
                                   + sin(2*kk*Z).*sin(kk*Y).*cos(kk*X)) ...
                       - 1.0*(cos(2*kk*X).*cos(2*kk*Y) + cos(2*kk*Y).*cos(2*kk*Z) + cos(2*kk*Z).*cos(2*kk*X))) - 0.95;
+    elseif strcmp(type_b, 'fcky')
+        V_b = -weights_b(1)*(cos(kk*X).*cos(kk*Y).*cos(kk*Z) + sin(kk*X).*sin(kk*Y).*sin(kk*Z)) ...
+            + weights_b(2)*(sin(2*kk*X).*sin(kk*Y) + sin(2*kk*Y).*sin(kk*Z) + sin(kk*X).*sin(2*kk*Z) ...
+                            + sin(2*kk*X).*cos(kk*Z) + cos(kk*X).*sin(2*kk*Y) + cos(kk*Y).*sin(2*kk*Z));
     else
         error('Unsupported hybrid TPMS type');
     end

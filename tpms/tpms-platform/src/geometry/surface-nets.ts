@@ -144,7 +144,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // 含 2 倍频谐波/常偏置的曲面族无法使用 sin/cos 查表，需实时求值（C2 扩展 5 族与 lidinoid/splitp 同语义）
   const useLookup = !hybridEnabled && !stressOn && !hierCfg && !neuralOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
     type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime' && type !== 'fcks' &&
-    type !== 'dprime' && type !== 'dp' && type !== 'dd' && type !== 'dg';
+    type !== 'dprime' && type !== 'dp' && type !== 'dd' && type !== 'dg' && type !== 'fcky';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
@@ -1180,7 +1180,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         // 【阶段 IV】stress 变换是逐点非线性 warp，解析查表法线不感知 ⇒ 强制数值梯度
         // 【v7.0 Stage I】neural 场同理：解析查表法线与神经场无关 ⇒ 强制数值梯度
         // 【C2 扩展】新 5 族无解析梯度分支——不加守卫会静默落链尾 diamond 公式（v1 审计历史 bug 同款形态）
-        const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg';
+        const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky';
         const needNumericGrad = hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
         if (needNumericGrad) {
           // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
