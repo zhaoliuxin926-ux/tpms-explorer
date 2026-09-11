@@ -163,6 +163,8 @@ const CASES = [
   { name: 'frd solid75 k3 R96(倍频补偿)', type: 'frd', mode: 'solid_network', p: 0.75, k: 3, R: 96, tol2k: true },
   { name: 'lidinoid solid75 k2 R61', type: 'lidinoid', mode: 'solid_network', p: 0.75, k: 2, R: 61 },
   { name: 'splitp solid75 k2 R61', type: 'splitp', mode: 'solid_network', p: 0.75, k: 2, R: 61 },
+  // C2 第四批：fcky（低谐波，R48/R96 均可产——实测 nm=0，2026-09-11）
+  { name: 'fcky solid60 k6 R61', type: 'fcky', mode: 'solid_network', p: 0.60, k: 6, R: 61 },
   { name: 'diamond w=[1,1.2,0.8,1] solid75', type: 'diamond', mode: 'solid_network', p: 0.75, k: 3, R: 61, weights: [1, 1.2, 0.8, 1] },
   { name: 'gyroid w=[1.3,0.7,1.1] shell70', type: 'gyroid', mode: 'shell', p: 0.70, k: 3, R: 61, weights: [1.3, 0.7, 1.1, 1] },
   // 红队回归（2026-08-27 攻击战果的修复守护）
@@ -265,6 +267,6 @@ if (process.argv.includes('--json')) {
   const idx = process.argv.indexOf('--json');
   writeFileSync(process.argv[idx + 1], JSON.stringify(results, null, 2));
 }
-if (results.length < 28) { console.error('GUARD FAIL: 案例执行数 ' + results.length + ' < 基线 28（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+if (results.length < 29) { console.error('GUARD FAIL: 案例执行数 ' + results.length + ' < 基线 29（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +1）'); process.exit(1); }
 console.log(pass ? '\n=== 全部通过 ===' : '\n=== 存在 FAIL ===');
 process.exit(pass ? 0 : 1);

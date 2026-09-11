@@ -14,14 +14,16 @@ const DOI_MAP: Record<string, string> = {
   fks: '',
   fky: '',
   gprime: '',
+  fcks: '',
   dprime: '',
   dp: '',
   dd: '',
   dg: '',
+  fcky: '',
   custom: '',
   // f-rd / lidinoid / splitp：原始数学文献（Schoen 1970 NASA TR、Lidin & Larsson 1990）无 DOI，
   // 亦未检索到可靠的现代专文 DOI，宁缺毋滥保持空——生成 BibTeX 时省略 doi 行。
-  // C2 扩展 5 族及第三批 4 族（dprime/dp/dd/dg）同口径：公式对标 MiniSurf
+  // C2 扩展族（含 fcks/fcky/dprime/dp/dd/dg）同口径：公式对标 MiniSurf
   // （Hsieh & Valdevit 2020, Software Impacts, DOI 10.1016/j.simpa.2020.100026——
   // 该 DOI 归属软件论文本身，附于平台引用而非单曲面）
 };

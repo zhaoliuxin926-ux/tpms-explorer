@@ -15,7 +15,7 @@ const args = process.argv.slice(2);
 const mdPath = args.includes('--md') ? args[args.indexOf('--md') + 1] : null;
 const jsonPath = args.includes('--json') ? args[args.indexOf('--json') + 1] : join(HERE, 'benchmarks-latest.json');
 const quick = args.includes('--quick');
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky'];
 const RS = quick ? [48] : [48, 96];
 const P = 0.6;
 

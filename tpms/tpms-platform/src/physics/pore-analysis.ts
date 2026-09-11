@@ -35,6 +35,7 @@ const PORE_FACTOR: Record<string, number> = {
   dp: 0.58,
   dd: 0.53,
   dg: 0.57,
+  fcky: 0.57, // C2 扩展第四批：沿 fky 口径
   custom: 0.58,
 };
 
