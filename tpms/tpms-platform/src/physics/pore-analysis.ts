@@ -36,6 +36,7 @@ const PORE_FACTOR: Record<string, number> = {
   dd: 0.53,
   dg: 0.57,
   fcky: 0.57, // C2 扩展第四批：沿 fky 口径
+  cdd: 0.54, // C2 扩展第五批：沿 diamond 族口径
   custom: 0.58,
 };
 

@@ -152,6 +152,20 @@ const LIT = {
     -w[0] * (Math.cos(x) * Math.cos(y) * Math.cos(z) + Math.sin(x) * Math.sin(y) * Math.sin(z)) +
     w[1] * (Math.sin(2 * x) * Math.sin(y) + Math.sin(2 * y) * Math.sin(z) + Math.sin(x) * Math.sin(2 * z) +
       Math.sin(2 * x) * Math.cos(z) + Math.cos(x) * Math.sin(2 * y) + Math.cos(y) * Math.sin(2 * z)),
+  // ── C2 第五批（Complementary D，MiniSurf 展示方程；谐波 3× 混合角展开）──
+  cdd: (x, y, z, w) => {
+    const S3x = Math.sin(3 * x), C3x = Math.cos(3 * x);
+    const S3y = Math.sin(3 * y), C3y = Math.cos(3 * y);
+    const S3z = Math.sin(3 * z), C3z = Math.cos(3 * z);
+    return w[0] * (
+      C3x * Math.cos(y) * Math.cos(z) - S3x * Math.sin(y) * Math.cos(z)
+      - S3x * Math.cos(y) * Math.sin(z) + C3x * Math.sin(y) * Math.sin(z)
+      + Math.cos(x) * C3y * Math.cos(z) - Math.sin(x) * S3y * Math.cos(z)
+      + Math.sin(x) * C3y * Math.sin(z) - Math.cos(x) * S3y * Math.sin(z)
+      + Math.cos(x) * Math.cos(y) * C3z + Math.sin(x) * Math.sin(y) * C3z
+      - Math.sin(x) * Math.cos(y) * S3z - Math.cos(x) * Math.sin(y) * S3z
+    );
+  },
 };
 
 // 确定性伪随机（可复现）
@@ -236,6 +250,9 @@ for (const type of Object.keys(LIT)) {
   check('解析锚点 fcky 循环置换不变（5 点）', cycOk(F.fcky));
   check('解析锚点 fcky 与 fky 低频反号（原点）', near(F.fcky(0, 0, 0, W), -F.fky(0, 0, 0, W)));
   check('解析锚点 fcky (π/2,0,0) 为 0', near(F.fcky(Math.PI / 2, 0, 0, W), 0, 1e-12), String(F.fcky(Math.PI / 2, 0, 0, W)));
+  // cdd：原点值 = 3（cos3·cos·cos 三组各 1，其余 sin 项为 0）；循环置换不变
+  check('解析锚点 cdd 原点值 3', near(F.cdd(0, 0, 0, W), 3), String(F.cdd(0, 0, 0, W)));
+  check('解析锚点 cdd 循环置换不变（5 点）', cycOk(F.cdd));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -717,7 +734,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 268) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 268（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-10 C2 第三批实测上移 229→264；2026-09-11 fcky 锚点 +4）'); process.exit(1); }
+  if (pass < 272) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 272（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

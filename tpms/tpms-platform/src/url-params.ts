@@ -8,7 +8,7 @@ import { ENDPLATE_MAX_UI_MM, type BlendAxis } from './types';
 // import { getDefaultWeights } from './core/tpms-functions'; // TODO: restore when used
 
 const VALID = {
-  type: ['gyroid','diamond','schwarz','neovius','iwp','frd','lidinoid','splitp','octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','custom'] as TpmType[],
+  type: ['gyroid','diamond','schwarz','neovius','iwp','frd','lidinoid','splitp','octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd','custom'] as TpmType[],
   model: ['surface','strut','solid'] as RenderModel[],
   structure: ['solid_network','shell','gradient_shell'] as StructureMode[],
   container: ['cube','cylinder'] as ContainerShape[],
@@ -111,7 +111,7 @@ export function parseURLParams(search: string): Partial<AppState> {
 
   // 【v3.0 阶段 V】多级分形恢复（microType 白名单 = 已知 TPMS 族）
   const hdRaw = q.get('hd');
-  if (hdRaw && ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky'].includes(hdRaw)) {
+  if (hdRaw && ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'].includes(hdRaw)) {
     state.hierarchical = {
       enabled: true,
       microType: hdRaw as AppState['hierarchical']['microType'],
