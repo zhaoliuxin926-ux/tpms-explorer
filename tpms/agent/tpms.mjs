@@ -70,6 +70,7 @@ function parseIsoGrad(str, usage) {
   if (!m) die(`--iso-grad 格式须为 "<v0,v1,...>[@band]"，如 -0.1,0,0.1@0.4（z 向梯度，值=各平台 iso 偏移）`, usage);
   const values = m[1].split(',').map(Number);
   if (values.some((v) => !Number.isFinite(v))) die('--iso-grad 值须全为有限数字', usage);
+  if (values.some((v) => v < -1.5 || v > 1.5)) die('--iso-grad 平台值须在 [-1.5, 1.5]（超出平台 iso 可用域）', usage);
   if (values.length < 2 || values.length > 6) die('--iso-grad 须 2~6 个平台值（1 值无梯度意义；>6 超出支架语义）', usage);
   const band = m[2] !== undefined ? Number(m[2]) : 0.4;
   if (!Number.isFinite(band) || band < 0 || band > 2) die('--iso-grad 过渡带 band 须 0 ≤ b ≤ 2', usage);

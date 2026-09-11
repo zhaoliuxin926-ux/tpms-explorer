@@ -192,6 +192,9 @@ for (const [label, args] of [
   rBad.status === 2 ? ok('iso-grad 非法格式被拒 [exit2]') : bad('iso-grad 格式守卫', `exit=${rBad.status}`);
   const rShell = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--mode', 'shell', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()));
   rShell.status === 2 ? ok('iso-grad × shell 模式互斥被拒 [exit2]') : bad('iso-grad 模式守卫', `exit=${rShell.status}`);
+  const rHuge = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', '-100,100@0.4', '--out', join(tmpOut()));
+  rHuge.status === 2 && (rHuge.stderr || '').includes('[-1.5, 1.5]')
+    ? ok('iso-grad 幅值越界被拒 [exit2]') : bad('iso-grad 幅值守卫', `exit=${rHuge.status}`);
 }
 
 // estimate 枚举与 material 约束
@@ -272,5 +275,5 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 71) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 71`); process.exit(1); }
+if (pass < 72) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 72`); process.exit(1); }
 process.exit(fail ? 1 : 0);
