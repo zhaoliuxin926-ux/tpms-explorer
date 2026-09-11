@@ -24,9 +24,13 @@ and biophysical tissue-ingrowth dynamics}
 We present TPMS Explorer v7.0, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
-with thirty-eight continuously executed CI gates plus a navigation quick-check (39-item suite,
-$>1000 assertions under strict per-line accounting, each gate carrying a minimum-assertion guard)
-claim shipped to the user. Version 7.0 adds five research-grade modules: (i) a sinusoidal-activation
+with forty-one continuously executed CI gates ($>1000 assertions under strict per-line accounting,
+each gate carrying a minimum-assertion guard)
+claim shipped to the user. The surface library spans 20 level-set families --- the eight canonical
+topologies plus C2 extensions (O,C-TO; Karcher; Fischer-Koch S/Y/C(S)/C(Y); G$'$; D$'$; Double
+P/D/G; Complementary D) transcribed from the MiniSurf reference implementation, with
+four-way formula parity (TypeScript / Python / MATLAB / GPU IR) and a public geometric
+benchmark matrix. Version 7.0 adds five research-grade modules: (i) a sinusoidal-activation
 implicit neural field (SIREN) with an exactly periodic Fourier-feature input and an 8-dimensional
 latent space over five distilled TPMS experts; (ii) multiaxial anisotropic yield envelopes
 (Hill-48, Tsai-Wu, Gurson, Drucker--Prager) with a unified star-convex ray-distance formulation
@@ -188,7 +192,7 @@ the pipeline guarantees (open = non-manifold = degenerate = 0), misoriented edge
 construction --- verified byte-level on the exported STL (823,500 edges at resolution 96).
 
 \section{Quality control}
-Thirty-eight gates plus a navigation quick-check (39-item top-level suite) run via
+Forty-one gates run via
 \texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
 bundler and asserts behavior-level invariants (no mocked math), and every gate now carries a
 \emph{minimum-assertion guard}: a probe experiment showed that an auditor whose assertions are all
