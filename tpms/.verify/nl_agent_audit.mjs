@@ -120,10 +120,17 @@ console.log('\n[E] 毒化回归');
   check('E8d 分写 d prime → dprime', w4.patches.type === 'dprime', String(w4.patches.type));
   const w5 = parseNL('用 diamond 重建');
   check('E9 裸 diamond 不被新词表劫持', w5.patches.type === 'diamond', String(w5.patches.type));
+  // E10 C2 第四/五批（2026-09-11）
+  const w6 = parseNL('Fisher-Koch C(Y) 骨支架');
+  check('E10a Fisher-Koch C(Y) → fcky（不被 fky 劫持）', w6.patches.type === 'fcky', String(w6.patches.type));
+  const w7 = parseNL('Complementary D 曲面');
+  check('E10b Complementary D → cdd', w7.patches.type === 'cdd', String(w7.patches.type));
+  const w8 = parseNL('用 FK-C(Y) 重建');
+  check('E10c FK-C(Y) 简写 → fcky', w8.patches.type === 'fcky', String(w8.patches.type));
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
-  if (passCount < 37) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 37（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 40) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 40（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 +3 fcky/cdd）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
