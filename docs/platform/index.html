@@ -214,7 +214,30 @@
   .opt[data-color="frd"].active{background:linear-gradient(140deg,#a855f7 0%,#c084fc 100%);border-color:#a855f7;color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.32)}
   .opt[data-color="lidinoid"].active{background:linear-gradient(140deg,#84cc16 0%,#a3e635 100%);border-color:#84cc16;color:#fff;box-shadow:0 4px 14px rgba(132,204,22,.32)}
   .opt[data-color="splitp"].active{background:linear-gradient(140deg,#f43f5e 0%,#fb7185 100%);border-color:#f43f5e;color:#fff;box-shadow:0 4px 14px rgba(244,63,94,.32)}
+  /* C2 扩展族 active 色（与 types.ts TYPE_COLORS 同源，2026-09-11 补齐——此前 12 族选中时无专属渐变） */
+  .opt[data-color="octo"].active{background:linear-gradient(140deg,#14b8a6 0%,#2dd4bf 100%);border-color:#14b8a6;color:#fff;box-shadow:0 4px 14px rgba(20,184,166,.32)}
+  .opt[data-color="karcher"].active{background:linear-gradient(140deg,#a855f7 0%,#c084fc 100%);border-color:#a855f7;color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.32)}
+  .opt[data-color="fks"].active{background:linear-gradient(140deg,#f97316 0%,#fb923c 100%);border-color:#f97316;color:#fff;box-shadow:0 4px 14px rgba(249,115,22,.32)}
+  .opt[data-color="fky"].active{background:linear-gradient(140deg,#eab308 0%,#facc15 100%);border-color:#eab308;color:#fff;box-shadow:0 4px 14px rgba(234,179,8,.32)}
+  .opt[data-color="gprime"].active{background:linear-gradient(140deg,#06b6d4 0%,#22d3ee 100%);border-color:#06b6d4;color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.32)}
+  .opt[data-color="fcks"].active{background:linear-gradient(140deg,#c084fc 0%,#d8b4fe 100%);border-color:#c084fc;color:#fff;box-shadow:0 4px 14px rgba(192,132,252,.32)}
+  .opt[data-color="dprime"].active{background:linear-gradient(140deg,#0ea5a5 0%,#2dd4bf 100%);border-color:#0ea5a5;color:#fff;box-shadow:0 4px 14px rgba(14,165,165,.32)}
+  .opt[data-color="dp"].active{background:linear-gradient(140deg,#d946ef 0%,#e879f9 100%);border-color:#d946ef;color:#fff;box-shadow:0 4px 14px rgba(217,70,239,.32)}
+  .opt[data-color="dd"].active{background:linear-gradient(140deg,#65a30d 0%,#84cc16 100%);border-color:#65a30d;color:#fff;box-shadow:0 4px 14px rgba(101,163,13,.32)}
+  .opt[data-color="dg"].active{background:linear-gradient(140deg,#f472b6 0%,#f9a8d4 100%);border-color:#f472b6;color:#fff;box-shadow:0 4px 14px rgba(244,114,182,.32)}
+  .opt[data-color="fcky"].active{background:linear-gradient(140deg,#34d399 0%,#6ee7b7 100%);border-color:#34d399;color:#fff;box-shadow:0 4px 14px rgba(52,211,153,.32)}
+  .opt[data-color="cdd"].active{background:linear-gradient(140deg,#fb923c 0%,#fdba74 100%);border-color:#fb923c;color:#fff;box-shadow:0 4px 14px rgba(251,146,60,.32)}
   .opt.active .o-sub{color:rgba(255,255,255,.82)}
+  /* C2 扩展族折叠（不占 ui_jump sect 计数） */
+  .type-more{margin-top:10px;border-top:1px dashed var(--panel-border);padding-top:8px}
+  .type-more-h{cursor:pointer;user-select:none;font-size:var(--fs-s);font-weight:600;color:var(--ink-2);
+    display:flex;align-items:baseline;gap:8px;padding:4px 2px;border-radius:var(--radius-xs);list-style:none}
+  .type-more-h::-webkit-details-marker{display:none}
+  .type-more-h::before{content:'▸';font-size:.65rem;color:var(--ink-3);transition:transform .18s var(--ease-out)}
+  .type-more[open] .type-more-h::before{transform:rotate(90deg)}
+  .type-more-h:hover{color:var(--accent)}
+  .type-more-h .tm-hint{font-weight:400;font-size:var(--fs-xs);color:var(--ink-3)}
+  .type-more .opt-row{margin-top:8px}
   .opt[data-model].active{background:var(--ink);border-color:var(--ink);color:#fff}
   .opt[data-model].active .o-sub{color:rgba(255,255,255,.7)}
   .opt[data-material].active{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -710,7 +733,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-DQRo9brz.js"></script>
+  <script type="module" crossorigin src="./assets/index-4ULSmS0E.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -844,19 +867,24 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-type="frd" data-color="frd">F-RD<span class="o-sub">复合面</span></button>
           <button class="opt" data-type="lidinoid" data-color="lidinoid">Lidinoid<span class="o-sub">利迪诺</span></button>
           <button class="opt" data-type="splitp" data-color="splitp">Split-P<span class="o-sub">分裂 P</span></button>
-          <button class="opt" data-type="octo" data-color="octo">O,C-TO<span class="o-sub">正交 TO</span></button>
-          <button class="opt" data-type="karcher" data-color="karcher">K<span class="o-sub">Karcher</span></button>
-          <button class="opt" data-type="fks" data-color="fks">FK-S<span class="o-sub">Fischer-Koch S</span></button>
-          <button class="opt" data-type="fky" data-color="fky">FK-Y<span class="o-sub">Fischer-Koch Y</span></button>
-          <button class="opt" data-type="gprime" data-color="gprime">G′<span class="o-sub">G-prime</span></button>
-          <button class="opt" data-type="fcks" data-color="fcks">FK-C(S)<span class="o-sub">谐波3×</span></button>
-          <button class="opt" data-type="dprime" data-color="dprime">D′<span class="o-sub">谐波≤2×</span></button>
-          <button class="opt" data-type="dp" data-color="dp">Double P<span class="o-sub">谐波≤2×</span></button>
-          <button class="opt" data-type="dd" data-color="dd">Double D<span class="o-sub">谐波≤2×</span></button>
-          <button class="opt" data-type="dg" data-color="dg">Double G<span class="o-sub">谐波≤2×</span></button>
-          <button class="opt" data-type="fcky" data-color="fcky">FK-C(Y)<span class="o-sub">C(Y) 互补</span></button>
-          <button class="opt" data-type="cdd" data-color="cdd">Comp-D<span class="o-sub">谐波3×</span></button>
         </div>
+        <details class="type-more" id="type-more-c2">
+          <summary class="type-more-h">C2 扩展族（12）<span class="tm-hint">Fischer-Koch / Double / Complementary</span></summary>
+          <div class="opt-row">
+            <button class="opt" data-type="octo" data-color="octo">O,C-TO<span class="o-sub">正交 TO</span></button>
+            <button class="opt" data-type="karcher" data-color="karcher">K<span class="o-sub">Karcher</span></button>
+            <button class="opt" data-type="fks" data-color="fks">FK-S<span class="o-sub">Fischer-Koch S</span></button>
+            <button class="opt" data-type="fky" data-color="fky">FK-Y<span class="o-sub">Fischer-Koch Y</span></button>
+            <button class="opt" data-type="gprime" data-color="gprime">G′<span class="o-sub">G-prime</span></button>
+            <button class="opt" data-type="fcks" data-color="fcks">FK-C(S)<span class="o-sub">谐波3×</span></button>
+            <button class="opt" data-type="dprime" data-color="dprime">D′<span class="o-sub">谐波≤2×</span></button>
+            <button class="opt" data-type="dp" data-color="dp">Double P<span class="o-sub">谐波≤2×</span></button>
+            <button class="opt" data-type="dd" data-color="dd">Double D<span class="o-sub">谐波≤2×</span></button>
+            <button class="opt" data-type="dg" data-color="dg">Double G<span class="o-sub">谐波≤2×</span></button>
+            <button class="opt" data-type="fcky" data-color="fcky">FK-C(Y)<span class="o-sub">C(Y) 互补</span></button>
+            <button class="opt" data-type="cdd" data-color="cdd">Comp-D<span class="o-sub">谐波3×</span></button>
+          </div>
+        </details>
       </details>
 
       <details class="sect">

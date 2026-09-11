@@ -3065,6 +3065,12 @@ function syncUI(s: AppState): void {
     const prop = el.hasAttribute('data-type') ? 'type' : el.hasAttribute('data-model') ? 'model' : el.hasAttribute('data-structure') ? 'structureMode' : el.hasAttribute('data-container') ? 'containerShape' : 'material';
     el.classList.toggle('active', (s as any)[prop] === key);
   });
+  // C2 扩展族折叠：当前类型落在折叠区内时自动展开（URL 恢复 / 预设 / 点击均覆盖）
+  {
+    const C2 = new Set(['octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd']);
+    const more = document.getElementById('type-more-c2') as HTMLDetailsElement | null;
+    if (more && C2.has(s.type)) more.open = true;
+  }
 
   // Active 状态（梯度 / 混合类型 / 混合函数）
   document.querySelectorAll('[data-gradient]').forEach(el => {
