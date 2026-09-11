@@ -734,7 +734,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 272) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 272（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2）'); process.exit(1); }
+  if (pass < 280) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 280（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2 → 实测 282）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

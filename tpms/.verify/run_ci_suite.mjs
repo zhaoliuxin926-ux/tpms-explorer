@@ -137,7 +137,7 @@ const SCHEDULE = [
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],
-  ['schema_check 契约与可用域（69 断言）', 'Schema 契约', '../agent/schema_check.mjs'],
+  ['schema_check 契约与可用域（71 断言）', 'Schema 契约', '../agent/schema_check.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));
