@@ -269,9 +269,9 @@ export function getWeightCount(type: TpmType): number {
     case 'splitp': return 3;
     case 'diamond': return 4;
     case 'octo': return 2;
-    case 'karcher': case 'fks': case 'fky': return 3;
+    case 'karcher': case 'fks': return 3;
     case 'gprime': case 'fcks': case 'dprime': case 'dp': case 'dd': case 'dg': return 1;
-    case 'fcky': return 2; // 与 fky 公式同构（w0 低频 + w1 2 倍频组）；fky 登记为 3 为历史口径
+    case 'fky': case 'fcky': return 2; // 低频 (ccc+sss) + 2 倍频组，各乘一个权重
     case 'cdd': return 1;
     case 'custom': return 4;
     default: return 3;
