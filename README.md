@@ -15,7 +15,7 @@
 | 🎓 第一次接触 TPMS，想系统入门 | [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md)（五阶学习路径 + 概念动画） |
 | 🖱️ 不想读文字，直接上手玩 | [docs/index.html](docs/index.html)（浏览器打开即用，零安装；说明见 [docs/README-体验说明.md](docs/README-体验说明.md)） |
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
-| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十五章：AM/CFD/RVE/红队） |
+| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十六章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
 | 🕘 历史版本变更 | [docs/RELEASE_NOTES_v7.0.0.md](docs/RELEASE_NOTES_v7.0.0.md)（v2.4~v6 同目录） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |

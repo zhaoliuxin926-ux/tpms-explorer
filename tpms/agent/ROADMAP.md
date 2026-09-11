@@ -80,11 +80,11 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 - [x] A2 孔隙率解析映射（2026-09-05）：`mesh` 命令默认 `--porosity-solver exact`——解析积分求根（确定性 LCG MC）+ 网格实测一轮割线（变差回退直出）。实测：R96 diamond 0.26pp / gyroid p0.5 1.96pp；R48 立方对称族 1.3~4.3pp；高谐波族（iwp/frd/lidinoid/splitp）R48 网格表示物理受限 8.7~23pp（legacy 二分对照 17.9~27.7pp，多数改善），>5pp 时输出升级分辨率提示。验收口径修订依据：R48 网格对 iso 的响应含顶点投影混沌敏感性（比例损耗因子实测漂移 ρ 0.94~1.72），R96 下割线后 ≤0.3pp
   - 对标源码事实：RegionTPMS 为 Mathematica notebook（非 Python），方法 = NIntegrate(Boole) 解析体积分 + bisection 反解——与本项目实现的"解析 MC 求根"同构
   - selftest 29/29（新增 R96 ≤1pp 断言 + solver 默认值检查）
-- [ ] A3 GitHub 门面国际化：英文 README、topics 标签（tpms/lattice/bone-scaffold/webgpu）、issue/PR 模板、showcase 截图——验证：GitHub tpms topic 页可检索到本仓库
+- [ ] A3 GitHub 门面国际化：英文 README ✅、issue/PR 模板 ✅；余 topics 标签（tpms/lattice/bone-scaffold/webgpu，B5.4 push 后手动加）、showcase 截图——验证：GitHub tpms topic 页可检索到本仓库（红队 C 核验：A3 整项原描述与事实部分脱节，2026-09-12 拆分标注）
 - [ ] A4 教学素材：LEARNING_PATH 配动画/视频（自制 3 分钟概念动画或嵌入权威视频）——验证：落地页可播放
 
 ### 阶段 B · Agent 化与学术化（1 ~ 2 月）
-- [ ] B1 = M2 tool schema：CLI 命令 → JSON Schema（钳制范围源自 nl-agent 钳制表）——验证：覆盖 nl_agent_audit 32 断言全部意图类型
+- [x] B1 = M2 tool schema ✅（2026-09-05 完成；本行 2026-09-12 红队 C 核验补勾——tools.schema.json + schema_check 72 断言已转正进 CI 调度，验收即 M2 节）
 - [ ] B2 = M3 LLM 接入（前置：provider + key）——验证：30 条中英指令回归、零 LLM 直写数值
 - [ ] B3 = M4 闭环驱动器（对标 verify-loop 协议）——验证：注入缺陷方案 N 轮内凭门禁反馈收敛全绿
 - [ ] B4 SoftwareX 投稿（对标 RegionTPMS 同刊路径；docs/paper 手稿已在）——验证：获得投稿号；补充审稿人可复跑的门禁证据
@@ -116,7 +116,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 
 ### B-t1 投稿包（第 1~2 周，最高优先）
 - [x] B1.1 **LICENSE 文件** ✅（2026-09-05 已入库 MIT；本行 2026-09-12 核验补勾——根目录 LICENSE 存在，README 许可行+投稿清单均链接）
-- [ ] B1.2 手稿更新到当前事实：MANUSCRIPT/main.tex 停在 v5 口径——补 exact 孔隙率求解器（0.26pp@R96）、全局定向传播（misoriented=0 由构造）、39 门禁/1000+ 断言验证体系、CLM 与 tsc/vite 工具链；补"诚实边界"节（网格体积损耗数据、高谐波曲面 R48 极限）——验证：稿件中每个数字可溯源到门禁或审计脚本
+- [x] B1.2 手稿更新到当前事实 ✅（2026-09-11 完成对齐 v7.0 + 20 族 + 41 门——commit 0037c16/3376066；本行 2026-09-12 红队 C 核验补勾，原"停在 v5 口径"描述过时）
 - [ ] B1.3 可复现包：一条命令复跑（`npm run test:all` 已满足）+ 数据/图生成脚本清单——验证：干净 clone → install → test:all 绿（CI 三平台即证据）
 - [ ] B1.4 投稿提交——验证：拿到投稿号
 
@@ -225,7 +225,7 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
   相对容差外推下 12/12 PASS——最紧 frd 定向错 4230/阈 7562（44% 余量）、体积最差 iwp −4.53%/阈 12%；
   R128 单案例构建仅 1.6~4.4s。数据表 r128_tolerance_table.json。
 - **gprime 拒产域钉住**：默认周期数 k=6 R96 p0.6 fail-closed（nm 19080，B5 基准一致）；k=2 R96
-  可产（nm=0，偏差 0.2pp）——"择 band 可避"量化为**降周期数可避**。schema_check 55 断言
+  可产（nm=0，偏差 0.2pp）——"择 band 可避"量化为**降周期数可避**。schema_check 55 断言（时点值；2026-09-12 红队后为 75）
   （+3 gprime 案例）+ tools.schema.json 量化声明。
 - **C-9 修正**（digital_twin 门禁）：D 节坍塌断言二择一 `collapsed||allConverged` 收紧为严格
   `collapsed===true`（场景实测确定性坍塌 strain=0.018；旧写法放过"坍塌停止发生"回归），
@@ -234,6 +234,42 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
   （旧本地复刻=冻结副本，平台公式漂移审计仍绿）；变异测试实证有牙（平台公式反向→17/1 红）。
 - **bugs.md 过时条目清理**：poincare 斜率公式/stl 定向传播/Tb.Th 头注/buffer-pool normals 四项
   实为 2026-09-05 轮已修，登记滞后。
+
+## 究极对抗审查轮（2026-09-12 · 3 路红队 + 主会话补查 · 全部发现已修复）
+
+3 路并行红队（A: M3 LLM 层 / B: fcky/cdd 四方同源 / C: 文档声明一致性+UI 回归），攻击脚本在 %TEMP%\tpms-audit2，仓库零写入。**1 CRITICAL + 8 MAJOR + 12 MINOR，全修**。
+
+### A 路（LLM 层——M3 交付后首次对抗审查）
+- **[已修·CRITICAL] validateToolCalls 对 `out`/`design` 路径槽位零校验**——LLM 可控路径穿越任意写/读（mock 实锤 `out:"../x.stl"` 落盘 cwd 之外；数字/布尔 out 亦放行）。修复：schema pattern 路径狱（单段安全文件名 `^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$`）+ validator 实现 pattern/严格 string 校验
+- **[已修·MAJOR] OllamaProvider fetch 无超时**（不响应服务端永久挂起）→ AbortSignal.timeout 默认 120s
+- **[已修·MAJOR] 标量 arguments**（`"null"`/`"5"`）→ 未捕获 TypeError 裸堆栈 exit 1，或静默吞成空参数真实执行 → parse 后强制 plain-object 校验，结构化 exit 2
+- **[已修·MAJOR] isoGrad 对象槽位内容零校验 + runCli 误发 `--isoGrad`**（CLI 只认 `--iso-grad`）→ agent 通道该功能 100% 失败且畸形对象免检 → validator 递归子 schema（values 2~6 个 [-1.5,1.5]、band 0~2、additionalProperties:false）+ runCli 显式映射 `--iso-grad "<v0,...>@band"`
+- [已修·MINOR] `'k in props'` 原型链键名绕过未知属性拒绝 → `Object.hasOwn` 全量替换
+- [已修·MINOR] mock provider 不带 `--dry-run` 可真实落盘 → 默认拒绝 exit 2
+- [已修·MINOR] 数值/布尔强制转换怪象（"75"→75、[5]→5、true→1）→ 严格 typeof 校验
+- [登记·待用户决策] llm_provider_selftest 33/33（守卫 30）尚未注册进 run_ci_suite——注册改变 41 门矩阵计数，按本文件约定留单独决策
+- 攻击不可行清单（审查深度证据）：spawnSync 数组参数无 shell 注入、原型污染写入、越界数值/未知字段到 CLI、`out:"--resolution=1"` flag 混淆、Ollama 非 200/非 JSON/空 tool_calls、深嵌套 JSON——全部被既有层拦截
+
+### B 路（fcky/cdd 四方同源——公式层全绿）
+- **正面结论**：8 处公式出现点逐字符一致（无 diamond 式双定义分裂）；cdd 12 项展开 ≡ 混合角原式 maxdiff 2.22e-15（100 随机+27 角点）；解析锚点独立复核全过（fcky 原点 −1 任意权重、(π/2,0,0)=0、循环置换 ≤1.8e-15）；fcky+fky=2w₁·hi 低频反号恒等式残差 1.3e-15；权重计数 fky/fcky=2、fcks/cdd=1；parity 282 / webgpu 101 / nl_agent 40 / mesh 实跑全绿
+- **[已修·MAJOR] script-exporter 应力×hybrid 组合坐标分裂**：Python B 场用变换前坐标（A 场用 Xs）→ 改 `tpms_field(Xs,Ys,Zs,…)`；连带发现 MATLAB 波前/容器 SDF 被 `X=Xs` 就地替换污染（平台语义=物理空间取点）→ 保存 X0/Y0/Z0，波前/容器恢复原始坐标
+- [已修·MINOR] 宣称-钉住缺口：fcky "R96 可产"补双钉（R48+R96）；cdd R48 补 nm=18252 数值钉；fcks 宣称带 p0.5–0.7 补 p0.5/p0.7 端点钉——schema_check 72→75
+- [登记·平台既有缺口] stress×hybrid 组合在平台渲染路径静默忽略应力（hybridFn 直调绕过 tpmFn 应力包装）——脚本侧语义定案=A/B 同变换坐标+波前/容器物理空间（内部一致、跨语言一致）；平台侧组合语义登记深水区，待专项设计+门禁
+
+### C 路（文档声明一致性 + UI 回归）
+- **正面结论**：20 族/41 门/断言数 26 条 claim 全对齐；BENCHMARKS.md 与 benchmarks-latest.json 40 格零漂移；ROADMAP commit 号抽查 8/8 存在；UI !important=7、reduced-motion 在位、C2 active 色 20/20、分组计数 12/8/1/5=26
+- **[已修·MAJOR] WORKFLOW_GUIDE TOC 缺二十六~三十 5 章 + 26/31 锚点失效**（emoji slug 尾连字符）→ 程序化重生成 36 项（github-slugger 算法忠实实现）
+- **[已修·MAJOR] G-code 导出宣称与实现脱节**（README_EN 工程版清单 + GUIDE 廿四章称导出中心有按钮；实际 UI 从未接线）→ 文档诚实化"引擎+门禁 25 就绪，UI 入口未开放"
+- **[已修·MAJOR] COVER_LETTER 39-item → 41-item**
+- **[已修·MAJOR] ROADMAP 复选框与事实矛盾 4 处**：B1 补勾（M2 已完成）、B1.2 补勾（手稿 09-11 已对齐）、A3 拆分标注（英文 README✓/issue 模板✓/余 topics+showcase）、schema_check 计数标注时点值
+- [已修·MINOR] README 三十五章→三十六；GUIDE「36 门」历史口径标注；focus-visible 宣称 18→实数 17（注释行误计）；构型组徽章 11→12（重建 docs/platform）；run_ci_suite schema_check 标签 71→75；tpms/README run_all 位置描述删除
+
+### 主会话补查
+- B4.2 原验收示例探针证伪：p=0.999@R48 实测 2 轮 PASS（99.95% 可达）——结构化诊断已由 solve exit-3 覆盖，并案定案（2026-09-12 晨 0c25426）
+- llm-agent mock dry-run 全链路回归 + 红队 A 两攻击复现（穿越写/标量崩溃）封死确认
+- llm_provider_selftest 扩容 15→33 断言（守卫 30）：路径狱×5、isoGrad 子 schema×4、标量 arguments×3、原型链键、严格类型×2、逐调用归属、Ollama 超时、mock 守卫 e2e
+
+**验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
 ## 下一步（更新）
 1. **用户操作**：署名三项（作者拼写/单位/LICENSE 版权行）→ Editorial Manager 注册提交 → 回填投稿号。
