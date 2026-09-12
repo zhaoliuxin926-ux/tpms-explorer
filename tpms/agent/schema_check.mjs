@@ -8,7 +8,8 @@
 //
 // 运行: node schema_check.mjs
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -23,9 +24,9 @@ const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding:
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
-schema.tools?.length === 4 && ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_scenario'].every((n) => tool(n))
-  ? ok('schema 含四工具') : bad('schema 工具清单');
-for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario']) {
+schema.tools?.length === 5 && ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify'].every((n) => tool(n))
+  ? ok('schema 含五工具') : bad('schema 工具清单');
+for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify']) {
   const t = tool(n);
   t.parameters.additionalProperties === false && Array.isArray(t.parameters.required)
     ? ok(`${n} additionalProperties=false + required 声明`) : bad(`${n} 参数结构`);
@@ -270,6 +271,79 @@ for (const [label, args] of [
   run('scenario').status !== 0 ? ok('scenario 缺 --design 被拒') : bad('scenario 缺 --design');
 }
 
+// ── 3d. tpms_design_verify（M3→M4 桥接）schema ↔ driver/llm-agent 对拍 ──
+{
+  const meshP = tool('tpms_mesh').parameters.properties;
+  const dvP = tool('tpms_design_verify').parameters.properties;
+  // 槽位枚举与 tpms_mesh 逐项一致（type/container/material 同源；mode 为 mesh 超集域）
+  JSON.stringify(dvP.type.enum) === JSON.stringify(meshP.type.enum)
+    ? ok('design_verify ≡ mesh type enum') : bad('design_verify/mesh type enum 不一致');
+  JSON.stringify(dvP.container.enum) === JSON.stringify(meshP.container.enum)
+    ? ok('design_verify ≡ mesh container enum') : bad('design_verify/mesh container enum 不一致');
+  JSON.stringify(dvP.material.enum) === JSON.stringify(tool('tpms_estimate').parameters.properties.material.enum)
+    ? ok('design_verify ≡ estimate material enum') : bad('design_verify/estimate material enum 不一致');
+  // 闭环不变量：driver 修复菜单的 mode 域 ⊆ 初始槽位 mode 域（修复不得越出初始声明域）
+  const drvSrc = readFileSync(join(HERE, 'tpms-driver.mjs'), 'utf8');
+  const mRepair = drvSrc.match(/const TYPES = \[([^\]]+)\]/);
+  const drvTypes = mRepair ? mRepair[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')) : [];
+  JSON.stringify(drvTypes) === JSON.stringify(dvP.type.enum)
+    ? ok('driver 修复菜单 TYPES ≡ schema type enum（跨实现静态哨兵）') : bad('driver/schema type enum 漂移', `drv=${drvTypes.length} schema=${dvP.type.enum.length}`);
+  dvP.mode.enum.every((m) => meshP.mode.enum.includes(m))
+    ? ok('design_verify mode enum ⊆ mesh（修复域不越初始声明域）') : bad('design_verify mode enum 越域');
+  // llm-agent 桥接分支注册哨兵（工具名 ↔ runDesignVerify 分支共存）
+  const agentSrc = readFileSync(join(HERE, 'llm-agent.mjs'), 'utf8');
+  agentSrc.includes("'tpms_design_verify'") && agentSrc.includes('runDesignVerify') && agentSrc.includes('tpms-driver.mjs')
+    ? ok('llm-agent 桥接分支注册（tpms_design_verify → tpms-driver）') : bad('llm-agent 桥接分支缺失');
+
+  // 端到端（离线闭环回归：mock 槽位 + TPMS_ALLOW_MOCK_EXEC 逃生门 + 真实 verify 执行，temp cwd 不污染仓库）
+  const work = mkdtempSync(join(tmpdir(), 'schema-bridge-'));
+  const runAgent = (mockCalls, { extraEnv = {}, allow = true, dryRun = false } = {}) => {
+    const env = { ...process.env, TPMS_MOCK_TOOLCALLS: JSON.stringify(mockCalls), ...extraEnv };
+    if (allow) env.TPMS_ALLOW_MOCK_EXEC = '1'; else delete env.TPMS_ALLOW_MOCK_EXEC;
+    const args = [join(HERE, 'llm-agent.mjs'), '--provider', 'mock'];
+    if (dryRun) args.push('--dry-run');
+    args.push('--json', 'e2e');
+    const r = spawnSync(process.execPath, args, { encoding: 'utf8', cwd: work, timeout: 300_000, maxBuffer: 32 * 1024 * 1024, env });
+    let out = null;
+    try { out = JSON.parse(r.stdout ?? ''); } catch { /* 拒绝路径 stdout 空 */ }
+    return { exit: r.status, out, stderr: r.stderr ?? '' };
+  };
+  const mkCall = (name, args) => ({ toolCalls: [{ function: { name, arguments: JSON.stringify(args) } }] });
+  // 直通收敛：gyroid 0.65 R48（快档）→ exit 0 + verdict=pass + design JSON 落盘 + STL 交付
+  {
+    const r = runAgent(mkCall('tpms_design_verify', { type: 'gyroid', porosity: 0.65, resolution: 48 }));
+    const d = r.out?.results?.[0]?.result;
+    r.exit === 0 && d?.verdict === 'pass'
+      ? ok('桥接端到端直通收敛（exit0+verdict=pass）') : bad('桥接端到端直通', `exit=${r.exit} verdict=${d?.verdict} ${(r.stderr || '').slice(-60)}`);
+    existsBridgeDesign(work) ? ok('桥接 design JSON 确定性落盘（tpms-design-<type>.json）') : bad('桥接 design JSON 未落盘');
+  }
+  // 修复闭环：坏槽位 porosity 1.5（schema 放行、verify 参数层拒）+ mock 决策 patch 0.65 → 2 轮收敛
+  {
+    const decisions = [{ function: { name: 'apply_repair', arguments: JSON.stringify({ action: 'patch_design', patches: { porosity: 0.65 }, reason: 'porosity 1.5% 低于 5% 下界' }) } }];
+    const r = runAgent(mkCall('tpms_design_verify', { type: 'gyroid', porosity: 1.5, resolution: 48 }), { extraEnv: { TPMS_DRIVER_MOCK_DECISIONS: JSON.stringify(decisions) } });
+    const d = r.out?.results?.[0]?.result;
+    r.exit === 0 && d?.verdict === 'pass' && d?.rounds === 2 && d?.history?.filter((h) => h.decision).length === 1
+      ? ok('桥接端到端修复闭环（参数层拒→patch→2轮收敛，决策轨迹在案）') : bad('桥接端到端修复闭环', `exit=${r.exit} verdict=${d?.verdict} rounds=${d?.rounds}`);
+  }
+  // 越界槽位：porosity 120 → M3 拦截器拒绝（不执行闭环）
+  {
+    const r = runAgent(mkCall('tpms_design_verify', { type: 'gyroid', porosity: 120 }));
+    r.exit === 2 && /拦截器|maximum/.test(r.stderr)
+      ? ok('桥接越界槽位被拦截器拒绝 [exit2]') : bad('桥接越界槽位未拒', `exit=${r.exit}`);
+  }
+  // 红队 A-6 守卫保持：mock 无逃生门默认拒绝真实执行
+  {
+    const r = runAgent(mkCall('tpms_design_verify', { type: 'gyroid', porosity: 0.65 }), { allow: false });
+    r.exit === 2 && /mock provider 仅限/.test(r.stderr)
+      ? ok('mock 真实执行默认拒绝守卫保持（TPMS_ALLOW_MOCK_EXEC 显式逃生门）') : bad('mock 守卫失效', `exit=${r.exit}`);
+  }
+  rmSync(work, { recursive: true, force: true });
+}
+
+function existsBridgeDesign(work) {
+  try { return readFileSync(join(work, 'tpms-design-gyroid.json'), 'utf8').includes('"gyroid"'); } catch { return false; }
+}
+
 // ── 4. nl-agent 语义覆盖映射完整性 ──
 {
   const cov = schema.nl_agent_semantic_coverage || {};
@@ -290,5 +364,6 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
-if (pass < 72) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 72`); process.exit(1); }
+// 【2026-09-12 桥接轮基线更新】72→87（tpms_design_verify 五工具 + 3d 节 9 断言 + 语义覆盖映射扩容）
+if (pass < 87) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 87`); process.exit(1); }
 process.exit(fail ? 1 : 0);

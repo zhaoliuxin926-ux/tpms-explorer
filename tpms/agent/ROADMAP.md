@@ -19,7 +19,7 @@
 - 边界：misorientedEdges（定向错）为 mesh_audit 容差项非硬门，CLI 内建自检未复刻该指标（与 mesh_audit ok 判定的三硬指标口径一致）
 
 ### M2 工具注册层 — ✅ 已完成（2026-09-05；本节 2026-09-12 状态修正，原"未开始"为过时口径）
-- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario 四工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐）+ `schema_check.mjs`（现 72 断言）
+- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario / tpms_design_verify 五工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐；第五工具为 2026-09-12 M3→M4 桥接增补）+ `schema_check.mjs`（现 87 断言）
 - 验收：nl-agent 参数类意图 100% 覆盖；每个数值参数都有硬边界；schema_check+selftest 自 2026-09-10 起转正进 run_ci_suite 调度（39→41 门）。过程与口径详见下方 B-t2
 
 ### M3 LLM 接入 — ✅ 全线达成（2026-09-12 真实模型回归 34/34）
@@ -42,6 +42,7 @@
 > 顺带修复 R128 扩容第三处漏点：verify LADDER/钳制 96→128（fcks R120 梯外修复曾被静默降回 96）。退出码 0/2/3/4。
 - 目标：propose → 执行 → 读门禁/审计结构化输出（CI RESULT 行）→ 修正重跑 循环
 - 成功标准：注入带故意缺陷的初始方案，Agent 在有限轮内凭门禁反馈收敛全绿，全程无人工干预
+- **M3→M4 桥接（2026-09-12，tpms_design_verify 第五工具）**：NL 入口直连闭环——llm-agent 新增 tpms_design_verify 工具（槽位=design JSON 契约：type/porosity 必填 + material/periods/resolution/container/mode/isoGrad/out 可选），runDesignVerify 确定性写 `tpms-design-<type>.json`（文件名由已钳制白名单 type 派生，无路径注入面）→ spawn tpms-driver（provider 选项转发，TPMS_DRIVER_MOCK_DECISIONS 经 env 透传）→ 退出码透传（driver 4=轮数耗尽为 llm-agent 新增合法退出码）。mock 真实执行守卫保留 + `TPMS_ALLOW_MOCK_EXEC=1` 显式逃生门（离线闭环回归：mock 槽位 + mock 修复决策 + 真实 verify 执行）。验收：schema_check 72→87 断言全绿（enum 逐项对拍 + driver TYPES 静态哨兵 + 离线端到端四例：直通收敛/参数层拒→patch→2轮收敛/越界拦截/守卫保持）；llm_provider_selftest 33/33（工具数 5）；selftest 47/47。llm_regression G1-G3 闭环意图用例已登记（37 条），真实模型验收待 key（用户侧）。
 
 ### M5 骨支架场景模板 — ✅ 已完成（2026-09-07，scenario 命令）
 - 交付：`tpms.mjs scenario --design 方案.json`——设计意图 JSON → Gibson-Ashby 解析预测 → exact 孔隙率求解（水密门 fail-closed）→ 水密 STL（mm）+ Abaqus INP（体素 C3D8+PBC 压缩工况，buildVoxelModel+buildAbaqusInp）→ 验证报告 MD+JSON（参数表/孔隙率双口径[网格实测 vs 体素分位]/Gibson-Ashby 文献带对比/交付物 sha256 指纹/诚实边界声明）。exit 0 必伴随四件交付物；exit 3 = 参数层结构化拒绝（与 verify 同构）或构建失败

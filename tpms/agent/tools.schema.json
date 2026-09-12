@@ -206,6 +206,117 @@
           }
         }
       }
+    },
+    {
+      "name": "tpms_design_verify",
+      "description": "M3→M4 桥接：闭环设计验证。从参数槽位确定性生成设计 JSON → tpms-driver 闭环（verify 水密/孔隙率偏差/物理合理性检查 → 失败时修复策略器在梯外修复菜单（换曲面族/降周期数/升分辨率≤128/换容器/改模式）内选修复 → 重跑）→ 收敛交付已验证 STL（mm）或结构化不可达宣告（如 cylinder+diamond 深水区）。退出码：0=收敛 PASS、2=决策被拦截器拒绝、3=结构化不可达、4=修复轮数耗尽。多轮完整构建，显著慢于 tpms_mesh；当用户明确要求'验证到通过/闭环/确保交付质量'或对可产性不确定时使用，普通一次性建模用 tpms_mesh。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "type",
+          "porosity"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "gyroid",
+              "diamond",
+              "schwarz",
+              "neovius",
+              "iwp",
+              "frd",
+              "lidinoid",
+              "splitp",
+              "octo",
+              "karcher",
+              "fks",
+              "fky",
+              "gprime",
+              "fcks",
+              "dprime",
+              "dp",
+              "dd",
+              "dg",
+              "fcky",
+              "cdd"
+            ],
+            "description": "TPMS 曲面族，枚举与 tpms_mesh 一致。别名对照同 tpms_mesh（diamond=Schwarz D 等）。闭环修复策略器可在后续轮次换族（薄壁自触族优先换低谐波曲面）。"
+          },
+          "porosity": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 99.999,
+            "description": "目标孔隙率，双口径同 tpms_mesh（0.05 ≤ p < 1 小数，或 5~99 百分数）。verify 容差默认 1pp，超差自动升分辨率/割线校正。"
+          },
+          "material": {
+            "type": "string",
+            "enum": [
+              "tc4",
+              "polymer",
+              "thermal"
+            ],
+            "description": "基体材料（物理合理性检查用），默认 tc4"
+          },
+          "periods": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "周期数（每轴单胞数），默认 6；薄壁自触类失败时修复策略器会降周期数"
+          },
+          "resolution": {
+            "type": "integer",
+            "minimum": 48,
+            "maximum": 128,
+            "description": "体素分辨率（每轴），默认 64；verify 梯内自动升档 48→64→96→128，fcks 类可产域 R120 k6 ∪ R128 k2"
+          },
+          "container": {
+            "type": "string",
+            "enum": [
+              "cube",
+              "cylinder"
+            ],
+            "description": "容器形状，默认 cube。cylinder+diamond 组合为已知不可达深水区（闭环会结构化宣告不可达，exit 3）"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "solid_network",
+              "shell",
+              "gradient_shell"
+            ],
+            "description": "结构拓扑模式，默认 solid_network"
+          },
+          "isoGrad": {
+            "type": "object",
+            "description": "C1 渐变等值场（z 向三区平台+过渡带），结构同 tpms_mesh.isoGrad；仅 solid_network，与孔隙率二分互斥。",
+            "additionalProperties": false,
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1.5,
+                  "maximum": 1.5
+                },
+                "minItems": 2,
+                "maxItems": 6
+              },
+              "band": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2
+              }
+            }
+          },
+          "out": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$",
+            "description": "STL 输出路径（收敛后落盘），默认 tpms-<type>-verified.stl。单段安全文件名（路径狱约束同 tpms_mesh.out）"
+          }
+        }
+      }
     }
   ],
   "nl_agent_semantic_coverage": {
@@ -219,6 +330,7 @@
     "NLAction.export-3mf": "⬜ 未覆盖（3MF 导出器在平台 UI；CLI 扩展属 B-t3+）",
     "NLAction.run-simulation": "🔶 tpms_scenario 部分覆盖（Abaqus INP 压缩模型交付；Abaqus 实跑在外部 CAE）",
     "NLAction.reset": "⬜ 不适用（CLI 无状态会话）",
-    "NLAction.preset-bone / preset-thermal": "🔶 tpms_scenario 场景化覆盖（参数组合固化为 design JSON）"
+    "NLAction.preset-bone / preset-thermal": "🔶 tpms_scenario 场景化覆盖（参数组合固化为 design JSON）",
+    "verify-loop 闭环": "✅ tpms_design_verify（M3→M4 桥接：NL→槽位→确定性 design JSON→tpms-driver 闭环，2026-09-12）"
   }
 }
