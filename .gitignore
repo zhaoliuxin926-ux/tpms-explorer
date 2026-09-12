@@ -77,3 +77,4 @@ tpms/*.stl
 tpms/agent/.iso-cache.json
 tpms/agent/.iso-cache.json.tmp
 audit_ubuntu/
+specimens/

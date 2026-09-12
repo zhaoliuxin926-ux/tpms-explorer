@@ -6,6 +6,8 @@
 \usepackage{mathtools} % psmallmatrix（声子节实化分块）；v7.0 稿缺失致 nonstopmode 带错出 PDF
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 \usepackage{hyperref}
 \usepackage{xcolor}
 \providecommand{\doi}[1]{\href{https://doi.org/#1}{doi:#1}} % 参考文献DOI链接；v7.0 稿缺失同上
@@ -239,7 +241,48 @@ design file bit-identical; and a 87-assertion schema$\leftrightarrow$CLI cross-c
 enumeration parity across tools, a static sentinel between the schema type enumeration and the
 driver's repair menu, and an offline end-to-end execution of the bridge. The LLM regression itself
 is key-gated and runs outside CI; correctness of the layer does not depend on it because the
-interceptor is deterministic.
+interceptor is deterministic. Figure~\ref{fig:agentic_pipeline} summarizes the resulting
+closed-loop state machine.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    box/.style={rectangle, draw=black, thick, fill=gray!10, rounded corners=2pt, align=center, font=\footnotesize, inner sep=4pt},
+    guard/.style={rectangle, draw=red!80!black, thick, fill=red!10, rounded corners=2pt, align=center, font=\footnotesize, inner sep=4pt},
+    action/.style={rectangle, draw=blue!80!black, thick, fill=blue!10, rounded corners=2pt, align=center, font=\footnotesize, inner sep=4pt},
+    outp/.style={rectangle, draw=green!50!black, thick, fill=green!8, rounded corners=2pt, align=center, font=\footnotesize, inner sep=4pt},
+    arrow/.style={-{Latex}, thick}
+]
+    % Top row: NL pipeline
+    \node[box, text width=2.3cm] (input) {Natural-language\\design intent};
+    \node[box, text width=2.9cm, right=0.55cm of input] (llm) {LLM provider\\(Ollama / OpenAI-compat / Mock)};
+    \node[guard, text width=3.0cm, right=0.55cm of llm] (interceptor) {\textbf{tools.schema interceptor}\\per-slot clamping\\(enum / bounds / path jail)};
+    \node[action, text width=2.9cm, right=0.55cm of interceptor] (cli) {Deterministic CLI\\(mesh / scenario / \texttt{design-verify})};
+    \node[font=\scriptsize, text=red!60!black, below=0.1cm of interceptor] (reject) {violation $\to$ reject (exit 2)};
+
+    % Bottom row: closed loop (verify centered under cli; driver left; artifact right)
+    \node[guard, text width=3.2cm, below=1.05cm of cli] (verify) {Deterministic verifier\\watertight (open = nm = degen = 0)\\$|\Delta p| \le \mathrm{tol}$ \&\ physics range};
+    \node[action, text width=4.4cm, left=1.0cm of verify] (driver) {\textbf{M4 driver}: LLM picks repair \emph{only} from bounded menu (family / periods / resolution $\le$128 / container / mode); patch applied deterministically, re-run};
+    \node[outp, text width=2.8cm, right=0.6cm of verify] (output) {Verified artifact delivery\\watertight STL / INP / report};
+    \node[box, draw=black!60, text width=3.2cm, below=0.75cm of driver] (unreach) {Structured \emph{unreachability} declaration (exit 3)};
+
+    % Arrows
+    \draw[arrow] (input) -- (llm);
+    \draw[arrow] (llm) -- node[above, font=\scriptsize] {raw calls} (interceptor);
+    \draw[arrow] (interceptor) -- node[above, font=\scriptsize] {clamped args} (cli);
+    \draw[arrow] (cli) -- (verify);
+    \draw[arrow] (verify.170) -- node[above, font=\scriptsize] {FAIL} (driver.10);
+    \draw[arrow] (driver.350) -- node[below, font=\scriptsize, align=center] {repair\\(re-clamped)} (verify.190);
+    \draw[arrow] (verify) -- node[above, font=\scriptsize] {PASS} (output);
+    \draw[arrow] (driver) -- node[right, font=\scriptsize, align=left] {menu exhausted /\\representation-limited} (unreach);
+\end{tikzpicture}
+\caption{The agentic closed loop (v8.0). The LLM is confined to proposing schema slots: a
+deterministic interceptor clamps or rejects every call before execution, the verification ladder
+is purely deterministic, and repair decisions are re-clamped from a bounded strategy menu ---
+yielding either a verified watertight artifact or a structured unreachability declaration, never
+a silently degraded mesh.}
+\label{fig:agentic_pipeline}
+\end{figure*}
 
 \section{Quality control}
 Forty-two gates run via
