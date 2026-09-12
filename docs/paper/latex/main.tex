@@ -1,11 +1,14 @@
-% main.tex — TPMS Explorer v7.0 SoftwareX-style manuscript (self-contained, pdflatex)
+% main.tex — TPMS Explorer v8.0 SoftwareX-style manuscript (self-contained, pdflatex)
 % 编译：pdflatex main && bibtex main && pdflatex main && pdflatex main
+% 【2026-09-12 对齐 v8.0-agentic-loop】42 门 + (viii) agentic 验证层；Abstract 破句修复
 \documentclass[5p,times,authoryear]{elsarticle}
 \usepackage{amsmath,amssymb}
+\usepackage{mathtools} % psmallmatrix（声子节实化分块）；v7.0 稿缺失致 nonstopmode 带错出 PDF
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{xcolor}
+\providecommand{\doi}[1]{\href{https://doi.org/#1}{doi:#1}} % 参考文献DOI链接；v7.0 稿缺失同上
 
 \journal{SoftwareX}
 
@@ -21,12 +24,12 @@ and biophysical tissue-ingrowth dynamics}
 \address[a]{Independent Open-Source Project}
 
 \begin{abstract}
-We present TPMS Explorer v7.0, a browser-based, zero-backend ecosystem for parametric design,
+We present TPMS Explorer v8.0, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
-with forty-one continuously executed CI gates ($>1000 assertions under strict per-line accounting,
-each gate carrying a minimum-assertion guard)
-claim shipped to the user. The surface library spans 20 level-set families --- the eight canonical
+with forty-two continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
+each gate carrying a minimum-assertion guard) that re-execute the exact code claim
+shipped to the user. The surface library spans 20 level-set families --- the eight canonical
 topologies plus C2 extensions (O,C-TO; Karcher; Fischer-Koch S/Y/C(S)/C(Y); G$'$; D$'$; Double
 P/D/G; Complementary D) transcribed from the MiniSurf reference implementation, with
 four-way formula parity (TypeScript / Python / MATLAB / GPU IR) and a public geometric
@@ -39,20 +42,27 @@ Born--von K\'arm\'an lattice dynamics with realified two-pass deflate-Lanczos ei
 long-wave dynamical-matrix calibration; (iv) a reaction--diffusion tissue-ingrowth engine coupling
 quasi-steady oxygen transport, hypoxia-gated osteoblast proliferation, and mineral deposition over
 a 28-day horizon; and (v) a level-set topology-optimization loop with Hamilton--Jacobi Godunov
-evolution driven by elastic and flow sensitivities under a volume constraint. All modules execute
-client-side with zero dependencies beyond Three.js, export to industrial formats (STL, 3MF, GLB,
-Abaqus INP, OpenFOAM polyMesh, G-code), and are guarded by behavior-level audit gates whose
-calibration traps are documented.
+evolution driven by elastic and flow sensitivities under a volume constraint.
 Post-release hardening adds (vi) a deterministic exact-porosity
 solver --- analytic-integration root finding with mesh-measured secant validation, reaching 0.26 pp
 deviation at resolution 96 --- and (vii) constructive global orientation propagation that reduces
 misoriented STL edges to zero by construction, replacing a per-triangle normal-voting scheme that
-degraded winding consistency five-fold.
+degraded winding consistency five-fold. Version 8.0 adds (viii) an agentic verification layer:
+a five-operation deterministic tool schema consumed through LLM function calling under a per-slot
+clamping interceptor (enumeration, range, unknown-property, and path-traversal rejection), and a
+closed-loop design-verification driver in which the LLM selects repairs only from a bounded
+strategy menu while patch application, execution, and acceptance remain deterministic --- including
+structured unreachability declarations for representation-limited parameter combinations.
+All simulation modules execute client-side with zero dependencies beyond Three.js; the agent
+layer runs under Node.js and exports to industrial formats (STL, 3MF, GLB, Abaqus INP,
+OpenFOAM polyMesh, G-code), guarded throughout by behavior-level audit gates whose
+calibration traps are documented.
 \end{abstract}
 
 \begin{keyword}
 TPMS \sep implicit neural representation \sep SIREN \sep yield surface \sep phononic bandgap \sep
-tissue engineering \sep level-set topology optimization \sep continuous integration
+tissue engineering \sep level-set topology optimization \sep LLM tool calling \sep
+continuous integration
 \end{keyword}
 
 \end{frontmatter}
@@ -66,11 +76,14 @@ research bench for architected materials. The five v7.0
 modules extend the platform from ``geometry plus linear physics surrogates'' to generative design,
 structural-failure envelopes, wave dynamics, biophysical growth, and closed-loop shape optimization
 --- each guarded by an audit gate that executes the same code paths the user sees
-(Table~\ref{tab:gates}).
+(Table~\ref{tab:gates}). Version 8.0 completes the loop on the automation side: an agentic
+verification layer turns natural-language design intents into schema-clamped tool calls and drives
+verification--repair cycles to convergence, with every acceptance decision still taken by
+deterministic code (Section~\ref{sec:agentic}).
 
 \begin{table}[h]
 \centering
-\caption{v7.0 modules and their CI gates.}
+\caption{v7.0/v8.0 modules and their CI gates.}
 \label{tab:gates}
 \begin{tabular}{@{}llp{5.2cm}l@{}}
 \toprule
@@ -91,6 +104,10 @@ bitwise determinism & 11 \\
 V & Level-set optimization & unit-load compliance $\propto 1/\text{reaction}$ monotone under 0.5\%
 tolerance; volume Lagrange constraint $\pm$10\%; permeability gain $\times1.50$; water-tight
 extraction (open edges $=0$); reinitialization $|\nabla\Phi|\approx1$ & 8 \\
+VI & Agentic verification (v8.0) & schema$\leftrightarrow$CLI cross-check (enum/range/path parity,
+incl.\ static sentinel vs.\ driver repair menu); interceptor clamping incl.\ adversarial and
+malformed calls; mock-driven closed-loop convergence on injected defects with the original design
+file bit-identical & 126 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -191,13 +208,49 @@ and flip the whole mesh once if the divergence-theorem volume is negative. For t
 the pipeline guarantees (open = non-manifold = degenerate = 0), misoriented edges are zero by
 construction --- verified byte-level on the exported STL (823,500 edges at resolution 96).
 
+\subsection{Agentic closed-loop verification (v8.0)}
+\label{sec:agentic}
+The agent layer follows one iron rule: the LLM only fills schema-bounded slots, and every numeric
+value that reaches the geometry pipeline is clamped or rejected by a deterministic interceptor ---
+enumeration membership, numeric ranges, unknown-property rejection, and single-segment path
+patterns (anti path-traversal) are enforced per slot, so adversarial or malformed model output can
+neither inject code nor escape the parameter domain regardless of model behavior. Five operations
+are registered in the tool schema: \texttt{list}, \texttt{estimate}, \texttt{mesh} (direct
+watertight build), \texttt{scenario} (end-to-end scaffold delivery: STL + Abaqus INP + verification
+report), and \texttt{design-verify} (the closed-loop entry). A natural-language agent maps
+bilingual instructions --- with alias resolution such as Schwarz~D $\to$ diamond --- to tool calls
+through LLM function calling over three interchangeable providers: a local Ollama endpoint, any
+OpenAI-compatible endpoint, and an offline Mock provider whose real-execution path is guard-railed
+behind an explicit opt-in so that closed-loop regression can run without network access.
+
+The design-verify driver closes the loop: propose $\to$ verify (water-tightness, porosity-deviation,
+and physical-range checks) $\to$ on failure, the LLM selects the next repair \emph{only} from a
+bounded strategy menu (surface-family swap, period reduction, resolution escalation $\le128$,
+container or mode change, per-slot parameter fixes) $\to$ deterministic patch application and
+re-run. Repairs inside the existing verification ladder (automatic resolution escalation, secant
+correction) remain deterministic; the driver handles ladder-external repairs, and for
+representation-limited combinations (e.g.\ the cylinder\,$+$\,diamond deep-water region identified
+by the benchmark matrix) it emits a structured \emph{unreachability declaration} instead of
+looping. Acceptance rests on three layers: a 34-instruction bilingual regression against a
+production LLM (34/34; all adversarial samples rejected or self-clamped); an offline mock-driven
+closed-loop self-test covering parameter-fix convergence, out-of-ladder resolution repair, period
+reduction, unreachable declaration, interceptor rejection, and round exhaustion with the original
+design file bit-identical; and a 87-assertion schema$\leftrightarrow$CLI cross-check gate that pins
+enumeration parity across tools, a static sentinel between the schema type enumeration and the
+driver's repair menu, and an offline end-to-end execution of the bridge. The LLM regression itself
+is key-gated and runs outside CI; correctness of the layer does not depend on it because the
+interceptor is deterministic.
+
 \section{Quality control}
-Forty-one gates run via
+Forty-two gates run via
 \texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
 bundler and asserts behavior-level invariants (no mocked math), and every gate now carries a
 \emph{minimum-assertion guard}: a probe experiment showed that an auditor whose assertions are all
 neutralized still exits green under the historical \texttt{if (fail) exit} idiom, so each gate
-additionally fails when its executed-assertion count drops below a measured baseline. Four
+additionally fails when its executed-assertion count drops below a measured baseline. Three
+agent-layer self-checks whose unregistered periods had incident histories of silent redness (a
+drifted fail-closed contract that went unnoticed for a day) were promoted into the CI scheduler
+so that the same discipline covers the automation layer itself. Four
 tautological assertions (two \texttt{|| true} disjunctions, a self-multiplying metric check, and a
 dead variable that was computed but never asserted) were exposed by a dedicated audit and either
 removed or rewritten as real checks; one of them had been masking a wrong closed-form slope in the
@@ -209,7 +262,7 @@ fixes covered by regression assertions.
 
 \section{Availability}
 \subsection{Current code version}
-v7.0.0-generative-biophysics (MIT license).
+v8.0.0-agentic-loop (MIT license).
 
 \subsection{Operating requirements}
 See Necessary resources; no backend, no telemetry, no build-time secrets.
@@ -217,9 +270,11 @@ See Necessary resources; no backend, no telemetry, no build-time secrets.
 \subsection{Installation}
 Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm install} and
 \texttt{npm run dev} in \texttt{tpms/tpms-platform}. CI: \texttt{npm run test:all}.
-A deterministic agent CLI (\texttt{tpms/agent/tpms.mjs}) exposes \texttt{list}, 
-\texttt{estimate}, and \texttt{mesh} subcommands with JSON output for scripting and
-LLM-tool integration.
+A deterministic agent CLI (\texttt{tpms/agent/tpms.mjs}) exposes \texttt{list},
+\texttt{estimate}, \texttt{mesh}, \texttt{verify}, \texttt{solve}, and \texttt{scenario}
+subcommands with JSON output for scripting; \texttt{llm-agent.mjs} adds natural-language
+tool calling and \texttt{tpms-driver.mjs} closed-loop design verification (LLM API keys are
+supplied via environment variables and never committed).
 
 \begin{thebibliography}{9}
 

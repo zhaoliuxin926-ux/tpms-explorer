@@ -3,12 +3,12 @@
 > 状态标记：✅ 完成 / ⬜ 需用户操作 / ⬜ 待办
 
 ## 材料
-- ✅ 主稿：`docs/paper/latex/main.tex`（pdflatex 三连编译通过，PDF 112KB，无错误）
-- ✅ References：7 条 thebibliography（2026-09-06 补——原稿零引用为 desk reject 硬伤；RegionTPMS DOI 经 doi.org 核对，正文 7 处 authoryear 行内引用，pdftotext 逐条验证渲染）
+- ✅ 主稿：`docs/paper/latex/main.tex`（2026-09-12 对齐 v8.0-agentic-loop + 42 门 + (viii) agentic 验证层；同轮修复 v7.0 稿两处预存 LaTeX 缺陷——psmallmatrix 缺 mathtools、\doi 未定义，此前"三连编译通过"实为 nonstopmode 带错出 PDF；现 log 0 错误，PDF 4 页 126KB，pdftotext 内容验证在案）
+- ✅ References：7 条 thebibliography（2026-09-06 补——原稿零引用为 desk reject 硬伤；RegionTPMS DOI 经 doi.org 核对，正文 7 处 authoryear 行内引用，pdftotext 逐条验证渲染；2026-09-12 起 \doi 经 providecommand 渲染为可点击 doi.org 链接）
 - ✅ 摘要导览：`docs/paper/MANUSCRIPT.md`（与主稿同步）
-- ✅ Cover letter：`docs/paper/COVER_LETTER.md` 完整稿
+- ✅ Cover letter：`docs/paper/COVER_LETTER.md` 完整稿（2026-09-12 同步 v8.0/42 门 + 第三条方法论贡献 agentic 闭环验证层）
 - ✅ LICENSE：仓库根 MIT
-- ✅ 可复现：`npm install && npm run test:all` → 41/41 门禁（CI 三平台矩阵 .github/workflows/ci.yml，三平台实测全绿；2026-09-11 本机全量复验）
+- ✅ 可复现：`npm install && npm run test:all` → 42/42 门禁（CI 三平台矩阵 .github/workflows/ci.yml；2026-09-12 本机全量复验 + CI run 34702020524 三平台 success）
 - ⬜ figures/：现有图是否覆盖新特性（定向传播前后对比图、exact 求解器流程图可加分）——建议投稿前补 1~2 张
 
 ## 需用户操作（AI 无法代劳）
