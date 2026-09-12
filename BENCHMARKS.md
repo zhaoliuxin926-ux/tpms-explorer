@@ -1,32 +1,32 @@
 # BENCHMARKS — TPMS Explorer 公开基准
 
-> 生成于 2026-09-11T05:34:47.716Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
+> 生成于 2026-09-12T17:00:24.553Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
 > 口径：目标孔隙率 60%｜exact 孔隙率求解器（解析积分求根 + 网格实测割线校正）｜水密三硬指标（开放边/非流形边/退化面）任一非零即 fail-closed 拒产——**拒产是平台的正确行为**，代表该 (曲面, 孔隙率, 分辨率) 组合的网格表示不可靠（亚体素薄壁自触，随分辨率收敛）。
 
 ## 1. 几何基准矩阵（可产性 / 水密 / 孔隙率偏差）
 
 | 曲面 | R48 | R96 |
 |---|---|---|
-| gyroid | ✓ dev 0.59pp / 3198ms | ✓ dev 0.09pp / 9212ms |
-| diamond | ✓ dev 0.09pp / 3219ms | ✓ dev 0.13pp / 10524ms |
-| schwarz | ✓ dev 0.05pp / 2588ms | ✓ dev 0.05pp / 4462ms |
-| neovius | ✓ dev 0.18pp / 2914ms | ✓ dev 0.22pp / 5140ms |
-| iwp | ✓ dev 0.16pp / 3319ms | ✓ dev 0.02pp / 10134ms |
-| frd | 拒产 (nm 20736) / 3157ms | ✓ dev 0.04pp / 11629ms |
-| lidinoid | ✓ dev 0.28pp / 5525ms | ✓ dev 0.08pp / 17399ms |
-| splitp | ✓ dev 0.55pp / 4418ms | ✓ dev 0.33pp / 16056ms |
-| octo | ✓ dev 7.06pp / 2827ms | ✓ dev 0.32pp / 8785ms |
-| karcher | ✓ dev 0.51pp / 3574ms | ✓ dev 0.23pp / 12429ms |
-| fks | 拒产 (nm 9504) / 3350ms | ✓ dev 0.19pp / 8856ms |
-| fky | 拒产 (nm 4752) / 3225ms | ✓ dev 0.58pp / 14123ms |
-| gprime | ✓ dev 1.12pp / 4239ms | 拒产 (nm 19080) / 7408ms |
-| fcks | 拒产 (nm 27720) / 3914ms | 拒产 (nm 10368) / 15104ms |
-| dprime | 拒产 (nm 18252) / 3947ms | ✓ dev 0.13pp / 17045ms |
-| dp | ✓ dev 2.94pp / 3791ms | ✓ dev 0.27pp / 8710ms |
-| dd | ✓ dev 1.31pp / 3508ms | ✓ dev 0.22pp / 6888ms |
-| dg | ✓ dev 8.52pp / 5566ms | ✓ dev 7.92pp / 19463ms |
-| fcky | ✓ dev 0.26pp / 4014ms | ✓ dev 0.29pp / 8169ms |
-| cdd | 拒产 (nm 18252) / 4110ms | ✓ dev 0.16pp / 20341ms |
+| gyroid | ✓ dev 0.59pp / 2976ms | ✓ dev 0.09pp / 8923ms |
+| diamond | ✓ dev 0.09pp / 3316ms | ✓ dev 0.13pp / 10355ms |
+| schwarz | ✓ dev 0.05pp / 2221ms | ✓ dev 0.05pp / 4267ms |
+| neovius | ✓ dev 0.18pp / 2858ms | ✓ dev 0.22pp / 5291ms |
+| iwp | ✓ dev 0.16pp / 3194ms | ✓ dev 0.02pp / 8766ms |
+| frd | 拒产 (nm 20736) / 3186ms | ✓ dev 0.04pp / 10929ms |
+| lidinoid | ✓ dev 0.28pp / 5792ms | ✓ dev 0.08pp / 16835ms |
+| splitp | ✓ dev 0.55pp / 4523ms | ✓ dev 0.33pp / 15471ms |
+| octo | ✓ dev 7.06pp / 2890ms | ✓ dev 0.32pp / 8780ms |
+| karcher | ✓ dev 0.51pp / 3546ms | ✓ dev 0.23pp / 11524ms |
+| fks | 拒产 (nm 9504) / 3488ms | ✓ dev 0.19pp / 8939ms |
+| fky | 拒产 (nm 4752) / 3339ms | ✓ dev 0.58pp / 13771ms |
+| gprime | ✓ dev 1.12pp / 4391ms | 拒产 (nm 19080) / 7468ms |
+| fcks | 拒产 (nm 27720) / 4270ms | 拒产 (nm 10368) / 14121ms |
+| dprime | 拒产 (nm 18252) / 4059ms | ✓ dev 0.13pp / 16215ms |
+| dp | ✓ dev 2.94pp / 3961ms | ✓ dev 0.27pp / 9232ms |
+| dd | ✓ dev 1.31pp / 3617ms | ✓ dev 0.22pp / 7027ms |
+| dg | ✓ dev 8.52pp / 5845ms | ✓ dev 7.92pp / 19529ms |
+| fcky | ✓ dev 0.26pp / 3914ms | ✓ dev 0.29pp / 8065ms |
+| cdd | 拒产 (nm 18252) / 4706ms | ✓ dev 0.16pp / 19955ms |
 
 ## 2. 可用域速查（LLM/用户选择曲面时的决策表）
 
@@ -46,7 +46,7 @@
 | fky | ⛔ | ✅ | 低分辨率薄壁自触 fail-closed，R96 可产 |
 | gprime | ✅ | ⛔ | 默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产 |
 | fcks | ⛔ | ⛔ | 谐波 3×：可产域=R120 k6（p0.5-0.7 nm=0）∪ R128 k2（nm=0，偏差 0.13pp，~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避 |
-| dprime | ⛔ | ✅ | 低分辨率薄壁自触 fail-closed，R96 可产（C2 第三批实测 nm 18252@R48） |
+| dprime | ⛔ | ✅ | 低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48） |
 | dp | ✅ | ✅ |  |
 | dd | ✅ | ✅ |  |
 | dg | ✅ | ✅ | p0.6 iso 触求解域下界 −1.6：偏差 ~8pp 为可用域事实（nm=0 可产，如实报告） |
