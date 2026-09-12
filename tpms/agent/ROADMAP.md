@@ -266,7 +266,7 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 - **正面结论**：8 处公式出现点逐字符一致（无 diamond 式双定义分裂）；cdd 12 项展开 ≡ 混合角原式 maxdiff 2.22e-15（100 随机+27 角点）；解析锚点独立复核全过（fcky 原点 −1 任意权重、(π/2,0,0)=0、循环置换 ≤1.8e-15）；fcky+fky=2w₁·hi 低频反号恒等式残差 1.3e-15；权重计数 fky/fcky=2、fcks/cdd=1；parity 282 / webgpu 101 / nl_agent 40 / mesh 实跑全绿
 - **[已修·MAJOR] script-exporter 应力×hybrid 组合坐标分裂**：Python B 场用变换前坐标（A 场用 Xs）→ 改 `tpms_field(Xs,Ys,Zs,…)`；连带发现 MATLAB 波前/容器 SDF 被 `X=Xs` 就地替换污染（平台语义=物理空间取点）→ 保存 X0/Y0/Z0，波前/容器恢复原始坐标
 - [已修·MINOR] 宣称-钉住缺口：fcky "R96 可产"补双钉（R48+R96）；cdd R48 补 nm=18252 数值钉；fcks 宣称带 p0.5–0.7 补 p0.5/p0.7 端点钉——schema_check 72→75
-- [登记·平台既有缺口] stress×hybrid 组合在平台渲染路径静默忽略应力（hybridFn 直调绕过 tpmFn 应力包装）——脚本侧语义定案=A/B 同变换坐标+波前/容器物理空间（内部一致、跨语言一致）；平台侧组合语义登记深水区，待专项设计+门禁
+- [登记·平台既有缺口→已闭环 2026-09-12 晚] stress×hybrid 组合在平台渲染路径静默忽略应力——**定案走组合路线**：surface-nets hybridFn 创建点包装 transformByStress（度规坐标 warp、波前留物理域，与脚本侧「A/B 同变换坐标+波前物理空间」定案对齐），四处调用点经创建点统一生效；壳厚 vm 调制（物理域）本就组合。GPU 路径应力开启即回退 CPU 不受影响；单文件版无 stress 不在范围。门禁=hybrid_audit ④ 节（组合水密+网格贴 warped 零面 max 5.28e-4+素场偏移中位 0.379 杀静默忽略+同 iso 孔隙率位移 0.081pp），基线 5→9
 
 ### C 路（文档声明一致性 + UI 回归）
 - **正面结论**：20 族/41 门/断言数 26 条 claim 全对齐；BENCHMARKS.md 与 benchmarks-latest.json 40 格零漂移；ROADMAP commit 号抽查 8/8 存在；UI !important=7、reduced-motion 在位、C2 active 色 20/20、分组计数 12/8/1/5=26

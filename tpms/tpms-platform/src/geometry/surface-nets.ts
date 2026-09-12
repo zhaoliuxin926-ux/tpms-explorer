@@ -150,7 +150,18 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
 
   if (hybridEnabled) {
-    hybridFn = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
+    const hf = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
+    // 【2026-09-12 stress×hybrid 组合定案（bugs.md 登记项清欠）】混合场双坐标域：A/B 曲面在
+    // wc·k 度规坐标求值、波前混合在物理坐标——应力 warp 只变换度规坐标，与 tpmFn 包装同构，
+    // 四处调用点（V 场/Newton 投影/切向平滑/数值法线）经创建点包装统一生效；
+    // 壳厚 vm 调制在 tpmsAt 物理域（stressThicknessScale）本就与 hybrid 天然组合。
+    // 语义与脚本导出侧「A/B 同变换坐标 + 波前/容器物理空间」定案对齐。
+    hybridFn = stressOn
+      ? (mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => {
+          const [qx, qy, qz] = transformByStress(stressCfg!, mx, my, mz);
+          return hf(qx, qy, qz, px, py, pz, w);
+        }
+      : hf;
   } else if (!useLookup) {
     if (neuralOn) {
       const nf = neuralFn!;
