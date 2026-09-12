@@ -5,7 +5,7 @@
 An interactive, browser-based explorer for **Triply Periodic Minimal Surfaces (TPMS)** — the lattice geometries behind bone scaffolds, lightweight parts, heat exchangers and catalyst supports.
 Personal, independently maintained open-source project.
 
-**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **42 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 30 audit cases).
+**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **43 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 30 audit cases).
 
 ---
 
@@ -52,7 +52,7 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ## Verification
 
 ```bash
-cd tpms/tpms-platform && npm run test:all   # 42/42 gates, ~6–10 min
+cd tpms/tpms-platform && npm run test:all   # 43/43 gates, ~6–10 min
 ```
 
 Every gate prints a `RESULT` line and carries a minimum-assertion guard, so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (36 chapters) for AM/CFD/CAE practice.

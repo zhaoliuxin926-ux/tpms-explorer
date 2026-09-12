@@ -3,7 +3,7 @@
 > **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
 ![release](https://img.shields.io/badge/release-v8.0.0--agentic--loop-2563eb)
-![ci](https://img.shields.io/badge/CI-42%2F42%20gates%C2%B71000%2B%20assertions-16a34a)
+![ci](https://img.shields.io/badge/CI-43%2F43%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
 ![license-note](https://img.shields.io/badge/status-独立开源作品-8b5cf6)
@@ -52,7 +52,7 @@
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 282/282 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
-| 🔗 分享与审计 | URL 全量恢复 + **42 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 42/42 |
+| 🔗 分享与审计 | URL 全量恢复 + **43 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 43/43 |
 | 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界钳制）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 34 条中英指令真实模型回归 34/34（glm-4.6）+ llm_provider_selftest 33 断言 |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 56 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
@@ -68,6 +68,7 @@
 | 🌀 RVE 均质化 + E(n) 曲面 | Voigt–Reuss 精确界 + 迂曲度调制方向刚度 + 方向模量球面热力图 | homogenization_audit 13 断言 |
 | 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 14 断言 |
 | 🥊 红队极端工况矩阵 | 100+ 案例：孔隙率/容器/长宽比/高频/鞍点/极端权重三硬指标 | redteam_matrix_audit 100/100 |
+| 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 18 断言（合成曲线解析真值恢复 ≤2%） |
 | ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 43 断言（万点对拍 0.00e+0） |
 | 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
 | 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步）与 polyMesh 五件套直通求解，免 snappyHexMesh | cae_mesh_audit 46 断言 |
@@ -87,7 +88,7 @@
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
-- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错 / 39 道正式 CI 门禁全绿；`run_ci_suite` 顶层调度 42/42（额外包含 `ui_jump_check` 与 agent selftest/schema_check/llm_provider_selftest）。
+- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错 / 39 道正式 CI 门禁全绿；`run_ci_suite` 顶层调度 43/43（额外包含 `ui_jump_check` 与 agent selftest/schema_check/llm_provider_selftest）。
 
 ---
 
