@@ -209,6 +209,26 @@ triangle adjacency graph by BFS (same-direction neighbours get opposite colors),
 and flip the whole mesh once if the divergence-theorem volume is negative. For the closed manifolds
 the pipeline guarantees (open = non-manifold = degenerate = 0), misoriented edges are zero by
 construction --- verified byte-level on the exported STL (823,500 edges at resolution 96).
+Figure~\ref{fig:orientation} contrasts the two writer strategies on identical geometry (F-RD
+lattice, resolution 96, $k$=6, 838{,}008 triangles): the extraction output itself carries 15{,}552
+misoriented edges concentrated along high-curvature sheet junctions; the historical per-triangle
+voting pass not only fails to repair them but fragments the winding across the entire surface
+(16{,}104); the constructive propagation pass eliminates all of them. The same experiment on the
+earlier extraction pipeline recorded 4{,}536 $\rightarrow$ 23{,}571 under voting --- the scheme
+degrades winding whenever the vertex-normal field it votes against is unreliable.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{../figures/fig_orientation_comparison.pdf}
+\caption{Orientation states of the same F-RD lattice (R96, $k$=6) under three writer
+strategies, with misoriented-edge midpoints overlaid on the unit cell. (a) Raw extraction output:
+15{,}552 misoriented edges cluster along sheet junctions. (b) The historical per-triangle voting
+writer (flip each triangle whose winding disagrees with the summed vertex normal) raises the count
+to 16{,}104 and scatters the defects over the whole surface. (c) The constructive propagation
+writer (undirected edge registration, BFS two-coloring of the triangle adjacency graph, and a
+divergence-volume sign flip) yields zero misoriented edges by construction.}
+\label{fig:orientation}
+\end{figure*}
 
 \subsection{Agentic closed-loop verification (v8.0)}
 \label{sec:agentic}
