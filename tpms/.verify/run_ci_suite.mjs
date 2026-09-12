@@ -1,6 +1,6 @@
 // run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6 → 2026-09-06 并行化）
 //
-// 调度：41 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
+// 调度：42 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
 //       结果按原序汇报。并发度 CI_JOBS 可调（默认 4；18 核机器实测安全）。
 // 用法：
 //   cd tpms/tpms-platform && npm run test:all
@@ -138,6 +138,8 @@ const SCHEDULE = [
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],
   ['schema_check 契约与可用域（75 断言，2026-09-12 红队 B 补钉 +3）', 'Schema 契约', '../agent/schema_check.mjs'],
+  // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 钳制/路径狱/畸形拒绝）离线自检，无外部依赖
+  ['llm_provider_selftest M3 拦截器自检（33 断言，离线）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));
