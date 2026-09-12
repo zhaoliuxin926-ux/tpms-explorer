@@ -88,16 +88,17 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 ## 三阶段计划（结合 M0-M5）
 
 ### 阶段 A · 巩固与门面（现在 ~ 2 周）
-- [ ] A1 平台级修复 3 项：stl-exporter 定向翻转（定向一致性进 selftest 断言）、poincare 延拓斜率改真导数 f'(rC)、F-2 四处头注宣称对齐——验证：新门禁断言 + 全量 39/39 绿
+- [x] A1 平台级修复 3 项（2026-09-13 收敛勾选，三项均已于既往轮次完成）：stl-exporter 定向翻转 ✅（2026-09-05：orientConsistently 全局传播 + parity_math 全局定向门禁化）、poincare 延拓斜率改真导数 f'(rC) ✅（2026-09-05：mapPoint 真导数 + py 镜像断言钉住）、F-2 类头注宣称对齐 ✅（2026-09-10：18 处头注全部对齐实现）——验证口径由"全量 39/39 绿"演进为**全量 42/42 绿**（2026-09-12 本机全量复验 + CI run 34702020524 三平台 success）
 - [x] A2 孔隙率解析映射（2026-09-05）：`mesh` 命令默认 `--porosity-solver exact`——解析积分求根（确定性 LCG MC）+ 网格实测一轮割线（变差回退直出）。实测：R96 diamond 0.26pp / gyroid p0.5 1.96pp；R48 立方对称族 1.3~4.3pp；高谐波族（iwp/frd/lidinoid/splitp）R48 网格表示物理受限 8.7~23pp（legacy 二分对照 17.9~27.7pp，多数改善），>5pp 时输出升级分辨率提示。验收口径修订依据：R48 网格对 iso 的响应含顶点投影混沌敏感性（比例损耗因子实测漂移 ρ 0.94~1.72），R96 下割线后 ≤0.3pp
   - 对标源码事实：RegionTPMS 为 Mathematica notebook（非 Python），方法 = NIntegrate(Boole) 解析体积分 + bisection 反解——与本项目实现的"解析 MC 求根"同构
   - selftest 29/29（新增 R96 ≤1pp 断言 + solver 默认值检查）
-- [ ] A3 GitHub 门面国际化：英文 README ✅、issue/PR 模板 ✅；余 topics 标签（tpms/lattice/bone-scaffold/webgpu，B5.4 push 后手动加）、showcase 截图——验证：GitHub tpms topic 页可检索到本仓库（红队 C 核验：A3 整项原描述与事实部分脱节，2026-09-12 拆分标注）
+- [x] A3 GitHub 门面国际化（2026-09-13 收敛勾选，三项完成一项余留）：英文 README ✅、issue/PR 模板 ✅、topics 标签 ✅（2026-09-06 经 GitHub API 设置并公开复核：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing）——**余项：showcase 截图**（低优先，随手补）
+  - [ ] A3 余项：showcase 截图（仓库 README 或 GitHub Social Preview 图）
 - [ ] A4 教学素材：LEARNING_PATH 配动画/视频（自制 3 分钟概念动画或嵌入权威视频）——验证：落地页可播放
 
 ### 阶段 B · Agent 化与学术化（1 ~ 2 月）
 - [x] B1 = M2 tool schema ✅（2026-09-05 完成；本行 2026-09-12 红队 C 核验补勾——tools.schema.json + schema_check 72 断言已转正进 CI 调度，验收即 M2 节）
-- [ ] B2 = M3 LLM 接入（前置：provider + key）——验证：30 条中英指令回归、零 LLM 直写数值
+- [x] B2 = M3 LLM 接入 ✅（2026-09-12 验收翻转，commit 951ce3e/7007486；本行 2026-09-13 收敛勾选）：OpenAICompatProvider 接智谱 + 34 条中英指令真实模型回归 **34/34**（glm-4-flash 经济档 29/34，异常全被拦截器兜住）+ 对抗样例零透传 + 拦截器自检 33/33 纳管 CI——验证标准"30 条中英指令回归、零 LLM 直写数值"超额满足
 - [x] B3 = M4 闭环驱动器 ✅（2026-09-12：Mock 6/6+真实 glm-4.6 2/2，见 M4 节）
 - [ ] B4 SoftwareX 投稿（对标 RegionTPMS 同刊路径；docs/paper 手稿已在）——验证：获得投稿号；补充审稿人可复跑的门禁证据
 - [ ] B5 BENCHMARKS.md 公开基准：解析锚点 + 与文献实验数据（Ti6Al4V gyroid/diamond）对比表——验证：外部用户可一条命令复跑
