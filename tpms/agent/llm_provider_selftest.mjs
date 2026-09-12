@@ -23,7 +23,7 @@ const schema = loadToolsSchema();
 const tools = schemaToOllamaTools(schema);
 
 // ── 1. schema 结构 ──
-ok('schema 含 4 工具', schema.tools.length === 4, `got ${schema.tools.length}`);
+ok('schema 含 5 工具', schema.tools.length === 5, `got ${schema.tools.length}`);
 ok('ollama tools 格式完整', tools.every((t) => t.type === 'function' && t.function.name && t.function.parameters));
 ok('ollama tools 名称与 schema 一致', tools.map((t) => t.function.name).join() === schema.tools.map((t) => t.name).join());
 

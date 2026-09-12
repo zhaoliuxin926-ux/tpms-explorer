@@ -74,6 +74,10 @@ const CASES = [
   { name: 'F2 多目标', instr: 'Gyroid 和 Diamond 各建一个孔隙率 60% 的支架', minCalls: 2 },
   { name: 'F3 模糊 EN', instr: 'I need a bone scaffold model', expect: { tool: 'tpms_mesh' } },
   { name: 'F4 渐变 isoGrad', instr: 'z 向渐变支架，渐变 iso 偏移 -0.1,0,0.1，孔隙率基准 70%，用 gyroid', expect: { tool: 'tpms_mesh', type: 'gyroid' } },
+  // ── G. M3→M4 桥接（tpms_design_verify 闭环意图；真实执行不在此跑——本回归全程 --dry-run）──
+  { name: 'G1 闭环意图 CN', instr: '设计一个孔隙率 65% 的 gyroid 支架，要求验证到通过后再交付', expect: { tool: 'tpms_design_verify', type: 'gyroid', porosity: 65 } },
+  { name: 'G2 closed-loop EN', instr: 'Create a 60% porosity Diamond scaffold and run the verify closed loop until it passes', expect: { tool: 'tpms_design_verify', type: 'diamond', porosity: 60 } },
+  { name: 'G3 可产性不确定', instr: '用 FKS 曲面做一个孔隙率 60% 的支架，不确定能不能生产出来，帮我自动修复到通过', expect: { tool: 'tpms_design_verify', type: 'fks', porosity: 60 } },
 ];
 
 const normArgP = (calls, key) => {
