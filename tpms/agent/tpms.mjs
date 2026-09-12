@@ -561,7 +561,7 @@ function cmdMesh(a, json) {
   console.log('  ───────────────────────────────');
   console.log(`  顶点/三角形  ${res.vertCount} / ${res.triCount}`);
   console.log(`  实测孔隙率   ${(porEst * 100).toFixed(2)}%（目标 ${(pf * 100).toFixed(1)}%，偏差 ${(Math.abs(porEst - pf) * 100).toFixed(2)}pp）`);
-  if (Math.abs(porEst - pf) > 0.02) console.log('  ⚠ 偏差 >2pp：exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），可尝试 --porosity-solver legacy；或提高 --resolution（上限 96）');
+  if (Math.abs(porEst - pf) > 0.02) console.log('  ⚠ 偏差 >2pp：exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），可尝试 --porosity-solver legacy；或提高 --resolution（上限 128）');
   console.log(`  水密自检     开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris} → 通过（索引空间定向观测 misoriented=${audit.misorientedEdges}）`);
   console.log(`  STL 已写入   ${outFile}（${(stl.byteLength / 1024).toFixed(1)} KB，单位 mm，${scale.toFixed(4)} mm/wc）`);
 }
@@ -613,11 +613,13 @@ function cmdVerify(core, a, json) {
   }
 
   // ── 修复循环：分辨率升档表（水密/构建失败的修复策略）──
-  const LADDER = [48, 64, 96];
+  // 【2026-09-12】R128 档位扩容补漏：LADDER 与钳制上限 96→128（此前 mesh/solve 开放 R128
+  // 而 verify 仍钳 96——fcks R120 梯外修复被静默降回 96 的根因）
+  const LADDER = [48, 64, 96, 128];
   const tol = design.tolerance ?? 0.01;
   let R = Number.isInteger(design.resolution) ? design.resolution : 64;
   if (R < 48) R = 48;
-  if (R > 96) R = 96;
+  if (R > 128) R = 128;
 
   // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）
   let isoGradD = null;
