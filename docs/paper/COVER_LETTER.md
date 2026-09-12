@@ -16,9 +16,11 @@ Software Publication.
 parametric design, physics simulation, and additive-manufacturing preparation of triply periodic
 minimal surface (TPMS) architected materials. It couples a watertight Surface Nets meshing
 pipeline with an exact analytic porosity solver, multifunctional physics estimators (mechanical,
-permeability, acoustic, thermal), CAE hand-off (Abaqus/OpenFOAM/G-code), and v7.0 research-grade
+permeability, acoustic, thermal), CAE hand-off (Abaqus/OpenFOAM/G-code), v7.0 research-grade
 modules for generative implicit fields, yield envelopes, phononic bandgaps, and tissue-ingrowth
-dynamics.
+dynamics, and a v8.0 agentic verification layer (schema-clamped LLM tool calling plus a
+closed-loop design-verify driver with bounded repair menus and structured unreachability
+declarations).
 
 **Why we believe it fits SoftwareX.**
 
@@ -28,16 +30,22 @@ dynamics.
    address adjacent stages of the same workflow and share the 1-period-equals-1-mm convention for
    interoperability.
 2. **Verification culture as the core differentiator.** Every headline claim in the manuscript is
-   re-executable: a 41-item CI suite (38 formal gates + navigation quick-check + CLI selftest + schema contract, >1,000 assertions
+   re-executable: a 42-item CI suite (37 formal behavior audit gates + two UI-regression entries +
+   three agent-layer self-checks, >1,000 assertions
    under strict per-line accounting, each gate carrying a minimum-assertion guard) runs on a
    three-platform GitHub Actions matrix; a clean clone reproduces all claims via
    `npm install && npm run test:all`.
-3. **Two methodological contributions.** (i) An exact porosity solver (analytic iso\* root-finding
+3. **Three methodological contributions.** (i) An exact porosity solver (analytic iso\* root-finding
    with cross-process caching and mesh-measured secant correction) that reaches 0.05 pp tolerance
    on families where the pre-fix bisection stalled and reported unreachable; (ii) root-cause
    identification and fix of a projection step-length unit error (missing k-factor) in the Surface
    Nets Newton projection — the dominant source of systematic solid-volume loss (up to 9–11 pp),
-   documented with before/after evidence (IWP R48 solid fraction +21.5 pp).
+   documented with before/after evidence (IWP R48 solid fraction +21.5 pp); (iii) an agentic
+   closed-loop verification layer in which the LLM only fills schema-bounded slots under a
+   deterministic clamping interceptor and selects repairs only from a bounded menu, while patch
+   application, execution, and acceptance remain deterministic — validated by a 34-instruction
+   bilingual production-LLM regression (34/34), an offline mock-driven closed-loop self-test, and
+   an 87-assertion schema↔CLI cross-check gate.
 4. **Honest-boundary engineering.** Known limitations (Voigt upper-bound shear estimates,
    LBM→FD-Darcy substitution, voxel-topology fail-closed parameter ranges) are disclosed and
    guard-railed in the repository rather than left undocumented.
