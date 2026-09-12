@@ -22,7 +22,14 @@
 - 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario 四工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐）+ `schema_check.mjs`（现 72 断言）
 - 验收：nl-agent 参数类意图 100% 覆盖；每个数值参数都有硬边界；schema_check+selftest 自 2026-09-10 起转正进 run_ci_suite 调度（39→41 门）。过程与口径详见下方 B-t2
 
-### M3 LLM 接入 — 🔶 Provider 层已交付（2026-09-11），待真实模型回归
+### M3 LLM 接入 — ✅ 全线达成（2026-09-12 真实模型回归 34/34）
+
+> 【2026-09-12 验收】OpenAICompatProvider 接入智谱端点（key 走 env 不入库）+ llm_regression.mjs
+> 34 条中英指令回归：**glm-4.6 34/34 全 PASS**（glm-4-flash 经济档 29/34，弱项全被拦截器安全兜住）。
+> 对抗三样例（路径穿越/越界孔隙率/越界分辨率）两模型均拒绝或自钳制，零透传。
+> 回归产出修复：SYSTEM_PROMPT 工具选择强化（杜绝幻觉文件名）、schema 别名对照表
+> （diamond=Schwarz D 等）、nl-agent Schwarz D 别名 + 门禁 +2（42/42）、
+> libuv win/async.c 断言根治（exitCode 排空替代 process.exit）。M0-M5 全线打通。
 - **已交付**：`llm-provider.mjs`（LLMProvider 抽象 + OllamaProvider + MockProvider + validateToolCalls 拦截器）+ `llm-agent.mjs`（自然语言 → tool calling → CLI 执行循环）+ `llm_provider_selftest.mjs`（15/15，离线不依赖 Ollama）
 - 铁律落地：LLM 产出逐槽位过 schema 钳制（enum/minimum/maximum/未知属性/未知工具/缺必填全拦截）；拦截失败 exit 2
 - 用法：`node llm-agent.mjs --provider ollama --model qwen2.5:7b "设计一个孔隙率 75% 的 Gyroid 骨支架"`（需本地 ollama serve）
@@ -37,7 +44,7 @@
 - 口径事实：INP 体素孔隙率走 buildVoxelModel 内部体素分位二分（targetPorosity 口径），与 STL 网格实测口径并列披露随 R 收敛；材料泊松比为 CLI 确定性常数表（tc4=0.34/polymer=0.4/thermal=0.3）+ 报告披露；力学预测为解析工程口径非 FEA（报告内声明，schema description 同步声明勿向终端用户宣称仿真精度）
 - 注册：tools.schema.json 第四工具 tpms_scenario（design 单参数，值全部入 JSON 文件）+ nl_agent 语义覆盖升级（run-simulation/preset-* → 🔶 scenario 部分覆盖）；schema_check 30→40 断言（含退出码分层/参数越界逐点/UNKNOWN_FLAGS 拒绝）+ 守卫基线 40；selftest 40→47（端到端交付/双口径 trace/INP 结构/诚实边界/拒绝语义）
 - 验证：selftest 47/47 + schema_check 40/40 + 全量 39 门绿；实测冒烟 gyroid p0.65 tc4 R64×6：四件交付、网格实测 64.23%（偏差 0.77pp）、体素 64.99%、E*=5.12 GPa 带内
-- 剩余：M3 LLM 接入（等 key）——接入后 LLM tool calling 直填 scenario design 槽位即达成完整 Agent 闭环
+- ~~剩余：M3 LLM 接入（等 key）~~ ✅（2026-09-12 智谱端点 34/34 验收，Agent 闭环达成）
 
 ## 约定
 - 每个 M 完成时更新本文件状态 + agent_memory/progress.md；新门禁进 .verify 前先在 agent/ 内自检（正式注册门禁会改变 CI 矩阵计数，须单独决策）
