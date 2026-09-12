@@ -166,18 +166,24 @@ export class OllamaProvider extends LLMProvider {
       options: { temperature: this.temperature },
       ...(tools?.length ? { tools } : {}),
     };
+    // 手写 AbortController+clearTimeout：AbortSignal.timeout 的句柄在 process.exit 时
+    // 触发 libuv win/async.c 断言崩溃（Windows 实测），退出码被污染
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), this.timeoutMs);
     let res;
     try {
       res = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Connection: 'close' },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: ac.signal,
       });
     } catch (e) {
-      throw new Error(e.name === 'TimeoutError'
+      throw new Error(ac.signal.aborted
         ? `Ollama ${this.timeoutMs}ms 无响应（timeout）`
         : `Ollama 连接失败: ${e.message}`);
+    } finally {
+      clearTimeout(timer);
     }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
@@ -187,6 +193,56 @@ export class OllamaProvider extends LLMProvider {
     const msg = json.message ?? {};
     const toolCalls = msg.tool_calls ?? [];
     return { toolCalls, raw: msg.content ?? '' };
+  }
+}
+
+// ── OpenAI 兼容 Provider（智谱/DeepSeek/LM Studio/任意 OpenAI 格式端点）──
+export class OpenAICompatProvider extends LLMProvider {
+  /**
+   * @param {{ baseUrl?: string, apiKey?: string, model?: string, temperature?: number, timeoutMs?: number }} opts
+   * baseUrl 须含版本段（如 https://open.bigmodel.cn/api/paas/v4）；key 走环境变量或 --api-key，不得入库
+   */
+  constructor(opts = {}) {
+    super();
+    this.baseUrl = (opts.baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '');
+    if (!opts.apiKey) throw new Error('OpenAICompatProvider 缺 apiKey（设 TPMS_LLM_API_KEY 或 --api-key）');
+    this.apiKey = opts.apiKey;
+    this.model = opts.model ?? 'gpt-4o-mini';
+    this.temperature = opts.temperature ?? 0;
+    this.timeoutMs = opts.timeoutMs ?? 120_000; // 无超时=对不响应的服务端永久挂起（红队 A-2 同源）
+  }
+
+  async complete(messages, tools) {
+    const body = {
+      model: this.model,
+      messages,
+      temperature: this.temperature,
+      ...(tools?.length ? { tools } : {}),
+    };
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), this.timeoutMs);
+    let res;
+    try {
+      res = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}`, Connection: 'close' },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+    } catch (e) {
+      throw new Error(ac.signal.aborted
+        ? `端点 ${this.timeoutMs}ms 无响应（timeout）`
+        : `端点连接失败: ${e.message}`);
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    const msg = json.choices?.[0]?.message ?? {};
+    return { toolCalls: msg.tool_calls ?? [], raw: msg.content ?? '' };
   }
 }
 

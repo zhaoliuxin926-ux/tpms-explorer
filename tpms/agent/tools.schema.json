@@ -6,20 +6,68 @@
     {
       "name": "tpms_list",
       "description": "列出内置 TPMS 曲面族（20 种，含 Gibson-Ashby 刚度系数 C1 与各向异性比）、基体材料（tc4/polymer/thermal 的模量与屈服强度）与模型常数（C2=0.3，文献出处）。用于回答'有哪些曲面/材料'类查询。无副作用。",
-      "parameters": { "type": "object", "properties": {}, "additionalProperties": false }
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
     },
     {
       "name": "tpms_estimate",
       "description": "Gibson-Ashby 开孔泡沫力学估算：E*/Es = C1·ρ̄²，σ*/σs = C2·ρ̄^1.5（ρ̄ = 1−孔隙率）。材料级解析近似（秒级），几何相关指标（比表面积/渗透率/孔径）不在本工具范围。回答'某孔隙率下刚度/强度多少'类查询。",
       "parameters": {
         "type": "object",
-        "required": ["type", "porosity"],
+        "required": [
+          "type",
+          "porosity"
+        ],
         "additionalProperties": false,
         "properties": {
-          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp", "octo", "karcher", "fks", "fky", "gprime", "fcks", "dprime", "dp", "dd", "dg", "fcky", "cdd"], "description": "TPMS 曲面族。custom 公式沙箱未注册本工具，传入将被拒绝。" },
-          "porosity": { "type": "number", "minimum": 0, "exclusiveMaximum": 100, "description": "孔隙率，0 ≤ p < 1 小数或 1~99 百分数（>1 自动按百分数解释，与平台 computePhysicsMetrics 同口径）。换算后 ≥1（即 ≥100%）被拒绝。" },
-          "material": { "type": "string", "enum": ["tc4", "polymer", "thermal"], "description": "基体材料：tc4=Ti-6Al-4V (E=110GPa σ=880MPa)、polymer=PLLA/PLA (3.5/50)、thermal≈Al-SiC (70/300)。默认 tc4；'auto' 等未注册值被拒绝。" },
-          "json": { "type": "boolean", "description": "输出机器可读 JSON（agent 消费方必须置 true）" }
+          "type": {
+            "type": "string",
+            "enum": [
+              "gyroid",
+              "diamond",
+              "schwarz",
+              "neovius",
+              "iwp",
+              "frd",
+              "lidinoid",
+              "splitp",
+              "octo",
+              "karcher",
+              "fks",
+              "fky",
+              "gprime",
+              "fcks",
+              "dprime",
+              "dp",
+              "dd",
+              "dg",
+              "fcky",
+              "cdd"
+            ],
+            "description": "TPMS 曲面族。别名对照：diamond=Schwarz D（金刚石）；schwarz=Schwarz P；iwp=I-WP；frd=F-RD；fks/fky/fcks=Fischer-Koch S/Y/C(S)；dp/dd/dg=Double P/D/G；dprime=D′；cdd=Complementary D；gprime=G′。用户用历史别名（如 Schwarz D）时须映射到本表 id。custom 公式沙箱未注册本工具，传入将被拒绝。"
+          },
+          "porosity": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMaximum": 100,
+            "description": "孔隙率，0 ≤ p < 1 小数或 1~99 百分数（>1 自动按百分数解释，与平台 computePhysicsMetrics 同口径）。换算后 ≥1（即 ≥100%）被拒绝。"
+          },
+          "material": {
+            "type": "string",
+            "enum": [
+              "tc4",
+              "polymer",
+              "thermal"
+            ],
+            "description": "基体材料：tc4=Ti-6Al-4V (E=110GPa σ=880MPa)、polymer=PLLA/PLA (3.5/50)、thermal≈Al-SiC (70/300)。默认 tc4；'auto' 等未注册值被拒绝。"
+          },
+          "json": {
+            "type": "boolean",
+            "description": "输出机器可读 JSON（agent 消费方必须置 true）"
+          }
         }
       }
     },
@@ -28,20 +76,116 @@
       "description": "参数 → Surface Nets 网格 → 水密三硬指标门（开放边/非流形/退化面任一非零即 exit 3 不产 STL）→ 二进制 STL 落盘（mm）。映射 nl-agent 动作 export-stl。含 exact 孔隙率求解器（解析积分求根 + 网格实测割线校正，R96 实测偏差 0.26pp；低分辨率或高谐波族偏差大时如实报告并提示升分辨率）。对应平台动作 run-simulation 为后续扩展（B-t3+）。",
       "parameters": {
         "type": "object",
-        "required": ["type", "porosity"],
+        "required": [
+          "type",
+          "porosity"
+        ],
         "additionalProperties": false,
         "properties": {
-          "type": { "type": "string", "enum": ["gyroid", "diamond", "schwarz", "neovius", "iwp", "frd", "lidinoid", "splitp", "octo", "karcher", "fks", "fky", "gprime", "fcks", "dprime", "dp", "dd", "dg", "fcky", "cdd"], "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。" },
-          "porosity": { "type": "number", "minimum": 0.05, "maximum": 99.999, "description": "目标孔隙率（0.05 ≤ p < 1 小数，或 5~99 百分数——>1 自动按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。精度（网格实测口径）：R96 Diamond 0.26pp / Gyroid ~1pp，随曲面族与目标值变化；exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），偏差 >2pp 时 CLI 会提示。低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。高孔隙薄壁自触域（2026-09-08 诊断定案）：lidinoid p0.7 在 R48/R64 fail-closed（nm 28512/8640，实测锚点，不外推到全 p≥0.7）、R96 可产；lidinoid p0.9 R48 虽可产但 exact 求解孔隙率偏差可达 4.6pp（薄壁区 iso 响应混沌，如实报告）；frd p0.6 R48/R64 同族拒产；gprime 默认周期数（k=6）R96 p0.6 fail-closed（nm 19080），降周期数 k=2 R96 可产（nm=0，偏差 0.2pp）——高 k=特征相对体素更薄，降周期数即可避（2026-09-10 B5 基准钉住）；lidinoid p0.75 在默认周期数 k=6 时 R96 也 fail-closed（nm 10368），k2 可产（2026-09-10 k6 标定轮钉住）；C2 第三批（2026-09-10 实测）：dprime p0.6 R48 fail-closed（nm 18252）、R96 可产（偏差 0.13pp）；dp/dd R48/R96 均可产；dg p0.6 可产（nm=0）但 iso 二分触求解域下界 −1.6，孔隙率偏差 ~7.9pp@R96（0.6 目标超出场可用域，如实报告勿标称达标）。根因=亚体素薄壁自触（零等值面两叶间距<体素尺寸），nm 边全域分布、随分辨率收敛、iso 邻域呈平台状（nudge 微调不可逃逸，已实证）。" },
-          "periods": { "type": "integer", "minimum": 1, "maximum": 12, "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素" },
-          "resolution": { "type": "integer", "minimum": 48, "maximum": 128, "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 128 = RES_CAP_HD（场缓冲 2.5M 采样点约束 R≤135）；越高孔隙率偏差越小" },
-          "container": { "type": "string", "enum": ["cube", "cylinder"], "description": "容器形状，默认 cube。注意：cylinder 深水区（2026-09-10 实测收窄可用域）：diamond p0.6 cylinder 在 R48-R128 全部 fail-closed 且非单调不收敛（nm 123/1940/164/624/786），k2 R96（84）与 p0.65（248）同样拒产——降周期数与升分辨率均不可避（与 gprime/lidinoid 族对照），依赖 cylinder 的设计请换 cube 或其他曲面族并用 solve 验证；cube+cylinder 的容器面本身不是缺陷源（nm 边全域分布已实证）" },
-          "mode": { "type": "string", "enum": ["solid_network", "shell", "gradient_shell"], "description": "结构拓扑模式，默认 solid_network" },
-          "isoGrad": { "type": "object", "description": "C1 渐变等值场（z 向三区平台+过渡带）：{ values: [v0,v1,...] 各平台 iso 偏移（2~6 个 [-1.5,1.5] 有限数字），band?: 过渡带宽（默认 0.4，0≤b≤2）}。仅 solid_network；与 targetPorosity 二分互斥（显式 iso 求根基准）。R48 低分辨率下过渡带可能薄壁自触 fail-closed，建议 R≥96。", "additionalProperties": false, "properties": { "values": { "type": "array", "items": { "type": "number", "minimum": -1.5, "maximum": 1.5 }, "minItems": 2, "maxItems": 6 }, "band": { "type": "number", "minimum": 0, "maximum": 2 } } },
-          "out": { "type": "string", "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$", "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl。agent 通道安全约束：仅单段安全文件名（^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$，禁路径分隔符/..——防 LLM 可控路径穿越，红队 A-1）。" },
-          "hybrid": { "type": "string", "description": "异族拼接 typeB[:blend[:center[:width[:axis]]]]，如 diamond:linear:0:0.5:x。与 isoGrad 互斥；仅 solid_network；需 exact 求解器。" },
-          "porosity-solver": { "type": "string", "enum": ["exact", "legacy"], "description": "孔隙率求解器，默认 exact（解析积分求根+网格实测割线）。legacy=体素分位二分。hybrid 需 exact。" },
-          "json": { "type": "boolean", "description": "输出机器可读 JSON" }
+          "type": {
+            "type": "string",
+            "enum": [
+              "gyroid",
+              "diamond",
+              "schwarz",
+              "neovius",
+              "iwp",
+              "frd",
+              "lidinoid",
+              "splitp",
+              "octo",
+              "karcher",
+              "fks",
+              "fky",
+              "gprime",
+              "fcks",
+              "dprime",
+              "dp",
+              "dd",
+              "dg",
+              "fcky",
+              "cdd"
+            ],
+            "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。"
+          },
+          "porosity": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 99.999,
+            "description": "目标孔隙率（0.05 ≤ p < 1 小数，或 5~99 百分数——>1 自动按百分数换算）。exact 求解器在解析口径求根并经网格实测校正。精度（网格实测口径）：R96 Diamond 0.26pp / Gyroid ~1pp，随曲面族与目标值变化；exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），偏差 >2pp 时 CLI 会提示。低孔隙率需高分辨率——p<0.3 时 R48 常无法通过水密门（fail-closed 拒产），建议 R≥96（实测 p=0.2@R96 偏差 1.2pp）。高孔隙薄壁自触域（2026-09-08 诊断定案）：lidinoid p0.7 在 R48/R64 fail-closed（nm 28512/8640，实测锚点，不外推到全 p≥0.7）、R96 可产；lidinoid p0.9 R48 虽可产但 exact 求解孔隙率偏差可达 4.6pp（薄壁区 iso 响应混沌，如实报告）；frd p0.6 R48/R64 同族拒产；gprime 默认周期数（k=6）R96 p0.6 fail-closed（nm 19080），降周期数 k=2 R96 可产（nm=0，偏差 0.2pp）——高 k=特征相对体素更薄，降周期数即可避（2026-09-10 B5 基准钉住）；lidinoid p0.75 在默认周期数 k=6 时 R96 也 fail-closed（nm 10368），k2 可产（2026-09-10 k6 标定轮钉住）；C2 第三批（2026-09-10 实测）：dprime p0.6 R48 fail-closed（nm 18252）、R96 可产（偏差 0.13pp）；dp/dd R48/R96 均可产；dg p0.6 可产（nm=0）但 iso 二分触求解域下界 −1.6，孔隙率偏差 ~7.9pp@R96（0.6 目标超出场可用域，如实报告勿标称达标）。根因=亚体素薄壁自触（零等值面两叶间距<体素尺寸），nm 边全域分布、随分辨率收敛、iso 邻域呈平台状（nudge 微调不可逃逸，已实证）。"
+          },
+          "periods": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素"
+          },
+          "resolution": {
+            "type": "integer",
+            "minimum": 48,
+            "maximum": 128,
+            "description": "体素分辨率（每轴），默认 64。下限 48：更低分辨率无法稳定产出水密网格；上限 128 = RES_CAP_HD（场缓冲 2.5M 采样点约束 R≤135）；越高孔隙率偏差越小"
+          },
+          "container": {
+            "type": "string",
+            "enum": [
+              "cube",
+              "cylinder"
+            ],
+            "description": "容器形状，默认 cube。注意：cylinder 深水区（2026-09-10 实测收窄可用域）：diamond p0.6 cylinder 在 R48-R128 全部 fail-closed 且非单调不收敛（nm 123/1940/164/624/786），k2 R96（84）与 p0.65（248）同样拒产——降周期数与升分辨率均不可避（与 gprime/lidinoid 族对照），依赖 cylinder 的设计请换 cube 或其他曲面族并用 solve 验证；cube+cylinder 的容器面本身不是缺陷源（nm 边全域分布已实证）"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "solid_network",
+              "shell",
+              "gradient_shell"
+            ],
+            "description": "结构拓扑模式，默认 solid_network"
+          },
+          "isoGrad": {
+            "type": "object",
+            "description": "C1 渐变等值场（z 向三区平台+过渡带）：{ values: [v0,v1,...] 各平台 iso 偏移（2~6 个 [-1.5,1.5] 有限数字），band?: 过渡带宽（默认 0.4，0≤b≤2）}。仅 solid_network；与 targetPorosity 二分互斥（显式 iso 求根基准）。R48 低分辨率下过渡带可能薄壁自触 fail-closed，建议 R≥96。",
+            "additionalProperties": false,
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1.5,
+                  "maximum": 1.5
+                },
+                "minItems": 2,
+                "maxItems": 6
+              },
+              "band": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2
+              }
+            }
+          },
+          "out": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$",
+            "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl。agent 通道安全约束：仅单段安全文件名（^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$，禁路径分隔符/..——防 LLM 可控路径穿越，红队 A-1）。"
+          },
+          "hybrid": {
+            "type": "string",
+            "description": "异族拼接 typeB[:blend[:center[:width[:axis]]]]，如 diamond:linear:0:0.5:x。与 isoGrad 互斥；仅 solid_network；需 exact 求解器。"
+          },
+          "porosity-solver": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "legacy"
+            ],
+            "description": "孔隙率求解器，默认 exact（解析积分求根+网格实测割线）。legacy=体素分位二分。hybrid 需 exact。"
+          },
+          "json": {
+            "type": "boolean",
+            "description": "输出机器可读 JSON"
+          }
         }
       }
     },
@@ -50,10 +194,16 @@
       "description": "M5 骨支架场景模板：一条指令的端到端交付——设计意图 JSON → Gibson-Ashby 解析预测 → exact 孔隙率求解（水密门 fail-closed）→ 水密 STL（mm）+ Abaqus INP（体素 C3D8+PBC 压缩工况）→ 验证报告（MD+JSON，含参数表/孔隙率双口径/Gibson-Ashby 文献带对比/交付物指纹）。输入为 design 文件路径（设计值全部写入 JSON 文件而非命令行）。exit 0 必伴随四件交付物；exit 3 = 参数层结构化拒绝（stage=parameter + paramErrors，与 verify 同构）或构建/水密门失败。力学预测为解析工程口径非 FEA——报告内已诚实声明，勿向终端用户宣称仿真精度。",
       "parameters": {
         "type": "object",
-        "required": ["design"],
+        "required": [
+          "design"
+        ],
         "additionalProperties": false,
         "properties": {
-          "design": { "type": "string", "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$", "description": "设计方案 JSON 文件路径（单段安全文件名，约束同 out——防路径穿越读）。JSON 字段：type/porosity/material 必填（枚举同 tpms_mesh/tpms_estimate）；resolution(48~128,默认64)/periods(1~12,默认6)/container/mode/tolerance(0<t≤0.2,默认0.01)/nominalStrain(0<ε≤0.2,默认0.05)/specimenSizeMm(默认=periods，1 period=1mm 约定)/out(输出前缀) 可选。参数越界在参数层结构化拒绝。" }
+          "design": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$",
+            "description": "设计方案 JSON 文件路径（单段安全文件名，约束同 out——防路径穿越读）。JSON 字段：type/porosity/material 必填（枚举同 tpms_mesh/tpms_estimate）；resolution(48~128,默认64)/periods(1~12,默认6)/container/mode/tolerance(0<t≤0.2,默认0.01)/nominalStrain(0<ε≤0.2,默认0.05)/specimenSizeMm(默认=periods，1 period=1mm 约定)/out(输出前缀) 可选。参数越界在参数层结构化拒绝。。注意：仅当用户明确给出设计 JSON 文件名时才调用本工具；从自然语言参数新建设计请改用 tpms_mesh，design 绝不臆造。"
+          }
         }
       }
     }
