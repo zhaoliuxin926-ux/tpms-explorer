@@ -2,7 +2,7 @@
 
 > **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v7.0.0--generative--biophysics-2563eb)
+![release](https://img.shields.io/badge/release-v8.0.0--agentic--loop-2563eb)
 ![ci](https://img.shields.io/badge/CI-42%2F42%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -40,7 +40,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v7.0.0-generative-biophysics）
+### 科研与增材制造特性矩阵（v8.0.0-agentic-loop）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
