@@ -35,7 +35,11 @@
 - 用法：`node llm-agent.mjs --provider ollama --model qwen2.5:7b "设计一个孔隙率 75% 的 Gyroid 骨支架"`（需本地 ollama serve）
 - 剩余：≥30 条中英文设计指令真实模型回归（需 Ollama 进程）；越界意图 100% 钳制验证
 
-### M4 闭环驱动器 — 未开始
+### M4 闭环驱动器 — ✅ 已完成（2026-09-12，tpms-driver.mjs）
+
+> 闭环：propose→执行→读 verify 结构化输出→LLM 有界策略选修复（apply_repair：action enum+patches 槽位，M3 同源拦截器钳制）→确定性应用→重跑。梯内修复仍由 verify 确定性梯完成，驱动器接管梯外（换族/降周期/换容器/改模式/参数修正）与不可达宣告。
+> 验收：Mock 离线自检 6/6（参数修正/梯外 R120/降周期/不可达 exit3/拦截器拒绝 exit2/轮数耗尽 exit4，原始文件零改写）+ 真实 glm-4.6 抽测 2/2 收敛 PASS（fcks R96→换族 gyroid R128 两轮；gprime k6 R96→periods 5 失败后自动换族 diamond 三轮）。
+> 顺带修复 R128 扩容第三处漏点：verify LADDER/钳制 96→128（fcks R120 梯外修复曾被静默降回 96）。退出码 0/2/3/4。
 - 目标：propose → 执行 → 读门禁/审计结构化输出（CI RESULT 行）→ 修正重跑 循环
 - 成功标准：注入带故意缺陷的初始方案，Agent 在有限轮内凭门禁反馈收敛全绿，全程无人工干预
 
@@ -93,7 +97,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 ### 阶段 B · Agent 化与学术化（1 ~ 2 月）
 - [x] B1 = M2 tool schema ✅（2026-09-05 完成；本行 2026-09-12 红队 C 核验补勾——tools.schema.json + schema_check 72 断言已转正进 CI 调度，验收即 M2 节）
 - [ ] B2 = M3 LLM 接入（前置：provider + key）——验证：30 条中英指令回归、零 LLM 直写数值
-- [ ] B3 = M4 闭环驱动器（对标 verify-loop 协议）——验证：注入缺陷方案 N 轮内凭门禁反馈收敛全绿
+- [x] B3 = M4 闭环驱动器 ✅（2026-09-12：Mock 6/6+真实 glm-4.6 2/2，见 M4 节）
 - [ ] B4 SoftwareX 投稿（对标 RegionTPMS 同刊路径；docs/paper 手稿已在）——验证：获得投稿号；补充审稿人可复跑的门禁证据
 - [ ] B5 BENCHMARKS.md 公开基准：解析锚点 + 与文献实验数据（Ti6Al4V gyroid/diamond）对比表——验证：外部用户可一条命令复跑
 
