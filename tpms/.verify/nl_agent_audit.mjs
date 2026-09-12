@@ -127,10 +127,15 @@ console.log('\n[E] 毒化回归');
   check('E10b Complementary D → cdd', w7.patches.type === 'cdd', String(w7.patches.type));
   const w8 = parseNL('用 FK-C(Y) 重建');
   check('E10c FK-C(Y) 简写 → fcky', w8.patches.type === 'fcky', String(w8.patches.type));
+  // E11 历史别名（2026-09-12 真实模型回归 C7）：Schwarz D=平台 diamond，须不被 schwarz-p 劫持
+  const w9 = parseNL('Schwarz D 支架');
+  check('E11a Schwarz D 历史别名 → diamond', w9.patches.type === 'diamond', String(w9.patches.type));
+  const w10 = parseNL('Schwarz P 支架');
+  check('E11b Schwarz P 仍 → schwarz', w10.patches.type === 'schwarz', String(w10.patches.type));
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
-  if (passCount < 40) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 40（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 +3 fcky/cdd）'); process.exit(1); }
+  if (passCount < 42) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 42（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 +3 fcky/cdd；2026-09-12 +2 Schwarz D 别名）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

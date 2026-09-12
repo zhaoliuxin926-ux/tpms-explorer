@@ -44,7 +44,7 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/double[\s-]?(d(iamond)?\b)|\bdd\b|双d/i, 'dd', 'Double D'],
   [/double[\s-]?(g(yroid)?\b)|\bdg\b|双g/i, 'dg', 'Double G'],
   [/gyroid|吉罗伊德|螺旋|gyroid结构/i, 'gyroid', 'Gyroid'],
-  [/diamond|金刚石|钻石/i, 'diamond', 'Diamond'],
+  [/diamond|金刚石|钻石|schwarz-?\s*d(iamond)?\b/i, 'diamond', 'Diamond'],   // Schwarz D=平台 diamond（历史别名，2026-09-12 真实模型回归 C7）
   [/schwarz\s*p|施瓦兹|p曲面|schwarzp/i, 'schwarz', 'Schwarz P'],
   [/neovius|新ovius|诺沃厄斯/i, 'neovius', 'Neovius'],
   [/i-?wp/i, 'iwp', 'I-WP'],

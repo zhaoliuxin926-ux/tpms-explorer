@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   loadToolsSchema, validateToolCalls, schemaToOllamaTools,
-  OllamaProvider, MockProvider,
+  OllamaProvider, MockProvider, OpenAICompatProvider,
 } from './llm-provider.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +28,7 @@ function parseArgs(argv) {
     if (s === '--provider') a.provider = argv[++i];
     else if (s === '--model') a.model = argv[++i];
     else if (s === '--base-url') a.baseUrl = argv[++i];
+    else if (s === '--api-key') a.apiKey = argv[++i];
     else if (s === '--dry-run') a.dryRun = true;
     else if (s === '--json') a.json = true;
     else if (s.startsWith('--')) { console.error(`未知选项 ${s}`); process.exit(2); }
@@ -60,15 +61,20 @@ function runCli(toolName, args) {
 }
 
 const SYSTEM_PROMPT = `你是 TPMS Explorer 的设计助手。用户用自然语言描述 TPMS 支架设计需求。
-你必须通过 tool calling 响应——只填工具定义的参数槽位，不得臆造数值。
-参数含义与边界见各工具的 description。优先使用 tpms_scenario（端到端交付）或 tpms_mesh（仅 STL）。
+你必须通过 tool calling 响应——只填工具定义的参数槽位，不得臆造数值，绝不臆造文件名。
+工具选择：
+- tpms_mesh：从参数直接构建 STL。绝大多数"设计/建一个 X 支架"意图走这里。
+- tpms_scenario：仅当用户明确给出或要求某个设计方案 JSON 文件时使用（design 必填且该文件须真实存在，绝不臆造文件名）。
+- tpms_estimate：仅当用户只询力学/渗透估算、明确不需要交付文件时使用。
+- tpms_list：仅当用户要列曲面/材料清单时使用。
+参数含义与边界见各工具的 description；孔隙率按用户表述习惯选 0-1 小数或 1-99 百分数。
 若用户意图模糊，选择最合理的默认并在参数中体现；不要反问。`;
 
 async function main() {
   const a = parseArgs(process.argv.slice(2));
   const userMsg = a._.join(' ').trim();
   if (!userMsg) {
-    console.error('用法: node llm-agent.mjs [--provider ollama|mock] [--model X] [--dry-run] "<自然语言指令>"');
+    console.error('用法: node llm-agent.mjs [--provider ollama|openai|mock] [--model X] [--base-url U] [--api-key K] [--dry-run] "<自然语言指令>"');
     process.exit(2);
   }
 
@@ -79,14 +85,21 @@ async function main() {
   if (a.provider === 'mock') {
     // 铁律守卫：mock 是回归测试装置，不带 --dry-run 会真实执行 CLI 写盘（红队 A-6）——默认拒绝
     if (!a.dryRun) {
-      console.error('✗ mock provider 仅限 --dry-run 回归（不落盘）；真实执行请用 --provider ollama');
-      process.exit(2);
+      console.error('✗ mock provider 仅限 --dry-run 回归（不落盘）；真实执行请用 --provider ollama|openai');
+      process.exitCode = 2; return;
     }
     // Mock：从 stdin 或环境读预设 toolCalls（回归测试用）
     const preset = process.env.TPMS_MOCK_TOOLCALLS
       ? JSON.parse(process.env.TPMS_MOCK_TOOLCALLS)
       : { toolCalls: [{ function: { name: 'tpms_list', arguments: '{}' } }] };
     provider = new MockProvider(preset);
+  } else if (a.provider === 'openai') {
+    // OpenAI 兼容端点（智谱/DeepSeek/LM Studio/…）：key 走 TPMS_LLM_API_KEY 或 --api-key，不入库
+    provider = new OpenAICompatProvider({
+      baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
+      apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
+      model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-4-flash',
+    });
   } else {
     provider = new OllamaProvider({ baseUrl: a.baseUrl, model: a.model });
   }
@@ -101,14 +114,16 @@ async function main() {
     llmOut = await provider.complete(messages, tools);
   } catch (e) {
     console.error(`✗ LLM 调用失败: ${e.message}`);
-    console.error('  提示: 确认 Ollama 已启动（ollama serve）且模型已拉取（ollama pull qwen2.5:7b）');
-    process.exit(2);
+    console.error('  提示: ollama 需已启动（ollama serve）且模型已拉取；openai 兼容端点需 TPMS_LLM_API_KEY/TPMS_LLM_BASE_URL 或对应 flag');
+    // 【2026-09-12】process.exit 在 undici async 句柄存活时触发 libuv win/async.c 断言（污染退出码）——
+    // 全部改 exitCode + return 自然排空（fetch 已完成、定时器已清、Connection: close 下排空即时）
+    process.exitCode = 2; return;
   }
 
   if (!llmOut.toolCalls?.length) {
     console.error('✗ LLM 未返回 tool calls（仅文本回复）。指令可能过于模糊，或模型不支持 function calling。');
     if (llmOut.raw) console.error(`  LLM 文本: ${llmOut.raw.slice(0, 200)}`);
-    process.exit(2);
+    process.exitCode = 2; return;
   }
 
   // 铁律：schema 拦截器逐槽位钳制
@@ -116,13 +131,14 @@ async function main() {
   if (!verdict.ok) {
     console.error('✗ LLM 产出被 schema 拦截器拒绝:');
     for (const e of verdict.errors) console.error(`  - ${e}`);
-    process.exit(2);
+    process.exitCode = 2; return;
   }
 
   const results = [];
   for (const call of verdict.calls) {
     if (a.dryRun) {
-      console.log(`[dry-run] ${call.name} ${JSON.stringify(call.arguments)}`);
+      // dry-run 诊断走 stderr：--json 时 stdout 必须是纯 JSON（消费方契约）
+      console.error(`[dry-run] ${call.name} ${JSON.stringify(call.arguments)}`);
       results.push({ tool: call.name, args: call.arguments, dryRun: true });
       continue;
     }
@@ -135,7 +151,7 @@ async function main() {
       console.error(`✗ ${call.name} exit=${r.status}`);
       if (r.stderr) console.error(r.stderr.slice(0, 300));
       if (a.json) console.log(JSON.stringify({ ok: false, calls: verdict.calls, results }, null, 2));
-      process.exit(r.status === 3 ? 3 : 2);
+      process.exitCode = r.status === 3 ? 3 : 2; return;
     }
   }
 
@@ -145,7 +161,7 @@ async function main() {
     console.log('✓ 全部工具执行成功');
     for (const r of results) console.log(`  ${r.tool}: exit=${r.exit}`);
   }
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 main();
