@@ -132,6 +132,7 @@ const SCHEDULE = [
   ['phononic_bandgap_audit 声子能带与禁带（门34）', '声子能带审计', 'phononic_bandgap_audit.mjs'],
   ['tissue_growth_audit 组织长入反应扩散（门35）', '组织长入审计', 'tissue_growth_audit.mjs'],
   ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
+  ['experimental_fit_audit ISO 13314 标定与反演（门43，18断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['run_all UI 回归（6 套件）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、

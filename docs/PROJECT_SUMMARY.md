@@ -1,6 +1,6 @@
 # TPMS Explorer 项目全貌总结（v8.0.0-agentic-loop）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-13（对齐 v8.0-agentic-loop + M3→M4 桥接 + stress×hybrid 组合定案）｜ **42 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-13（对齐 v8.0-agentic-loop + M3→M4 桥接 + stress×hybrid 组合定案）｜ **43 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。
 
 ---
@@ -109,18 +109,18 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
-## 五、门禁体系（42 项，run_ci_suite.mjs 调度，三平台矩阵）
+## 五、门禁体系（43 项，run_ci_suite.mjs 调度，三平台矩阵）
 
-入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 37 道行为审计
+入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 38 道行为审计（含 experimental_fit_audit 实验曲线反演，v9.0 门 43）
 （rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（6 套 UI 回归）+
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 282 · redteam_matrix 100 ·
 custom_equation 73 · periodic_rve 88 · cae_mesh 46 · webgpu_parity 101（万点对拍 0.00e+0）·
-schema_check 87。全 42 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
+schema_check 87。全 43 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
 
 ## 六、文档体系
 
-- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（42 门徽章 1000+）+ LEARNING_PATH 入口
+- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（43 门徽章 1000+）+ LEARNING_PATH 入口
 - **WORKFLOW_GUIDE.md**：35 章实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
 - **RELEASE_NOTES_v2.4~v8.0**：七份双语发布说明
 - **BENCHMARKS.md**：20 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
@@ -157,7 +157,7 @@ schema_check 87。全 42 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README
 cd tpms/tpms-platform
 npm run dev          # 开发
 npm run build        # 构建（dist → docs/platform 同步，勿入库 sourcemap）
-npm run test:all     # 42 门 CI（本机约 6-10 分钟）
+npm run test:all     # 43 门 CI（本机约 6-10 分钟）
 
 # Agent CLI
 node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.65 --resolution 96 --json

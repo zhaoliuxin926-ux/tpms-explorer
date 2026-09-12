@@ -1,7 +1,7 @@
 # TPMS Explorer: A Browser-Based Parametric Design and Multi-Physics Simulation Platform for Triply Periodic Minimal Surface Lattices
 
 > 投稿主稿：`latex/main.tex`（Elsevier SoftwareX 格式，pdflatex 编译 0 错误——v8.0 轮修复 v7.0 稿两处预存 LaTeX 缺陷：psmallmatrix 缺 mathtools、\doi 未定义，此前为 nonstopmode 带错出 PDF）。
-> 本文件为摘要导览，与 main.tex 同步更新（2026-09-12 对齐至 v8.0-agentic-loop + 42 门 + (viii) agentic 验证层）。
+> 本文件为摘要导览，与 main.tex 同步更新（2026-09-12 对齐至 v8.0-agentic-loop + 43 门（2026-09-13 起含门 43 experimental_fit）+ (viii) agentic 验证层）。
 
 ## Abstract
 
@@ -24,7 +24,7 @@ TPMS Explorer is an open-source, browser-based platform for parametric design, a
 - Single-page Vite + TypeScript platform (tpms-platform/)
 - Self-contained single-file teaching edition (docs/app.html, 8 canonical families)
 - Deterministic agent CLI with JSON output (tpms/agent/: list/estimate/mesh/verify/solve/scenario + NL tool-calling agent + closed-loop design-verify driver)
-- **42 CI gates / 1000+ assertions / 3-platform matrix (Ubuntu/Windows/macOS)**; every gate carries a minimum-assertion guard
+- **43 CI gates / 1000+ assertions / 3-platform matrix (Ubuntu/Windows/macOS)**; every gate carries a minimum-assertion guard
 - Four-way parity: TS source ↔ docs/app.html ↔ Python ↔ MATLAB (+ GPU IR for all 20 families)
 
 ## Statements

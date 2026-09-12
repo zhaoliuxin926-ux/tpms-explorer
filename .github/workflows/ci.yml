@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.os }} · 41 gates
+    name: ${{ matrix.os }} · 43 gates
     strategy:
       fail-fast: false
       matrix:
