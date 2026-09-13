@@ -299,7 +299,16 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
-## 方向 C 立项规格书：C5 容器 OpenFOAM Multi-Patch 自动切分（2026-09-13 落盘 · 已立项待开工令）
+## 方向 C 立项规格书：C5 容器 OpenFOAM Multi-Patch 自动切分（2026-09-13 落盘 · 同日实现收官）
+
+> 规格书见下方原节。**实现收官登记（同日）**：
+- **交付**：`buildVoxelModel` 增 `containerSdf`（体素中心三线性采样，格坐标恒 i+0.5 干净映射）+ `inside` 掩码暴露；`buildOpenfoamPolyMesh` 增 `PolyMeshOptions{fourPatch,flowAxis}`——四 patch 分类：非流体侧为固相→tpms_scaffold_wetted；为容器外→d===flowAxis 则 flow_inlet(−)/flow_outlet(+)，否则 casing_wall（轴对面天然即端口，侧壁法向垂直轴——无需端带阈值）；**legacy 三 patch 路径字节级不变**（cube/cylinder 的 corner-air 既有行为保留登记）。
+- **CLI**：`mesh --container-mesh <stl> --cfd-polyMesh --flow-axis x|y|z`；三重 exit2 守卫（缺容器/缺轴向/裸轴向）；KNOWN_FLAGS 注册。
+- **关键语义定案（实现期新增）**：polyMesh 交付物源自体素流体域、不依赖 STL——C5 容器属相对水密域（审计定案：torus k1/k2/胖环/凸球实测 nm=32~121 随 R 反增，管壁剪切碎片为结构性），故 `--cfd-polyMesh` 下 STL 门失败仅拒 STL（`stlSkipped` 字段+stderr 显式披露），CFD zip 照常交付 exit 0。
+- **门禁（conformal 20→28，守卫 25）**：C7 节十断言——流体域守恒（cells==inside−solid）/容器体积锚（torus 解析 13.28% vs 实测 13.41%）/四 patch 全非空/面数总和对账/boundary startFace 链闭合/fourPatch 缺 flowAxis fail-closed/legacy 不受扰动/CLI 双 exit2/CLI happy-path（exit0+zip+stlSkipped，torus k2 R64 实测 {in:1669,out:1194,casing:3685,wetted:4928}）。
+- **实现期踩坑**：自写 STL writer 法线段漏 advance 12 字节→每面吞前一面末顶点（open 边爆发假象，两组参数探测作废）；torus 极区扇三角的极点重合边。教训：先对照久经验证的参考实现（审计 toBinarySTL）再自造轮子。
+
+### 规格书原文（2026-09-13 落盘）
 
 > 状态：规格定案，**未开工**——实现属下一战役（等用户开工令）。本节先行钉死语义与判据，
 > 防止实现期在 ill-posed 前提上漂移。

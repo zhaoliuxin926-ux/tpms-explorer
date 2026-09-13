@@ -9,7 +9,7 @@
  * 运行：node conformal_fill_audit.mjs
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,8 @@ const BUNDLE = join(tmpdir(), 'tpms_conformal_bundle.mjs');
     'src/geometry/surface-nets.ts:buildSurface',
     'src/geometry/buffer-pool.ts:globalBufferPool',
     'src/geometry/mesh-container.ts:computeMeshSDF,checkMesh,parseSTL',
+    'src/export/voxel-model.ts:buildVoxelModel',
+    'src/export/openfoam-polymesh-exporter.ts:buildOpenfoamPolyMesh,buildStoredZip',
   ];
   writeFileSync(entry, mods.map((m) => {
     const [f, names] = m.split(':');
@@ -32,7 +34,7 @@ const BUNDLE = join(tmpdir(), 'tpms_conformal_bundle.mjs');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildSurface, globalBufferPool, computeMeshSDF, checkMesh, parseSTL } = await import(pathToFileURL(BUNDLE));
+const { buildSurface, globalBufferPool, computeMeshSDF, checkMesh, parseSTL, buildVoxelModel, buildOpenfoamPolyMesh } = await import(pathToFileURL(BUNDLE));
 
 let pass = 0, fail = 0;
 const ok = (n, d = '') => { pass++; console.log('PASS', n, d ? '— ' + d : ''); };
@@ -390,7 +392,90 @@ function fillTorus(blend) {
   audit.vertCount > 0 && nSoft >= nHard * 1.15 ? ok('C5 倒角壳成形（紧贴带 |sd|<0.03 顶点 ≥1.15×（实测 1.21×——C-2 内侧化后外侧壳不再计入，无 bump 恒 1.0×））', `hard=${nHard} soft=${nSoft}`) : bad('C5 倒角壳未成形', `hard=${nHard} soft=${nSoft}`);
 }
 
+
+// ── Case 7: 方向 C —— C5 容器 OpenFOAM polyMesh 四 patch（体素流体域口径）──
+{
+  const R48 = 48;
+  const gC7 = makeTorus(14, 6, 128, 48);
+  const mrC = computeMeshSDF(toBinarySTL(gC7.positions, gC7.indices), R48 + 1);
+  const vox = buildVoxelModel({
+    type: 'gyroid', periods: 2, weights: [1, 1, 1, 1], structureMode: 'solid_network',
+    containerShape: 'cube', thickness: 1.0, targetPorosity: 0.6, iso: 0, customFormula: '',
+    containerSdf: mrC.sdf,
+  }, R48);
+  const pm = buildOpenfoamPolyMesh(vox, 2, { fourPatch: true, flowAxis: 2 });
+  // ① 守恒：流体 cell 数 == 容器内体素 − 固相体素（polyMesh 与 voxel 模型同源对账）
+  pm.stats.cells === vox.insideCount - vox.solidCount
+    ? ok('C7 流体域守恒：cells == insideCount − solidCount', pm.stats.cells + ' cells')
+    : bad('C7 流体域守恒', pm.stats.cells + ' vs ' + (vox.insideCount - vox.solidCount));
+  // ② 容器体积占比锚：insideCount/R³ ≈ Vtorus/(8·scale³)（解析 13.28%，体素中心采样 ±3pp）
+  const frac = vox.insideCount / (R48 ** 3);
+  Math.abs(frac - 2 * Math.PI * Math.PI * 14 * 36 / (mrC.domain.scale ** 3) / 8) <= 0.03
+    ? ok('C7 容器体积锚：inside/R³ ≈ 解析 torus/域盒', (frac * 100).toFixed(2) + '%')
+    : bad('C7 容器体积锚', 'frac=' + frac.toFixed(4));
+  // ③ 四 patch 全非空 + 边界面总数对账
+  const P = pm.stats.patches;
+  ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'].every((n) => P[n] > 0)
+    ? ok('C7 四 patch 全非空', JSON.stringify(P))
+    : bad('C7 四 patch 存在性', JSON.stringify(P));
+  P.flow_inlet + P.flow_outlet + P.casing_wall + P.tpms_scaffold_wetted === pm.stats.boundaryFaces
+    ? ok('C7 patch 面数总和 == boundaryFaces')
+    : bad('C7 patch 总和对账', JSON.stringify(P) + ' vs ' + pm.stats.boundaryFaces);
+  // ④ boundary 文件：patch 区间连续覆盖（startFace 链 = internal + 前序 nFaces）
+  {
+    const b = pm.files['constant/polyMesh/boundary'];
+    const nums = [...b.matchAll(/nFaces\s+(\d+);\s+startFace\s+(\d+);/g)].map((m) => [Number(m[1]), Number(m[2])]);
+    let expect = pm.stats.internalFaces, chainOk = nums.length === 4;
+    for (const [n, s] of nums) { if (s !== expect) chainOk = false; expect += n; }
+    chainOk && expect === pm.stats.faces
+      ? ok('C7 boundary 区间连续覆盖（startFace 链闭合）', 'start@' + pm.stats.internalFaces + ' → ' + expect + '/' + pm.stats.faces)
+      : bad('C7 boundary 区间', JSON.stringify(nums));
+  }
+  // ⑤ fourPatch 缺 flowAxis → 结构化抛错（导出器层 fail-closed）
+  {
+    let threw = false;
+    try { buildOpenfoamPolyMesh(vox, 2, { fourPatch: true }); } catch (e) { threw = /flowAxis/.test(e.message); }
+    threw ? ok('C7 fourPatch 缺 flowAxis fail-closed') : bad('C7 flowAxis 守卫');
+  }
+  // ⑥ legacy 三 patch 路径不受扰动（cube 无容器：inlet/outlet/wall 三段 + cells == R³−solid）
+  {
+    const voxL = buildVoxelModel({
+      type: 'gyroid', periods: 2, weights: [1, 1, 1, 1], structureMode: 'solid_network',
+      containerShape: 'cube', thickness: 1.0, targetPorosity: 0.6, iso: 0, customFormula: '',
+    }, 32);
+    const pmL = buildOpenfoamPolyMesh(voxL, 2);
+    const names = Object.keys(pmL.stats.patches);
+    names.length === 3 && names.join() === 'inlet,outlet,wall' && pmL.stats.cells === 32 ** 3 - voxL.solidCount
+      ? ok('C7 legacy 三 patch 路径不受扰动', JSON.stringify(pmL.stats.patches))
+      : bad('C7 legacy 回归', JSON.stringify(pmL.stats.patches));
+  }
+  // ⑦ CLI 端到端：fail-closed（缺 flow-axis exit2；flow-axis 单独用 exit2）
+  {
+    const CLI = join(dirname(fileURLToPath(import.meta.url)), '../agent/tpms.mjs');
+    const torusStl = join(tmpdir(), 'tpms_c7_torus_' + process.pid + '.stl');
+    writeFileSync(torusStl, Buffer.from(toBinarySTL(gC7.positions, gC7.indices)));
+    const run = (...args) => spawnSync(process.execPath, [CLI, 'mesh', ...args], { encoding: 'utf8' });
+    const r1 = run('--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--periods', '2', '--container-mesh', torusStl, '--cfd-polyMesh', '--out', join(tmpdir(), 'tpms_c7_x.stl'));
+    r1.status === 2 && (r1.stderr || '').includes('--flow-axis')
+      ? ok('C7 CLI 缺 --flow-axis → exit2（规格书 fail-closed）')
+      : bad('C7 CLI flow-axis 守卫', 'exit=' + r1.status);
+    const r2 = run('--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--flow-axis', 'z', '--out', join(tmpdir(), 'tpms_c7_x.stl'));
+    r2.status === 2 && (r2.stderr || '').includes('组合')
+      ? ok('C7 CLI 裸 --flow-axis → exit2')
+      : bad('C7 CLI 裸 flow-axis', 'exit=' + r2.status);
+    // happy path：torus 属相对水密域（STL 门结构性 nm>0）——CFD 交付物独立有效（exit0 + zip + stlSkipped 披露）
+    const zipOut = join(tmpdir(), 'tpms_c7_cfd_' + process.pid);
+    const r3 = run('--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--container-mesh', torusStl, '--cfd-polyMesh', '--flow-axis', 'z', '--out', zipOut + '.stl', '--json');
+    let j3 = null; try { j3 = JSON.parse(r3.stdout); } catch { /* 忽略 */ }
+    const zipOk = r3.status === 0 && j3?.cfdPolyMesh?.patches && Object.values(j3.cfdPolyMesh.patches).every((v) => v > 0)
+      && typeof j3.stlSkipped === 'string' && existsSync(zipOut + '.polyMesh.zip');
+    zipOk ? ok('C7 CLI happy-path：exit0 + 四 patch zip + stlSkipped 披露', JSON.stringify(j3.cfdPolyMesh.patches))
+      : bad('C7 CLI happy-path', 'exit=' + r3.status + ' ' + (r3.stderr || '').slice(0, 80));
+    try { unlinkSync(torusStl); unlinkSync(zipOut + '.polyMesh.zip'); } catch { /* 忽略 */ }
+  }
+}
+
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
 // 【2026-09-13 口径专项】10→14（+体积对拍/孔隙率闭环/envelope 换算共 5 条；实测 15 留 1 余量）
-if (pass < 17) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 17（B+ 进度契约 +3）`); process.exit(1); }
+if (pass < 25) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 25（方向 C 四 patch +8）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

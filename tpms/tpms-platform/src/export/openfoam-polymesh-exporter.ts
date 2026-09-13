@@ -22,6 +22,18 @@ export interface PolyMeshBuild {
   stats: { points: number; faces: number; internalFaces: number; boundaryFaces: number; cells: number; patches: Record<string, number> };
 }
 
+/**
+ * 【方向 C 2026-09-13】四 patch 模式选项（C5 mesh 容器）：
+ *   flowAxis: 主流动轴向 0=x/1=y/2=z（必填于 fourPatch——任意流形自动识别 ill-posed，fail-closed 在 CLI 层）
+ *   fourPatch: 启用 casing_wall / flow_inlet / flow_outlet / tpms_scaffold_wetted 四 patch 分类。
+ * 流体域 = inside && !solid（容器外既非固相也非流体）；legacy 路径（cube/cylinder 三 patch）
+ * 保持 !solid 口径与字节级输出不变——corner-air 为既有登记行为（cylinder 外包络角部体素计入流体）。
+ */
+export interface PolyMeshOptions {
+  fourPatch?: boolean;
+  flowAxis?: 0 | 1 | 2;
+}
+
 /** 手写 STORED ZIP（CRC32 表格法，零依赖；3MF 导出器同款算法独立实现） */
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -96,17 +108,27 @@ export function buildStoredZip(entries: { name: string; data: Uint8Array }[]): U
 const FOAM_HEAD = (cls: string, obj: string) =>
   `FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       ${cls};\n    object      ${obj};\n}\n`;
 
-export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number): PolyMeshBuild {
+export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number, opts: PolyMeshOptions = {}): PolyMeshBuild {
   const { R, solid, hWc } = model;
   const scale = specimenSizeMm / (2 * Math.PI);
   const h = hWc * scale;
+  const four = opts.fourPatch === true;
+  if (four && (opts.flowAxis === undefined || ![0, 1, 2].includes(opts.flowAxis)))
+    throw new Error('fourPatch 模式必须提供 flowAxis（0=x/1=y/2=z）——任意流形流向自动识别 ill-posed，fail-closed');
+  const fluidVox = (x: number, y: number, z: number): 0 | 1 | 2 => {
+    // 0=流体 1=固相 2=容器外（fourPatch）；legacy 口径容器外视同流体（既有行为）
+    const i = x + y * R + z * R * R;
+    if (solid[i]) return 1;
+    if (four && model.inside && !model.inside[i]) return 2;
+    return 0;
+  };
 
   // 1. 流体（空隙）体素 → 紧凑 cell id
   const cellId = new Int32Array(R * R * R).fill(-1);
   let nCells = 0;
   const cellVoxel = new Int32Array(R * R * R);
   for (let i = 0; i < R * R * R; i++) {
-    if (!solid[i]) { cellId[i] = nCells; cellVoxel[nCells++] = i; }
+    if (fluidVox(i % R, Math.floor((i % (R * R)) / R), Math.floor(i / (R * R))) === 0) { cellId[i] = nCells; cellVoxel[nCells++] = i; }
   }
   const voxelOf = (i: number): [number, number, number] => {
     const iz = Math.floor(i / (R * R));
@@ -116,10 +138,9 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
 
   // 2. 面生成：跨界面对（含域边界面）
   interface FaceDef { pts: [number, number, number][]; owner: number; neighbour: number; patch: number }
-  // patch: 0=inlet(z−) 1=outlet(z+) 2=wall
+  // patch 编号：legacy 0=inlet(z−) 1=outlet(z+) 2=wall；fourPatch 0=flow_inlet 1=flow_outlet 2=casing_wall 3=tpms_scaffold_wetted
   const faces: FaceDef[] = [];
   const inBounds = (x: number, y: number, z: number) => x >= 0 && x < R && y >= 0 && y < R && z >= 0 && z < R;
-  const vox = (x: number, y: number, z: number) => solid[x + y * R + z * R * R];
   const cellOf = (x: number, y: number, z: number) => cellId[x + y * R + z * R * R];
   const centerOf = (cell: number): [number, number, number] => {
     const [vx, vy, vz] = voxelOf(cellVoxel[cell]);
@@ -139,8 +160,8 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
           c2[a1] = i; c2[a2] = j;
           const in1 = inBounds(c1[0], c1[1], c1[2]);
           const in2 = inBounds(c2[0], c2[1], c2[2]);
-          const s1 = in1 ? vox(c1[0], c1[1], c1[2]) : -1;   // -1 = 域外
-          const s2 = in2 ? vox(c2[0], c2[1], c2[2]) : -1;
+          const s1 = in1 ? fluidVox(c1[0], c1[1], c1[2]) : 2;
+          const s2 = in2 ? fluidVox(c2[0], c2[1], c2[2]) : 2;
           const isFluid1 = in1 && s1 === 0;
           const isFluid2 = in2 && s2 === 0;
           // 无流体侧参与的面一律不生成（固-固 / 外-外 / 固-外）；双流体 ⇒ 内部面
@@ -168,8 +189,16 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
           // patch 判定（边界面才有）
           let patch = 2;
           if (!(isFluid1 && isFluid2)) {
-            if (d === 2 && p === 0) patch = 0;
-            else if (d === 2 && p === R) patch = 1;
+            if (four) {
+              // 非流体侧性质决定 patch：固相 → 浸润面；容器外/域外 → 容器壁（轴向端 → 端口）
+              const nbSolid = isFluid1 ? s2 : s1;
+              if (nbSolid === 1) patch = 3;                                    // tpms_scaffold_wetted
+              else if (d === opts.flowAxis) patch = isFluid1 ? 1 : 0;          // 出流(+axis)/进流(−axis)
+              else patch = 2;                                                  // casing_wall
+            } else {
+              if (d === 2 && p === 0) patch = 0;
+              else if (d === 2 && p === R) patch = 1;
+            }
           }
           faces.push({ pts: ordered, owner: ownerCell, neighbour: neighCell, patch });
         }
@@ -177,12 +206,13 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
     }
   }
 
-  // 3. 排序：内部面 → inlet → outlet → wall
+  // 3. 排序：内部面 → 端口/壁面 patch 依 boundary 声明序连续排列
   const internal = faces.filter((f) => f.neighbour >= 0);
   const bIn = faces.filter((f) => f.neighbour < 0 && f.patch === 0);
   const bOut = faces.filter((f) => f.neighbour < 0 && f.patch === 1);
   const bWall = faces.filter((f) => f.neighbour < 0 && f.patch === 2);
-  const ordered = [...internal, ...bIn, ...bOut, ...bWall];
+  const bWet = four ? faces.filter((f) => f.neighbour < 0 && f.patch === 3) : [];
+  const ordered = [...internal, ...bIn, ...bOut, ...bWall, ...bWet];
 
   // 4. 节点去重（首触序紧凑 id）
   const nodeId = new Map<string, number>();
@@ -202,13 +232,18 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
   const ownerLines: string[] = [];
   const neighLines: string[] = [];
   let nInternal = 0;
-  const patchRanges: Record<string, { start: number; n: number }> = { inlet: { start: -1, n: 0 }, outlet: { start: -1, n: 0 }, wall: { start: -1, n: 0 } };
+  const patchNames = four
+    ? ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'] as const
+    : ['inlet', 'outlet', 'wall'] as const;
+  const patchRanges: Record<string, { start: number; n: number }> = Object.fromEntries(
+    patchNames.map((n) => [n, { start: -1, n: 0 }]),
+  );
   ordered.forEach((f, fi) => {
     faceLines.push(`(${f.pts.map(pid).join(' ')})`);
     ownerLines.push(String(f.owner));
     if (f.neighbour >= 0) { neighLines.push(String(f.neighbour)); nInternal++; }
     else {
-      const name = f.patch === 0 ? 'inlet' : f.patch === 1 ? 'outlet' : 'wall';
+      const name = patchNames[f.patch];
       if (patchRanges[name].start < 0) patchRanges[name].start = fi;
       patchRanges[name].n++;
     }
@@ -223,12 +258,12 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
     + `\n${ordered.length}\n(\n` + ownerLines.join('\n') + '\n)\n';
   files['constant/polyMesh/neighbour'] = FOAM_HEAD('labelList', 'neighbour')
     + `\n${nInternal}\n(\n` + neighLines.join('\n') + '\n)\n';
-  const bEntries = (['inlet', 'outlet', 'wall'] as const).map((name) => {
+  const bEntries = patchNames.map((name) => {
     const r = patchRanges[name];
     return `    ${name}\n    {\n        type            patch;\n        nFaces          ${r.n};\n        startFace       ${Math.max(0, r.start)};\n    }`;
   }).join('\n');
   files['constant/polyMesh/boundary'] = FOAM_HEAD('polyBoundaryMesh', 'boundary')
-    + `\n3\n(\n${bEntries}\n)\n`;
+    + `\n${patchNames.length}\n(\n${bEntries}\n)\n`;
 
   return {
     files,
@@ -238,7 +273,7 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number)
       internalFaces: nInternal,
       boundaryFaces: ordered.length - nInternal,
       cells: nCells,
-      patches: { inlet: patchRanges.inlet.n, outlet: patchRanges.outlet.n, wall: patchRanges.wall.n },
+      patches: Object.fromEntries(patchNames.map((n) => [n, patchRanges[n].n])),
     },
   };
 }

@@ -505,12 +505,12 @@ function cmdMesh(a, json) {
   // success），KNOWN_FLAGS 放行 flag 后静默忽略用户意图、产出 cube 裁剪 STL——CLI 接入
   // 实为 2026-09-13 对抗审查轮才真正落地，RELEASE_NOTES 的 CLI 宣称自此成立。
   let meshDomain = null;
+  let mr = null;
   if (a['container-mesh'] !== undefined) {
     const meshPath = String(a['container-mesh']);
     let buf;
     try { buf = readFileSync(meshPath); } catch (e) { die(`容器 STL 读取失败: ${e?.message ?? e}`, usage); }
     const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    let mr;
     try { mr = core.computeMeshSDF(ab, resolution + 1); } catch (e) { die(`容器 STL 不合格: ${e?.message ?? e}`, usage); }
     meshDomain = mr.domain;
     params.containerMeshSdf = mr.sdf;
@@ -521,6 +521,17 @@ function cmdMesh(a, json) {
     }
     if (isoGradM || hybridM) die('--container-mesh 与 --iso-grad/--hybrid 暂不支持组合', usage);
   }
+  // ── 【方向 C 2026-09-13】C5 容器 CFD polyMesh 四 patch 导出（规格书：fail-closed 语义）──
+  const cfdPoly = a['cfd-polyMesh'] === true || a['cfd-polyMesh'] === 'true';
+  const flowAxisS = a['flow-axis'] !== undefined ? String(a['flow-axis']) : undefined;
+  if (cfdPoly && a['container-mesh'] === undefined)
+    die('--cfd-polyMesh 当前作用域 = --container-mesh（C5 容器）；cube/cylinder 走平台 UI 既有三 patch 导出', usage);
+  if (cfdPoly && flowAxisS === undefined)
+    die('--cfd-polyMesh 须显式 --flow-axis x|y|z（任意流形流向自动识别 ill-posed——方向 C 规格书 fail-closed）', usage);
+  if (!cfdPoly && flowAxisS !== undefined)
+    die('--flow-axis 仅与 --cfd-polyMesh 组合使用', usage);
+  if (flowAxisS !== undefined && !['x', 'y', 'z'].includes(flowAxisS))
+    die(`--flow-axis 须 x|y|z（收到 "${flowAxisS}"）`, usage);
   const solver = String(a['porosity-solver'] ?? 'exact');
   if (!['exact', 'legacy'].includes(solver)) die(`未知求解器 "${solver}"，可选 exact|legacy`, usage);
 
@@ -563,13 +574,47 @@ function cmdMesh(a, json) {
     scaleMmPerWc: core.wcToMmFactor(periods),
     boundary: '水密自检 = mesh_audit 同款三硬指标（开放边/非流形/退化面，索引空间）；misoriented 为观测值不设门（导出翻转后全局定向一致性是平台已知盲区）；孔隙率为网格发散体积实测口径，与目标值的口径差随分辨率收敛',
   };
+  const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}.stl`);
+  // ── 【方向 C】C5 容器 polyMesh：体素流体域（inside∩¬solid）→ 四 patch → STORED ZIP ──
+  // 先于水密门构建：polyMesh 源自体素流体域，不依赖 STL 网格——C5 容器属「相对水密域」
+  //（审计定案：管壁碎片结构性存在），STL 绝对门失败时 CFD 交付物仍有效（仅拒 STL）
+  if (cfdPoly) {
+    const vox = core.buildVoxelModel({
+      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
+      containerSdf: mr.sdf,
+    }, resolution);
+    const pm = core.buildOpenfoamPolyMesh(vox, periods, {
+      fourPatch: true,
+      flowAxis: { x: 0, y: 1, z: 2 }[flowAxisS],
+    });
+    const enc = new TextEncoder();
+    const entries = Object.entries(pm.files).map(([name, text]) => ({ name, data: enc.encode(text) }));
+    const zipBuf = core.buildStoredZip(entries);
+    const cfdFile = outFile.replace(/\.stl$/i, '') + '.polyMesh.zip';
+    writeFileSync(cfdFile, Buffer.from(zipBuf));
+    out.cfdPolyMesh = {
+      file: cfdFile, fileBytes: zipBuf.byteLength,
+      fluidCells: pm.stats.cells, internalFaces: pm.stats.internalFaces,
+      boundaryFaces: pm.stats.boundaryFaces, patches: pm.stats.patches,
+      flowAxis: flowAxisS,
+      note: '流体域=容器内∩非固相（体素口径）；物理尺度 = voxel 域全宽 periods mm（容器最长轴 0.95×periods）',
+    };
+  }
   if (!watertight) {
+    if (cfdPoly) {
+      // CFD 交付物独立于 STL 水密门（体素流体域无 STL 水密语义）：产出 zip、拒 STL、显式披露
+      out.stlSkipped = `水密门未过（开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris}）——STL 未产出；polyMesh 基于体素流体域不受影响（C5 相对水密域，审计定案）`;
+      console.error(`⚠ ${out.stlSkipped}`);
+      if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+      console.log('CFD polyMesh 已交付（STL 因水密门跳过——见上方警示）');
+      return;
+    }
     if (json) console.log(JSON.stringify(out, null, 2));
     // 退出码约定：2=参数错误（改输入可解）；3=构建/水密门失败（物理不可产出，升分辨率或改设计）
     console.error(`✗ 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 不产出 STL`);
     process.exit(3);
   }
-  const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}.stl`);
   const scale = meshDomain ? meshDomain.scale : core.wcToMmFactor(periods);
   const stl = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
   writeFileSync(outFile, Buffer.from(stl));
@@ -1016,7 +1061,7 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
