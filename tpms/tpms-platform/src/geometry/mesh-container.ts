@@ -66,7 +66,10 @@ function parseSTLRaw(buffer: ArrayBuffer): { positions: Float32Array; indices: U
   const view = new DataView(buffer);
   const bytes = new Uint8Array(buffer);
   const head = String.fromCharCode(...bytes.slice(0, 5));
-  const isAscii = head === 'solid' && /\bfacet\b|\bendsolid\b/.test(new TextDecoder().decode(bytes.slice(0, 512)));
+  // 红队 A MINOR-1：binary 头含 solid...facet 字样会被误判 ASCII——长度契约（84+n×50 精确匹配）优先
+  const hdrTri = buffer.byteLength >= 84 ? view.getUint32(80, true) : 0;
+  const lenOk = buffer.byteLength === 84 + hdrTri * 50 && hdrTri > 0;
+  const isAscii = !lenOk && head === 'solid' && /\bfacet\b|\bendsolid\b/.test(new TextDecoder().decode(bytes.slice(0, 512)));
   if (!isAscii) {
     if (buffer.byteLength < 84) throw new Error('binary STL 过短（<84 字节头）');
     const triCount = view.getUint32(80, true);
@@ -192,6 +195,9 @@ export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult
     for (let t = 0; t < indices.length; t += 3) {
       const tmp = indices[t + 1]; indices[t + 1] = indices[t + 2]; indices[t + 2] = tmp;
     }
+  }
+  for (let k = 0; k < positions.length; k++) {
+    if (!Number.isFinite(positions[k])) throw new Error('容器网格含非有限坐标（NaN/Inf，分量序 ' + k + '）——红队 A MINOR-4');
   }
   let ax = Infinity, ay = Infinity, az = Infinity, bx = -Infinity, by = -Infinity, bz = -Infinity;
   for (let i = 0; i < positions.length; i += 3) {

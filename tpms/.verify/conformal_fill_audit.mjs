@@ -216,13 +216,14 @@ function trilinearSample(sdf, N, x, y, z) {
   const r = computeMeshSDF(buf, N);
   let maxErr = 0, medErr = 0;
   const rng = mulberry32(45);
+  chk.watertight ? ok('C2 斜切管焊接链水密（parseSTL 顶点焊接后 open=nm=0，红队 D M-7）', 'tris=' + chk.tris) : bad('C2 焊接链水密', JSON.stringify(chk));
   let dbg2 = 0;
   const errs = [];
   for (let i = 0; i < 2000; i++) {
     const x = (rng() * 2 - 1) * 0.95, y = (rng() * 2 - 1) * 0.95, z = (rng() * 2 - 1) * 0.95;
     const gi = Math.round(((x + 1) / 2) * (N - 1)), gj = Math.round(((y + 1) / 2) * (N - 1)), gk = Math.round(((z + 1) / 2) * (N - 1));
     const sampled = trilinearSample(r.sdf, N, x, y, z);
-    const ref = sdCutTube(14, 5, 4, 18, 25, x * r.domain.scale, y * r.domain.scale, z * r.domain.scale) / r.domain.scale;
+  const ref = sdCutTube(14, 5, 4, 18, 25, x * r.domain.scale, y * r.domain.scale, z * r.domain.scale) / r.domain.scale;
     if (Math.abs(sampled - ref) > 0.2 && dbg2 < 5) { dbg2++; console.log('  C2 top-err', x.toFixed(3), y.toFixed(3), z.toFixed(3), 'sampled=', sampled.toFixed(4), 'ref=', ref.toFixed(4), 'mm=', (x * r.domain.scale).toFixed(1), (y * r.domain.scale).toFixed(1), (z * r.domain.scale).toFixed(1)); }
     errs.push(Math.abs(sampled - ref));
     maxErr = Math.max(maxErr, Math.abs(sampled - ref));
@@ -236,11 +237,17 @@ function trilinearSample(sdf, N, x, y, z) {
 }
 
 // ── Case 3/4/5: torus 保形填充（水密/贴合/倒角 A/B）──
+// 红队 A M-3：SDF 只依赖 (STL, N) 与 blend 无关——memo 化（原 hard/soft/mrRef 三算 61s×3）
+const sdfMemo = new Map();
+function torusSdf65() {
+  if (!sdfMemo.has(65)) {
+    const g = makeTorus(14, 6, 128, 48);
+    sdfMemo.set(65, computeMeshSDF(toBinarySTL(g.positions, g.indices), 65));
+  }
+  return sdfMemo.get(65);
+}
 function fillTorus(blend) {
-  const g = makeTorus(14, 6, 128, 48);
-  const buf = toBinarySTL(g.positions, g.indices);
-  const N = 65;
-  const mr = computeMeshSDF(buf, N);
+  const mr = torusSdf65();
   globalBufferPool.reset();
   const res = buildSurface({
     type: 'gyroid', iso: 0, periods: 6, resolution: 64, targetPorosity: 0.65,
@@ -302,13 +309,16 @@ function fillTorus(blend) {
     }
     for (const [, [f2, b3]] of em2) { if (!(f2 === 1 && b3 === 1)) nmCube++; }
   }
-  open === 0 && nmE <= nmCube
+  // H-1 修复（红队 D）：空输出恒真链——buildSurface 与容器无交集时 vertCount=0 静默空返回，
+  // 三断言全部零迭代恒真（worst=-Infinity/nSoft=0）。前置非空断言使空输出必红。
+  audit.vertCount > 0 && cubeRef.vertCount > 0 &&
+  open === 0 && nmE <= Math.min(nmCube, 800)
     ? ok('C3 相对水密：mesh 容器 nm ≤ cube 同参对照（融合不引入新缺陷）', `mesh nm=${nmE} ≤ cube nm=${nmCube}（管壁碎片区结构性，随分辨率收敛）`)
     : bad('C3 相对水密', `mesh open=${open} nm=${nmE} vs cube nm=${nmCube}`);
   // 贴合度：顶点重算解析 SDF（torus），穿出壁面（sdf>容差）计 0
   const g = makeTorus(14, 6, 128, 48);
   const buf = toBinarySTL(g.positions, g.indices);
-  const mrRef = computeMeshSDF(buf, 65);
+  const mrRef = torusSdf65(); // M-3：与 hard/soft 档共享
   const p = audit.positions;
   let worst = -Infinity, penetrate = 0;
   for (let vi = 0; vi < audit.vertCount; vi++) {
@@ -319,7 +329,7 @@ function fillTorus(blend) {
     if (sd > worst) worst = sd;
     if (sd > 0.04) { penetrate++; if (penetrate < 4) console.log('  C4 pt', x.toFixed(3), y.toFixed(3), z.toFixed(3), 'sd_mm=', (sd * mrRef.domain.scale).toFixed(2)); }
   }
-  penetrate === 0 && worst <= 0.04
+  audit.vertCount > 0 && penetrate === 0 && worst <= 0.04
     ? ok('C4 贴合度：填充网格零穿出壁面（max sdf ≤0.04 = 半格+弦差，立项口径）', `max=${worst.toFixed(4)}`)
     : bad('C4 贴合度（壁面穿出）', `worst=${worst.toFixed(4)} penetrate=${penetrate}`);
   // 倒角 A/B：blend 提升近壁让步（表面到壁最小距离分布上移）
@@ -336,7 +346,17 @@ function fillTorus(blend) {
   // 倒角观测定案：bump 让步把 TPMS 面向壁推 → 紧贴带（|sd|<0.03）成形倒角壳（soft 显著多于 hard）；
   // 同时穿壁侧受壁面硬覆写约束（C4 半格口径），不因让步而加深。
   const nHard = nearWall(p, 0.03), nSoft = nearWall(pS, 0.03);
-  nSoft >= nHard * 1.25 ? ok('C5 倒角壳成形（紧贴带 |sd|<0.03 顶点 ≥1.25×（实测 1.35×，无 bump 恒 1.0×——有区分力））', `hard=${nHard} soft=${nSoft}`) : bad('C5 倒角壳未成形', `hard=${nHard} soft=${nSoft}`);
+  // 红队 A C-2 配套：bump 内侧化后 soft 档不得穿壁（原外侧壳 0.38 已消）
+  {
+    let worstSoft = -Infinity;
+    const pS2 = soft.res.positions;
+    for (let vi = 0; vi < soft.res.vertCount; vi++) {
+      const sd = sdTorus(14, 6, (pS2[vi * 3] / Math.PI) * mrRef.domain.scale, (pS2[vi * 3 + 1] / Math.PI) * mrRef.domain.scale, (pS2[vi * 3 + 2] / Math.PI) * mrRef.domain.scale) / mrRef.domain.scale;
+      if (sd > worstSoft) worstSoft = sd;
+    }
+    worstSoft <= 0.04 ? ok('C5b soft 档穿壁 ≤0.04（bump 内侧化验证）', 'max=' + worstSoft.toFixed(4)) : bad('C5b soft 档穿壁', 'max=' + worstSoft.toFixed(4));
+  }
+  audit.vertCount > 0 && nSoft >= nHard * 1.15 ? ok('C5 倒角壳成形（紧贴带 |sd|<0.03 顶点 ≥1.15×（实测 1.21×——C-2 内侧化后外侧壳不再计入，无 bump 恒 1.0×））', `hard=${nHard} soft=${nSoft}`) : bad('C5 倒角壳未成形', `hard=${nHard} soft=${nSoft}`);
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);

@@ -248,7 +248,7 @@
             "type": "number",
             "minimum": 0.05,
             "maximum": 99.999,
-            "description": "目标孔隙率，双口径同 tpms_mesh（0.05 ≤ p < 1 小数，或 5~99 百分数）。verify 容差默认 1pp，超差自动升分辨率/割线校正。"
+            "description": "目标孔隙率，双口径同 tpms_mesh（0.05 ≤ p < 1 小数，或 5~99 百分数）。verify 判定下限 3pp（tolerance 可收紧至 0.01 但判定下限 0.03——低分辨率网格表示极限的诚实口径），超差自动升分辨率/割线校正。"
           },
           "material": {
             "type": "string",

@@ -309,6 +309,10 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     return c0 * (1 - fz) + c1 * fz;
   };
   if (meshSdf && epOn) throw new Error('mesh 容器 × 加载端板组合未支持（v9.0）');
+  if (meshSdf && params.containerBlend !== undefined && (params.containerBlend < 0 || params.containerBlend > 1))
+    throw new Error('containerBlend 须 0 ≤ h ≤ 1（>1 全域实体化/负值空网格——红队 A MINOR-3）');
+  if (meshSdf && (params as { periodicRve?: boolean }).periodicRve)
+    throw new Error('mesh 容器与 periodicRve 互斥（红队 A MINOR-2：原静默忽略且产空网格）');
   if (meshSdf && meshSdf.length !== N * N * N) throw new Error('containerMeshSdf 长度 ≠ N³（防静默截肢）');
 
   const boundArr = pool.boundArr.subarray(0, N * N * N);
@@ -529,11 +533,15 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           continue;
         }
         field[yB + ix] = (dAx === 0) ? -1e-6
-          : meshSdf ? (b >= blendH ? -1e-6 : (blendH > 0 ? Math.max(f + blendH * Math.exp(-((b / blendH) ** 2)), b) : Math.max(f, b)))
+          : meshSdf ? (b >= 0 ? -1e-6 : (blendH > 0 ? Math.max(f + blendH * Math.exp(-((b / blendH) ** 2)), b) : Math.max(f, b))) // 红队 A C-2：bump 仅容器内侧（b<0）——原 b>=blendH 才覆写致 (0,blendH) 带恒实体穿壁壳
           : ((b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b));
       }
     }
   }
+  // 红队 A M-1：容器内格点过少（细管/薄片容器低于采样密度）时二分统计失效，
+  // 静默产出实心容器复制（实测 rm=0.15mm torus 52/117649 格点）——fail-closed 拒绝
+  if (meshSdf && containerInside < Math.max(64, Math.floor(N * N * N * 0.005)))
+    throw new Error('容器特征小于采样格距（内部格点 ' + containerInside + '/' + (N * N * N) + '），请升分辨率或检查 STL 几何尺度（红队 A M-1）');
 
   // 诊断日志（仅开发模式启用，Vite 生产构建会 tree-shake 掉）
   if (import.meta.env?.DEV) {
