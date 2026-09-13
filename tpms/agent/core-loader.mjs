@@ -22,6 +22,7 @@ const CORE_EXPORTS = [
   `export { computeMeshSDF, checkMesh, parseSTL, closestPtTriangle } from ` + JSON.stringify(join(PLATFORM, 'src/geometry/mesh-container.ts')) + `;
   export { buildBinarySTL } from ${JSON.stringify(join(PLATFORM, 'src/export/stl-exporter.ts'))};`,
   `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
+  `export { buildOpenfoamPolyMesh, buildStoredZip } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-polymesh-exporter.ts'))};`,
   `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');
 
