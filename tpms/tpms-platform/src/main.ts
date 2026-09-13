@@ -44,6 +44,7 @@ import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets }
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
+import { computeMeshSDF } from './geometry/mesh-container';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
 import { parseNL, type NLIntent } from './core/nl-agent';
@@ -675,6 +676,66 @@ function bindExperimentalFit(): void {
 }
 bindExperimentalFit();
 
+// ── C5 v9.0 外部 STL 保形容器（UI 摄入：文件 → SDF → buildParams 注入）──
+let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number } | null = null;
+function meshSdfFor(R: number): Float32Array | null {
+  if (!meshCont) return null;
+  const n = R + 1;
+  let sdf = meshCont.sdfCache.get(n);
+  if (!sdf) {
+    // ArrayBuffer 可能已被上次调用转移（不可重读）——每次 reserve 前重拷贝
+    const ab = meshCont.ab.slice(0);
+    const r = computeMeshSDF(ab, n);
+    sdf = r.sdf;
+    meshCont.sdfCache.set(n, sdf);
+    meshCont.scale = r.domain.scale;
+  }
+  return sdf;
+}
+function meshContParams(R: number): { containerMeshSdf?: Float32Array; containerBlend?: number } {
+  if (!meshCont) return {};
+  const sdf = meshSdfFor(R);
+  return sdf ? { containerMeshSdf: sdf, containerBlend: meshCont!.blend } : {};
+}
+function bindMeshContainer(): void {
+  const fileInput = document.getElementById('meshcont-file') as HTMLInputElement | null;
+  const status = document.getElementById('meshcont-status') as HTMLElement | null;
+  const blendEl = document.getElementById('meshcont-blend') as HTMLInputElement | null;
+  const blendVal = document.getElementById('meshcont-blend-value') as HTMLElement | null;
+  if (!fileInput || !status || !blendEl || !blendVal) return;
+  const load = (f: File): void => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const ab = rd.result as ArrayBuffer;
+        // 预检+首算（当前 full R）——非水密在此 fail-closed 抛错
+        const s0 = getState();
+        const R0 = hdResolution(s0.type, s0.structureMode, s0.gradientDir, s0.cellSize);
+        const r0 = computeMeshSDF(ab.slice(0), R0 + 1);
+        meshCont = { ab, sdfCache: new Map([[R0 + 1, r0.sdf]]), blend: meshCont?.blend ?? 0, name: f.name, scale: r0.domain.scale, tris: r0.check.tris };
+        status.style.display = "block";
+        status.textContent = "✓ " + f.name + "（" + r0.check.tris.toLocaleString() + " 三角，归一化域" + (r0.domain.scale * 2).toFixed(1) + "mm 全宽）已启用 —— 重建中";
+        if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast("STL 容器与端板互斥：端板已禁用"); }
+        scheduleRebuild(false);
+      } catch (e) {
+        status.style.display = "block";
+        status.textContent = "✗ " + (e instanceof Error ? e.message : String(e));
+      }
+    };
+    rd.readAsArrayBuffer(f);
+  };
+  fileInput.addEventListener("change", () => { const f = fileInput.files?.[0]; if (f) load(f); });
+  fileInput.addEventListener("dragover", (ev) => ev.preventDefault());
+  fileInput.addEventListener("drop", (ev) => { ev.preventDefault(); const f = ev.dataTransfer?.files?.[0]; if (f) load(f); });
+  blendEl.addEventListener("input", () => {
+    if (!meshCont) return;
+    meshCont.blend = Number(blendEl.value);
+    blendVal.textContent = meshCont.blend.toFixed(2);
+    scheduleRebuild(false);
+  });
+}
+bindMeshContainer();
+
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
 let nlPendingExport: 'stl' | '3mf' | null = null;
@@ -690,7 +751,7 @@ function nlDoExport(fmt: 'stl' | '3mf'): void {
   if (!baseGeo) throw new Error('几何尚未就绪');
   const pos = baseGeo.attributes.position.array as Float32Array;
   const idx = baseGeo.index!.array as Uint32Array;
-  const scale = wcToMmFactor(sNow.cellSize);
+  const scale = meshCont ? meshCont.scale : wcToMmFactor(sNow.cellSize);
   if (fmt === 'stl') exportBinarySTL(pos, idx, `${base}.stl`, scale);
   else export3MF(pos, idx, `${base}.3mf`, scale, { configName: base, porosity: sNow.porosity, endplateMm: sNow.endplateMm, structureMode: sNow.structureMode });
   nlAppend(`助手：已导出 ${base}.${fmt} ✓`);
@@ -1354,7 +1415,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     customFormula: s.customFormula,
     preview,
     coloring: effectiveColoring(s),
-    endplateMm: s.endplateMm,
+    endplateMm: meshCont ? 0 : s.endplateMm,
     stress: s.stress,
     hierarchical: s.hierarchical,
     neural: s.neural,
@@ -1363,6 +1424,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     isoGrad: s.isoGrad.enabled
       ? makeZGrad(s.isoGrad.hard, s.isoGrad.soft, s.isoGrad.band)
       : undefined,
+    ...(meshCont ? meshContParams(R) : {}),
   };
 
   const completion = dispatchFullBuild(params, buildRequestKey(s, R), waitForResult);
@@ -1404,10 +1466,11 @@ function scheduleHdUpgrade(): void {
       customFormula: s.customFormula,
       preview: false,
       coloring: effectiveColoring(s),
-      endplateMm: s.endplateMm,
+      endplateMm: meshCont ? 0 : s.endplateMm,
       stress: s.stress,
       hierarchical: s.hierarchical,
       neural: s.neural,
+      ...(meshCont ? meshContParams(fullR) : {}),
     };
     dispatchFullBuild(params, buildRequestKey(s, fullR));
     if (s.hierarchical.enabled) scheduleHierarchicalStats();
@@ -3628,12 +3691,12 @@ function handleExport(fmt: string | null): void {
       case 'stl': {
         // 与 btn-stl 工具栏入口共用同一 mm 缩放（wc 域 ±π → cellSize mm），两入口产物必须一致
         const stlNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, wcToMmFactor(getState().cellSize), stlNormals);
+        exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), stlNormals);
         break;
       }
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, wcToMmFactor(getState().cellSize), vtkNormals);
+        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), vtkNormals);
         break;
       }
       case 'glb': {
