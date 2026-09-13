@@ -42,6 +42,11 @@ export interface VoxelModel {
   insideCount: number;
   /** 容器内掩码（方向 C：polyMesh 流体域 = inside && !solid；容器外既非固相也非流体） */
   inside: Uint8Array;
+  /**
+   * 体素中心 V 场（wc 域 TPMS 隐式场值，Float64Array R³——直接层切的数学源，
+   * 战役三 2026-09-14：层切等值线 level = isoUsed（与体素/网格同 iso 口径））
+   */
+  V: Float64Array;
   /** 载入的等值参数（INP 头部元数据） */
   isoUsed: number;
 }
@@ -153,6 +158,7 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
     solidCount,
     insideCount,
     inside,
+    V,
     isoUsed: params.structureMode === 'solid_network' ? bias : tEff / 2,
   };
 }
