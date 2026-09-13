@@ -299,6 +299,44 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 方向 C 立项规格书：C5 容器 OpenFOAM Multi-Patch 自动切分（2026-09-13 落盘 · 已立项待开工令）
+
+> 状态：规格定案，**未开工**——实现属下一战役（等用户开工令）。本节先行钉死语义与判据，
+> 防止实现期在 ill-posed 前提上漂移。
+
+### 语义定案（先于算法——本轮取证修正了两处提案前提）
+
+1. **沿现有 polyMesh 体素流体域口径同构延伸，不发明新口径**：现有 cube/cylinder CFD 导出
+   （门 15/19）的 patch 本就是**体网格边界段区间**（流体 cell = 空隙体素，patch 按几何区间
+   连续覆盖，audit 断言守恒）。C5 的自然路线：流体 cell = 容器内（meshSdf<0）∩ 非固相——
+   meshSdf 分类器现成。**提案中「ports 开放端口环」判据在此口径下不需要**（体网格边界无
+   开放边；C5 固体网格的水密性与流体域 patch 分类是两个正交命题，勿混）。
+2. **ill-posed 边界诚实声明**：不承诺任意流形的"全自动黑盒识别"——主流动轴向未指定的
+   输入 fail-closed（exit 2 结构化拒绝），要求显式 `--flow-axis x|y|z`（与 --hybrid axis
+   同型的用户语义输入）。
+
+### Patch 分类判据（两方案，1 为主交付、2 为增强）
+
+- **方案 1 · 轴向投影端口法（主交付，主流管状支架适用）**：边界 cell 按质心轴向坐标归段
+  ——inlet（z<z_min+δ）/ outlet（z>z_max−δ）/ casing_wall（容器贴邻，径向 SDF |b|<ε）/
+  tpms_scaffold_wetted（其余，TPMS 内表面）。δ 取首/末层流体 cell 厚度；与现有 cube
+  polyMesh 三段区间法同构（ranges 连续覆盖断言直接复用）。
+- **方案 2 · 贴壁二分 + 法向角生长（增强）**：casing_wall 用容器 SDF 距离 ≤ ε_contact 判定
+  （复用 C5 融合贴壁带同源阈值，C4/C5 断言已钉 0.03 phys 量级）；其余表面 patch 用
+  boundary_picker `growRegion`（法向角区域生长，门 23 现成原语）从种子面聚类。
+  仅当方案 1 的轴向语义不适用（如侧支解剖构型）才启用。
+
+### 交付物与验收（开工时执行）
+
+- CLI：`mesh --container-mesh <stl> --cfd-polyMesh --flow-axis z`（或独立 cfd 子命令）；
+  产物 = polyMesh + boundary 字典（四 patch：casing_wall / flow_inlet / flow_outlet /
+  tpms_scaffold_wetted）+ patch 三角集 STL（表面 patch 可视化核对）。
+- 门禁（建议并入门 15 cae_mesh_audit 或新门）：①patch 区间连续覆盖（现有断言同型）；
+  ②流体 cell 数 == 容器内非固相体素数（守恒，现成口径）；③torus 容器端到端：inlet/outlet
+  各成一环带、casing_wetted 非空、patch 并集 == 全边界 cell；④无 flow-axis 输入 exit 2。
+- 风险登记：贴壁带 ε 与 bump 融合带宽的交互（blend>0 时贴壁壳可能被误分类为 wall——
+  开工首轮先对 blend=0/0.35 各跑一遍定性）。
+
 ## B+ 专项：C5 SDF 全路径 Worker 化 + 流式进度（2026-09-13 · 方向裁决后开工 · 收官）
 
 **方向裁决（三选一）**：A（众数斜率 KDE）不做——e098c30 已三轮六方案实证终审为信息论 SNR 边界（毛刺斜率幅≥E\* 时任何窗口统计不可辨识），现行高斜率带并集回代已达标（E\* +0.4%），重开即推翻实证定案；C（CFD multi-patch）inlet/outlet 自动识别对任意流形 ill-posed，留待限定管状语义后单独立项；**B+ 选中**——e098c30 只 Worker 化了上传预热路径，`meshSdfFor()` 缓存 miss（分辨率切换/HD 升级/导出触发新 R 档）仍在**主线程同步** computeMeshSDF，是代码库唯一已知主线程冻结级 UX 缺陷。
