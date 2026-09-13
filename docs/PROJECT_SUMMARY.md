@@ -1,4 +1,4 @@
-# TPMS Explorer 项目全貌总结（v8.0.0-agentic-loop）
+# TPMS Explorer 项目全貌总结（v9.0.0-fullstack-cae-ecosystem）
 
 > 生成：2026-08-29 ｜ 最近刷新：2026-09-13（v9.0 三战役收官：experimental-fit + 前端标定 UI + C5 任意流形保形填充）｜ **44 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。
