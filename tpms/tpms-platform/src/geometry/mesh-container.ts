@@ -265,7 +265,7 @@ export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult
 
 
   const sdf = new Float32Array(n * n * n);
-  const hits: number[] = [];
+  const hits: Array<{ x: number; w: number }> = [];
   for (let k = 0; k < n; k++) {
     const z = pt(k);
     const zB = k * n * n;

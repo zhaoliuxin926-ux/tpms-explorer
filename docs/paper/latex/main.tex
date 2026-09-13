@@ -29,7 +29,7 @@ and biophysical tissue-ingrowth dynamics}
 We present TPMS Explorer v8.0, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
-with forty-three continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
+with forty-four continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
 each gate carrying a minimum-assertion guard) that re-execute the exact code claim
 shipped to the user. The surface library spans 20 level-set families --- the eight canonical
 topologies plus C2 extensions (O,C-TO; Karcher; Fischer-Koch S/Y/C(S)/C(Y); G$'$; D$'$; Double
@@ -305,7 +305,7 @@ a silently degraded mesh.}
 \end{figure*}
 
 \section{Quality control}
-Forty-three gates run via
+Forty-four gates run via
 \texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
 bundler and asserts behavior-level invariants (no mocked math), and every gate now carries a
 \emph{minimum-assertion guard}: a probe experiment showed that an auditor whose assertions are all
