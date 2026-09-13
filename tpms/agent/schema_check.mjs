@@ -384,6 +384,40 @@ function existsBridgeDesign(work) {
   coveredN >= 6 ? ok(`已覆盖语义项 ≥6（实测 ${coveredN}）`) : bad('已覆盖语义项不足', String(coveredN));
 }
 
+// ── 9. README 门数防漂移守卫（2026-09-13 小冲刺第二枪）──
+// 单一定义源：run_ci_suite.mjs 的 SCHEDULE 注册数；README 双语全部「门数」宣称必须与它严格一致。
+// benchmarks.mjs 曾硬编码 41→44 漂移前科——本节把同类漂移变成 CI 红灯而非人工发现。
+{
+  const suiteSrc = readFileSync(join(HERE, '..', '.verify', 'run_ci_suite.mjs'), 'utf8');
+  const schedBlock = suiteSrc.match(/const SCHEDULE = \[([\s\S]*?)\n\];/);
+  const N = schedBlock ? (schedBlock[1].match(/^\s*\['/gm) || []).length : 0;
+  N >= 40 ? ok(`run_ci_suite SCHEDULE 解析得 ${N} 门（唯一定义源）`) : bad('SCHEDULE 解析失败或门数异常', String(N));
+
+  const readme = readFileSync(join(HERE, '..', '..', 'README.md'), 'utf8');
+  const badge = readme.match(/CI-(\d+)%2F(\d+)/);
+  badge && Number(badge[1]) === N && Number(badge[2]) === N
+    ? ok(`README badge CI-${N}/${N} 与调度一致`)
+    : bad('README badge 门数漂移', badge ? badge[0] : '未找到 badge');
+  const cnMentions = [...readme.matchAll(/(\d+) 道 CI 门禁/g)].map((m) => Number(m[1]));
+  cnMentions.length > 0 && cnMentions.every((v) => v === N)
+    ? ok(`README「${N} 道 CI 门禁」全部一致（${cnMentions.length} 处）`)
+    : bad('README 中文门数宣称漂移', JSON.stringify(cnMentions));
+  const cnSum = readme.match(/顶层调度 (\d+)\/(\d+)/);
+  cnSum && Number(cnSum[1]) === N && Number(cnSum[2]) === N
+    ? ok(`README 顶层调度 ${N}/${N} 与调度一致`)
+    : bad('README 调度汇总数漂移', cnSum ? cnSum[0] : '未找到');
+
+  const en = readFileSync(join(HERE, '..', '..', 'README_EN.md'), 'utf8');
+  const enMentions = [...en.matchAll(/\*\*(\d+) CI gates/g)].map((m) => Number(m[1]));
+  enMentions.length > 0 && enMentions.every((v) => v === N)
+    ? ok(`README_EN「${N} CI gates」全部一致（${enMentions.length} 处）`)
+    : bad('README_EN 门数宣称漂移', JSON.stringify(enMentions));
+  const enSum = en.match(/# (\d+)\/(\d+) gates/);
+  enSum && Number(enSum[1]) === N && Number(enSum[2]) === N
+    ? ok(`README_EN ${N}/${N} gates 与调度一致`)
+    : bad('README_EN 调度汇总数漂移', enSum ? enSum[0] : '未找到');
+}
+
 function tmpOut() { return join(HERE, `_schema_tmp_${process.pid}.stl`); }
 // 清理探针 STL
 import { readdirSync, unlinkSync } from 'node:fs';
@@ -392,5 +426,6 @@ for (const f of readdirSync(HERE)) if (f.startsWith('_schema_tmp_')) { try { unl
 console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
 // 【2026-09-12 桥接轮基线更新】72→87（tpms_design_verify 五工具 + 3d 节 9 断言 + 语义覆盖映射扩容）
-if (pass < 87) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 87`); process.exit(1); }
+// 【2026-09-13 小冲刺第二枪】守卫校准至实测基线 98（v9 加固轮 87→92 未同步旧守卫，本轮 +6 防漂移节后实跑 98）
+if (pass < 98) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 93`); process.exit(1); }
 process.exit(fail ? 1 : 0);
