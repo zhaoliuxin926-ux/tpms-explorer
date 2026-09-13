@@ -529,7 +529,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           continue;
         }
         field[yB + ix] = (dAx === 0) ? -1e-6
-          : meshSdf ? (blendH > 0 ? Math.max(f, b) + Math.log1p(Math.exp(-blendH * Math.abs(f - b))) / blendH : ((b >= 0) ? -1e-6 : Math.max(f, b)))
+          : meshSdf ? (b >= blendH ? -1e-6 : (blendH > 0 ? Math.max(f + blendH * Math.exp(-((b / blendH) ** 2)), b) : Math.max(f, b)))
           : ((b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b));
       }
     }

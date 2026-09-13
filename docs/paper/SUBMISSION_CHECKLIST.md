@@ -8,7 +8,7 @@
 - ✅ 摘要导览：`docs/paper/MANUSCRIPT.md`（与主稿同步）
 - ✅ Cover letter：`docs/paper/COVER_LETTER.md` 完整稿（2026-09-12 同步 v8.0/42 门 + 第三条方法论贡献 agentic 闭环验证层）
 - ✅ LICENSE：仓库根 MIT
-- ✅ 可复现：`npm install && npm run test:all` → 43/43 门禁（CI 三平台矩阵 .github/workflows/ci.yml；2026-09-12 本机全量复验 + CI run 34702020524 三平台 success）
+- ✅ 可复现：`npm install && npm run test:all` → 44/44 门禁（CI 三平台矩阵 .github/workflows/ci.yml；2026-09-12 本机全量复验 + CI run 34702020524 三平台 success）
 - ⬜ figures/：现有图是否覆盖新特性（定向传播前后对比图、exact 求解器流程图可加分）——建议投稿前补 1~2 张
 
 ## 需用户操作（AI 无法代劳）
