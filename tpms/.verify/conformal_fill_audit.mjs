@@ -204,6 +204,12 @@ function trilinearSample(sdf, N, x, y, z) {
   let threw = false;
   try { computeMeshSDF(toBinarySTL(hole.positions, hole.indices), 33); } catch (e) { threw = /非水密/.test(e.message); }
   threw && !chkHole.watertight ? ok('C1 非水密输入 fail-closed（结构化拒绝）') : bad('C1 非水密 fail-closed');
+  // 容器体积散度定理 ≡ 解析（口径专项 2026-09-13）：V=2π²·Rm·rm²，归一化 ÷scale³；离散弦化 <1%
+  const scaleC1 = r.domain.scale;
+  const vAna = (2 * Math.PI * Math.PI * 14 * 6 * 6) / (scaleC1 ** 3);
+  Math.abs(r.volumePhys - vAna) / vAna <= 0.01
+    ? ok('C1 容器体积散度定理 ≡ 解析（孔隙率分母真值源）', `phys=${r.volumePhys.toFixed(5)} vs ${vAna.toFixed(5)}（${(Math.abs(r.volumePhys - vAna) / vAna * 100).toFixed(3)}%）`)
+    : bad('C1 容器体积对拍', `${r.volumePhys} vs ${vAna}`);
 }
 
 // ── Case 2: 斜切管（股骨段）SDF 解析对照 ──
@@ -255,7 +261,7 @@ function fillTorus(blend) {
     thickness: 1.0, gradientDir: 'z', preview: false,
     hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     customFormula: '', endplateMm: 0,
-    containerMeshSdf: mr.sdf, containerBlend: blend,
+    containerMeshSdf: mr.sdf, containerBlend: blend, containerVolumePhys: mr.volumePhys,
   }, globalBufferPool);
   return { res, mr };
 }
@@ -315,6 +321,15 @@ function fillTorus(blend) {
   open === 0 && nmE <= Math.min(nmCube, 800)
     ? ok('C3 相对水密：mesh 容器 nm ≤ cube 同参对照（融合不引入新缺陷）', `mesh nm=${nmE} ≤ cube nm=${nmCube}（管壁碎片区结构性，随分辨率收敛）`)
     : bad('C3 相对水密', `mesh open=${open} nm=${nmE} vs cube nm=${nmCube}`);
+  // 孔隙率分母闭环（口径专项 2026-09-13）：正确分母=容器散度体积 → porosityEstimate ≈ 目标 65%；
+  // 旧 AABB 盒分母读数 ≈ 1−0.35·(Vtorus/Vbox) ≈ 95%（torus 仅占盒 ~13%）——盒污染必红
+  Math.abs(hard.res.porosityEstimate - 0.65) <= 0.06
+    ? ok('C3 孔隙率分母闭环：porosityEstimate ≈ 目标（容器散度体积分母）', 'est=' + (hard.res.porosityEstimate * 100).toFixed(2) + '% vs 目标 65%')
+    : bad('C3 孔隙率分母', 'est=' + (hard.res.porosityEstimate * 100).toFixed(2) + '%（盒分母污染时 ≈95%）');
+  const envExp = hard.mr.volumePhys * Math.pow(6 / 2, 3); // periods=6 → mm³
+  hard.res.envelopeVolume > 0 && Math.abs(hard.res.envelopeVolume - envExp) <= 1e-9 * envExp
+    ? ok('C3 envelopeVolume = 容器体积×(periods/2)³ 单位换算闭环', hard.res.envelopeVolume.toFixed(4) + ' mm³')
+    : bad('C3 envelopeVolume 换算', hard.res.envelopeVolume + ' vs ' + envExp);
   // 贴合度：顶点重算解析 SDF（torus），穿出壁面（sdf>容差）计 0
   const g = makeTorus(14, 6, 128, 48);
   const buf = toBinarySTL(g.positions, g.indices);
@@ -360,5 +375,6 @@ function fillTorus(blend) {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 10) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 10（恒真/集体跳过防护）`); process.exit(1); }
+// 【2026-09-13 口径专项】10→14（+体积对拍/孔隙率闭环/envelope 换算共 5 条；实测 15 留 1 余量）
+if (pass < 14) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 14（恒真/集体跳过防护）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

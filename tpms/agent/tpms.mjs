@@ -514,6 +514,7 @@ function cmdMesh(a, json) {
     try { mr = core.computeMeshSDF(ab, resolution + 1); } catch (e) { die(`容器 STL 不合格: ${e?.message ?? e}`, usage); }
     meshDomain = mr.domain;
     params.containerMeshSdf = mr.sdf;
+    params.containerVolumePhys = mr.volumePhys; // 孔隙率分母唯一定义源（容器口径专项）
     params.containerBlend = a['container-blend'] !== undefined ? Number(a['container-blend']) : 0;
     if (!Number.isFinite(params.containerBlend) || params.containerBlend < 0 || params.containerBlend > 1) {
       die('--container-blend 须 0 ≤ h ≤ 1（>1 会全域实体化，红队 A MINOR-3 域校验）', usage);
@@ -913,7 +914,7 @@ function cmdScenario(a, json) {
     inpText = inp.text; nodeCount = inp.nodeCount; elemCount = inp.elemCount;
     const inpFile = `${outPrefix}.inp`;
     writeFileSync(inpFile, inpText, 'utf8');
-    voxelPorosity = 1 - voxel.solidCount / (resolution * resolution * resolution); // 全包络口径
+    voxelPorosity = 1 - voxel.solidCount / voxel.insideCount; // 容器内体素口径（cube=R³；cylinder=柱内格点——全盒分母曾致 21.5pp 虚高）
   }
 
   // ── 5. 验证报告（MD + JSON）──
@@ -927,6 +928,7 @@ function cmdScenario(a, json) {
       meshPorosity: +meshPorosity.toFixed(6), meshPorosityDeviation: +(Math.abs(meshPorosity - pf)).toFixed(6),
       voxelPorosity: Number.isFinite(voxelPorosity) ? +voxelPorosity.toFixed(6) : null,
       voxelSolidCount: Number.isFinite(voxelPorosity) ? voxel.solidCount : null,
+      voxelInsideCount: Number.isFinite(voxelPorosity) ? voxel.insideCount : null,
       watertight: { openEdges: audit.openEdges, nonManifoldEdges: audit.nonManifoldEdges, degenTris: audit.degenTris },
       vertCount: res.vertCount, triCount: res.triCount,
     },
@@ -946,7 +948,7 @@ function cmdScenario(a, json) {
     ],
     boundary: isoGradS
       ? '报告口径：渐变等值场模式下 INP 体素模型暂不支持（体素二分无渐变语义）已跳过——渐变工况的仿真交付待扩展；力学预测为解析估算非仿真结果'
-      : '报告口径：孔隙率双口径（网格实测/体素分位）随分辨率收敛；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准',
+      : '报告口径：孔隙率双口径（网格实测[容器散度体积分母]/体素分位[容器内体素分母]）随分辨率收敛；INP 体素模型不含端板（多孔芯层口径，端板属增材工艺层）；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准',
     elapsedMs: Date.now() - t0,
   };
   const md = [

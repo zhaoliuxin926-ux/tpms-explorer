@@ -32,6 +32,8 @@ export interface VoxelModel {
   hWc: number;               // 体素边长（wc 域）
   solid: Uint8Array;         // R³，1 = 固相体素
   solidCount: number;
+  /** 容器内体素数（cube = R³；cylinder = 柱内格点数）——体素孔隙率的正确分母（口径专项 2026-09-13） */
+  insideCount: number;
   /** 载入的等值参数（INP 头部元数据） */
   isoUsed: number;
 }
@@ -60,6 +62,7 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
   // 1. V 场（体素中心；容器外不参与二分）
   const V = new Float64Array(N * N * N);
   const inside = new Uint8Array(N * N * N);
+  let insideCount = 0;
   let minV = Infinity, maxV = -Infinity;
   for (let iz = 0; iz < N; iz++) {
     for (let iy = 0; iy < N; iy++) {
@@ -67,7 +70,7 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
         const px = center(ix), py = center(iy), pz = center(iz);
         const i = ix + iy * N + iz * N * N;
         // boundAt 语义为归一化坐标（±1），与 surface-nets 的 phys 口径一致
-        if (boundAt(px / Math.PI, py / Math.PI, pz / Math.PI) < 0) inside[i] = 1;
+        if (boundAt(px / Math.PI, py / Math.PI, pz / Math.PI) < 0) { inside[i] = 1; insideCount++; }
         // 【阶段 IV】主轴各向异性坐标变换（与 surface-nets 的包装同语义）
         const v = params.stress && params.stress.preset !== 'none'
           ? tpmFn(...transformByStress(params.stress, px * k, py * k, pz * k), w)
@@ -126,6 +129,7 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
     hWc,
     solid,
     solidCount,
+    insideCount,
     isoUsed: params.structureMode === 'solid_network' ? bias : tEff / 2,
   };
 }

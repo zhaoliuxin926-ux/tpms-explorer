@@ -314,6 +314,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   if (meshSdf && (params as { periodicRve?: boolean }).periodicRve)
     throw new Error('mesh 容器与 periodicRve 互斥（红队 A MINOR-2：原静默忽略且产空网格）');
   if (meshSdf && meshSdf.length !== N * N * N) throw new Error('containerMeshSdf 长度 ≠ N³（防静默截肢）');
+  // 容器口径专项（2026-09-13）：meshSdf 激活时孔隙率/Sv 分母必须用容器散度体积，
+  // 缺失/非法即 fail-closed——静默回退 AABB 盒会把分母放大数倍（torus 容器 porosityEstimate
+  // 实测失真 +30pp），属报告数字可信度红线
+  if (meshSdf && !(typeof params.containerVolumePhys === 'number'
+    && Number.isFinite(params.containerVolumePhys) && params.containerVolumePhys > 0 && params.containerVolumePhys <= 8))
+    throw new Error('mesh 容器缺少有效体积参数 containerVolumePhys（应传 computeMeshSDF 的 volumePhys）——孔隙率分母不可回退 AABB 盒，fail-closed');
 
   const boundArr = pool.boundArr.subarray(0, N * N * N);
   let containerInside = 0;
@@ -1345,6 +1351,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // ──────────────────────────────────────────────────────────────
   // 11. 几何指标：表面积、包围体积、比表面积 Sv
   // ──────────────────────────────────────────────────────────────
+  // 分母（表观体积）：mesh 容器 = 自身散度体积（phys³ × (periods/2)³ = mm³，
+  // 与立方盒 periods³ 同单位系——cube 校验：phys 盒体积 8 × periods³/8 = periods³ ✓）；
+  // cube/cylinder = 解析包络（cylinder πL³/4 自 2026-09 前即正确）
+  const envVolumeMm3 = meshSdf
+    ? params.containerVolumePhys! * Math.pow(params.periods / 2, 3)
+    : computeEnvelopeVolume(params.periods, params.containerShape);
   let surfaceArea = 0;
   let envelopeVolume = 0;
   let svRatio = 0;
@@ -1355,7 +1367,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       indices.subarray(0, indexCount),
       params.periods,
     );
-    envelopeVolume = computeEnvelopeVolume(params.periods, params.containerShape);
+    envelopeVolume = envVolumeMm3;
     svRatio = computeSvRatio(surfaceArea, envelopeVolume);
   }
 
@@ -1372,8 +1384,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         + positions[i0 + 2] * (positions[i1] * positions[i2 + 1] - positions[i1 + 1] * positions[i2]);
     }
     const mm3 = Math.pow(wcToMmFactor(params.periods), 3);
-    const env = computeEnvelopeVolume(params.periods, params.containerShape);
-    meshSolidFraction = env > 0 ? Math.min(1, Math.abs(vol6) / 6 * mm3 / env) : 0;
+    meshSolidFraction = envVolumeMm3 > 0 ? Math.min(1, Math.abs(vol6) / 6 * mm3 / envVolumeMm3) : 0;
   }
 
   const buildTimeMs = performance.now() - t0;

@@ -36,6 +36,12 @@ export interface MeshSDFResult {
   n: number;
   domain: MeshDomain;
   check: MeshCheck;
+  /**
+   * 容器封闭体积（归一化 phys 域，散度定理 |Σ v·(v×v)|/6 ÷ scale³）。
+   * 孔隙率分母的唯一定义源（container 专项 2026-09-13）：mm³ = volumePhys × (periods/2)³。
+   * 水密 fail-closed 在先保证闭包可积；零/超域（>8）为退化输入，结构化拒绝。
+   */
+  volumePhys: number;
 }
 
 /** STL 解析（binary + ASCII 自动识别）+ 顶点焊接（STL 是面汤：同坐标顶点量化合并恢复共享索引） */
@@ -208,6 +214,12 @@ export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult
   const halfMax = Math.max(bx - ax, by - ay, bz - az) / 2;
   if (!(halfMax > 0)) throw new Error('容器网格退化（零包围盒）');
   const scale = halfMax / 0.95;
+  // 容器封闭体积（归一化 phys 域）：原始域散度体积 ÷ scale³（每坐标 ÷scale，体积 ÷scale³）。
+  // vol6 已在定向自愈步算得（水密 fail-closed 在先 → 闭包可积）；零体积=退化薄壳，超 8=越归一化域
+  const volumePhys = Math.abs(vol6) / 6 / (scale * scale * scale);
+  if (!(volumePhys > 1e-9) || volumePhys > 8) {
+    throw new Error(`容器体积散度积分异常（volumePhys=${volumePhys.toExponential(3)}，phys 域合法区间 (0,8]）——孔隙率分母不可用，fail-closed 拒绝（不回退 AABB 盒）`);
+  }
   const P = positions.slice();
   for (let i = 0; i < P.length; i += 3) {
     P[i] = (P[i] - cx) / scale; P[i + 1] = (P[i + 1] - cy) / scale; P[i + 2] = (P[i + 2] - cz) / scale;
@@ -312,5 +324,5 @@ export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult
       }
     }
   }
-  return { sdf, n, domain: { scale, cx, cy, cz }, check };
+  return { sdf, n, domain: { scale, cx, cy, cz }, check, volumePhys };
 }
