@@ -976,7 +976,7 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],

@@ -287,8 +287,29 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       // 平方比较，省去 N³ 次 sqrt
       return Math.max(px * px + py * py - 1, Math.abs(pz) - 1);
     }
-    return Math.max(Math.abs(px) - 1, Math.max(Math.abs(py) - 1, Math.abs(pz) - 1));
+    return Math.max(Math.abs(px) - 1, Math.max(Math.abs(py) - 1, Math.abs(pz) - 1));};
+
+  // ── 【C5】mesh 容器：连续 SDF 三线性采样（params.containerMeshSdf，N³ 与本网格同构）──
+  const meshSdf = params.containerMeshSdf ?? null;
+  const blendH = meshSdf ? (params.containerBlend ?? 0) : 0;
+  const sampleSdf = (px: number, py: number, pz: number): number => {
+    if (!meshSdf) return 1;
+    const gx = Math.min(R - 1e-6, Math.max(0, ((px + 1) / 2) * R));
+    const gy = Math.min(R - 1e-6, Math.max(0, ((py + 1) / 2) * R));
+    const gz = Math.min(R - 1e-6, Math.max(0, ((pz + 1) / 2) * R));
+    const i0 = Math.floor(gx), j0 = Math.floor(gy), k0 = Math.floor(gz);
+    const fx = gx - i0, fy = gy - j0, fz = gz - k0;
+    const i1 = Math.min(i0 + 1, R), j1 = Math.min(j0 + 1, R), k1 = Math.min(k0 + 1, R);
+    const c00 = meshSdf[k0 * N * N + j0 * N + i0] * (1 - fx) + meshSdf[k0 * N * N + j0 * N + i1] * fx;
+    const c01 = meshSdf[k0 * N * N + j1 * N + i0] * (1 - fx) + meshSdf[k0 * N * N + j1 * N + i1] * fx;
+    const c10 = meshSdf[k1 * N * N + j0 * N + i0] * (1 - fx) + meshSdf[k1 * N * N + j0 * N + i1] * fx;
+    const c11 = meshSdf[k1 * N * N + j1 * N + i0] * (1 - fx) + meshSdf[k1 * N * N + j1 * N + i1] * fx;
+    const c0 = c00 * (1 - fy) + c01 * fy;
+    const c1 = c10 * (1 - fy) + c11 * fy;
+    return c0 * (1 - fz) + c1 * fz;
   };
+  if (meshSdf && epOn) throw new Error('mesh 容器 × 加载端板组合未支持（v9.0）');
+  if (meshSdf && meshSdf.length !== N * N * N) throw new Error('containerMeshSdf 长度 ≠ N³（防静默截肢）');
 
   const boundArr = pool.boundArr.subarray(0, N * N * N);
   let containerInside = 0;
@@ -300,7 +321,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       const py = phys(iy);
       const yB = zB + iy * N;
       for (let ix = 0; ix < N; ix++) {
-        const b = boundAt(phys(ix), py, pz);
+        const b = meshSdf ? sampleSdf(phys(ix), py, pz) : boundAt(phys(ix), py, pz);
         // 容器边界面上 b 恰为 0：与内部负值无符号变化 → 不产生 crossing → 网格边界开口（非水密）。
         // 把 >=0 的点抬升为严格正值后边界处生成盖板，导出网格闭合；不影响统计（MC/二分用原始符号判定）。
         boundArr[yB + ix] = b < 0 ? b : Math.max(b, 1e-6);
@@ -378,7 +399,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         const py = phys(iy);
         const yB = zB + iy * N;
         for (let ix = 0; ix < N; ix++) {
-          if (boundAt(phys(ix), py, pz) < 0) {
+          if ((meshSdf ? sampleSdf(phys(ix), py, pz) : boundAt(phys(ix), py, pz)) < 0) {
             insideV[insideIdx++] = V[yB + ix];
           }
         }
@@ -507,7 +528,9 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
           field[yB + ix] = (dAz !== 0 && sideB < 0) ? 1.0 : -1.0;
           continue;
         }
-        field[yB + ix] = (b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b);
+        field[yB + ix] = (dAx === 0) ? -1e-6
+          : meshSdf ? (blendH > 0 ? Math.max(f, b) + Math.log1p(Math.exp(-blendH * Math.abs(f - b))) / blendH : ((b >= 0) ? -1e-6 : Math.max(f, b)))
+          : ((b >= 0 || dAx === 0) ? -1e-6 : Math.max(f, b));
       }
     }
   }
@@ -972,7 +995,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       // 符号锁边、目标解 dv²=(t/2)²−f 偏置、配合薄壁冻结；此即当年
       // projOnly −29.5% 折叠事故的高危领域，须以 29 案例矩阵全程押注验证。
       for (let i = 0; i < vertCount * 3; i++) positions[i] = cur[i];
-      if (mode === 'solid_network') projectVertices(1);
+      if (mode === 'solid_network' && !meshSdf) projectVertices(1); // mesh 容器：投影目标为 TPMS 场会拉离贴壁面——跳过（C5 立项定案）
     }
   }
 
