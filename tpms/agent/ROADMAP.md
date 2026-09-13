@@ -51,6 +51,12 @@
 - 验证：selftest 47/47 + schema_check 40/40 + 全量 39 门绿；实测冒烟 gyroid p0.65 tc4 R64×6：四件交付、网格实测 64.23%（偏差 0.77pp）、体素 64.99%、E*=5.12 GPa 带内
 - ~~剩余：M3 LLM 接入（等 key）~~ ✅（2026-09-12 智谱端点 34/34 验收，Agent 闭环达成）
 
+### v9.0 长程演进（2026-09-13 立项）
+
+- [x] **方向三 experimental-fit** ✅（2026-09-13）：experimental-fit.ts（ISO 13314 标定反演）+ 门禁 43（18 断言）+ UI 卡片「试验曲线反演」（grp-sim 第 9 sect，文件拖拽/canvas 曲线/GA 实时对标；check_expfit_card.mjs 冒烟 4/4）。真实数据回填待试验机上机（PHYSICAL_TESTING_PROTOCOL.md §六 CSV 格式）
+- [ ] **C5 方向二（v9 旗舰）：任意解剖流形 STL 保形填充**——外部封闭三角网格输入（流形/水密自检）→ BVH 加速符号距离场 SDF_casing → 体素容器抽象扩展（cube/cylinder → 任意网格）→ Smooth-Max 场层过渡自愈（圆柱体验证过的算子复用，注：2026-09-06 曾证伪其解决 cylinder+diamond 薄壁自触的能力，此处用于**边界贴合倒角**是不同问题域）→ 门禁 44（非凸多面体+解剖骨切口用例，断言边界贴合度与水密性）。工程量大，独立长会话攻坚
+- [ ] 方向一（真实 Agentic CAE 闭环）：待 TPMS_LLM_API_KEY + Abaqus 无头可用性验证（双阻塞）
+
 ## 约定
 - 每个 M 完成时更新本文件状态 + agent_memory/progress.md；新门禁进 .verify 前先在 agent/ 内自检（正式注册门禁会改变 CI 矩阵计数，须单独决策）
 
