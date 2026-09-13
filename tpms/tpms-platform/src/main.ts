@@ -13,6 +13,7 @@ import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
 import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH } from './physics/gibson-ashby';
+import { fitExperimentalCurve } from './physics/experimental-fit';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { makeZGrad } from './core/iso-grad';
 import { buildSurface } from './geometry/surface-nets';
@@ -584,6 +585,95 @@ function runPlasticityDemo(): boolean {
 }
 
 document.getElementById('btn-plasticity')?.addEventListener('click', runPlasticityDemo);
+
+// ── v9.0 试验曲线反演（experimental-fit UI 接线）──
+function drawExpFitCanvas(cv: HTMLCanvasElement, xs: Float64Array, ys: Float64Array, plateau: number, ed: number, rp: number, emod: number): void {
+  cv.style.display = 'block';
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  const W = cv.width, H = cv.height, pad = 24;
+  ctx.clearRect(0, 0, W, H);
+  const emax = xs[xs.length - 1] || 1;
+  let smax = 0;
+  for (let i = 0; i < ys.length; i++) if (ys[i] > smax) smax = ys[i];
+  smax *= 1.08;
+  const X = (e: number) => pad + (e / emax) * (W - pad - 6);
+  const Y = (s: number) => H - pad - (s / smax) * (H - pad - 8);
+  ctx.strokeStyle = 'rgba(128,128,128,.25)';
+  ctx.beginPath(); ctx.moveTo(pad, 6); ctx.lineTo(pad, H - pad); ctx.lineTo(W - 6, H - pad); ctx.stroke();
+  // 平台线（绿虚）+ εd 竖线
+  ctx.strokeStyle = 'rgba(46,204,113,.8)'; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(X(0), Y(plateau)); ctx.lineTo(X(emax), Y(plateau)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X(ed), Y(0)); ctx.lineTo(X(ed), Y(smax * 0.95)); ctx.stroke();
+  ctx.setLineDash([]);
+  // Rp0.2 交点
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath(); ctx.arc(X(0.002 + rp / emod), Y(rp), 3, 0, Math.PI * 2); ctx.fill();
+  // 反演曲线
+  ctx.strokeStyle = '#5b9bd5'; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  for (let i = 0; i < xs.length; i++) {
+    const px = X(xs[i]), py = Y(ys[i]);
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke(); ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(128,128,128,.9)'; ctx.font = '9px sans-serif';
+  ctx.fillText('ε', W - 10, H - pad + 10);
+  ctx.fillText('σ', pad - 14, 10);
+  ctx.fillText(plateau.toFixed(1), pad + 2, Y(plateau) - 3);
+}
+
+function bindExperimentalFit(): void {
+  const fileInput = document.getElementById('expfit-file') as HTMLInputElement | null;
+  const canvas = document.getElementById('expfit-curve') as HTMLCanvasElement | null;
+  const out = document.getElementById('expfit-result') as HTMLElement | null;
+  if (!fileInput || !canvas || !out) return;
+
+  const run = (text: string): void => {
+    try {
+      const st = getState();
+      const isDf = (document.getElementById('expfit-df') as HTMLInputElement | null)?.checked ?? false;
+      const l0 = Number((document.getElementById('expfit-l0') as HTMLInputElement | null)?.value ?? 12);
+      const a0 = Number((document.getElementById('expfit-area') as HTMLInputElement | null)?.value ?? 100);
+      const r = fitExperimentalCurve({
+        text,
+        inputType: isDf ? 'displacement-force' : 'strain-stress',
+        specimenDimensions: isDf ? { lengthMm: l0, widthMm: Math.sqrt(a0), thicknessMm: Math.sqrt(a0) } : undefined,
+      });
+      const m = r.metrics;
+      const pf = Math.max(0.05, Math.min(0.98, st.porosity / 100));
+      const mat = st.material === 'auto' ? 'tc4' : st.material;
+      const syield = BASE_YIELD_STRENGTH[mat] ?? 880;
+      const gaPlateau = 0.3 * Math.pow(1 - pf, 1.5) * syield; // Gibson-Ashby 开孔式平台应力估算
+      const ratio = gaPlateau / m.plateauStress;
+      out.style.display = 'block';
+      out.textContent = 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
+        + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · εd=' + (m.densificationStrain * 100).toFixed(1)
+        + '% · W=' + m.energyAbsorptionW.toFixed(3) + ' MJ/m³ · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%）';
+      drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
+    } catch (err) {
+      out.style.display = 'block';
+      out.textContent = '✗ 反演失败: ' + (err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const readFile = (f: File): void => {
+    const rd = new FileReader();
+    rd.onload = () => run(String(rd.result ?? ''));
+    rd.readAsText(f);
+  };
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files?.[0];
+    if (f) readFile(f);
+  });
+  fileInput.addEventListener('dragover', (ev) => ev.preventDefault());
+  fileInput.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    const f = ev.dataTransfer?.files?.[0];
+    if (f) readFile(f);
+  });
+}
+bindExperimentalFit();
 
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────

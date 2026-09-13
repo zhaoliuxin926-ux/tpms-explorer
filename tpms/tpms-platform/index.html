@@ -1155,7 +1155,7 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       </section>
-      <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">8</span></div>
+      <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">9</span></div>
 
       <details class="sect">
         <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">v6.0</span></summary>
@@ -1164,6 +1164,21 @@ window.addEventListener('error', function(e) {
           <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
           <canvas id="plas-curve" width="280" height="120" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="plas-result" style="display:none"></div>
+        </div>
+      </details>
+
+      <details class="sect">
+        <summary class="sect-h">试验曲线反演 <span class="sect-tag">v9.0</span></summary>
+        <div class="field">
+          <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
+          <input type="file" id="expfit-file" accept=".csv,.txt,.tsv" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
+          <div class="opt-row two" style="gap:6px;margin-top:4px">
+            <label style="font-size:.7rem">L0 mm<input id="expfit-l0" type="number" value="12" min="1" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">A0 mm²<input id="expfit-area" type="number" value="100" min="1" step="1" style="width:100%"></label>
+          </div>
+          <label style="font-size:.7rem;display:flex;align-items:center;gap:6px;margin-top:4px"><input type="checkbox" id="expfit-df"> 输入为位移-载荷（勾选后按 L0/A0 换算）</label>
+          <canvas id="expfit-curve" width="280" height="150" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
+          <div class="field-note" id="expfit-result" style="display:none"></div>
         </div>
       </details>
 
