@@ -183,9 +183,17 @@ export function compensateToe(strain: Float64Array, stress: Float64Array, window
   let eFit = bestSlope;
   if (rn >= 5) {
     const mx = rs / rn, my = sys / rn;
-    let num = 0, den = 0;
+    let num = 0, den = 0, tss = 0;
     for (let k = rStart; k <= rEnd; k++) { const dx = strain[k] - mx; num += dx * (stress[k] - my); den += dx * dx; }
-    if (den > 0 && num / den > 0) eFit = num / den;
+    for (let k = rStart; k <= rEnd; k++) { const dy = stress[k] - my; tss += dy * dy; }
+    if (den > 0 && num / den > 0) {
+      // 【主会话补位攻防 S3】弹性段信号质量门：带内 R² < 0.85 = 周期干扰/系统性非线性混入
+      // （超长 Toe 带正弦毛刺实测 OLS E* 正偏 87%——毛刺窗口斜率虚高但 R² 崩塌暴露）；
+      // 正常试验机高斯噪声下 R² ≈0.99+（门禁标定曲线实测通过）
+      const r2 = tss > 0 ? 1 - (tss - (num * num) / den) / tss : 1;
+      if (r2 < 0.85) throw new Error('弹性段信号质量不足（带内 R²=' + r2.toFixed(3) + ' < 0.85）——检测到周期干扰或系统性非线性混入弹性窗口，E* 不可信（补位攻防 S3）');
+      eFit = num / den;
+    }
   }
   const e = eFit;
   // 虚拟原点 = 带内回归直线的零应力截距（全带统计；单点 σ_mid/E 会把 0.5 MPa 噪声全传给原点）
@@ -256,9 +264,17 @@ export function extractIso13314(strain: Float64Array, stress: Float64Array, elas
   const peakStress = stress[peakIdx];
   const peakStrain = strain[peakIdx];
 
+
   const eMax = strain[strain.length - 1];
   if (eMax < 0.4) throw new Error(`应变范围不足（max ε=${eMax.toFixed(3)} < 0.40，无法取平台应力）`);
   const plateau = trapz(strain, stress, 0.2, 0.4) / 0.2;
+  // 【主会话补位攻防 S2】无平台坍塌守卫：屈服后直冲密实化的构型（超高孔/拉伸主导）中
+  // [20%,40%] 区间已入密实化陡升段——积分均值病态畸高（实测 6×超峰值）。物理不变量：
+  // 平台应力不可能显著超过第一屈服峰值——fail-closed 拒绝并指明构型不适用 ISO 平台口径
+  if (plateau > peakStress * 1.5) {
+    throw new Error('σpl=' + plateau.toFixed(1) + ' MPa 显著超第一峰值 ' + peakStress.toFixed(1) + ' MPa（>1.5×）——无平台坍塌构型（屈服后直冲密实化），ISO 13314 平台应力口径不适用，建议检查试样构型或分段分析');
+  }
+
 
   // 吸能效率 η(ε)=W(ε)/σ(ε)，εd=argmax η（σ>0 且 ε>0.02 域内全局搜索）
   let w = 0, bestEta = -Infinity, ed = NaN;
