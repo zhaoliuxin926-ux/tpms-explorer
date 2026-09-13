@@ -236,6 +236,10 @@ export interface BuildParams {
    * 模式公式/二分。长度校验失败抛错（不静默截肢）。CPU 回退路径不携带此字段。
    */
   gpuVField?: Float32Array;
+  /** 【C5】mesh 容器：外部流形 STL 的预计算体素 SDF（N³ = (resolution+1)³，外正内负，5% margin）。注入契约与 gpuVField 同构 */
+  containerMeshSdf?: Float32Array;
+  /** 【C5】Smooth-Max 融合带宽（场单位；0 = 硬 max 裁剪） */
+  containerBlend?: number;
   /**
    * 【v3.0 阶段 II】周期性 RVE 模式（PBC-Ready）：wrapped 场索引 + 跨平面裁剪 +
    * 缝合边精确配对（v_right − v_left = (L,0,0)），输出可三维无缝平铺的单胞网格。
