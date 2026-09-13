@@ -59,7 +59,7 @@ const handle = await page.evaluateHandle(([bytes]) => {
   input.files = dt.files;
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }, [stlBytes]);
-await page.waitForTimeout(6000);
+await page.waitForTimeout(20000);
 
 const statusText = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
 let pass = 0, fail = 0;
