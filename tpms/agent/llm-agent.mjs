@@ -117,17 +117,22 @@ async function main() {
       process.exitCode = 2; return;
     }
     // Mock：从 stdin 或环境读预设 toolCalls（回归测试用）
-    const preset = process.env.TPMS_MOCK_TOOLCALLS
-      ? JSON.parse(process.env.TPMS_MOCK_TOOLCALLS)
-      : { toolCalls: [{ function: { name: 'tpms_list', arguments: '{}' } }] };
+    let preset;
+    try {
+      preset = process.env.TPMS_MOCK_TOOLCALLS
+        ? JSON.parse(process.env.TPMS_MOCK_TOOLCALLS)
+        : { toolCalls: [{ function: { name: 'tpms_list', arguments: '{}' } }] };
+    } catch { console.error('✗ TPMS_MOCK_TOOLCALLS 非法 JSON'); process.exitCode = 2; return; } // 红队 C C-6
     provider = new MockProvider(preset);
   } else if (a.provider === 'openai') {
     // OpenAI 兼容端点（智谱/DeepSeek/LM Studio/…）：key 走 TPMS_LLM_API_KEY 或 --api-key，不入库
+    try {
     provider = new OpenAICompatProvider({
       baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
       apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
       model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-4-flash',
     });
+    } catch (e) { console.error('✗ Provider 构造失败: ' + (e?.message ?? e)); process.exitCode = 2; return; } // 红队 C C-6
   } else {
     provider = new OllamaProvider({ baseUrl: a.baseUrl, model: a.model });
   }

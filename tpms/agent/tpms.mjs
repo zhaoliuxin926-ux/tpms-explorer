@@ -500,6 +500,26 @@ function cmdMesh(a, json) {
     hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
     isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
   };
+  // ── 【C5 v9.0】mesh 容器：外部流形 STL → 体素 SDF（fail-closed 于非水密输入）──
+  // 【红队 A C-1 修复】本段曾在 1314fc7 被宣称实装但补丁静默失败（replace 未命中仍打印
+  // success），KNOWN_FLAGS 放行 flag 后静默忽略用户意图、产出 cube 裁剪 STL——CLI 接入
+  // 实为 2026-09-13 对抗审查轮才真正落地，RELEASE_NOTES 的 CLI 宣称自此成立。
+  let meshDomain = null;
+  if (a['container-mesh'] !== undefined) {
+    const meshPath = String(a['container-mesh']);
+    let buf;
+    try { buf = readFileSync(meshPath); } catch (e) { die(`容器 STL 读取失败: ${e?.message ?? e}`, usage); }
+    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    let mr;
+    try { mr = core.computeMeshSDF(ab, resolution + 1); } catch (e) { die(`容器 STL 不合格: ${e?.message ?? e}`, usage); }
+    meshDomain = mr.domain;
+    params.containerMeshSdf = mr.sdf;
+    params.containerBlend = a['container-blend'] !== undefined ? Number(a['container-blend']) : 0;
+    if (!Number.isFinite(params.containerBlend) || params.containerBlend < 0 || params.containerBlend > 1) {
+      die('--container-blend 须 0 ≤ h ≤ 1（>1 会全域实体化，红队 A MINOR-3 域校验）', usage);
+    }
+    if (isoGradM || hybridM) die('--container-mesh 与 --iso-grad/--hybrid 暂不支持组合', usage);
+  }
   const solver = String(a['porosity-solver'] ?? 'exact');
   if (!['exact', 'legacy'].includes(solver)) die(`未知求解器 "${solver}"，可选 exact|legacy`, usage);
 
@@ -549,7 +569,7 @@ function cmdMesh(a, json) {
     process.exit(3);
   }
   const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}.stl`);
-  const scale = core.wcToMmFactor(periods);
+  const scale = meshDomain ? meshDomain.scale : core.wcToMmFactor(periods);
   const stl = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
   writeFileSync(outFile, Buffer.from(stl));
   out.file = outFile;
@@ -605,6 +625,28 @@ function cmdVerify(core, a, json) {
   const container = design.container ?? 'cube';
   if (!CONTAINER_SHAPES.includes(container)) paramErrors.push(`container "${container}" 不在 ${CONTAINER_SHAPES.join('/')}`);
 
+  // C1 渐变等值场校验（【红队 C C-2 修复】原位置在下方出口检查之后——paramErrors.push 是死代码，
+  // 非法 isoGrad 被静默丢弃后照常 exit 0 交付，违反「无静默回退」铁律。整体前移 + 与
+  // tools.schema.json 的 isoGrad 槽位同源补全：values 范围 [-1.5,1.5]、元素数 2~6、
+  // band 严格 number、未知属性拒绝）
+  let isoGradD = null;
+  if (design.isoGrad) {
+    const g = design.isoGrad;
+    if (typeof g !== 'object' || Array.isArray(g)) paramErrors.push('isoGrad 须为 object');
+    else {
+      for (const k of Object.keys(g)) if (!['values', 'band'].includes(k)) paramErrors.push(`isoGrad 未知属性 "${k}"`);
+      const vals = g.values;
+      if (!Array.isArray(vals) || vals.length < 2 || vals.length > 6 || vals.some((v) => typeof v !== 'number' || !Number.isFinite(v) || v < -1.5 || v > 1.5)) {
+        paramErrors.push('isoGrad.values 须为 2~6 个 ∈[-1.5,1.5] 的有限数字');
+      } else {
+        const band = g.band === undefined ? 0.4 : g.band;
+        if (typeof band !== 'number' || !Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须为 0 ≤ b ≤ 2 的数字');
+        else isoGradD = { dir: 'z', stops: gradStops(vals, band) };
+      }
+      if (design.mode && design.mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
+    }
+  }
+
   if (paramErrors.length) {
     const out = { command: 'verify', design: designPath, verdict: 'fail', stage: 'parameter', paramErrors };
     if (json) console.log(JSON.stringify(out, null, 2));
@@ -620,20 +662,9 @@ function cmdVerify(core, a, json) {
   let R = Number.isInteger(design.resolution) ? design.resolution : 64;
   if (R < 48) R = 48;
   if (R > 128) R = 128;
-
-  // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）
-  let isoGradD = null;
-  if (design.isoGrad) {
-    const g = design.isoGrad;
-    if (!Array.isArray(g.values) || g.values.length < 2 || g.values.some((v) => !Number.isFinite(v))) {
-      paramErrors.push('isoGrad.values 须为 ≥2 个有限数字数组');
-    } else {
-      const band = g.band === undefined ? 0.4 : Number(g.band);
-      if (!Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须 0 ≤ b ≤ 2');
-      else isoGradD = { dir: 'z', stops: gradStops(g.values, band) };
-    }
-    if (design.mode && design.mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
-  }
+  // 【红队 C C-8 修复】非档位起点（如 schema 合法的 R=100）原 indexOf(R)=-1 → nextR=48
+  // 先降后升浪费修复轮；改为「向上一档」
+  const nextLadder = (cur) => LADDER.find((x) => x > cur);
 
   const W = [1, 1, 1, 1];
   const attempts = [];
@@ -666,7 +697,7 @@ function cmdVerify(core, a, json) {
       attempt.checks.build = { pass: false, detail: buildErr ?? 'empty' };
       attempts.push(attempt);
       finalStage = 'build';
-      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      const nextR = nextLadder(R);
       if (nextR) { R = nextR; continue; }
       break;
     }
@@ -681,7 +712,7 @@ function cmdVerify(core, a, json) {
     if (!wt) {
       attempts.push(attempt);
       finalStage = 'water_tightness';
-      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      const nextR = nextLadder(R);
       if (nextR) { R = nextR; continue; }
       break;
     }
@@ -692,14 +723,14 @@ function cmdVerify(core, a, json) {
     attempts.push(attempt);
     if (dev > Math.max(tol, 0.03)) {
       // 修复策略（A2 实测口径）：升分辨率优先（R96 割线后 0.26pp）；已达 96 才用割线微调
-      const nextR = LADDER[LADDER.indexOf(R) + 1];
+      const nextR = nextLadder(R);
       if (nextR) { R = nextR; continue; }
       if (Number.isFinite(slopeAnalytic) && Math.abs(slopeAnalytic) > 1e-6) {
         const step = Math.max(-0.35, Math.min(0.35, (pf - est) / slopeAnalytic));
         iso += step;
         continue;
       }
-      break;
+      finalStage = 'porosity_deviation'; break; // 红队 C C-5
     }
 
     // 检查 4：物理合理性（E* ∈ (0, 基体模量)）
@@ -724,7 +755,14 @@ function cmdVerify(core, a, json) {
   if (verdict === 'pass') {
     const outFile = design.out ?? `tpms-${type}-verified.stl`;
     const stl = core.buildBinarySTL(res.positions, res.indices, core.wcToMmFactor(periods), res.normals);
-    writeFileSync(outFile, Buffer.from(stl));
+    try {
+      writeFileSync(outFile, Buffer.from(stl));
+    } catch (e) { // 红队 C C-1：out='..' 曾 pass 分支裸崩 EISDIR（exit 1 stdout 空）被 driver 吞成不可达
+      const outE = { command: 'verify', design: designPath, verdict: 'fail', stage: 'parameter', paramErrors: ['out "' + outFile + '" 写入失败: ' + (e?.code ?? e?.message)] };
+      if (json) { console.log(JSON.stringify(outE, null, 2)); process.exitCode = 3; return; }
+      console.error('out 写入失败: ' + (e?.message ?? e));
+      process.exit(3);
+    }
     out.file = outFile;
     out.fileBytes = stl.byteLength;
     out.metrics = {
@@ -744,7 +782,7 @@ function cmdVerify(core, a, json) {
     finalStage === 'water_tightness' || finalStage === 'build' ? `分辨率已升至 ${R} 仍失败——该 (曲面, 孔隙率, 容器) 组合在此精度下不可达，建议改曲面族或容器` : null,
     finalStage === 'porosity_deviation' ? `分辨率已升至 ${R} 仍超容差——高谐波族在该分辨率属表示极限，建议 R=96 或放宽 tolerance` : null,
   ].filter(Boolean);
-  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  if (json) { console.log(JSON.stringify(out, null, 2)); process.exitCode = 3; return; } // 红队 C C-5：json fail 曾 exit 0 假成功
   console.error(`✗ verify FAIL @ ${finalStage}`);
   console.error(JSON.stringify(out.suggestions, null, 2));
   process.exit(3);

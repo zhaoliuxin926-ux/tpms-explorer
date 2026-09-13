@@ -288,6 +288,33 @@ for (const [label, args] of [
   const drvTypes = mRepair ? mRepair[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')) : [];
   JSON.stringify(drvTypes) === JSON.stringify(dvP.type.enum)
     ? ok('driver 修复菜单 TYPES ≡ schema type enum（跨实现静态哨兵）') : bad('driver/schema type enum 漂移', `drv=${drvTypes.length} schema=${dvP.type.enum.length}`);
+  // 红队 C C-10：REPAIR_TOOL 非 type 槽位漂移曾无哨兵（porosity 口径分裂/mode 缺项正是发生地）——
+  // driver REPAIR_TOOL.patches 与 tools.schema 初始槽位逐项静态对拍
+  {
+    const drvSrc2 = readFileSync(join(HERE, 'tpms-driver.mjs'), 'utf8');
+    const rt = drvSrc2.match(/patches: \{[\s\S]*?\n        \},/);
+    if (!rt) bad('REPAIR_TOOL.patches 静态提取失败');
+    else {
+      const rp = rt[0];
+      // patches.type 可为内联枚举或 enum: TYPES 常量引用（后者已被上方 TYPES 哨兵覆盖）
+      const rpType = /enum: TYPES\b/.test(rp)
+        ? { 1: TYPES.join(',') } // 常量引用形态：等价对拍（TYPES 已 ≡ enum）
+        : rp.match(/type: \{[^}]*enum: \[([^\]]*)\]/);
+      const rpTypes = rpType ? rpType[1].split(',').map((x) => x.trim().replace(/'/g, '')) : [];
+      JSON.stringify(rpTypes) === JSON.stringify(dvP.type.enum)
+        ? ok('REPAIR_TOOL.patches.type ≡ schema type enum') : bad('REPAIR_TOOL type 漂移');
+      /gradient_shell/.test(rp)
+        ? ok('REPAIR_TOOL.patches.mode 含 gradient_shell（与初始槽位同域）') : bad('REPAIR_TOOL mode 缺 gradient_shell');
+      /material: \{/.test(rp)
+        ? ok('REPAIR_TOOL.patches.material 槽位在位') : bad('REPAIR_TOOL material 缺位');
+      const rpP = rp.match(/porosity: \{[^}]*maximum: ([0-9.]+)/);
+      rpP && Number(rpP[1]) >= 0.99
+        ? ok('REPAIR_TOOL.patches.porosity 口径与初始槽位兼容（小数口径声明在位）', 'max=' + rpP[1]) : bad('REPAIR_TOOL porosity 口径', rpP ? 'max=' + rpP[1] : '未提取');
+    }
+    // schema_check 自身 TYPES 第三副本显式对拍（原仅 pass>=87 间接兜底）
+    JSON.stringify(TYPES) === JSON.stringify(dvP.type.enum)
+      ? ok('schema_check TYPES ≡ dv enum（第三副本显式对拍）') : bad('TYPES 第三副本漂移');
+  }
   dvP.mode.enum.every((m) => meshP.mode.enum.includes(m))
     ? ok('design_verify mode enum ⊆ mesh（修复域不越初始声明域）') : bad('design_verify mode enum 越域');
   // llm-agent 桥接分支注册哨兵（工具名 ↔ runDesignVerify 分支共存）

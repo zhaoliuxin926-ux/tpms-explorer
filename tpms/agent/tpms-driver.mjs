@@ -40,11 +40,12 @@ const REPAIR_TOOL = {
         additionalProperties: false,
         properties: {
           type: { type: 'string', enum: TYPES },
-          porosity: { type: 'number', minimum: 0.05, maximum: 0.95 },
+          porosity: { type: 'number', minimum: 0.05, maximum: 0.99, description: '目标孔隙率，0-1 小数口径（diag 的 designNormalized.porosity 同口径；勿用百分数）' },
           periods: { type: 'integer', minimum: 1, maximum: 12 },
           resolution: { type: 'integer', minimum: 48, maximum: 128 },
           container: { type: 'string', enum: ['cube', 'cylinder'] },
-          mode: { type: 'string', enum: ['solid_network', 'shell'] },
+          mode: { type: 'string', enum: ['solid_network', 'shell', 'gradient_shell'] },
+          material: { type: 'string', enum: ['tc4', 'polymer', 'thermal'] },
         },
       },
       reason: { type: 'string' },
@@ -81,19 +82,23 @@ function runVerify(designFile, maxRounds) {
 
 const SYSTEM_PROMPT = `你是 TPMS 闭环驱动的修复策略器。每轮你会收到 verify 的结构化失败诊断
 （finalStage / suggestions / 当前设计参数 / 已尝试轮次），请从有界动作菜单选择下一轮修复。
-原则：①只动与失败相关的槽位，一次一小步；②薄壁自触类失败（非流形边>0）优先降 periods 或换低谐波曲面族，
+口径：patches.porosity 用 0-1 小数（diag.designNormalized 同口径，勿用百分数）。\n原则：①只动与失败相关的槽位，一次一小步；②薄壁自触类失败（非流形边>0）优先降 periods 或换低谐波曲面族，
 其次升 resolution（≤128）；③cylinder+diamond 组合已知为不可达深水区，应 declare_unreachable；
 ④同一修复连续失败两次后应换策略或宣告不可达，不要重复无效修补。`;
 
 async function main() {
   const a = parseArgs(process.argv.slice(2));
-  const maxRounds = Number.isInteger(a.maxRounds) && a.maxRounds > 0 && a.maxRounds <= 12 ? a.maxRounds : 6;
+  let maxRounds = 6;
+  if (a.maxRounds !== undefined) {
+    if (!Number.isInteger(a.maxRounds) || a.maxRounds < 1 || a.maxRounds > 12) { console.error('--max-rounds 须为 1~12 整数'); process.exitCode = 2; return; } // 红队 C C-14：静默回退违反无静默回退铁律
+    maxRounds = a.maxRounds;
+  }
   if (!a.design) { console.error('用法: node tpms-driver.mjs --design 方案.json [--max-rounds 6] [--provider openai|ollama|mock]'); process.exitCode = 2; return; }
 
   // 原始设计文件只读；工作副本独立维护（收官报告可 diff 出全部自动修复轨迹）
   let design;
   try { design = JSON.parse(readFileSync(a.design, 'utf8')); } catch (e) { console.error(`✗ 设计文件解析失败: ${e.message}`); process.exitCode = 2; return; }
-  const workFile = a.design.replace(/\.json$/i, '') + `.driver.json`;
+  const workFile = a.design.replace(/\.json$/i, '') + `.driver-${process.pid}.json`; // 红队 C C-9：并发实例共享 workFile 竞态
   const writeWork = () => writeFileSync(workFile, JSON.stringify(design, null, 2));
   writeWork();
 
@@ -102,7 +107,9 @@ async function main() {
   let provider;
   if (a.provider === 'mock') {
     // 离线回归：TPMS_DRIVER_MOCK_DECISIONS 为修复决策队列（每轮弹出一个，耗尽即宣告不可达）
-    const q = process.env.TPMS_DRIVER_MOCK_DECISIONS ? JSON.parse(process.env.TPMS_DRIVER_MOCK_DECISIONS) : [];
+    let q = [];
+    try { q = process.env.TPMS_DRIVER_MOCK_DECISIONS ? JSON.parse(process.env.TPMS_DRIVER_MOCK_DECISIONS) : []; }
+    catch { console.error('✗ TPMS_DRIVER_MOCK_DECISIONS 非法 JSON'); process.exitCode = 2; return; } // 红队 C C-6
     let qi = 0;
     provider = {
       complete: async () => ({
@@ -187,7 +194,9 @@ async function main() {
   }
   process.exitCode = verdict === 'pass' ? 0 : verdict === 'unreachable' ? 3 : 4;
   // 工作副本保留供 diff 审计；失败时清理空工作文件
-  if (verdict !== 'pass') { try { rmSync(workFile); } catch { /* 保留亦可 */ } }
+  // 红队 C C-4：语义反转修正——失败路径的修复轨迹审计价值最高，保留 workFile；
+  // pass 路径 diff 已完成（报告含 history），清理工作副本防堆积
+  if (verdict === 'pass') { try { rmSync(workFile); } catch { /* 保留亦可 */ } }
 }
 
 main();

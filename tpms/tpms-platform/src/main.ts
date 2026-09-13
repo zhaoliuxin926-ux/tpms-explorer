@@ -3618,7 +3618,8 @@ function handleExport(fmt: string | null): void {
           targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
           containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
           hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
-          endplateMm: s.endplateMm,
+          endplateMm: meshCont ? 0 : s.endplateMm,
+          ...(meshCont ? meshContParams(hdR) : {}), // 红队 A C-3：导出重建路径漏注入——竞态下屏幕 torus 保形、导出 cube 裁剪
           coloring: effectiveColoring(s),
           stress: s.stress,
           hierarchical: s.hierarchical,

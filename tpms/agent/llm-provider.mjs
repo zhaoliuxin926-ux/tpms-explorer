@@ -25,7 +25,8 @@ export function loadToolsSchema() {
 }
 
 // ── 输出拦截器：LLM 产出 → schema 钳制 ──────────────────────────
-const SAFE_PATH_RE = /^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$/;
+// 【红队 C C-1 修复】排除整串 ./..（首字符允许 . 曾放行 '..' 穿越——verify 端 EISDIR 崩溃被吞成结构化不可达）
+const SAFE_PATH_RE = /^(?!.{1,2}$)[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$/;
 
 /** 递归校验单值：number/integer 严格类型，string 支持 enum/pattern（路径狱），object/array 递归子 schema */
 function validateValue(toolName, key, spec, v, errors) {
