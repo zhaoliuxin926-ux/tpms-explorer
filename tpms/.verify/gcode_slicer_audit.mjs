@@ -30,13 +30,15 @@ const BUNDLE = join(tmpdir(), 'tpms_gcode_audit_bundle.mjs');
   writeFileSync(entry, [
     `export { sliceMesh, compileGcode } from ${JSON.stringify(join(PLATFORM, 'src/export/gcode-slicer.ts'))};`,
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
+    `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
+    `export { directSlice, buildSliceSvg } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { sliceMesh, compileGcode, buildSurface } = await import(pathToFileURL(BUNDLE));
+const { sliceMesh, compileGcode, buildSurface, buildVoxelModel, directSlice, buildSliceSvg } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -113,8 +115,42 @@ console.log('\n[E] gyroid 真实网格（R=16）');
   check(`gyroid 挤出路径 ${g.stats.extrusions} > 100`, g.stats.extrusions > 100);
 }
 
+
+// ── F. 直接隐式层切（战役三 2026-09-14）：扫描线区间法，与网格发散体积双口径对拍 ──
+{
+  const CLI = join(HERE, '../agent/tpms.mjs');
+  const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+  for (const [ty, p, R, k] of [['gyroid', 0.6, 64, 2], ['schwarz', 0.55, 64, 4]]) { // gyroid k2：k6 R64 属薄壁自触拒产域（nm 768 exit3），对拍须用可产组合
+    const pre = join(tmpdir(), 'tpms_f_' + ty + '_' + process.pid);
+    const rs = run('slice', '--type', ty, '--porosity', String(p), '--resolution', String(R), '--periods', String(k), '--layers', '160', '--out', pre, '--json');
+    const rm = run('mesh', '--type', ty, '--porosity', String(p), '--resolution', String(R), '--periods', String(k), '--out', pre + '_m.stl', '--json');
+    let js = null, jm = null;
+    try { js = JSON.parse(rs.stdout); } catch { /* */ }
+    try { jm = JSON.parse(rm.stdout); } catch { /* */ }
+    const meshVol = js && jm ? (1 - jm.porosityEstimate) * Math.pow(k, 3) : NaN;
+    const dev = js && Number.isFinite(meshVol) ? Math.abs(js.slicedVolumeMm3 - meshVol) / meshVol : NaN;
+    check('F1 ' + ty + ' 直接层切 ≡ mesh 发散体积（双口径 ≤2%）',
+      rs.status === 0 && rm.status === 0 && dev <= 0.02,
+      'dev=' + (Number.isFinite(dev) ? (dev * 100).toFixed(2) + '%' : 'n/a') + ' sliceExit=' + rs.status + ' meshExit=' + rm.status);
+    if (js) {
+      const svg = readFileSync(js.file, 'utf8');
+      const gCount = (svg.match(/<g id="layer-/g) || []).length;
+      check('F2 ' + ty + ' SVG 结构（160 层 g + metadata + 扫描路径）',
+        gCount === 160 && svg.includes('<metadata>') && svg.includes(' H '),
+        'g=' + gCount + ' bytes=' + js.fileBytes);
+      try { unlinkSync(js.file); unlinkSync(pre + '_m.stl'); } catch { /* */ }
+    } else check('F2 ' + ty + ' SVG 结构', false, 'slice JSON 缺失');
+  }
+  {
+    const r1 = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--container', 'cylinder');
+    check('F3 slice cylinder 容器 → exit2（v1 限 cube）', r1.status === 2 && (r1.stderr || '').includes('cube'), 'exit=' + r1.status);
+    const r2 = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--mode', 'shell');
+    check('F3 slice shell 模式 → exit2', r2.status === 2 && (r2.stderr || '').includes('solid_network'), 'exit=' + r2.status);
+  }
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 13) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 13（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 19) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 19（战役三直接层切 F 节 +6）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

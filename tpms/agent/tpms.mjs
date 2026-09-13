@@ -842,6 +842,71 @@ function cmdVerify(core, a, json) {
 
 const POISSON_BY_MATERIAL = { tc4: 0.34, polymer: 0.4, thermal: 0.3 }; // 基体泊松比（工程常数，INP *ELASTIC 用）
 
+// ── 【战役三 2026-09-14】直接隐式层切：跳过三角网格，V 场 Marching Squares 直出矢量层切 ──
+// 数学源 = VoxelModel 的 V 场 + isoUsed（与体素/网格同 iso）；体积口径 = 层切积分 Σ(净面积×层高)，
+// 与同模型体素体积（solidCount×h³）构成两独立积分口径对拍（门禁断言，见 gcode_slicer_audit D 节）。
+function cmdSlice(a, json) {
+  const usage = '用法: node tpms.mjs slice --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--layers 200] [--out 前缀] [--json]';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const type = String(a.type ?? '');
+  if (!BUILTIN_TYPES.includes(type)) die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}`, usage);
+  const p = Number(a.porosity);
+  if (!Number.isFinite(p)) die('porosity 必须是数字', usage);
+  const pf = p > 1 ? p / 100 : p;
+  if (pf < 0.05 || pf >= 1) die(`孔隙率 ${pf} 越界，须 0.05 ≤ p < 1`, usage);
+  const periods = a.periods === undefined ? 6 : Number(a.periods);
+  if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数', usage);
+  const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
+  if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
+  const layers = a.layers === undefined ? 200 : Number(a.layers);
+  if (!Number.isInteger(layers) || layers < 8 || layers > 2000) die('layers 须为 8~2000 整数（层高=试样高/层数）', usage);
+  const container = String(a.container ?? 'cube');
+  if (container !== 'cube') die('--container 限 cube（直接层切 v1：域边界即容器；cylinder/mesh 裁剪待后续）', usage);
+  const mode = String(a.mode ?? 'solid_network');
+  if (mode !== 'solid_network') die('--mode 限 solid_network（shell 的等值语义 dv²−(t/2)² 另属）', usage);
+
+  core.globalBufferPool.reset();
+  let vox;
+  try {
+    vox = core.buildVoxelModel({
+      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
+    }, resolution);
+  } catch (e) {
+    console.error('✗ 体素模型构建失败: ' + (e?.message ?? String(e)));
+    process.exit(3);
+  }
+  const res = core.directSlice(vox, layers, periods);
+  const svg = core.buildSliceSvg(res, periods);
+  const outPrefix = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}`);
+  const svgFile = outPrefix.replace(/\.(svg|stl)$/i, '') + '.svg';
+  writeFileSync(svgFile, svg, 'utf8');
+
+  // 双口径对拍：同模型体素体积（solidCount×h³，独立积分口径）
+  const hWc = 2 * Math.PI / resolution;
+  const scale = periods / (2 * Math.PI);
+  const voxelVol = vox.solidCount * Math.pow(hWc * scale, 3);
+  const out = {
+    command: 'slice', type, porosity: pf, periods, resolution, layers, container, mode,
+    file: svgFile, fileBytes: Buffer.byteLength(svg),
+    layerHeightMm: res.layerHeightMm,
+    slicedVolumeMm3: res.volumeMm3,
+    voxelVolumeMm3: voxelVol,
+    crossCaliberDeviationPct: Math.abs(res.volumeMm3 - voxelVol) / voxelVol * 100,
+    totalRings: res.totalRings,
+    minLayerNetAreaMm2: Math.min(...res.layers.map((l) => l.netArea)),
+    boundary: '层切积分体积与体素体积为同模型两独立离散口径（对拍偏差随分辨率/层数收敛）；'
+      + '等值面与 mesh/solid 同 iso；跳过三角化无弦化误差；层数即增材层高语义（层高=试样高/层数）',
+  };
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.log('TPMS 直接隐式层切（Marching Squares，无三角网格中转）');
+  console.log(`  曲面/孔隙率  ${type} @ ${(pf * 100).toFixed(1)}%（iso=${vox.isoUsed.toFixed(4)}）`);
+  console.log(`  层切         ${layers} 层 × 层高 ${res.layerHeightMm.toFixed(4)} mm（试样全宽 ${periods} mm）`);
+  console.log(`  层切体积     ${res.volumeMm3.toFixed(2)} mm³（体素口径对照 ${voxelVol.toFixed(2)} mm³，偏差 ${out.crossCaliberDeviationPct.toFixed(2)}%）`);
+  console.log(`  轮廓环       ${res.totalRings} 个（嵌套定向：外环+ / 内孔−）`);
+  console.log(`  SVG 已写入   ${svgFile}（${(out.fileBytes / 1024).toFixed(1)} KB）`);
+}
+
 function cmdScenario(a, json) {
   const usage = '用法: node tpms.mjs scenario --design <方案.json> [--json]\n'
     + '方案 JSON: { type, porosity, material 必填; resolution/periods/container/mode/tolerance/\n'
@@ -1065,6 +1130,7 @@ const KNOWN_FLAGS = {
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
+  slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'mode', 'out', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -1084,6 +1150,7 @@ else if (cmd === 'mesh') cmdMesh(a, json);
 else if (cmd === 'solve') cmdSolve(a, json);
 else if (cmd === 'verify') cmdVerify(core, a, json);
 else if (cmd === 'scenario') cmdScenario(a, json);
+else if (cmd === 'slice') cmdSlice(a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环 + M5 场景模板）');
   console.log('用法:');

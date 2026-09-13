@@ -299,6 +299,19 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 战役三：直接隐式层切（2026-09-14 · 四战役裁决后开工 · 收官）
+
+**方向裁决**：四提案逐一账实核验——战役二（多形貌混合）已实现（hybrid radial 即提案语义）；战役一（渐进均匀化）与 2026-08-28 三度失败机理正面冲突（剪切 Voigt 上界为结构性登记）；战役四（WebGPU 网格提取）验收不可门禁化（CI swiftshader 无 WebGPU）。**战役三选中**：唯一真实空白且可完全门禁化，与物理试验线协同（6 试样切片上机）。
+
+**交付**：
+- `direct-slicer.ts` **扫描线区间法**：每层每行沿 x 对 V−iso 线性求根取固相区间（x 周期 mod 归一，行首 inside 修复——首区间丢失曾致 4.2% 系统性低估）；层面积 = Σ区间×行距；体积 = Σ层面积×层高。**弃用路线登记**：Marching Squares 环面环链接三轮未收敛（gyroid 截面固相为绕环面条带——波浪线绕环闭合的 shoelace 基准语义 + 周期 unwrap 深水区；曾试几何嵌套定向/格林定理 probe 定向均未根治），扫描线法以一维求根绕开全部拓扑难题。
+- VoxelModel 暴露 V 场（层切数学源）；CLI `slice` 命令（--layers 8~2000，SVG 逐层 g + 扫描路径 = 增材填充语义；cylinder/shell exit2 fail-closed v1 范围）。
+- **双口径对拍定案**：层切 vs mesh 发散体积（同为 1 阶+口径）0.4~1.2% 高度一致；体素 0 阶分类为离群源（+2~4.4%）——门禁锚定 mesh 口径 ≤2%。
+
+**门禁**：gcode_slicer_audit 13→19（F 节：F1 双曲面双口径对拍 [gyroid k2——k6 R64 属薄壁自触拒产域 nm768，对拍须用可产组合]/schwarz；F2 SVG 结构 160 层 g+metadata+扫描路径；F3 cylinder/shell 双 exit2 守卫）守卫 13→19。
+
+**坑**：①mesh 命令水密门 exit3 时 JSON 仍打印（porosityEstimate 可用但 exit≠0）——管道 `$?` 读的是下游 node，误判 exit0 两轮；②gyroid R64 k6 p0.6 属薄壁自触族（nm 768）。
+
 ## 方向 C 立项规格书：C5 容器 OpenFOAM Multi-Patch 自动切分（2026-09-13 落盘 · 同日实现收官）
 
 > 规格书见下方原节。**实现收官登记（同日）**：
