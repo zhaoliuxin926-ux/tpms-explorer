@@ -703,24 +703,37 @@ function bindMeshContainer(): void {
   const blendEl = document.getElementById('meshcont-blend') as HTMLInputElement | null;
   const blendVal = document.getElementById('meshcont-blend-value') as HTMLElement | null;
   if (!fileInput || !status || !blendEl || !blendVal) return;
+  // 【SDF Worker 化】上传路径 HD 档预热移入 Worker（主线程曾同步 61s@12k 三角——大 STL 分钟级冻结）；
+  // 成功后 Transferable 回传零拷贝入缓存并触发重建；非水密等 fail-closed 经 worker 协议结构化回传。
+  let meshcontW: Worker | null = null;
+  let meshcontWId = 0;
   const load = (f: File): void => {
     const rd = new FileReader();
     rd.onload = () => {
-      try {
-        const ab = rd.result as ArrayBuffer;
-        // 预检+首算（当前 full R）——非水密在此 fail-closed 抛错
-        const s0 = getState();
-        const R0 = hdResolution(s0.type, s0.structureMode, s0.gradientDir, s0.cellSize);
-        const r0 = computeMeshSDF(ab.slice(0), R0 + 1);
-        meshCont = { ab, sdfCache: new Map([[R0 + 1, r0.sdf]]), blend: meshCont?.blend ?? 0, name: f.name, scale: r0.domain.scale, tris: r0.check.tris };
-        status.style.display = "block";
-        status.textContent = "✓ " + f.name + "（" + r0.check.tris.toLocaleString() + " 三角，归一化域" + (r0.domain.scale * 2).toFixed(1) + "mm 全宽）已启用 —— 重建中";
-        if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast("STL 容器与端板互斥：端板已禁用"); }
+      const ab = rd.result as ArrayBuffer;
+      const s0 = getState();
+      const R0 = hdResolution(s0.type, s0.structureMode, s0.gradientDir, s0.cellSize);
+      status.style.display = 'block';
+      status.textContent = '⏳ ' + f.name + ' SDF 计算中（Worker，' + (R0 + 1) + '³ 网格）—— 大网格约需数十秒，期间界面可正常操作';
+      if (meshcontW) meshcontW.terminate();
+      meshcontW = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
+      const myId = ++meshcontWId;
+      meshcontW.onmessage = (ev: MessageEvent) => {
+        const d = ev.data as { ok: boolean; id: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; error?: string };
+        if (d.id !== myId) return;
+        meshcontW?.terminate(); meshcontW = null;
+        if (!d.ok || !d.sdf || !d.domain) {
+          status.textContent = '✗ ' + (d.error ?? 'SDF 计算失败');
+          return;
+        }
+        meshCont = { ab, sdfCache: new Map([[R0 + 1, d.sdf]]), blend: meshCont?.blend ?? 0, name: f.name, scale: d.domain.scale, tris: d.check?.tris ?? 0 };
+        status.textContent = '✓ ' + f.name + '（' + (d.check?.tris ?? 0).toLocaleString() + ' 三角，归一化域' + (d.domain.scale * 2).toFixed(1) + 'mm 全宽）已启用 —— 重建中';
+        if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast('STL 容器与端板互斥：端板已禁用'); }
         scheduleRebuild(false);
-      } catch (e) {
-        status.style.display = "block";
-        status.textContent = "✗ " + (e instanceof Error ? e.message : String(e));
-      }
+      };
+      meshcontW.onerror = (e) => { status.textContent = '✗ Worker 失败: ' + (e.message ?? '未知'); };
+      const abForW = ab.slice(0); // 单一副本：消息体与 transfer 列表必须同对象（曾用两次 slice 生成不同副本——transfer 失效且多拷贝）
+      meshcontW.postMessage({ ab: abForW, n: R0 + 1, id: myId }, [abForW]);
     };
     rd.readAsArrayBuffer(f);
   };

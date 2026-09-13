@@ -149,7 +149,7 @@ export function compensateToe(strain: Float64Array, stress: Float64Array, window
   const sm = new Float64Array(strain.length);
   for (let i = 0; i < strain.length; i++) {
     let s = 0, n = 0;
-    for (let j = Math.max(0, i - 2); j <= Math.min(strain.length - 1, i + 2); j++) { s += stress[j]; n++; }
+    for (let j = Math.max(0, i - 10); j <= Math.min(strain.length - 1, i + 10); j++) { s += stress[j]; n++; } // 【S3】±10 平滑跨毛刺周期——首峰检测曾被毛刺局部极大愚弄致众数域截断
     sm[i] = s / n;
   }
   let peakIdx = strain.length - 1;
