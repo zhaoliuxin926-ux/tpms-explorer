@@ -44,7 +44,6 @@ import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets }
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
-import { computeMeshSDF } from './geometry/mesh-container';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
 import { parseNL, type NLIntent } from './core/nl-agent';
@@ -678,18 +677,65 @@ bindExperimentalFit();
 
 // ── C5 v9.0 外部 STL 保形容器（UI 摄入：文件 → SDF → buildParams 注入）──
 let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number; volumePhys: number } | null = null;
+/** B+ 专项（2026-09-13）：惰性档 SDF 一律走 Worker 异步预热——此前缓存 miss 在主线程
+ * 同步 computeMeshSDF（分辨率切换/HD 升级触发新 R 档时 UI 冻结数秒，Release Notes
+ * 「唯一算力边界」的残余半边）。同档并发共享一个 Promise；完成即 scheduleRebuild 重入。 */
+let meshSdfSeq = 0;
+const sdfEnsureJobs = new Map<number, Promise<void>>();
+function meshSdfStatus(): HTMLElement | null {
+  return document.getElementById('meshcont-status');
+}
+function meshSdfEnsure(R: number): Promise<void> {
+  const n = R + 1;
+  if (!meshCont || meshCont.sdfCache.has(n)) return Promise.resolve();
+  let job = sdfEnsureJobs.get(n);
+  if (job) return job;
+  job = new Promise<void>((resolve, reject) => {
+    const ab = meshCont!.ab.slice(0); // 原始 buffer 不转移（后续档位仍可拷贝）
+    const w = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
+    const id = ++meshSdfSeq;
+    const status = meshSdfStatus();
+    if (status) { status.style.display = 'block'; status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 0%'; }
+    w.onmessage = (ev: MessageEvent) => {
+      const d = ev.data as { ok?: boolean; id?: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; volumePhys?: number; error?: string };
+      if (d.id !== id) return;
+      if (d.progress !== undefined) {
+        if (status) status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 ' + Math.round(d.progress * 100) + '%';
+        return;
+      }
+      w.terminate();
+      sdfEnsureJobs.delete(n);
+      if (!d.ok || !d.sdf || !d.domain) {
+        if (status) status.textContent = '✗ ' + (d.error ?? 'SDF 计算失败');
+        reject(new Error(d.error ?? 'SDF 计算失败'));
+        return;
+      }
+      meshCont!.sdfCache.set(n, d.sdf);
+      meshCont!.scale = d.domain.scale;
+      meshCont!.volumePhys = d.volumePhys ?? NaN; // 协议缺失即 NaN → surface-nets 口径守卫 fail-closed
+      if (status) status.textContent = '✓ ' + meshCont!.name + '（R' + R + ' 档就绪）';
+      resolve();
+    };
+    w.onerror = (e) => {
+      w.terminate();
+      sdfEnsureJobs.delete(n);
+      reject(new Error('SDF Worker 加载失败: ' + e.message));
+    };
+    w.postMessage({ ab, n, id });
+  });
+  sdfEnsureJobs.set(n, job);
+  return job;
+}
 function meshSdfFor(R: number): Float32Array | null {
   if (!meshCont) return null;
   const n = R + 1;
-  let sdf = meshCont.sdfCache.get(n);
+  const sdf = meshCont.sdfCache.get(n) ?? null;
   if (!sdf) {
-    // ArrayBuffer 可能已被上次调用转移（不可重读）——每次 reserve 前重拷贝
-    const ab = meshCont.ab.slice(0);
-    const r = computeMeshSDF(ab, n);
-    sdf = r.sdf;
-    meshCont.sdfCache.set(n, sdf);
-    meshCont.scale = r.domain.scale;
-    meshCont.volumePhys = r.volumePhys;
+    // 缓存 miss：触发异步预热，完成后重入重建——绝不主线程同步算（冻结源）
+    meshSdfEnsure(R)
+      .then(() => scheduleRebuild(false))
+      .catch((e) => flashToast('✗ ' + (e instanceof Error ? e.message : String(e))));
+    return null;
   }
   return sdf;
 }
@@ -720,8 +766,13 @@ function bindMeshContainer(): void {
       meshcontW = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
       const myId = ++meshcontWId;
       meshcontW.onmessage = (ev: MessageEvent) => {
-        const d = ev.data as { ok: boolean; id: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; volumePhys?: number; error?: string };
+        const d = ev.data as { ok: boolean; id: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; volumePhys?: number; error?: string };
         if (d.id !== myId) return;
+        // B+ 协议 v2：进度消息不终结 Worker（最终消息无 progress 字段）
+        if (d.progress !== undefined) {
+          status.textContent = '⏳ ' + f.name + ' SDF 计算中 ' + Math.round(d.progress * 100) + '%（Worker，' + (R0 + 1) + '³ 网格）';
+          return;
+        }
         meshcontW?.terminate(); meshcontW = null;
         if (!d.ok || !d.sdf || !d.domain) {
           status.textContent = '✗ ' + (d.error ?? 'SDF 计算失败');
@@ -1414,6 +1465,14 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     return { fromCache: true };
   }
 
+  // B+ 专项：mesh 容器 SDF 该 R 档未就绪时本轮跳过（meshSdfFor 内部已触发异步预热，
+  // 完成后 scheduleRebuild 重入）——绝不主线程同步算 SDF（冻结源），也绝不无 SDF
+  // 降级 cube 裁剪重建（红队 A C-3 竞态先例：屏幕保形/静默 cube 是 CRITICAL 形态）
+  if (meshCont && !meshCont.sdfCache.has(R + 1)) {
+    meshSdfFor(R);
+    return { fromCache: false };
+  }
+
   const params: BuildParams = {
     type: s.type,
     iso,
@@ -1465,6 +1524,11 @@ function scheduleHdUpgrade(): void {
     hdUpgradeTimer = null;
     const s = getState();
     const fullR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+    // B+ 专项：HD 档 SDF 未就绪时本轮跳过（异步预热完成后 scheduleRebuild 会再到此）
+    if (meshCont && !meshCont.sdfCache.has(fullR + 1)) {
+      meshSdfFor(fullR);
+      return;
+    }
     const params: BuildParams = {
       type: s.type,
       iso: baseIso(s),
@@ -3589,7 +3653,7 @@ function enterFigureMode(): void {
 
 // ── 导出中心 ─────────────────────────────────────────────
 /** 统一导出分发：根据格式调用对应导出器 */
-function handleExport(fmt: string | null): void {
+async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
@@ -3620,6 +3684,14 @@ function handleExport(fmt: string | null): void {
       if (hdUpgradeTimer) {
         clearTimeout(hdUpgradeTimer);
         hdUpgradeTimer = null;
+      }
+      // B+ 专项：导出所需 SDF 档未缓存时异步预热（流式进度经 meshcont-status 展示），
+      // 就绪后继续同步导出链——此前该路径主线程同步算 SDF 是导出冻结源
+      if (meshCont && !meshCont.sdfCache.has(hdR + 1)) {
+        try { await meshSdfEnsure(hdR); } catch (e) {
+          flashToast('✗ ' + (e instanceof Error ? e.message : String(e)));
+          return;
+        }
       }
       bridge.invalidate();
       activeBuild = null;

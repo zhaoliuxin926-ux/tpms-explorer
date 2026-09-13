@@ -299,6 +299,19 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## B+ 专项：C5 SDF 全路径 Worker 化 + 流式进度（2026-09-13 · 方向裁决后开工 · 收官）
+
+**方向裁决（三选一）**：A（众数斜率 KDE）不做——e098c30 已三轮六方案实证终审为信息论 SNR 边界（毛刺斜率幅≥E\* 时任何窗口统计不可辨识），现行高斜率带并集回代已达标（E\* +0.4%），重开即推翻实证定案；C（CFD multi-patch）inlet/outlet 自动识别对任意流形 ill-posed，留待限定管状语义后单独立项；**B+ 选中**——e098c30 只 Worker 化了上传预热路径，`meshSdfFor()` 缓存 miss（分辨率切换/HD 升级/导出触发新 R 档）仍在**主线程同步** computeMeshSDF，是代码库唯一已知主线程冻结级 UX 缺陷。
+
+**实现**：
+- computeMeshSDF 第三参 onProgress（每 z 切片一报 (k+1)/n，两参调用向后兼容逐位一致）；
+- meshcont-worker 协议 v2：中间态 {ok, id, progress} 消息 + 终态不变（消费方按 progress 字段区分）；
+- main.ts `meshSdfEnsure(R)`：惰性档一律走临时 Worker（同档并发去重 Promise Map），流式百分比写入 meshcont-status；`meshSdfFor` 缓存 miss 只触发预热并返回 null；
+- 三调用点改接：rebuild/HD 升级 **SDF 未就绪即本轮跳过**（预热完成后 scheduleRebuild 重入——绝不无 SDF 降级 cube 裁剪，红队 A C-3 竞态先例）；handleExport 改 async，导出档 miss 时 await 预热再走同步导出链；
+- 上传路径 handler 适配进度消息（不再把 progress 误判失败提前 terminate——协议 v2 兼容陷阱）。
+
+**门禁**：conformal 15→18（C1 onProgress 契约：条数=N/严格递增=切片序/末值=1；两参向后兼容逐位一致；C6 worker 协议静态哨兵 progress+volumePhys 转发——URL 相对路径 CI 可携）+ 守卫 14→17。
+
 ## 容器孔隙率口径专项（2026-09-13 · 用户批准立项 · 收官）
 
 **失真机理（取证定案）**：UI/CLI mesh/solve 的 cylinder 分母自 2026-09 前即正确（computeEnvelopeVolume πL³/4 分支）；真实失真源两处——

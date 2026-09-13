@@ -182,8 +182,9 @@ export function closestPtTriangle(px: number, py: number, pz: number,
 
 const _cp = new Float64Array(3);
 
-/** STL → 归一化 [-1,1] 体素 SDF（N = resolution+1）。精度 = BVH 精确最近点 + 扫描线奇偶。 */
-export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult {
+/** STL → 归一化 [-1,1] 体素 SDF（N = resolution+1）。精度 = BVH 精确最近点 + 扫描线奇偶。
+ * onProgress（可选）：每个 z 切片完成时回调 (k+1)/n ∈ (0,1]——Worker 流式进度上报用（B+ 专项）。 */
+export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number, onProgress?: (frac: number) => void): MeshSDFResult {
   const { positions, indices } = parseSTL(stlBuffer);
   const check = checkMesh(indices);
   if (!check.watertight) {
@@ -323,6 +324,7 @@ export function computeMeshSDF(stlBuffer: ArrayBuffer, n: number): MeshSDFResult
         sdf[yB + i] = inside ? -d : d;
       }
     }
+    if (onProgress) onProgress((k + 1) / n); // 每 z 切片一报（B+ 流式进度）
   }
   return { sdf, n, domain: { scale, cx, cy, cz }, check, volumePhys };
 }

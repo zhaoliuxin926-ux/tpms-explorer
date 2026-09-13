@@ -9,7 +9,7 @@
  * 运行：node conformal_fill_audit.mjs
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -210,6 +210,22 @@ function trilinearSample(sdf, N, x, y, z) {
   Math.abs(r.volumePhys - vAna) / vAna <= 0.01
     ? ok('C1 容器体积散度定理 ≡ 解析（孔隙率分母真值源）', `phys=${r.volumePhys.toFixed(5)} vs ${vAna.toFixed(5)}（${(Math.abs(r.volumePhys - vAna) / vAna * 100).toFixed(3)}%）`)
     : bad('C1 容器体积对拍', `${r.volumePhys} vs ${vAna}`);
+  // B+ 专项（2026-09-13）：onProgress 进度契约——每 z 切片一报，严格递增、末值=1、条数=N
+  {
+    const prog = [];
+    computeMeshSDF(buf, 17, (fr) => prog.push(fr));
+    prog.length === 17 && prog.every((v, i) => v === (i + 1) / 17) && prog[prog.length - 1] === 1
+      ? ok('C1 onProgress 契约（条数=N/严格递增=切片序/末值=1）', 'n=17 msgs=' + prog.length)
+      : bad('C1 onProgress 契约', 'len=' + prog.length + ' head=' + JSON.stringify(prog.slice(0, 3)));
+    const r2 = computeMeshSDF(buf, 17);
+    r2.sdf.length === 17 * 17 * 17 && Math.abs(r2.volumePhys - r.volumePhys) < 1e-12
+      ? ok('C1 两参调用向后兼容（无回调结果逐位一致）')
+      : bad('C1 两参兼容', 'vol=' + r2.volumePhys + ' vs ' + r.volumePhys);
+    const wsrc = readFileSync(new URL('../tpms-platform/src/worker/meshcont-worker.ts', import.meta.url), 'utf8');
+    wsrc.includes('progress: frac') && wsrc.includes('volumePhys: r.volumePhys')
+      ? ok('C6 worker 协议 v2 静态哨兵（progress 转发 + volumePhys 携带）')
+      : bad('C6 worker 协议哨兵', 'meshcont-worker.ts 缺 progress/volumePhys 转发');
+  }
 }
 
 // ── Case 2: 斜切管（股骨段）SDF 解析对照 ──
@@ -376,5 +392,5 @@ function fillTorus(blend) {
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
 // 【2026-09-13 口径专项】10→14（+体积对拍/孔隙率闭环/envelope 换算共 5 条；实测 15 留 1 余量）
-if (pass < 14) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 14（恒真/集体跳过防护）`); process.exit(1); }
+if (pass < 17) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 17（B+ 进度契约 +3）`); process.exit(1); }
 process.exit(fail ? 1 : 0);
