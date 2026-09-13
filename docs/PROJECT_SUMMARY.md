@@ -107,7 +107,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
 | 验收 | 真实模型 glm-4.6 中英回归 34/34（现 37 条含闭环意图组，key 门）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 47 + schema_check 87 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
+| 自检（CI 纳管） | agent_selftest 47 + schema_check 98 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
@@ -118,7 +118,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 282 · redteam_matrix 100 ·
 custom_equation 73 · periodic_rve 88 · cae_mesh 46 · webgpu_parity 101（万点对拍 0.00e+0）·
-schema_check 87。全 44 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
+schema_check 98（含 README 门数防漂移守卫）。全 44 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
 
 ## 六、文档体系
 
