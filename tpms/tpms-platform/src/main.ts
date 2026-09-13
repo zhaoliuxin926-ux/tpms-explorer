@@ -677,7 +677,7 @@ function bindExperimentalFit(): void {
 bindExperimentalFit();
 
 // ── C5 v9.0 外部 STL 保形容器（UI 摄入：文件 → SDF → buildParams 注入）──
-let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number } | null = null;
+let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number; volumePhys: number } | null = null;
 function meshSdfFor(R: number): Float32Array | null {
   if (!meshCont) return null;
   const n = R + 1;
@@ -689,13 +689,14 @@ function meshSdfFor(R: number): Float32Array | null {
     sdf = r.sdf;
     meshCont.sdfCache.set(n, sdf);
     meshCont.scale = r.domain.scale;
+    meshCont.volumePhys = r.volumePhys;
   }
   return sdf;
 }
-function meshContParams(R: number): { containerMeshSdf?: Float32Array; containerBlend?: number } {
+function meshContParams(R: number): { containerMeshSdf?: Float32Array; containerBlend?: number; containerVolumePhys?: number } {
   if (!meshCont) return {};
   const sdf = meshSdfFor(R);
-  return sdf ? { containerMeshSdf: sdf, containerBlend: meshCont!.blend } : {};
+  return sdf ? { containerMeshSdf: sdf, containerBlend: meshCont!.blend, containerVolumePhys: meshCont!.volumePhys } : {};
 }
 function bindMeshContainer(): void {
   const fileInput = document.getElementById('meshcont-file') as HTMLInputElement | null;
@@ -719,14 +720,14 @@ function bindMeshContainer(): void {
       meshcontW = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
       const myId = ++meshcontWId;
       meshcontW.onmessage = (ev: MessageEvent) => {
-        const d = ev.data as { ok: boolean; id: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; error?: string };
+        const d = ev.data as { ok: boolean; id: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; volumePhys?: number; error?: string };
         if (d.id !== myId) return;
         meshcontW?.terminate(); meshcontW = null;
         if (!d.ok || !d.sdf || !d.domain) {
           status.textContent = '✗ ' + (d.error ?? 'SDF 计算失败');
           return;
         }
-        meshCont = { ab, sdfCache: new Map([[R0 + 1, d.sdf]]), blend: meshCont?.blend ?? 0, name: f.name, scale: d.domain.scale, tris: d.check?.tris ?? 0 };
+        meshCont = { ab, sdfCache: new Map([[R0 + 1, d.sdf]]), blend: meshCont?.blend ?? 0, name: f.name, scale: d.domain.scale, tris: d.check?.tris ?? 0, volumePhys: d.volumePhys ?? NaN };
         status.textContent = '✓ ' + f.name + '（' + (d.check?.tris ?? 0).toLocaleString() + ' 三角，归一化域' + (d.domain.scale * 2).toFixed(1) + 'mm 全宽）已启用 —— 重建中';
         if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast('STL 容器与端板互斥：端板已禁用'); }
         scheduleRebuild(false);

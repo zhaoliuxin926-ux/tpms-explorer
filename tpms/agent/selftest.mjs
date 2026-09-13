@@ -217,6 +217,28 @@ rmSync(stlPath, { force: true });
     ? ok('scenario 力学预测口径（0 < E* < 基体 + 文献带字段）') : bad('scenario 力学字段', JSON.stringify(js?.mechanics).slice(-80));
   js?.geometry?.meshPorosity > 0 && js.geometry.voxelPorosity > 0 && js.geometry.porosityTrace?.length >= 1
     ? ok('scenario 双口径孔隙率 + 求解 trace 可溯源') : bad('scenario 双口径', JSON.stringify(js?.geometry).slice(-80));
+  // 容器口径专项（2026-09-13）：cylinder 体素孔隙率分母 = 容器内格点（非全盒 R³——
+  // 旧口径 cylinder 读数系统性虚高至 +0.215·固相分数，p0.6 时 ≈0.686）
+  {
+    const dCyl = mk();
+    const pCyl = join(tmpdir(), 'tpms_selftest_scn_cyl_' + process.pid);
+    // k=4 柱面薄壁自触拒产（nm 32/56 非收敛）——k=2 稳定可产（实测 voxel 0.6005 / inside 78.81%≈π/4）
+    writeFileSync(dCyl, JSON.stringify({ type: 'gyroid', porosity: 0.6, material: 'tc4', resolution: 64, periods: 2, container: 'cylinder', out: pCyl }));
+    const rc = run('scenario', '--design', dCyl, '--json');
+    let jc = null;
+    try { jc = JSON.parse(rc.stdout); } catch { /* 忽略 */ }
+    const R3 = 64 ** 3;
+    const frac = jc?.geometry?.voxelInsideCount !== undefined && jc.geometry.voxelInsideCount !== null ? jc.geometry.voxelInsideCount / R3 : NaN;
+    // 分母锚：柱内格点占比 ≈ π/4（体素中心采样，离散 <2pp）
+    Number.isFinite(frac) && Math.abs(frac - Math.PI / 4) <= 0.02
+      ? ok('scenario cylinder 体素分母 = 容器内格点（π/4 锚 ' + (frac * 100).toFixed(2) + '%）')
+      : bad('scenario cylinder 体素分母', 'insideCount frac=' + frac);
+    // 收敛锚：全固相极限下 1−solid/inside → 0；p0.6 实测应 ≈ 目标（旧全盒分母 ≈0.686 必红）
+    rc.status === 0 && jc?.geometry?.voxelPorosity > 0 && Math.abs(jc.geometry.voxelPorosity - 0.6) <= 0.03
+      ? ok('scenario cylinder 体素孔隙率收敛目标（容器口径分母）', 'voxel=' + (jc.geometry.voxelPorosity * 100).toFixed(2) + '%')
+      : bad('scenario cylinder 体素孔隙率', 'exit=' + rc.status + ' voxel=' + jc?.geometry?.voxelPorosity);
+    try { unlinkSync(dCyl); } catch { /* 忽略 */ }
+  }
   const inp = readFileSync(prefix + '.inp', 'utf8');
   inp.includes('*NODE') && inp.includes('*ELEMENT, TYPE=C3D8') && inp.includes('*ELASTIC') && inp.includes('NSET_BOTTOM')
     ? ok('scenario INP 结构（NODE/C3D8/ELASTIC/压缩面集）') : bad('scenario INP 结构', inp.slice(0, 60));
@@ -237,4 +259,6 @@ rmSync(stlPath, { force: true });
   } catch { /* 忽略 */ }
 }
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
+// pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；实测 49 留 2 余量）
+if (pass < 47) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 47`); process.exit(1); }
 process.exit(fail ? 1 : 0);

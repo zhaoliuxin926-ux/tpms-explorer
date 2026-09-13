@@ -241,6 +241,13 @@ export interface BuildParams {
   /** 【C5】Smooth-Max 融合带宽（场单位；0 = 硬 max 裁剪） */
   containerBlend?: number;
   /**
+   * 【C5】容器封闭体积（归一化 phys 域，computeMeshSDF.volumePhys 散度定理）。
+   * 孔隙率/Sv 分母的唯一定义源（容器口径专项 2026-09-13）：meshSdf 激活时必填，
+   * mm³ = containerVolumePhys × (periods/2)³——AABB 盒对非充满容器失真可达 30pp+。
+   * buildSurface 对缺失/非法值 fail-closed（不回退盒体积）。
+   */
+  containerVolumePhys?: number;
+  /**
    * 【v3.0 阶段 II】周期性 RVE 模式（PBC-Ready）：wrapped 场索引 + 跨平面裁剪 +
    * 缝合边精确配对（v_right − v_left = (L,0,0)），输出可三维无缝平铺的单胞网格。
    * 约束：cube 容器 / solid_network 或 shell / 无端板 / 无 Hybrid / 无梯度；

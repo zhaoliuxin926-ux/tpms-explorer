@@ -299,6 +299,22 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 容器孔隙率口径专项（2026-09-13 · 用户批准立项 · 收官）
+
+**失真机理（取证定案）**：UI/CLI mesh/solve 的 cylinder 分母自 2026-09 前即正确（computeEnvelopeVolume πL³/4 分支）；真实失真源两处——
+1. **C5 网格容器**：meshSdf 激活时 containerShape 仍为用户值（默认 cube）→ porosityEstimate/envelopeVolume/svRatio/meshSolidFraction 分母全部 = AABB 归一化盒（8 phys³）——torus 容器仅占盒 ~13%，读数失真 +30pp 量级；
+2. **scenario INP 体素口径**：voxelPorosity = 1 − solidCount/R³（全盒）——体素二分本身容器感知（inside 样本分位），仅报告分母错：cylinder 全固相极限读 21.5% 而非 0%。
+
+**修复（三分支表观体积规范落地）**：
+- computeMeshSDF 新增 volumePhys 返回（复用既有定向自愈 vol6 ÷ scale³——零额外计算；零/超 (0,8] 域守卫结构化拒绝，绝不回退盒）；
+- BuildParams.containerVolumePhys（类型+文档）；surface-nets fail-closed 守卫：meshSdf 激活而体积缺失/非法即抛错；分母切换 volumePhys×(periods/2)³（单位换算闭环：cube 校验 8×periods³/8=periods³ ✓）；
+- CLI --container-mesh 传参；scenario 分母改 1−solid/insideCount（voxel-model 新增 insideCount；cube=R³ 恒等）+ JSON 增 voxelInsideCount + 报告 boundary 补「INP 不含端板（多孔芯层口径）」；
+- UI：meshcont-worker 协议转发 volumePhys；meshCont 缓存注入 meshContParams（三调用点自动继承——屏幕/HD 导出/重建）。
+
+**门禁（+9 断言）**：
+- conformal_fill_audit 10→15：C1 容器体积散度定理 ≡ 解析（torus 2π²Rm·rm²/scale³，实测偏差 0.325% 弦化）；C3 孔隙率分母闭环（torus p0.65 目标 → est 61.61%——盒污染时 ≈95% 必红）；C3 envelopeVolume×(periods/2)³ 换算闭环（28.6939 mm³ 精确）；守卫 10→14
+- selftest 47→49：scenario cylinder（k=2 R64——k=4 柱面薄壁自触非收敛，实测 nm 32/56）体素分母 π/4 锚（实测 78.81%）+ 孔隙率收敛锚（voxel 0.6005 vs 目标 0.6——旧全盒口径 ≈0.686 必红）；补上此前缺失的 pass 守卫（47 基线——PROJECT_SUMMARY「每门带守卫」宣称终成真）
+
 ## 下一步（更新）
 1. **用户操作**：署名三项（作者拼写/单位/LICENSE 版权行）→ Editorial Manager 注册提交 → 回填投稿号。
 2. B-t3 LLM 接入（等 key）。

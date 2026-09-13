@@ -15,7 +15,7 @@ self.onmessage = (ev: MessageEvent) => {
   try {
     const r = computeMeshSDF(ab, n);
     (self as unknown as Worker).postMessage(
-      { ok: true, id, sdf: r.sdf, domain: r.domain, check: r.check },
+      { ok: true, id, sdf: r.sdf, domain: r.domain, check: r.check, volumePhys: r.volumePhys },
       [r.sdf.buffer],
     );
   } catch (e) {
