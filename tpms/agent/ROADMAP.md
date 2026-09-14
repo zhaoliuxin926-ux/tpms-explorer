@@ -299,17 +299,30 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
-## 模型线真实验收轮（2026-09-14 · 用户 key 到位 · glm-4-flash/4.6 双档）
+## 模型线真实验收轮（2026-09-14 · 用户 key 到位 · 四档画像 4-flash/4.6/5.3/5.3-flash）
 
-**执行**：用户智谱 key 经环境变量注入（不落盘不入库）。glm-4-flash 33/37 → glm-4.6 35/37（判定修复后）。
+**执行**：用户智谱 key 经环境变量注入（不落盘不入库）。四档全量 37 条结果：glm-4-flash 33/37 → glm-4.6 35/37（判定修复后）→ **glm-5.3-flash 37/37 一次全绿（推荐默认档）** → glm-5.3 满血 36/37×2 轮（失败项轮换 E2→C3，均为单条方差、直跑即过）。
 
-**档位画像（双档对照实证）**：flash 免费档败于词表近邻（B4 dd→dp、B5 fcks→fks）+ 多目标不拆解（F2 calls=1）——爱猜但猜混；glm-4.6 词表准、F2 拆解正确（tpms_mesh×2），但对模糊指令有澄清倾向（F1/F3 exit2 无 toolCalls，直跑可过、全量连挂，19.9s vs 2.2s 疑服务端连续请求行为漂移）。
+**档位画像（四档对照实证）**：4-flash 爱猜但词表近邻混淆（B4 dd→dp、B5 fcks→fks）+ 多目标不拆解；4.6 词表准、F2 拆解对，但模糊指令有澄清倾向（F1/F3）；5.3-flash 推理档全项通过且响应快（中位 ~10s）；5.3 满血推理最深但慢（对抗用例 30~150s）且全量场景下每轮 ~1 条方差（服务端负载敏感）。
 
-**修复（llm_regression.mjs expectReject 判定完备性）**：E2「孔隙率 120%」在 glm-4.6 下模型识别越界后文字请求澄清、零工具调用 → agent exit2——安全语义等价（无调用=无执行=fail-closed），但原判定正则只匹配平台层拒绝文案（拒绝/路径/enum）漏判。新增第三合法结局 modelRefused：exit2 + agent 签名「LLM 未返回 tool calls」+ 越界语义词（超出/越界/无效/exceed/invalid）双锚防任意 exit2 恒真。E3 探针确认自钳制路径（500→128）不受扰。
+**修复 1（llm_regression.mjs expectReject 判定完备性，4d50b92）**：E2「孔隙率 120%」在 glm-4.6 下模型识别越界后文字请求澄清、零工具调用 → agent exit2——安全语义等价（无调用=无执行=fail-closed），但原判定正则只匹配平台层拒绝文案漏判。新增第三合法结局 modelRefused：exit2 + agent 签名「LLM 未返回 tool calls」+ 越界语义词（超出/越界/无效/exceed/invalid）双锚防任意 exit2 恒真。E3 探针确认自钳制路径（500→128）不受扰。
 
-**登记（不改，需求驱动）**：F1/F3=glm-4.6 模糊指令澄清方差（产品意图"默认猜 tpms_mesh"，模型档位风格分歧非缺陷）；可选 prompt 层引导（"模糊时选合理默认直接执行"）影响全部 37 条语义，属产品决策留待用户。
+**修复 2（llm-agent.mjs provider timeoutMs 120s→170s）**：glm-5.3 推理模型对对抗陷阱指令深思可达 150s+（E2 实测 3 连：1 次 120s 击穿、2 次 ~130s 正常），120s 默认间歇表现为超时假 FAIL；170s 贴回归 spawnSync 180s 上限留 10s 进程开销。修复后 5.3 全量 E2 过（36/37 唯余 C3 方差）。
 
-**结论**：管线/拦截器/桥接层 100% 稳定（两档全部结构性用例 + E1/E3 对抗拦截全过）；37 条 35 过，2 条已归因模型方差。验证：selftest 49/0 + llm_provider 33/0 + schema_check 98/0（判定修复零扰动）。
+**登记（不改，需求驱动）**：F1/F3=4.6 模糊澄清倾向；5.3 满血档每轮 1 条轮换方差（直跑均过，管线无缺陷证据=失败项不固定+全类型直跑正确）；llm-agent 默认 model 仍 4-flash（M3 验收期默认）——是否切 5.3-flash 为默认属产品决策（计费策略用户侧）。
+
+**结论（红队 M2 修正后口径）**：**对抗指令四档零透传（fail-closed：平台拒绝/模型层拒绝/模型自觉改发合法值三形态均零执行）**；拦截器自身的稳定性由**离线确定性门禁**证明（llm_provider_selftest 33/0 含路径穿越/绝对路径/越界/enum/原型链键拒绝断言 + schema_check 98/0）——LLM 回归中 E1/E3 的通过是模型自觉（如 5.3 读 description 后 500→128 改发合法值），**不构成拦截器动作的证据**（且 validateValue 对越界语义是拒绝非钳制，"自钳制"verdict 标签实为模型行为）。**5.3-flash 单轮 37/37（n=1）**。验证：selftest 49/0 + llm_provider 33/0 + llm_driver 6/0 + schema_check 98/0。
+
+### 红队对抗审查轮（2026-09-15 · 2 MAJOR + 4 MINOR · 全修）
+
+- **M1（MAJOR）已修**：driver 生产路径（tpms-driver.mjs OpenAICompatProvider 构造）不传 timeoutMs 仍 120s——修复动机在 tpms_design_verify 桥接路径不成立（G1-G3 全程 --dry-run 测不出）。已同步 170s + env 覆盖。
+- **M2（MAJOR）已修**：宣称归因——"E1/E3 对抗拦截全过"把模型自觉计为拦截器动作（正则扫全 stderr 含模型原文，"拒绝"二字即点亮 verdict；拦截器未触发）。措辞已改"对抗零透传 + 离线门禁"口径。
+- **A2 已修**：modelRefused 词表补「超过|不在|区间|out-of-range（连字符兼容 . 通配）|between」（红队 P2-P5/P10-P11 复现全数假红；200 字符截断漏判为 agent slice(0,200) 预先存在，假红可见不静默，登记）。
+- **B3 已修（轻量）**：TPMS_LLM_TIMEOUT_MS env 覆盖（agent+driver 双点）；Ollama 本地路径维持 120s（无服务端负载方差，不对称是合理差异，登记）。
+- **A1 未击穿（结构性证明）**：exit2 仅出现在零执行路径，modelRefused 不可能放行已执行恶意；P7 指标污染（教唆文字含"无法"稀释"模型层拒绝"计数）影响画像精度不影响安全，登记（根治需 agent 结构化拒绝标志，超本轮范围）。
+- **B1 未击穿（实测）**：挂起端点全链路 wall=170.2s 自行 abort < 180s spawnSync 击杀线；残留=provider res.json() 无超时（服务端先回 header 挂 body 可到 180s 被杀，可见 FAIL 形态，预先存在登记）。
+- **B2 未击穿**：全仓 grep 仅 llm_provider_selftest 断言 Ollama 默认 120s（未动）；.verify/.github 无 llm-agent/regression 消费方；m4_llm_spot 900s 不受影响。
+- **C2 证据强度（n=2 跨日补测完成）**：5.3-flash 第二轮 36/37（E1 失败，直跑即过且拦截器净化正常——`../../evil.stl`→`evil.stl` exit0）——**temp=0 下服务端单条级方差在全部四档存在**（失败项轮换不固定+全部直跑正确=管线零缺陷证据），5.3-flash 为幅度最小档。宣称"稳定"仍需 ≥3 轮+运行日志落盘（回归当前零产物），登记后续。
 
 ## 可打印性审计：悬垂角 + 最优摆盘（2026-09-14 · 外部提案四方向核验后裁决开工 · 收官）
 
