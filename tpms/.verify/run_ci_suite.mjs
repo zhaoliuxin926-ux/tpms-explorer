@@ -120,7 +120,7 @@ const SCHEDULE = [
   ['native_cae_solver_audit 原生CAE求解器（门22）', '原生CAE审计', 'native_cae_solver_audit.mjs'],
   ['boundary_picker_audit 边界拾取器（门23）', '边界拾取审计', 'boundary_picker_audit.mjs'],
   ['bone_morphometry_audit DICOM与骨计量（门24）', '骨计量审计', 'bone_morphometry_audit.mjs'],
-  ['gcode_slicer_audit G-code切片引擎（门25，19断言——战役三直接层切 F 节 +6）', 'G-code切片审计', 'gcode_slicer_audit.mjs'],
+  ['gcode_slicer_audit G-code切片引擎（门25，21断言——直接层切 F 节 + v2 容器裁剪 F4/F5）', 'G-code切片审计', 'gcode_slicer_audit.mjs'],
   ['ml_pareto_audit ML代理Pareto（门26）', 'ML Pareto审计', 'ml_pareto_audit.mjs'],
   ['gpu_plasticity_audit WebGPU弹塑性大变形（门27）', '弹塑性审计', 'gpu_plasticity_audit.mjs'],
   ['digital_twin_compression_audit 数字孪生压溃失效（门28）', '数字孪生审计', 'digital_twin_compression_audit.mjs'],

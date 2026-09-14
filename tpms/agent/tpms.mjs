@@ -568,6 +568,7 @@ function cmdMesh(a, json) {
     isoUsed: res.isoUsed,
     porosityEstimate: porEst,
     porosityDeviation: Math.abs(porEst - pf),
+    envelopeVolume: res.envelopeVolume, // 表观体积（cube/cylinder 解析包络；C5=容器散度体积——口径专项
     audit, watertight,
     lastAuditCounts: audit,
     solver, porosityTrace: porTrace,
@@ -861,22 +862,35 @@ function cmdSlice(a, json) {
   const layers = a.layers === undefined ? 200 : Number(a.layers);
   if (!Number.isInteger(layers) || layers < 8 || layers > 2000) die('layers 须为 8~2000 整数（层高=试样高/层数）', usage);
   const container = String(a.container ?? 'cube');
-  if (container !== 'cube') die('--container 限 cube（直接层切 v1：域边界即容器；cylinder/mesh 裁剪待后续）', usage);
+  if (!['cube', 'cylinder'].includes(container)) die('--container 限 cube|cylinder', usage);
   const mode = String(a.mode ?? 'solid_network');
   if (mode !== 'solid_network') die('--mode 限 solid_network（shell 的等值语义 dv²−(t/2)² 另属）', usage);
+  // v2 容器裁剪轮：--container-mesh 解锁 C5 任意流形容器层切（sdf 行区间线性求根 ∩ TPMS 区间）
+  let mrSlice = null;
+  if (a['container-mesh'] !== undefined) {
+    let buf;
+    try { buf = readFileSync(String(a['container-mesh'])); } catch (e) { die(`容器 STL 读取失败: ${e?.message ?? e}`, usage); }
+    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    try { mrSlice = core.computeMeshSDF(ab, resolution + 1); } catch (e) { die(`容器 STL 不合格: ${e?.message ?? e}`, usage); }
+  }
 
   core.globalBufferPool.reset();
   let vox;
   try {
     vox = core.buildVoxelModel({
-      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      type, periods, weights: [1, 1, 1, 1], structureMode: mode,
+      containerShape: mrSlice ? 'cube' : container,
       thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
+      containerSdf: mrSlice ? mrSlice.sdf : undefined,
     }, resolution);
   } catch (e) {
     console.error('✗ 体素模型构建失败: ' + (e?.message ?? String(e)));
     process.exit(3);
   }
-  const res = core.directSlice(vox, layers, periods);
+  const res = core.directSlice(vox, layers, periods, {
+    containerShape: mrSlice ? 'mesh' : container,
+    containerSdf: mrSlice ? mrSlice.sdf : undefined,
+  });
   const svg = core.buildSliceSvg(res, periods);
   const outPrefix = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}`);
   const svgFile = outPrefix.replace(/\.(svg|stl)$/i, '') + '.svg';
@@ -887,16 +901,18 @@ function cmdSlice(a, json) {
   const scale = periods / (2 * Math.PI);
   const voxelVol = vox.solidCount * Math.pow(hWc * scale, 3);
   const out = {
-    command: 'slice', type, porosity: pf, periods, resolution, layers, container, mode,
+    command: 'slice', type, porosity: pf, periods, resolution, layers,
+    container: mrSlice ? 'mesh' : container, mode,
     file: svgFile, fileBytes: Buffer.byteLength(svg),
     layerHeightMm: res.layerHeightMm,
     slicedVolumeMm3: res.volumeMm3,
-    voxelVolumeMm3: voxelVol,
+    voxelVolumeMm3: vox.solidCount * Math.pow(hWc * scale, 3),
     crossCaliberDeviationPct: Math.abs(res.volumeMm3 - voxelVol) / voxelVol * 100,
     totalRings: res.totalRings,
     minLayerNetAreaMm2: Math.min(...res.layers.map((l) => l.netArea)),
     boundary: '层切积分体积与体素体积为同模型两独立离散口径（对拍偏差随分辨率/层数收敛）；'
-      + '等值面与 mesh/solid 同 iso；跳过三角化无弦化误差；层数即增材层高语义（层高=试样高/层数）',
+      + '等值面与 mesh/solid 同 iso；跳过三角化无弦化误差；层数即增材层高语义（层高=试样高/层数）；'
+      + (mrSlice ? '容器=C5 mesh SDF 行区间线性求根（容器体积口径=散度 volumePhys）' : container === 'cylinder' ? '容器=cylinder 解析区间（精确一阶）' : '容器=cube 域边界'),
   };
   if (json) { console.log(JSON.stringify(out, null, 2)); return; }
   console.log('TPMS 直接隐式层切（Marching Squares，无三角网格中转）');
@@ -1130,7 +1146,7 @@ const KNOWN_FLAGS = {
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
-  slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'mode', 'out', 'json', 'help'],
+  slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'out', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
