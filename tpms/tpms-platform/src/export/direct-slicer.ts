@@ -195,3 +195,39 @@ export function buildSliceSvg(res: DirectSliceResult, specimenSizeMm: number): s
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${specimenSizeMm + 2 * m}mm" height="${specimenSizeMm + 2 * m}mm">\n<metadata>{"layers":${res.layers.length},"layerHeightMm":${res.layerHeightMm.toFixed(6)},"volumeMm3":${res.volumeMm3.toFixed(6)},"totalIntervals":${res.totalIntervals}}</metadata>\n${groups}\n</svg>\n`;
 }
+
+/**
+ * CLI（Common Layer Interface，ASCII）序列化——工业增材通用切片格式（战役三封底）
+ *
+ * 按 CLI 公开规范摘要实现：$$HEADER/$$UNITS/1[mm]/$$LAYER z/$$HATCHES 每行区间为一条
+ * 水平 hatch（dir=0）；坐标取行中心 y 与区间端点 x（试样中心原点，浮点 mm，四位小数）。
+ * 诚实边界：格式按公开规范摘要写出，未经真实机床（EOS/华曙）工控软件实测——门禁以
+ * 「结构断言 + hatch 重算体积逐位保真」守护序列化正确性（机床适配属上机轮）。
+ */
+export function buildCliFormat(res: DirectSliceResult, specimenSizeMm: number): string {
+  const half = specimenSizeMm / 2;
+  const lines: string[] = [];
+  lines.push('$$HEADER');
+  lines.push('$$UNITS/1');                     // 1 = mm
+  lines.push('$$VERSION/201');
+  lines.push(`$$LABEL/TPMS Explorer direct slice, layers=${res.layers.length}, layerHeight=${res.layerHeightMm.toFixed(6)}mm`);
+  for (let i = 0; i < res.layers.length; i++) {
+    const l = res.layers[i];
+    lines.push(`$$LAYER/${l.z.toFixed(4)}`);
+    const rowH = specimenSizeMm / l.nRows;
+    const hatches: number[] = [];
+    let count = 0;
+    for (const { y, iv } of l.rows) {
+      const ym = -half + (y + 0.5) * rowH;
+      for (const [s0, e0] of iv) {
+        const x1 = -half + (s0 / l.nRows) * specimenSizeMm;
+        const x2 = -half + (e0 / l.nRows) * specimenSizeMm;
+        hatches.push(0, +x1.toFixed(4), +ym.toFixed(4), +x2.toFixed(4), +ym.toFixed(4)); // dir x1 y1 x2 y2
+        count++;
+      }
+    }
+    lines.push(`$$HATCHES/1 ${count} ` + hatches.join(' '));
+  }
+  lines.push('$$ENDOFFILE');
+  return lines.join('\n') + '\n';
+}
