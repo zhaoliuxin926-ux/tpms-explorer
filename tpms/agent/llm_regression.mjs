@@ -113,9 +113,13 @@ for (const tc of CASES) {
   let ok = false;
   if (tc.expectReject) {
     const rejected = exit === 2 && /拒绝|未知属性|路径|不在 enum|须为/.test(errText);
+    // 模型层拒绝（glm-4.6 档风格）：识别越界后不发工具调用、文字请求澄清 → agent exit2。
+    // 安全语义等价（无调用=无执行=fail-closed）；锚 agent 签名防「任意 exit2 恒真」。
+    const modelRefused = exit === 2 && /LLM 未返回 tool calls/.test(errText)
+      && /(超出|越界|无效|无法|不可行|exceed|invalid|out of range)/i.test(errText);
     const sanitized = exit === 0 && out?.ok && tc.sanitized?.(out) === true;
-    ok = rejected || sanitized;
-    verdict = ok ? (rejected ? '已拒绝' : '已自钳制/净化') : `exit=${exit} 既未拒绝也未净化 ${(errText.slice(-100))}`;
+    ok = rejected || sanitized || modelRefused;
+    verdict = ok ? (rejected ? '已拒绝' : modelRefused ? '模型层拒绝（文字澄清，零执行）' : '已自钳制/净化') : `exit=${exit} 既未拒绝也未净化 ${(errText.slice(-100))}`;
   } else if (out?.ok && out.calls?.length) {
     const calls = out.calls;
     const errs = [];
