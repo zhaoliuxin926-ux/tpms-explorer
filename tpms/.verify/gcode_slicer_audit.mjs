@@ -132,13 +132,13 @@ console.log('\n[E] gyroid 真实网格（R=16）');
     check('F1 ' + ty + ' 直接层切 ≡ mesh 发散体积（双口径 ≤2%）',
       rs.status === 0 && rm.status === 0 && dev <= 0.02,
       'dev=' + (Number.isFinite(dev) ? (dev * 100).toFixed(2) + '%' : 'n/a') + ' sliceExit=' + rs.status + ' meshExit=' + rm.status);
-    if (js) {
-      const svg = readFileSync(js.file, 'utf8');
+    if (js && js.files && js.files[0]) {
+      const svg = readFileSync(js.files[0].file, 'utf8');
       const gCount = (svg.match(/<g id="layer-/g) || []).length;
       check('F2 ' + ty + ' SVG 结构（160 层 g + metadata + 扫描路径）',
         gCount === 160 && svg.includes('<metadata>') && svg.includes(' H '),
-        'g=' + gCount + ' bytes=' + js.fileBytes);
-      try { unlinkSync(js.file); unlinkSync(pre + '_m.stl'); } catch { /* */ }
+        'g=' + gCount + ' bytes=' + js.files[0].bytes);
+      try { unlinkSync(js.files[0].file); unlinkSync(pre + '_m.stl'); } catch { /* */ }
     } else check('F2 ' + ty + ' SVG 结构', false, 'slice JSON 缺失');
   }
   {
@@ -210,8 +210,44 @@ console.log('\n[E] gyroid 真实网格（R=16）');
   }
 }
 
+
+// ── F6. CLI（Common Layer Interface）工业格式封底：结构断言 + 序列化保真对拍 ──
+{
+  const CLI6 = join(HERE, '../agent/tpms.mjs');
+  const run6 = (...args) => spawnSync(process.execPath, [CLI6, ...args], { encoding: 'utf8' });
+  const pre = join(tmpdir(), 'tpms_f_cli_' + process.pid);
+  const rs = run6('slice', '--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--layers', '40', '--format', 'both', '--out', pre, '--json');
+  let js = null;
+  try { js = JSON.parse(rs.stdout); } catch { /* */ }
+  const cliPath = js && js.files ? js.files.map((x) => x.file).find((p) => p.endsWith('.cli')) : null;
+  if (js && cliPath) {
+    const cli = readFileSync(cliPath, 'utf8');
+    const layers = (cli.match(/^\$\$LAYER\//gm) || []).length;
+    const DD = String.fromCharCode(36, 36); // "$$" —— 字面量写法会触发替换串折叠史，用码点构造最稳
+    const structOk = cli.startsWith(DD + 'HEADER') && cli.includes(DD + 'UNITS/1') && cli.includes(DD + 'VERSION/201')
+      && cli.trimEnd().endsWith(DD + 'ENDOFFILE') && layers === 40;
+    check('F6 CLI 结构（HEADER/UNITS/VERSION/40×LAYER/HATCHES/ENDOFFILE）', structOk, 'layers=' + layers + ' head16=' + JSON.stringify(cli.slice(0, 12)));
+    // 序列化保真对拍：解析 $HATCHES 重算体积（Σ hatch 长 × 行距 × 层高）≈ slicedVolumeMm3
+    // 坐标四位小数舍入 → 相对差 ~1e-4 量级，容差 0.1%
+    let recon = 0;
+    const rowD = 2 / 64, layerH = 2 / 40; // periods=2, nRows=64
+    for (const m of cli.matchAll(/^\$\$HATCHES\/1 (\d+) (.*)$/gm)) {
+      const n = Number(m[1]);
+      const nums = m[2].trim().split(/\s+/).map(Number);
+      for (let h = 0; h < n; h++) recon += (nums[h * 5 + 3] - nums[h * 5 + 1]) * rowD * layerH;
+    }
+    const dev = Math.abs(recon - js.slicedVolumeMm3) / js.slicedVolumeMm3;
+    check('F6 CLI hatch 重算体积 ≡ slicedVolumeMm3（序列化保真 ≤0.1%）', dev <= 0.001,
+      'recon=' + recon.toFixed(4) + ' vs ' + js.slicedVolumeMm3.toFixed(4) + ' dev=' + (dev * 100).toFixed(3) + '%');
+    try { unlinkSync(cliPath); for (const x of js.files) unlinkSync(x.file); } catch { /* */ }
+  } else {
+    check('F6 CLI 结构', false, 'slice both 格式失败 exit=' + rs.status);
+    check('F6 CLI hatch 重算体积', false, 'n/a');
+  }
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 20) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 20（v2 容器裁剪 F4/F5 +2、F3 重组净 +1）'); process.exit(1); }
+  if (passCount < 22) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 22（F6 CLI 封底 +2）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

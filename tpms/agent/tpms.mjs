@@ -9,7 +9,7 @@
 //   node tpms.mjs list
 //   node tpms.mjs estimate --type gyroid --porosity 0.65 [--material tc4] [--json]
 import { loadCore } from './core-loader.mjs';
-import { writeFileSync, existsSync, readFileSync, renameSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync, renameSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 // ── A2 孔隙率精确求解器（解析积分口径 + 一轮割线校正）──
@@ -891,10 +891,22 @@ function cmdSlice(a, json) {
     containerShape: mrSlice ? 'mesh' : container,
     containerSdf: mrSlice ? mrSlice.sdf : undefined,
   });
-  const svg = core.buildSliceSvg(res, periods);
+  // 输出格式：svg（默认，矢量观察件）/ cli（工业 Common Layer Interface）/ both
+  const fmt = String(a.format ?? 'svg');
+  if (!['svg', 'cli', 'both'].includes(fmt)) die('--format 须 svg|cli|both', usage);
   const outPrefix = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}`);
-  const svgFile = outPrefix.replace(/\.(svg|stl)$/i, '') + '.svg';
-  writeFileSync(svgFile, svg, 'utf8');
+  const baseName = outPrefix.replace(/\.(svg|cli|stl)$/i, '');
+  const svgFile = baseName + '.svg';
+  const cliFile = baseName + '.cli';
+  const outFiles = [];
+  if (fmt === 'svg' || fmt === 'both') {
+    writeFileSync(svgFile, core.buildSliceSvg(res, periods), 'utf8');
+    outFiles.push(svgFile);
+  }
+  if (fmt === 'cli' || fmt === 'both') {
+    writeFileSync(cliFile, core.buildCliFormat(res, periods), 'utf8');
+    outFiles.push(cliFile);
+  }
 
   // 双口径对拍：同模型体素体积（solidCount×h³，独立积分口径）
   const hWc = 2 * Math.PI / resolution;
@@ -903,7 +915,7 @@ function cmdSlice(a, json) {
   const out = {
     command: 'slice', type, porosity: pf, periods, resolution, layers,
     container: mrSlice ? 'mesh' : container, mode,
-    file: svgFile, fileBytes: Buffer.byteLength(svg),
+    files: outFiles.map((p) => ({ file: p, bytes: statSync(p).size })),
     layerHeightMm: res.layerHeightMm,
     slicedVolumeMm3: res.volumeMm3,
     voxelVolumeMm3: vox.solidCount * Math.pow(hWc * scale, 3),
@@ -920,7 +932,7 @@ function cmdSlice(a, json) {
   console.log(`  层切         ${layers} 层 × 层高 ${res.layerHeightMm.toFixed(4)} mm（试样全宽 ${periods} mm）`);
   console.log(`  层切体积     ${res.volumeMm3.toFixed(2)} mm³（体素口径对照 ${voxelVol.toFixed(2)} mm³，偏差 ${out.crossCaliberDeviationPct.toFixed(2)}%）`);
   console.log(`  轮廓环       ${res.totalRings} 个（嵌套定向：外环+ / 内孔−）`);
-  console.log(`  SVG 已写入   ${svgFile}（${(out.fileBytes / 1024).toFixed(1)} KB）`);
+  for (const p of outFiles) console.log(`  已写入       ${p}（${(statSync(p).size / 1024).toFixed(1)} KB）`);
 }
 
 function cmdScenario(a, json) {
@@ -1146,7 +1158,7 @@ const KNOWN_FLAGS = {
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
-  slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'out', 'json', 'help'],
+  slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'format', 'out', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));

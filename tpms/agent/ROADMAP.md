@@ -299,6 +299,13 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 战役三 v3：CLI 工业格式封底（2026-09-14 · 收官）
+
+- `buildCliFormat`：ASCII Common Layer Interface 序列化（$$HEADER/$$UNITS/1[mm]/$$VERSION/201/$$LAYER z/$$HATCHES 每行区间一条水平 hatch/$$ENDOFFILE）；CLI `--format svg|cli|both`（默认 svg；输出 JSON files 数组）。
+- 诚实边界：格式按 CLI 公开规范摘要写出，未经真实机床（EOS/华曙）工控软件实测——门禁以**结构断言 + hatch 段重算体积保真对拍（≤0.1%）**守护序列化正确性，机床适配属上机轮。
+- 门禁 gcode 21→**23**（F6：结构五要素 + 保真对拍）守卫 22。
+- 坑（新模式）：**String.replace 替换串中 `$$` 折叠为 `$`**（replacement 特殊序列）——经 replace 注入的代码文本中字符串字面量 `$$XXX` 全部变 `$XXX`（正则 `\\$\\$` 因双反斜杠幸存）；断言文本 bug 制造 head=false 假红一轮。防御：注入含 `$` 的代码用码点构造（`String.fromCharCode(36,36)`）或 split/join。
+
 ## 战役三 v2：容器裁剪直接层切（2026-09-14 · 方案 1 选中 · 收官）
 
 **裁决**：方案 1（容器裁剪）vs 方案 2（CLI 工业格式）——1 有真数学（双场 1D 布尔交）+ 强验收锚（mesh 发散体积独立真值）；2 是纯序列化且机床端不可测（门禁只能语法断言），叠加在后。

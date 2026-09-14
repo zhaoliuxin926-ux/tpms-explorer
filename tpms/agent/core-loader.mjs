@@ -23,7 +23,7 @@ const CORE_EXPORTS = [
   export { buildBinarySTL } from ${JSON.stringify(join(PLATFORM, 'src/export/stl-exporter.ts'))};`,
   `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
   `export { buildOpenfoamPolyMesh, buildStoredZip } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-polymesh-exporter.ts'))};`,
-  `export { directSlice, buildSliceSvg } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
+  `export { directSlice, buildSliceSvg, buildCliFormat } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
   `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');
 
