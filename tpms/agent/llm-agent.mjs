@@ -131,6 +131,11 @@ async function main() {
       baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
       apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
       model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-4-flash',
+      // 推理模型（glm-5.x）对对抗/陷阱指令深思可达 150s+，120s 默认间歇击穿
+      // （E2 实测 3 次中 1 次超时、2 次 ~130s 正常）；170s 贴回归 spawnSync 180s 上限。
+      // TPMS_LLM_TIMEOUT_MS 可覆盖（红队 B3：死端点等待期可调；Ollama 本地路径无服务端
+      // 负载方差，维持 provider 默认 120s 不对称是合理差异）
+      timeoutMs: Number(process.env.TPMS_LLM_TIMEOUT_MS) || 170_000,
     });
     } catch (e) { console.error('✗ Provider 构造失败: ' + (e?.message ?? e)); process.exitCode = 2; return; } // 红队 C C-6
   } else {

@@ -123,6 +123,9 @@ async function main() {
       baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
       apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
       model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-4-flash',
+      // 与 llm-agent 同步（红队 M1）：推理模型深思 150s+，生产修复决策路径不可仍 120s 击穿；
+      // TPMS_LLM_TIMEOUT_MS 可覆盖（红队 B3：死端点等待期可调）
+      timeoutMs: Number(process.env.TPMS_LLM_TIMEOUT_MS) || 170_000,
     });
   } else {
     provider = new OllamaProvider({ baseUrl: a.baseUrl, model: a.model });
