@@ -299,6 +299,16 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 战役三 v4：前端切片预览画布（2026-09-14 · 方案 A · 收官）
+
+**裁决**：用户明确"纯代码边际收益递减，优先现实闭环"——第一梯队（论文元数据/试样上机）均用户侧；代码侧仅做此项"看得见摸得着"的轻量战役（方案 B 仍需用户装 Ollama）。
+
+**交付**：工程版 grp-view（视图与工具组，与 C5 容器卡同组——**field 级内嵌，sect 计数零扰动，ui_jump 分组哨兵零触碰**）新增「直接层切预览」卡：生成按钮（当前参数一次性预计算 120 层 directSlice，百 ms 级）+ 层位 Z 滑块（仅渲染选层零重复计算）+ Canvas 2D（灰填充带 + 深色扫描向量，与 CLI slice 同源渲染口径）；容器跟随构型（cube/cylinder/外部 STL 共用 meshCont SDF）；shell 模式 toast 守卫（与 CLI 同语义）。
+
+**门禁**：新冒烟 `slicepv_check.mjs` 5 断言（卡片定位 grp-view/生成就绪+滑块启用/canvas 像素非空白 18915px/滑块响应层位读数/shell 守卫）并入 run_all 第 7 套件（门 39 内部扩容，**44 门总数不变**）。
+
+**坑**：①`spawnSync` 起常驻服务器同步阻塞等退出（永久卡死，stdout 零字节是签名）——常驻服务必须 `spawn`；②TS `as`/`!` 语法混入 .mjs 直接 SyntaxError（不经 rolldown 的脚本写纯 JS）；③playwright actionability 等待对折叠组内元素超时——DOM 直点（el.click() + Event('input')）绕行；④C5 卡实际在 grp-view 而非构型组（v9 登记口径与 DOM 漂移——以 DOM 为准）。
+
 ## 战役三 v3：CLI 工业格式封底（2026-09-14 · 收官）
 
 - `buildCliFormat`：ASCII Common Layer Interface 序列化（$$HEADER/$$UNITS/1[mm]/$$VERSION/201/$$LAYER z/$$HATCHES 每行区间一条水平 hatch/$$ENDOFFILE）；CLI `--format svg|cli|both`（默认 svg；输出 JSON files 数组）。
