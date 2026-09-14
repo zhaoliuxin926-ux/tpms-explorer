@@ -41,7 +41,7 @@ import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
 import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
-import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite } from './export';
+import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite, directSlice } from './export';
 import { downloadBlob } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
@@ -800,6 +800,89 @@ function bindMeshContainer(): void {
   });
 }
 bindMeshContainer();
+
+// ── 【战役三】直接层切预览（扫描线区间法 · UI 感知层）────────────────
+// 一次性预计算全部层（directSlice 纯计算 ~百 ms 量级），Z 滑块只做渲染选层零重复计算；
+// 容器跟随构型（cube/cylinder/外部 STL 共用 meshCont SDF）；渲染口径与 CLI slice 完全同源。
+let slicePrev: import('./export/direct-slicer').DirectSliceResult | null = null;
+function renderSlicePreview(): void {
+  const cv = document.getElementById('slicepv-canvas') as HTMLCanvasElement | null;
+  const zVal = document.getElementById('slicepv-z-value') as HTMLElement | null;
+  const info = document.getElementById('slicepv-info') as HTMLElement | null;
+  const slider = document.getElementById('slicepv-z') as HTMLInputElement | null;
+  if (!cv || !slicePrev || !zVal || !info || !slider) return;
+  const k = Math.min(slicePrev.layers.length - 1, Math.max(0, Number(slider.value)));
+  const l = slicePrev.layers[k];
+  const size = slicePrev.layers[0] ? getState().cellSize : 1; // 试样全宽 mm（periods）
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const half = cv.width / 2;
+  const mm = cv.width / size; // mm → px
+  // 固相填充带（浅）+ 扫描向量（深）
+  ctx.fillStyle = 'rgba(148,163,184,0.55)';
+  const rowH = size / l.nRows;
+  for (const { y, iv } of l.rows) {
+    const yTop = size / 2 - (y * rowH + rowH); // canvas y 向下
+    for (const [s0, e0] of iv) {
+      const x1 = (s0 / l.nRows) * size - size / 2;
+      ctx.fillRect(half + x1 * mm, half + yTop * mm, (e0 - s0) / l.nRows * size * mm, rowH * mm + 0.5);
+    }
+  }
+  ctx.strokeStyle = 'rgba(15,23,42,0.9)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const { y, iv } of l.rows) {
+    const ym = half + (size / 2 - (y + 0.5) * rowH) * mm;
+    for (const [s0, e0] of iv) {
+      const x1 = half + ((s0 / l.nRows) * size - size / 2) * mm;
+      const x2 = half + ((e0 / l.nRows) * size - size / 2) * mm;
+      ctx.moveTo(x1, ym); ctx.lineTo(x2, ym);
+    }
+  }
+  ctx.stroke();
+  zVal.textContent = `第 ${k + 1}/${slicePrev.layers.length} 层 · z=${l.z.toFixed(2)}mm`;
+  info.textContent = `净面积 ${l.netArea.toFixed(2)}mm²`;
+}
+function bindSlicePreview(): void {
+  const gen = document.getElementById('slicepv-gen') as HTMLButtonElement | null;
+  const slider = document.getElementById('slicepv-z') as HTMLInputElement | null;
+  const status = document.getElementById('slicepv-status') as HTMLElement | null;
+  if (!gen || !slider || !status) return;
+  gen.addEventListener('click', () => {
+    const s = getState();
+    if (s.structureMode !== 'solid_network') { flashToast('直接层切预览仅支持 solid_network（与 CLI slice 同语义）'); return; }
+    status.textContent = '⏳ 层切计算中（隐式场扫描线区间法）…';
+    // 异步一拍：让状态行先渲染（计算为百 ms 级同步，避免视觉冻结感）
+    setTimeout(() => {
+      try {
+        const R = 64;
+        const useMesh = meshCont !== null;
+        const vox = buildVoxelModel({
+          type: s.type, periods: s.cellSize, weights: s.weights, structureMode: s.structureMode,
+          containerShape: useMesh ? 'cube' : s.containerShape, thickness: s.thickness,
+          targetPorosity: s.porosity / 100, iso: 0, customFormula: s.type === 'custom' ? s.customFormula : '',
+          containerSdf: useMesh ? (meshSdfFor(R) ?? undefined) : undefined,
+        }, R);
+        const res = directSlice(vox, 120, s.cellSize, {
+          containerShape: useMesh ? 'mesh' : s.containerShape,
+          containerSdf: useMesh ? (meshSdfFor(R) ?? undefined) : undefined,
+        });
+        slicePrev = res;
+        slider.disabled = false;
+        slider.max = String(res.layers.length - 1);
+        renderSlicePreview();
+        status.textContent = `✓ ${res.layers.length} 层就绪 · 层高 ${res.layerHeightMm.toFixed(3)}mm · 总体积 ${res.volumeMm3.toFixed(2)}mm³（${useMesh ? '外部 STL 容器' : s.containerShape} 裁剪）——拖动层位滑块查看断面`;
+      } catch (e) {
+        slicePrev = null;
+        slider.disabled = true;
+        status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
+      }
+    }, 30);
+  });
+  slider.addEventListener('input', renderSlicePreview);
+}
+bindSlicePreview();
 
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────

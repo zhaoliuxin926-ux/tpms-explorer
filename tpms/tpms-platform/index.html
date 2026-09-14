@@ -1314,6 +1314,14 @@ window.addEventListener('error', function(e) {
           <div class="field-note" id="meshcont-status"></div>
         </div>
         <div class="field">
+          <div class="lbl"><span>直接层切预览 (Direct Slicing)</span><span class="val" id="slicepv-info">—</span></div>
+          <button class="opt" id="slicepv-gen" style="width:100%">生成层切（当前参数 · 120 层）</button>
+          <div class="lbl" style="margin-top:6px"><span>层位 Z</span><span class="val" id="slicepv-z-value">—</span></div>
+          <input type="range" id="slicepv-z" min="0" max="119" value="60" step="1" disabled>
+          <canvas id="slicepv-canvas" width="256" height="256" style="width:100%;aspect-ratio:1;margin-top:6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14)"></canvas>
+          <div class="field-note" id="slicepv-status">【战役三】扫描线直接层切：跳过三角网格在隐式场上直出增材扫描路径（灰色=固相填充带，深色=扫描向量）。容器跟随构型（cube/cylinder/外部 STL）；体积口径经门禁对拍（vs 网格发散 ≤0.4%）。仅 solid_network。</div>
+        </div>
+        <div class="field">
           <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
           <div class="opt-row" style="margin-bottom:6px">
             <button class="opt active" data-slice-axis="z">Z 轴<span class="o-sub">Z</span></button>
