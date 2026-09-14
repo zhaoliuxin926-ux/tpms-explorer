@@ -299,6 +299,20 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 可打印性审计：悬垂角 + 最优摆盘（2026-09-14 · 外部提案四方向核验后裁决开工 · 收官）
+
+**裁决**：用户"现在想写代码"。外部 AI 四方向提案先做版本树失焦核验——③渗透率半失焦（K-C 解析 + FD-Darcy 门 22 已在，真空白=K 张量/WSS 统计）、②应力梯度半失焦（stress-driven-field + vm 调制已在，真空白=外部 FEA 点云摄入）、①悬垂角全空白（`overhang` 全源码零命中 grep 实证）、④Toolpath TSP 空白但"工业成熟度"宣称无验证渠道且 Bambu Studio 不吃 CLI——**二选一裁决悬垂角胜出**（解析实现面小 + 与试样上机真闭环）。**外部提案的 α=arcsin|n·b| 判定方向写反（α<45° 实为安全区），实现前独立推导纠正**——α=朝下面与水平面夹角 arccos(−N·b)，0°=水平悬挑最危险，critical ⟺ α<45° ⟺ N·b<−√2/2。
+
+**交付**：`physics/printability-audit.ts`——auditOverhang（两遍定向：全量发散体积定符号再逐面累积，凹区域贡献可负、单遍中途 vol6 过零会让个别面法向翻转）+ 面积加权报告（critical 面积比/朝下面积/α 九桶直方图 10° 分箱）+ searchBuildOrientation（Fibonacci 螺旋确定性球面采样 512 方向，无 RNG）。CLI `overhang --input <stl> [--critical 45] [--search]`：parseSTL 焊接 → checkMesh 水密门 fail-closed exit3（开放网格外向法向不可定向）→ audit；诚实边界（45° 为无支撑常用工程阈值实际 30~60°/面积比≠支撑体积/寻优单目标/与切片器支撑预览交叉复核）。
+
+**门禁**：gcode_slicer_audit 23→32（守卫 32）。F7 十断言：a 立方体 1/6 精确锚 / b 反向缠绕定向自愈 / c **critical=89° 方向语义钉**（竖直面 α=90° 恰不触发——α 口径若反得 5/6 必炸）/ d **icosphere 球面积极分解析锚 (2−√2)/4=14.645%±1%**（真值与实现不同源）/ e 立方体最优摆盘=体对角零支撑（ratio=0 且距最近对角 ≤15°）/ f 确定性 JSON 逐字节 / g gyroid R16 悬垂带 / h CLI 冒烟 / i 三守卫（critical=90 exit2/文件缺失 exit2/非水密 exit3）。
+
+**specimens 实测（6 STL，上机前摆盘依据）**：critical 面积比 11.4~13.6%，**最优摆盘收益仅 ±1pp**（S1 13.47→12.39/S3 12.87→12.81/S5 13.58→13.43）——**TPMS 晶格法向近各向同性，换方向几乎不减支撑需求**（朝下面恒 50.0% 佐证；gyroid R16 门禁实测 14.1% 与球锚 14.64% 吻合）。工程含义：打印 TPMS 试样的支撑控制应走切片器参数/工艺侧而非摆盘；摆盘寻优对各向异性构件（C5 解剖支架）仍保留价值。
+
+**顺手修复（既有潜伏缺陷）**：gcode_slicer_audit.mjs 用 `unlinkSync` 却从未 import——ReferenceError 被 `catch {}` 吞掉，F1 轮起临时文件清理一直静默失效（恒真守卫同族：吞错掩盖未定义符号）。import 补一行。
+
+**验证**：tsc 0 错 + gcode 32/0 + selftest 49/0 + schema_check 98/0 + vite build（docs/platform 零 diff——纯 Node 面零 UI 扰动）+ 全量 44 门复验。
+
 ## 战役三 v4：前端切片预览画布（2026-09-14 · 方案 A · 收官）
 
 **裁决**：用户明确"纯代码边际收益递减，优先现实闭环"——第一梯队（论文元数据/试样上机）均用户侧；代码侧仅做此项"看得见摸得着"的轻量战役（方案 B 仍需用户装 Ollama）。

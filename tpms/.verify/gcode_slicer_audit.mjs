@@ -15,7 +15,7 @@
  * 运行：node gcode_slicer_audit.mjs
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -32,13 +32,14 @@ const BUNDLE = join(tmpdir(), 'tpms_gcode_audit_bundle.mjs');
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
     `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
     `export { directSlice, buildSliceSvg } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
+    `export { auditOverhang, searchBuildOrientation } from ${JSON.stringify(join(PLATFORM, 'src/physics/printability-audit.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { sliceMesh, compileGcode, buildSurface, buildVoxelModel, directSlice, buildSliceSvg } = await import(pathToFileURL(BUNDLE));
+const { sliceMesh, compileGcode, buildSurface, buildVoxelModel, directSlice, buildSliceSvg, auditOverhang, searchBuildOrientation } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -246,8 +247,124 @@ console.log('\n[E] gyroid 真实网格（R=16）');
   }
 }
 
+
+// ── F7. 可打印性审计（2026-09-14 悬垂角战役）：解析锚 + 方向语义钉 + 摆盘寻优 + CLI 冒烟 ──
+{
+  // 单位立方体（12 三角外向缠绕；与 A 节同构）
+  const cubePos = new Float32Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
+  const cubeIdx = new Uint32Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 1,2,6, 1,6,5, 2,3,7, 2,7,6, 3,0,4, 3,4,7]);
+  const r = auditOverhang(cubePos, cubeIdx, [0, 0, 1]);
+  check('F7a 立方体 b=[0,0,1]：ratio=1/6、朝下面积=1、直方图全落 0° 桶',
+    Math.abs(r.criticalAreaRatio - 1 / 6) < 1e-15 && Math.abs(r.downFacingArea - 1) < 1e-12
+      && Math.abs(r.alphaHistogram[0] - 1) < 1e-12 && r.alphaHistogram.slice(1).every((v) => v === 0)
+      && r.skippedDegenerate === 0,
+    'ratio=' + r.criticalAreaRatio);
+
+  // 反向缠绕自愈：逐面顶点逆序 → 发散体积<0 → 法向整体翻转，结果不变
+  const flipIdx = new Uint32Array(cubeIdx.length);
+  for (let t = 0; t < cubeIdx.length; t += 3) { flipIdx[t] = cubeIdx[t]; flipIdx[t + 1] = cubeIdx[t + 2]; flipIdx[t + 2] = cubeIdx[t + 1]; }
+  const rf = auditOverhang(cubePos, flipIdx, [0, 0, 1]);
+  check('F7b 反向缠绕定向自愈（ratio 不变 1/6）', Math.abs(rf.criticalAreaRatio - 1 / 6) < 1e-15, 'ratio=' + rf.criticalAreaRatio);
+
+  // critical=89°：竖直面 α=90° 恰不触发、底面 α=0° 仍触发 → ratio 仍 1/6
+  //（α 方向语义若弄反——如把 α 当「与竖直轴夹角」——竖直面会触发得 5/6，必炸）
+  const r89 = auditOverhang(cubePos, cubeIdx, [0, 0, 1], 89);
+  check('F7c 方向语义钉（critical=89° 竖直面不触发，ratio 仍 1/6）', Math.abs(r89.criticalAreaRatio - 1 / 6) < 1e-12, 'ratio=' + r89.criticalAreaRatio);
+
+  // 单位球解析锚（icosphere 细分 3 = 1280 面）：critical ⟺ N·b < −cos45°，
+  // 球面积极分占比 = (1−cos135°)/2 = (2−√2)/4 ≈ 14.6447%（真值与实现不同源：解析积分 vs 三角统计）
+  const t0 = (1 + Math.sqrt(5)) / 2;
+  let verts = [[-1, t0, 0], [1, t0, 0], [-1, -t0, 0], [1, -t0, 0], [0, -1, t0], [0, 1, t0], [0, -1, -t0], [0, 1, -t0], [t0, 0, -1], [t0, 0, 1], [-t0, 0, -1], [-t0, 0, 1]];
+  let faces = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+  const nrmv = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
+  verts = verts.map(nrmv);
+  for (let s = 0; s < 3; s++) {
+    const cache = new Map();
+    const mid = (x, y) => { const key = x < y ? x + ':' + y : y + ':' + x; let m = cache.get(key); if (m === undefined) { m = verts.length; verts.push(nrmv([(verts[x][0] + verts[y][0]) / 2, (verts[x][1] + verts[y][1]) / 2, (verts[x][2] + verts[y][2]) / 2])); cache.set(key, m); } return m; };
+    const next = [];
+    for (const [x, y, z] of faces) { const ab = mid(x, y), bc = mid(y, z), ca = mid(z, x); next.push([x, ab, ca], [y, bc, ab], [z, ca, bc], [ab, bc, ca]); }
+    faces = next;
+  }
+  const sphPos = new Float32Array(verts.length * 3);
+  verts.forEach((v, i) => { sphPos[i * 3] = v[0]; sphPos[i * 3 + 1] = v[1]; sphPos[i * 3 + 2] = v[2]; });
+  const sphIdx = new Uint32Array(faces.length * 3);
+  faces.forEach((f, i) => { sphIdx[i * 3] = f[0]; sphIdx[i * 3 + 1] = f[1]; sphIdx[i * 3 + 2] = f[2]; });
+  const sphAnchor = (2 - Math.SQRT2) / 4;
+  const rsph = auditOverhang(sphPos, sphIdx, [0, 0, 1]);
+  check(`F7d icosphere 解析锚（球面积极分 ${(sphAnchor * 100).toFixed(2)}% ±1%）`,
+    Math.abs(rsph.criticalAreaRatio - sphAnchor) <= 0.01,
+    'ratio=' + (rsph.criticalAreaRatio * 100).toFixed(3) + '% vs 解析 ' + (sphAnchor * 100).toFixed(3) + '%');
+
+  // 摆盘寻优：立方体全局最优 = 体对角摆盘（各面 N·b=±1/√3 均不过临界）→ 零支撑
+  const sr = searchBuildOrientation(cubePos, cubeIdx, 45, 512);
+  const diag = Math.max(...[[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]]
+    .map((d) => (sr.bestDir[0] * d[0] + sr.bestDir[1] * d[1] + sr.bestDir[2] * d[2]) / Math.sqrt(3)));
+  const angDeg = (Math.acos(Math.min(1, diag)) * 180) / Math.PI;
+  check('F7e 立方体最优摆盘=体对角零支撑（ratio=0 且距最近对角 ≤15°）',
+    sr.bestCriticalRatio === 0 && angDeg <= 15, 'ratio=' + sr.bestCriticalRatio + ' 夹角=' + angDeg.toFixed(1) + '°');
+
+  // 确定性：Fibonacci 球无 RNG，同输入双跑 JSON 逐字节一致
+  const sr2 = searchBuildOrientation(cubePos, cubeIdx, 45, 512);
+  check('F7f 摆盘寻优确定性（JSON 逐字节一致）', JSON.stringify(sr) === JSON.stringify(sr2));
+
+  // 真实 TPMS 网格：gyroid R16（E 节同参数），法向近各向同性 → ratio 落宽带（实测后钉）
+  const res = buildSurface({
+    type: 'gyroid', iso: 0, periods: 1, resolution: 16, targetPorosity: 0.7,
+    weights: [1, 1, 1, 1], structureMode: 'solid_network', containerShape: 'cube',
+    thickness: 1.0, gradientDir: 'z', hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
+    customFormula: '', preview: false,
+  });
+  const rg = auditOverhang(res.positions, res.indices, [0, 0, 1]);
+  check(`F7g gyroid 真实网格悬垂带 0.05~0.35（实测 ${(rg.criticalAreaRatio * 100).toFixed(1)}%）`,
+    rg.criticalAreaRatio > 0.05 && rg.criticalAreaRatio < 0.35, 'ratio=' + (rg.criticalAreaRatio * 100).toFixed(2) + '%');
+
+  // CLI 冒烟 + 守卫：STL 文件路径全链（parseSTL 焊接 → checkMesh 水密门 → audit/search）
+  const CLI7 = join(HERE, '../agent/tpms.mjs');
+  const run7 = (...args) => spawnSync(process.execPath, [CLI7, ...args], { encoding: 'utf8' });
+  const stlPath = join(tmpdir(), 'tpms_f7_cube_' + process.pid + '.stl');
+  {
+    const tris = cubeIdx.length / 3, buf = Buffer.alloc(84 + tris * 50);
+    buf.writeUInt32LE(tris, 80); let o = 84;
+    for (let t = 0; t < tris; t++) {
+      const a3 = cubeIdx[t * 3] * 3, b3 = cubeIdx[t * 3 + 1] * 3, c3 = cubeIdx[t * 3 + 2] * 3;
+      const u = [cubePos[b3] - cubePos[a3], cubePos[b3 + 1] - cubePos[a3 + 1], cubePos[b3 + 2] - cubePos[a3 + 2]];
+      const w = [cubePos[c3] - cubePos[a3], cubePos[c3 + 1] - cubePos[a3 + 1], cubePos[c3 + 2] - cubePos[a3 + 2]];
+      const nn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      const l = Math.hypot(nn[0], nn[1], nn[2]) || 1;
+      buf.writeFloatLE(nn[0] / l, o); buf.writeFloatLE(nn[1] / l, o + 4); buf.writeFloatLE(nn[2] / l, o + 8); o += 12;
+      for (const i3 of [a3, b3, c3]) { buf.writeFloatLE(cubePos[i3], o); buf.writeFloatLE(cubePos[i3 + 1], o + 4); buf.writeFloatLE(cubePos[i3 + 2], o + 8); o += 12; }
+      o += 2;
+    }
+    writeFileSync(stlPath, buf);
+  }
+  const rc = run7('overhang', '--input', stlPath, '--search', '--json');
+  let jc = null;
+  try { jc = JSON.parse(rc.stdout); } catch { /* */ }
+  check('F7h CLI 冒烟（exit0 + ratio=1/6 + search 零支撑 + 诚实边界披露）',
+    rc.status === 0 && jc && Math.abs(jc.criticalAreaRatio - 1 / 6) < 1e-9
+      && jc.search && jc.search.bestCriticalRatio === 0 && typeof jc.boundary === 'string' && jc.boundary.includes('交叉复核'),
+    'exit=' + rc.status + ' ratio=' + (jc ? jc.criticalAreaRatio : '?'));
+  const rc2 = run7('overhang', '--input', stlPath, '--critical', '90');
+  const rc3 = run7('overhang', '--input', join(tmpdir(), 'no_such_overhang.stl'));
+  // 单三角开放网格（3 开放边）→ 非水密 → exit3（外向法向不可定向，fail-closed）
+  const openPath = join(tmpdir(), 'tpms_f7_open_' + process.pid + '.stl');
+  {
+    const buf = Buffer.alloc(84 + 50);
+    buf.writeUInt32LE(1, 80);
+    let o = 84;
+    const tri = [0,0,0, 1,0,0, 0,1,0];
+    for (const f of tri) { buf.writeFloatLE(f, o); o += 4; }
+    writeFileSync(openPath, buf);
+  }
+  const rc4 = run7('overhang', '--input', openPath);
+  check('F7i CLI 守卫（critical=90 exit2 / 文件不存在 exit2 / 非水密 exit3）',
+    rc2.status === 2 && rc3.status === 2 && rc4.status === 3,
+    'exits=' + rc2.status + '/' + rc3.status + '/' + rc4.status);
+  try { unlinkSync(stlPath); unlinkSync(openPath); } catch { /* */ }
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 22) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 22（F6 CLI 封底 +2）'); process.exit(1); }
+  if (passCount < 32) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 32（F7 可打印性审计 +10）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
