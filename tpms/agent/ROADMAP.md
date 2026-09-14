@@ -299,6 +299,17 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## 战役三 v2：容器裁剪直接层切（2026-09-14 · 方案 1 选中 · 收官）
+
+**裁决**：方案 1（容器裁剪）vs 方案 2（CLI 工业格式）——1 有真数学（双场 1D 布尔交）+ 强验收锚（mesh 发散体积独立真值）；2 是纯序列化且机床端不可测（门禁只能语法断言），叠加在后。
+
+**交付**：
+- `directSlice` 增 `DirectSliceOptions{containerShape, containerSdf}`：cylinder **解析区间**（x ∈ ±π√(1−y²)（精确一阶）；C5 mesh **sdf 三线性采样线性求根区间**（多区间支持凹容器）；TPMS 固相区间 ∩ 容器区间（有序列表 1D 布尔交线性合并）。
+- CLI slice 解锁 `--container cylinder` 与 `--container-mesh <stl>`（复用 mesh 命令的 computeMeshSDF 加载）；mesh JSON 补 envelopeVolume 透传（F5 对拍锚源）。
+- 门禁 gcode 19→**21**：F4 cylinder 对拍（实测 **0.36%** vs mesh 发散×πL³/4）；F5 C5 icosphere 对拍（实测 ~0.35% vs mesh (1−porEst)×envelopeVolume——mesh C5 属相对水密域 exit3 但 JSON 完整，对拍用数值 exit 不作判据）；F3 重组（shell exit2 / 容器 STL 不存在 exit2）。
+
+**坑**：lat-long 球极区焊接 nm=48 固有伪影（第二次踩——正二十面体细分球为标准测试容器）。
+
 ## 战役三：直接隐式层切（2026-09-14 · 四战役裁决后开工 · 收官）
 
 **方向裁决**：四提案逐一账实核验——战役二（多形貌混合）已实现（hybrid radial 即提案语义）；战役一（渐进均匀化）与 2026-08-28 三度失败机理正面冲突（剪切 Voigt 上界为结构性登记）；战役四（WebGPU 网格提取）验收不可门禁化（CI swiftshader 无 WebGPU）。**战役三选中**：唯一真实空白且可完全门禁化，与物理试验线协同（6 试样切片上机）。

@@ -142,15 +142,76 @@ console.log('\n[E] gyroid 真实网格（R=16）');
     } else check('F2 ' + ty + ' SVG 结构', false, 'slice JSON 缺失');
   }
   {
-    const r1 = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--container', 'cylinder');
-    check('F3 slice cylinder 容器 → exit2（v1 限 cube）', r1.status === 2 && (r1.stderr || '').includes('cube'), 'exit=' + r1.status);
     const r2 = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--mode', 'shell');
     check('F3 slice shell 模式 → exit2', r2.status === 2 && (r2.stderr || '').includes('solid_network'), 'exit=' + r2.status);
+    const r3 = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--container-mesh', join(tmpdir(), 'no_such_container.stl'));
+    check('F3 slice 容器 STL 不存在 → exit2', r3.status === 2 && (r3.stderr || '').includes('读取失败'), 'exit=' + r3.status);
+  }
+  // ── F4/F5. v2 容器裁剪：cylinder 解析区间 / C5 mesh SDF 区间 与 mesh 发散体积双口径对拍 ──
+  {
+    const pre = join(tmpdir(), 'tpms_f_cyl_' + process.pid);
+    const rs = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--layers', '160', '--container', 'cylinder', '--out', pre, '--json');
+    const rm = run('mesh', '--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--container', 'cylinder', '--out', pre + '_m.stl', '--json');
+    let js = null, jm = null;
+    try { js = JSON.parse(rs.stdout); } catch { /* */ }
+    try { jm = JSON.parse(rm.stdout); } catch { /* */ }
+    const envCyl = Math.PI * Math.pow(2, 3) / 4;
+    const meshVol = js && jm ? (1 - jm.porosityEstimate) * envCyl : NaN;
+    const dev = js && Number.isFinite(meshVol) ? Math.abs(js.slicedVolumeMm3 - meshVol) / meshVol : NaN;
+    check('F4 cylinder 直接层切 ≡ mesh 发散体积（解析区间裁剪 ≤2%）',
+      rs.status === 0 && rm.status === 0 && dev <= 0.02,
+      'dev=' + (Number.isFinite(dev) ? (dev * 100).toFixed(2) + '%' : 'n/a') + ' slice=' + (js ? js.slicedVolumeMm3.toFixed(3) : '?') + ' mesh=' + (Number.isFinite(meshVol) ? meshVol.toFixed(3) : '?'));
+    if (js) { try { unlinkSync(js.file); unlinkSync(pre + '_m.stl'); } catch { /* */ } }
+  }
+  {
+    // C5：icosphere（正二十面体细分球——无极区伪影，lat-long 球极区焊接有 nm=48 固有伪影）
+    const t0 = (1 + Math.sqrt(5)) / 2;
+    let verts = [[-1, t0, 0], [1, t0, 0], [-1, -t0, 0], [1, -t0, 0], [0, -1, t0], [0, 1, t0], [0, -1, -t0], [0, 1, -t0], [t0, 0, -1], [t0, 0, 1], [-t0, 0, -1], [-t0, 0, 1]];
+    let faces = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+    const nrm = (v) => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
+    verts = verts.map(nrm);
+    for (let s = 0; s < 3; s++) {
+      const cache = new Map();
+      const mid = (a, b) => { const key = a < b ? a + ':' + b : b + ':' + a; let m = cache.get(key); if (m === undefined) { m = verts.length; verts.push(nrm([(verts[a][0] + verts[b][0]) / 2, (verts[a][1] + verts[b][1]) / 2, (verts[a][2] + verts[b][2]) / 2])); cache.set(key, m); } return m; };
+      const next = [];
+      for (const [a, b, c] of faces) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); next.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+      faces = next;
+    }
+    const RR = 10;
+    const pos = []; for (const v of verts) pos.push(v[0] * RR, v[1] * RR, v[2] * RR);
+    const idx = []; for (const fc of faces) idx.push(...fc);
+    const tris = idx.length / 3, buf = Buffer.alloc(84 + tris * 50);
+    buf.writeUInt32LE(tris, 80); let o = 84;
+    for (let t = 0; t < tris; t++) {
+      const [a, b, c] = [idx[t * 3] * 3, idx[t * 3 + 1] * 3, idx[t * 3 + 2] * 3];
+      const u = [pos[b] - pos[a], pos[b + 1] - pos[a + 1], pos[b + 2] - pos[a + 2]];
+      const w = [pos[c] - pos[a], pos[c + 1] - pos[a + 1], pos[c + 2] - pos[a + 2]];
+      const nn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      const l = Math.hypot(...nn) || 1;
+      buf.writeFloatLE(nn[0] / l, o); buf.writeFloatLE(nn[1] / l, o + 4); buf.writeFloatLE(nn[2] / l, o + 8); o += 12;
+      for (const i of [a, b, c]) { buf.writeFloatLE(pos[i], o); buf.writeFloatLE(pos[i + 1], o + 4); buf.writeFloatLE(pos[i + 2], o + 8); o += 12; }
+      o += 2;
+    }
+
+    const stl = join(tmpdir(), 'tpms_f_ico_' + process.pid + '.stl');
+    writeFileSync(stl, buf);
+    const pre = join(tmpdir(), 'tpms_f_c5_' + process.pid);
+    const rs = run('slice', '--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--layers', '160', '--container-mesh', stl, '--out', pre, '--json');
+    const rm = run('mesh', '--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--container-mesh', stl, '--out', pre + '_m.stl', '--json');
+    let js = null, jm = null;
+    try { js = JSON.parse(rs.stdout); } catch { /* */ }
+    try { jm = JSON.parse(rm.stdout); } catch { /* */ }
+    const meshVol = js && jm && jm.envelopeVolume ? (1 - jm.porosityEstimate) * jm.envelopeVolume : NaN;
+    const dev = js && Number.isFinite(meshVol) ? Math.abs(js.slicedVolumeMm3 - meshVol) / meshVol : NaN;
+    check('F5 C5 mesh 容器直接层切 ≡ mesh 发散×散度包络（SDF 区间裁剪 ≤3%）',
+      rs.status === 0 && js && Number.isFinite(meshVol) && dev <= 0.03,
+      'dev=' + (Number.isFinite(dev) ? (dev * 100).toFixed(2) + '%' : 'n/a') + ' slice=' + (js ? js.slicedVolumeMm3.toFixed(3) : '?') + ' mesh=' + (Number.isFinite(meshVol) ? meshVol.toFixed(3) : '?'));
+    if (js) { try { unlinkSync(js.file); unlinkSync(pre + '_m.stl'); unlinkSync(stl); } catch { /* */ } }
   }
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 19) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 19（战役三直接层切 F 节 +6）'); process.exit(1); }
+  if (passCount < 20) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 20（v2 容器裁剪 F4/F5 +2、F3 重组净 +1）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
