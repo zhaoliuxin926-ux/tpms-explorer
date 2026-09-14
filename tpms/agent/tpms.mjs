@@ -935,6 +935,55 @@ function cmdSlice(a, json) {
   for (const p of outFiles) console.log(`  已写入       ${p}（${(statSync(p).size / 1024).toFixed(1)} KB）`);
 }
 
+function cmdOverhang(a, json) {
+  const usage = '用法: node tpms.mjs overhang --input <模型.stl> [--critical 45] [--search] [--json]\n'
+    + '悬垂口径: α=朝下面与水平面夹角（arccos(−N·b)，0°=水平悬挑最危险，90°=竖直墙安全）；α<critical 判需支撑';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const input = String(a.input ?? '');
+  if (!input) die('缺少 --input <模型.stl>', usage);
+  const critical = a.critical === undefined ? 45 : Number(a.critical);
+  if (!Number.isFinite(critical) || critical <= 0 || critical >= 90) die('--critical 须 0 < θ < 90（度，默认 45）', usage);
+  const search = a.search === true;
+  let buf;
+  try { buf = readFileSync(input); } catch (e) { die(`STL 读取失败: ${e?.message ?? e}`, usage); }
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  let mesh;
+  try { mesh = core.parseSTL(ab); } catch (e) { die(`STL 解析失败: ${e?.message ?? e}`, usage); }
+  const check = core.checkMesh(mesh.indices);
+  if (!check.watertight) {
+    console.error(`✗ 网格非水密（开放边 ${check.openEdges} / 非流形边 ${check.nonManifoldEdges}）——悬垂审计要求封闭流形外向法向，fail-closed 拒绝`);
+    process.exit(3);
+  }
+  let report, searchRes = null;
+  try {
+    report = core.auditOverhang(mesh.positions, mesh.indices, [0, 0, 1], critical);
+    if (search) searchRes = core.searchBuildOrientation(mesh.positions, mesh.indices, critical);
+  } catch (e) {
+    console.error('✗ 悬垂审计失败: ' + (e?.message ?? String(e)));
+    process.exit(3);
+  }
+  const out = {
+    command: 'overhang', input, tris: report.tris, skippedDegenerate: report.skippedDegenerate,
+    criticalDeg: critical, buildDir: report.buildDir,
+    totalArea: report.totalArea, downFacingArea: report.downFacingArea,
+    criticalArea: report.criticalArea, criticalAreaRatio: report.criticalAreaRatio,
+    alphaHistogram10deg: report.alphaHistogram,
+    ...(searchRes ? { search: searchRes } : {}),
+    boundary: 'α=朝下面与水平面夹角（0°=水平悬挑最危险）；45° 为无支撑 FDM/SLM 常用工程阈值（实际 30~60° 因材料/工艺而异）；'
+      + '面积加权口径≠支撑材料体积；摆盘寻优仅最小化临界面积比（表面质量/支撑痕位置/构建时间未纳入）；上机前建议与切片器支撑预览交叉复核',
+  };
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.log('TPMS 可打印性审计（悬垂角 + 面积加权统计）');
+  console.log(`  网格         ${report.tris} 三角（退化跳过 ${report.skippedDegenerate}）｜总表面积 ${report.totalArea.toFixed(2)}`);
+  console.log(`  悬垂判定     α < ${critical}°（b=[0,0,1]）`);
+  console.log(`  朝下面积     ${report.downFacingArea.toFixed(2)}（占全表面 ${(report.downFacingArea / report.totalArea * 100).toFixed(1)}%）`);
+  console.log(`  临界面积     ${report.criticalArea.toFixed(2)}（criticalAreaRatio ${(report.criticalAreaRatio * 100).toFixed(2)}%）`);
+  console.log('  α 直方图    ' + report.alphaHistogram.map((v, i) => `${i * 10}~${i * 10 + 10}:${((v / report.totalArea) * 100).toFixed(1)}%`).join(' '));
+  if (searchRes) {
+    console.log(`  最优摆盘     b=[${searchRes.bestDir.map((v) => v.toFixed(4)).join(', ')}] → critical ${(searchRes.bestCriticalRatio * 100).toFixed(2)}%（${searchRes.samples} 采样 Fibonacci 球）`);
+  }
+}
+
 function cmdScenario(a, json) {
   const usage = '用法: node tpms.mjs scenario --design <方案.json> [--json]\n'
     + '方案 JSON: { type, porosity, material 必填; resolution/periods/container/mode/tolerance/\n'
@@ -1159,6 +1208,7 @@ const KNOWN_FLAGS = {
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
   slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'format', 'out', 'json', 'help'],
+  overhang: ['input', 'critical', 'search', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -1179,6 +1229,7 @@ else if (cmd === 'solve') cmdSolve(a, json);
 else if (cmd === 'verify') cmdVerify(core, a, json);
 else if (cmd === 'scenario') cmdScenario(a, json);
 else if (cmd === 'slice') cmdSlice(a, json);
+else if (cmd === 'overhang') cmdOverhang(a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环 + M5 场景模板）');
   console.log('用法:');
@@ -1188,6 +1239,7 @@ else {
   console.log('  node tpms.mjs solve --type gyroid --porosity 0.65 [--tolerance 0.01] [--max-rounds 5] [--json]');
   console.log('  node tpms.mjs verify --design 设计.json [--max-rounds 5] [--json]');
   console.log('  node tpms.mjs scenario --design 方案.json   # M5：一条指令 → STL+INP+验证报告');
+  console.log('  node tpms.mjs overhang --input 模型.stl [--critical 45] [--search]   # 可打印性审计：悬垂角 + 最优摆盘');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }
