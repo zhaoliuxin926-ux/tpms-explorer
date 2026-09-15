@@ -196,6 +196,10 @@
   .opt[data-color="dg"].active{background:linear-gradient(140deg,#f472b6 0%,#f9a8d4 100%);border-color:#f472b6;color:#fff;box-shadow:0 4px 14px rgba(244,114,182,.32)}
   .opt[data-color="fcky"].active{background:linear-gradient(140deg,#34d399 0%,#6ee7b7 100%);border-color:#34d399;color:#fff;box-shadow:0 4px 14px rgba(52,211,153,.32)}
   .opt[data-color="cdd"].active{background:linear-gradient(140deg,#fb923c 0%,#fdba74 100%);border-color:#fb923c;color:#fff;box-shadow:0 4px 14px rgba(251,146,60,.32)}
+  .opt[data-color="slotp"].active{background:linear-gradient(140deg,#a78bfa 0%,#c4b5fd 100%);border-color:#a78bfa;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,.32)}
+  .opt[data-color="fs"].active{background:linear-gradient(140deg,#38bdf8 0%,#7dd3fc 100%);border-color:#38bdf8;color:#fff;box-shadow:0 4px 14px rgba(56,189,248,.32)}
+  .opt[data-color="qstar"].active{background:linear-gradient(140deg,#fbbf24 0%,#fcd34d 100%);border-color:#fbbf24;color:#fff;box-shadow:0 4px 14px rgba(251,191,36,.32)}
+  .opt[data-color="ws"].active{background:linear-gradient(140deg,#2dd4bf 0%,#5eead4 100%);border-color:#2dd4bf;color:#fff;box-shadow:0 4px 14px rgba(45,212,191,.32)}
   .opt.active .o-sub{color:rgba(255,255,255,.82)}
   /* C2 扩展族折叠（不占 ui_jump sect 计数） */
   .type-more{margin-top:10px;border-top:1px dashed var(--panel-border);padding-top:8px}
@@ -776,7 +780,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-DY9r5u28.js"></script>
+  <script type="module" crossorigin src="./assets/index-zGtn6Tbi.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -926,6 +930,10 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-type="dg" data-color="dg">Double G<span class="o-sub">谐波≤2×</span></button>
             <button class="opt" data-type="fcky" data-color="fcky">FK-C(Y)<span class="o-sub">C(Y) 互补</span></button>
             <button class="opt" data-type="cdd" data-color="cdd">Comp-D<span class="o-sub">谐波3×</span></button>
+            <button class="opt" data-type="slotp" data-color="slotp">Slot-P<span class="o-sub">开槽P</span></button>
+            <button class="opt" data-type="fs" data-color="fs">F<span class="o-sub">余弦积</span></button>
+            <button class="opt" data-type="qstar" data-color="qstar">Q*<span class="o-sub">差角族</span></button>
+            <button class="opt" data-type="ws" data-color="ws">W<span class="o-sub">反对称</span></button>
           </div>
         </details>
       </details>
@@ -1048,6 +1056,10 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-hybrid-type="dg">Double G</button>
             <button class="opt" data-hybrid-type="fcky">FK-C(Y)</button>
             <button class="opt" data-hybrid-type="cdd">Comp-D</button>
+            <button class="opt" data-hybrid-type="slotp">Slot-P</button>
+            <button class="opt" data-hybrid-type="fs">F</button>
+            <button class="opt" data-hybrid-type="qstar">Q*</button>
+            <button class="opt" data-hybrid-type="ws">W</button>
           </div>
           <div class="lbl" style="margin-top:8px"><span>过渡方向 (Axis)</span></div>
           <div class="opt-row">
@@ -1322,6 +1334,20 @@ window.addEventListener('error', function(e) {
           <input type="range" id="slicepv-z" min="0" max="119" value="60" step="1" disabled>
           <canvas id="slicepv-canvas" width="256" height="256" style="width:100%;aspect-ratio:1;margin-top:6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14)"></canvas>
           <div class="field-note" id="slicepv-status">【战役三】扫描线直接层切：跳过三角网格在隐式场上直出增材扫描路径（灰色=固相填充带，深色=扫描向量）。容器跟随构型（cube/cylinder/外部 STL）；体积口径经门禁对拍（vs 网格发散 ≤0.4%）。仅 solid_network。</div>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>径向梯度构型 M(r) (radial-grad)</span><span class="val" id="rg-info">K=1.5</span></div>
+          <div class="lbl" style="margin-top:6px"><span>密度梯度 K</span><span class="val" id="rg-k-value">1.5</span></div>
+          <input type="range" id="rg-k" min="1" max="2" step="0.25" value="1.5">
+          <div class="lbl" style="margin-top:6px"><span>中心壁厚 ta (mm)</span><span class="val" id="rg-ta-value">0.20</span></div>
+          <input type="range" id="rg-ta" min="0.05" max="0.6" step="0.05" value="0.2">
+          <div class="lbl" style="margin-top:6px"><span>边缘壁厚 tb (mm)</span><span class="val" id="rg-tb-value">0.32</span></div>
+          <input type="range" id="rg-tb" min="0.05" max="0.6" step="0.05" value="0.322" disabled>
+          <div class="opt-row" style="margin-top:6px">
+            <button class="opt" id="rg-gen">生成预览 (MT)</button>
+            <button class="opt" id="rg-export">导出 STL (HD)</button>
+          </div>
+          <div class="field-note" id="rg-status">【M(r) 度规梯度】论文同族几何：arctanh 径向映射让孔隙率沿半径连续变化（中心密→边缘疏）。MT 提取器管线（surface-nets 在该场结构性非流形）；须 Schwarz P + solid_network + cube；设计密度由公式决定（目标孔隙率滑块不参与）。导出为归一域 mm 圆柱试样。</div>
         </div>
         <div class="field">
           <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
