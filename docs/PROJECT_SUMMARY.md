@@ -1,6 +1,6 @@
-# TPMS Explorer 项目全貌总结（v9.0.0-fullstack-cae-ecosystem）
+# TPMS Explorer 项目全貌总结（v9.1.0-dual-extractor-manufacturing-loop）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-13（v9.0 三战役收官：experimental-fit + 前端标定 UI + C5 任意流形保形填充）｜ **44 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-15（v9.1：直接层切三部曲 + 可打印性审计 + CFD 交付链（可运行 case+cfd-post K_int）+ radial-grad 径向梯度构型 + Marching Tetrahedra 双提取器 + 模型线四档验收）｜ **44 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。
 
 ---
@@ -106,10 +106,19 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-provider.mjs | 三 Provider（Ollama / OpenAI 兼容端点 / Mock）+ validateToolCalls 拦截器（逐槽位钳制） |
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
-| 验收 | 真实模型 glm-4.6 中英回归 34/34（现 37 条含闭环意图组，key 门）；Mock 闭环自检 6/6 + 真实 2/2 |
+| 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 37/37 一次全绿=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
 | 自检（CI 纳管） | agent_selftest 49 + schema_check 98 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
+
+### v9.1.0 增量（2026-09-13~15 · 十五战 · 封板后功能演进）
+
+- **直接层切三部曲**：扫描线区间法核心（对拍 mesh 发散体积 0.4-1.2%）→ 容器裁剪（cylinder 解析/C5 SDF 区间）→ CLI 工业格式（hatch 保真 ≤0.1%）→ 前端预览画布（run_all 第 7 套件）
+- **可打印性审计**：`overhang` 命令（悬垂角面积统计 + Fibonacci 球确定性摆盘寻优）；六试样实测 TPMS 近各向同性=摆盘收益仅 ±1pp
+- **CFD 交付链**：`--cfd-polyMesh` 直出可运行 OpenFOAM case（SIMPLE 字典 + dP/WSS 预埋 + mm 单位制自洽）+ `cfd-post`（Forchheimer 两点分离 K_int=2.34e-9 m² 实测落文献带 + WSS 促矿化窗口诊断）；WSL foamRun 真跑闭环五迭代定案（GAMG 六面体死锁→PCG 等）
+- **radial-grad 径向梯度构型**：度规逆映射（arctanh 径向+有理轴向+壁厚补偿阈值场）+ **Marching Tetrahedra 提取器**（不光滑场免疫；4-cut 环排序/corner 正则化/尺度无关退化判据三定案）——K∈[1,3] 五档全水密 STL 产出，平台进入双提取器格局（surface-nets 光滑场 + MT 不光滑场）
+- **模型线四档验收**：glm-5.3-flash 推荐（37/37）；provider 超时三处对称 170s+env；对抗指令四档零透传
+- **诚实边界**：CFD 字典口径经真跑验证但几何为结构化六面体（绝对值须网格敏感性披露）；MT 管线退化判据=尺度无关口径（相切带等边微楔片为真实离散几何，manifold_audit 2026-09-11 先例）；radial-grad clip 边界半格内移（尺寸损 1/R）
 
 ## 五、门禁体系（44 项，run_ci_suite.mjs 调度，三平台矩阵）
 
@@ -117,8 +126,8 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 （rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（7 套 UI 回归，含 slicepv 直接层切预览冒烟）+
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 282 · redteam_matrix 100 ·
-custom_equation 73 · periodic_rve 88 · cae_mesh 46 · webgpu_parity 101（万点对拍 0.00e+0）·
-schema_check 98（含 README 门数防漂移守卫）；gcode 23（含直接层切 F1-F6：扫描线/容器裁剪/CLI 工业格式）；conformal 28（C5 SDF+体积对拍+四 patch polyMesh）。全 44 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
+custom_equation 73 · periodic_rve 88 · cae_mesh 66（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 101（万点对拍 0.00e+0）·
+schema_check 98（含 README 门数防漂移守卫）；gcode 32（直接层切 F1-F6 + 可打印性审计 F7 十断言：球面积极分解析锚/方向语义钉/摆盘寻优）；conformal 28（C5 SDF+体积对拍+四 patch polyMesh）。全 44 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
 
 ## 六、文档体系
 

@@ -832,3 +832,48 @@ MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方 MATLAB 源码展示�
 | III | Navier-Stokes 微流体求解器 | 29 wasm_navier_stokes_audit | 15 |
 | IV | LPBF 热-力耦合预测 | 30 lpbf_thermo_mechanical_audit | 18 |
 | V | 自然语言 CAD 代理 | 31 nl_agent_audit | 25 |
+
+## 三十八、径向梯度构型与制造闭环三命令（v9.1）
+
+本章覆盖 v9.1 的三个高频工作流：径向梯度试样生成、打印前可打印性审计、CFD 渗透率闭环。
+
+### 38.1 radial-grad 径向梯度试样（Marching Tetrahedra 管线）
+
+中心膨胀 K、边缘 1 的径向梯度构型——内疏外密的密度梯度晶格圆柱：
+
+```bash
+node tpms/agent/tpms.mjs mesh --type schwarz --porosity 0.5 \
+  --periods 12 --resolution 128 --container cube \
+  --radial-grad 1.5 --out scaffold_K1.5.stl --json
+```
+
+- `--radial-grad K`：K∈[1,3]（1=均匀基准）；`periods` 在此模式下为域内晶胞数（域直径 = periods mm）。
+- `--ta/--tb`：中心/边缘壁厚 mm（默认按工程比例折算）。
+- **约束**：须 `--type schwarz` + `--mode solid_network` + `--container cube`（立方采样域 + 场内圆柱裁剪）；壁厚体素比 `ta·R/periods ≥ 2`（亚体素壁必拒产）。
+- **提取器**：该构型走 Marching Tetrahedra 管线（场含 |P| 折痕/max 尖点，surface-nets 结构性非流形；MT 角点二值化免疫）。退化判据为尺度无关口径——相切带等边微楔片是真实离散几何。
+- 尺寸提示：R128/12 周期 ≈443 万三角（STL ≈221MB）；降 `--resolution 96` 或 `--periods 8` 可减。
+
+### 38.2 打印前可打印性审计
+
+```bash
+node tpms/agent/tpms.mjs overhang --input scaffold_K1.5.stl --search --json
+```
+
+输出 critical 面积比（α<45° 工业口径）、九桶 α 直方图与 Fibonacci 球最优摆盘方向。实测结论：TPMS 晶格近各向同性——**默认平躺打印即可，支撑控制交给切片器参数**；摆盘寻优对解剖形（各向异性）构件才有显著收益。诚实边界：45° 为无支撑常用工程阈值（实际 30–60° 因材料/工艺而异）；面积比≠支撑材料体积。
+
+### 38.3 CFD 渗透率闭环（可运行 case → foamRun → K_int）
+
+```bash
+# ① 生成可运行 case（须 C5 容器：--container-mesh 外形.stl）
+node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.6 --periods 2 --resolution 48 \
+  --container-mesh specimen.stl --cfd-polyMesh --flow-axis z --out case1
+# 解压 case1.polyMesh.zip → WSL：foamRun（压降已预埋自动输出至 postProcessing/pin|pout/0/）
+# ② 改 0/U 的 volumetricFlowRate（×2 或 ×10）重跑得第二流量点
+# ③ 两点分离出固有渗透率
+node tpms/agent/tpms.mjs cfd-post --q1 8.33e-9 --dp1 <pin1> --q2 8.33e-8 --dp2 <pin2> \
+  --kinematic --box-mm <域直径> --length-mm <域直径> --json
+```
+
+- `--kinematic`：直接吃 case 预埋输出的运动压差（mm²/s²）自动 ×10⁻⁶×ρ 转 Pa。
+- 单位制：case 为 mm 自洽口径（几何 mm + 物理量配套换算），README.md（zip 内）含完整跑法与坑清单。
+- 诚实边界：绝对值（ΔP/K_int/WSS）须带网格敏感性披露（未做网格收敛研究前不报 GCI）；WSS 带 10–30 mPa 为 3D 灌注培养促矿化量级（文献核验锚）。
