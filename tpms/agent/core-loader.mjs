@@ -26,6 +26,8 @@ const CORE_EXPORTS = [
   `export { directSlice, buildSliceSvg, buildCliFormat } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
   `export { auditOverhang, searchBuildOrientation } from ${JSON.stringify(join(PLATFORM, 'src/physics/printability-audit.ts'))};`,
   `export { forchheimerTwoPoint } from ${JSON.stringify(join(PLATFORM, 'src/physics/forchheimer.ts'))};`,
+  `export { marchingTetrahedra } from ${JSON.stringify(join(PLATFORM, 'src/geometry/marching-tetrahedra.ts'))};`,
+  `export { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from ${JSON.stringify(join(PLATFORM, 'src/core/radial-grad.ts'))};`,
   `export { buildCaseFiles } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-case-template.ts'))};`,
   `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');

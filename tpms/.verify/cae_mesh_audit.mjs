@@ -34,13 +34,14 @@ const BUNDLE = join(tmpdir(), 'tpms_cae_audit_bundle.mjs');
     `export { forchheimerTwoPoint } from ${JSON.stringify(join(PLATFORM, 'src/physics/forchheimer.ts'))};`,
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
     `import { radialGradTransform as rgT, radialGradThreshold as rgC, schwarzPPhase as rgP, C_UNIFORM_K1 } from ${JSON.stringify(join(PLATFORM, 'src/core/radial-grad.ts'))}; export { rgT, rgC, rgP, C_UNIFORM_K1 };`,
+    `export { marchingTetrahedra } from ${JSON.stringify(join(PLATFORM, 'src/geometry/marching-tetrahedra.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip, buildCaseFiles, forchheimerTwoPoint, buildSurface, rgT, rgC, rgP, C_UNIFORM_K1 } = await import(pathToFileURL(BUNDLE));
+const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip, buildCaseFiles, forchheimerTwoPoint, buildSurface, rgT, rgC, rgP, C_UNIFORM_K1, marchingTetrahedra } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -352,31 +353,55 @@ console.log('\n[F] radial-grad M(r) 空间映射（论文公式移植 + surface-
   try {
     rgRes = buildSurface({
       type: 'schwarz', iso: 0, periods: 12, resolution: 96, targetPorosity: undefined,
-      weights: [1, 1, 1, 1], structureMode: 'solid_network', containerShape: 'cylinder',
+      weights: [1, 1, 1, 1], structureMode: 'solid_network', containerShape: 'cube',
       thickness: 1.0, gradientDir: 'z', customFormula: '', preview: false,
       hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
       radialGrad: { K: 1.5, sizeMm: 12, taMm: 0.2, tbMm: 0.322 },
     });
   } catch (e) { rgErr = String(e?.message ?? e); }
-  check('F3 K=1.5 构建成功 + 密度锚 [45,55]%（论文设计 ≈50%）',
-    rgRes !== null && rgRes.porosityEstimate > 0.45 && rgRes.porosityEstimate < 0.55,
+  check('F3 K=1.5 构建成功 + 密度锚 [58,64]（cube 包络口径 ⟺ 圆柱口径 ≈50.6%=论文设计 50%）',
+    rgRes !== null && rgRes.porosityEstimate > 0.58 && rgRes.porosityEstimate < 0.64,
     rgErr || 'poro=' + ((rgRes?.porosityEstimate ?? 0) * 100).toFixed(2) + '%');
   const CLI_F = join(HERE, '../agent/tpms.mjs');
   const runF = (...args2) => spawnSync(process.execPath, [CLI_F, ...args2], { encoding: 'utf8' });
   const rf = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '6', '--resolution', '64',
-    '--container', 'cylinder', '--radial-grad', '1.5', '--out', join(tmpdir(), 'tpms_f_rg_' + process.pid + '.stl'), '--json');
-  check('F4 水密门 fail-closed（exit3 + 非流形诊断——surface-nets 容器交线族边界，论文 MC 提取无此问题，登记待攻）',
-    rf.status === 3 && /非流形/.test(rf.stdout + rf.stderr), 'exit=' + rf.status);
+    '--container', 'cube', '--radial-grad', '1.5', '--out', join(tmpdir(), 'tpms_f_rg_' + process.pid + '.stl'), '--json');
+  check('F4 MT 管线水密产出（exit0 + open/nm/degen 全零——解锁战役收官，2026-09-15）',
+    rf.status === 0, 'exit=' + rf.status);
   const rf1 = runF('mesh', '--type', 'gyroid', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cylinder', '--radial-grad', '1.5');
   const rf2 = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cube', '--radial-grad', '1.5');
   const rf3 = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cylinder', '--radial-grad', '1.5', '--ta', '0.05');
-  check('F5 守卫三连（type≠schwarz / cube 容器 / 亚体素壁厚 → exit2）',
+  check('F5 守卫三连（type≠schwarz / 非 cube 容器 / 亚体素壁厚 → exit2）',
     rf1.status === 2 && rf2.status === 2 && rf3.status === 2,
     'exits=' + rf1.status + '/' + rf2.status + '/' + rf3.status);
+  // F6 MT 提取器数学锚：球场 r²−1 → 水密 + 体积 4π/3 收敛（2026-09-15 解锁战役）
+  {
+    const mtR = 48;
+    const mt = marchingTetrahedra((x, y, z) => x * x + y * y + z * z - 1, mtR);
+    const em = new Map();
+    for (let t = 0; t < mt.indices.length; t += 3)
+      for (let e = 0; e < 3; e++) {
+        const a = mt.indices[t + e], b = mt.indices[t + (e + 1) % 3];
+        const k = a < b ? a * 1e8 + b : b * 1e8 + a;
+        em.set(k, (em.get(k) ?? 0) + 1);
+      }
+    let mtOpen = 0, mtNm = 0;
+    for (const [, c] of em) { if (c > 2) mtNm++; if (c === 1) mtOpen++; }
+    let v6 = 0;
+    for (let t = 0; t < mt.indices.length; t += 3) {
+      const i0 = mt.indices[t] * 3, i1 = mt.indices[t + 1] * 3, i2 = mt.indices[t + 2] * 3;
+      v6 += mt.positions[i0] * (mt.positions[i1 + 1] * mt.positions[i2 + 2] - mt.positions[i1 + 2] * mt.positions[i2 + 1])
+        + mt.positions[i0 + 1] * (mt.positions[i1 + 2] * mt.positions[i2] - mt.positions[i1] * mt.positions[i2 + 2])
+        + mt.positions[i0 + 2] * (mt.positions[i1] * mt.positions[i2 + 1] - mt.positions[i1 + 1] * mt.positions[i2]);
+    }
+    const mtVol = Math.abs(v6) / 6;
+    check(`F6 MT 球锚（水密 open=${mtOpen}/nm=${mtNm} + 体积 4π/3 偏差 <1% 实测 ${(Math.abs(mtVol / 4.18879 - 1) * 100).toFixed(2)}%）`,
+      mtOpen === 0 && mtNm === 0 && Math.abs(mtVol / 4.18879 - 1) < 0.01);
+  }
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 65) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 65（F 组 radial-grad +5，2026-09-15）'); process.exit(1); }
+  if (passCount < 65) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 66（F 组 radial-grad +5，2026-09-15）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
