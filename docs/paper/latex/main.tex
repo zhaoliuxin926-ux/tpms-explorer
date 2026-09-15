@@ -1,6 +1,6 @@
-% main.tex — TPMS Explorer v8.0 SoftwareX-style manuscript (self-contained, pdflatex)
+% main.tex — TPMS Explorer v9.1 SoftwareX-style manuscript (self-contained, pdflatex)
 % 编译：pdflatex main && bibtex main && pdflatex main && pdflatex main
-% 【2026-09-12 对齐 v8.0-agentic-loop】42 门 + (viii) agentic 验证层；Abstract 破句修复
+% 【2026-09-15 对齐 v9.1.0-dual-extractor-manufacturing-loop】摘要/表/方法段/回归数/元数据全面对齐
 \documentclass[5p,times,authoryear]{elsarticle}
 \usepackage{amsmath,amssymb}
 \usepackage{mathtools} % psmallmatrix（声子节实化分块）；v7.0 稿缺失致 nonstopmode 带错出 PDF
@@ -26,7 +26,7 @@ and biophysical tissue-ingrowth dynamics}
 \address[a]{Independent Open-Source Project}
 
 \begin{abstract}
-We present TPMS Explorer v8.0, a browser-based, zero-backend ecosystem for parametric design,
+We present TPMS Explorer v9.1, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
 with forty-four continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
@@ -55,6 +55,21 @@ clamping interceptor (enumeration, range, unknown-property, and path-traversal r
 closed-loop design-verification driver in which the LLM selects repairs only from a bounded
 strategy menu while patch application, execution, and acceptance remain deterministic --- including
 structured unreachability declarations for representation-limited parameter combinations.
+Versions 9.0--9.1 close the manufacturing loop: (ix) conformal filling of arbitrary
+anatomical manifolds (voxelized signed-distance containers with wall-side Gaussian
+deburring and a divergence-volume porosity denominator); (x) ISO~13314 experimental-curve
+inversion of universal-testing-machine CSV exports with Toe virtual-origin compensation and
+Gibson--Ashby calibration ratios; (xi) direct implicit slicing --- scan-line interval
+extraction skipping the triangle mesh entirely, emitting layered SVG and the Common Layer
+Interface industrial format with $\le$0.1\% hatch-volume fidelity --- plus an overhang-angle
+printability audit with deterministic build-orientation search; and (xii) a runnable-OpenFOAM
+delivery chain (SIMPLE steady dictionaries with embedded pressure and wall-shear probes)
+consumed by a two-point Forchheimer post-processor yielding an intrinsic permeability of
+$2.34\times10^{-9}\,$m$^2$ on a measured WSL run. A radial-gradient geometry family
+(center-dilated metric remap with wall-thickness compensation) motivated a second mesh
+extractor --- Marching Tetrahedra with corner-value regularization and a shape-invariant
+degeneracy criterion --- extending watertight output to non-smooth implicit fields that
+defeat Surface Nets.
 All simulation modules execute client-side with zero dependencies beyond Three.js; the agent
 layer runs under Node.js and exports to industrial formats (STL, 3MF, GLB, Abaqus INP,
 OpenFOAM polyMesh, G-code), guarded throughout by behavior-level audit gates whose
@@ -81,11 +96,14 @@ structural-failure envelopes, wave dynamics, biophysical growth, and closed-loop
 (Table~\ref{tab:gates}). Version 8.0 completes the loop on the automation side: an agentic
 verification layer turns natural-language design intents into schema-clamped tool calls and drives
 verification--repair cycles to convergence, with every acceptance decision still taken by
-deterministic code (Section~\ref{sec:agentic}).
+deterministic code (Section~\ref{sec:agentic}). Versions 9.0--9.1 extend the loop to the
+physical side: anatomical conformal filling, experimental-curve inversion, direct implicit
+slicing with industrial CLI output, printability audit, a runnable-OpenFOAM permeability
+chain, and a dual-extractor meshing architecture (Section~\ref{sec:v91}).
 
 \begin{table}[h]
 \centering
-\caption{v7.0/v8.0 modules and their CI gates.}
+\caption{v7.0--v9.1 modules and their CI gates.}
 \label{tab:gates}
 \begin{tabular}{@{}llp{5.2cm}l@{}}
 \toprule
@@ -110,6 +128,11 @@ VI & Agentic verification (v8.0) & schema$\leftrightarrow$CLI cross-check (enum/
 incl.\ static sentinel vs.\ driver repair menu); interceptor clamping incl.\ adversarial and
 malformed calls; mock-driven closed-loop convergence on injected defects with the original design
 file bit-identical & 126 \\
+VII & Manufacturing loop (v9.0--9.1) & conformal-fill SDF vs.\ analytic anchors and divergence-volume
+denominator; ISO~13314 inversion against independent reference values; slicing volume parity
+vs.\ mesh divergence ($\le$2\%) and CLI hatch fidelity ($\le$0.1\%); overhang spherical-cap
+integral anchor (14.645\%$\pm$1\%); Forchheimer synthetic exact-recovery anchors; MT sphere
+anchor ($4\pi/3$ within 0.13\% at R48) & 66+32+18 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -253,8 +276,10 @@ re-run. Repairs inside the existing verification ladder (automatic resolution es
 correction) remain deterministic; the driver handles ladder-external repairs, and for
 representation-limited combinations (e.g.\ the cylinder\,$+$\,diamond deep-water region identified
 by the benchmark matrix) it emits a structured \emph{unreachability declaration} instead of
-looping. Acceptance rests on three layers: a 34-instruction bilingual regression against a
-production LLM (34/34; all adversarial samples rejected or self-clamped); an offline mock-driven
+looping. Acceptance rests on three layers: a 37-instruction bilingual regression against a
+production LLM (glm-5.3-flash 37/37 in a single run; all adversarial samples rejected or
+self-clamped; a four-tier model profile documents server-side variance as the residual failure
+mode, never the pipeline); an offline mock-driven
 closed-loop self-test covering parameter-fix convergence, out-of-ladder resolution repair, period
 reduction, unreachable declaration, interceptor rejection, and round exhaustion with the original
 design file bit-identical; and a 87-assertion schema$\leftrightarrow$CLI cross-check gate that pins
@@ -304,6 +329,39 @@ a silently degraded mesh.}
 \label{fig:agentic_pipeline}
 \end{figure*}
 
+\subsection{The v9.x manufacturing loop: from anatomy to permeability}
+\label{sec:v91}
+The v9.x releases extend the verified chain from geometry to physical deliverables, each link
+carrying its own analytic anchor. \emph{Conformal filling} (v9.0) voxelizes any watertight
+anatomical STL into a signed-distance container (welded vertices, weighted ray crossing, uniform-
+grid nearest-surface buckets), fuses it with the TPMS field through a wall-side Gaussian deburr
+that preserves the hard air override outside the container, and defines porosity only over the
+container's divergence-theorem volume --- eliminating a $+30$~pp envelope artefact measured for
+AABB-box denominators. \emph{Experimental-curve inversion} maps universal-testing-machine CSV
+exports to ISO~13314 features (toe virtual-origin compensation, union-of-bands slope re-substitution,
+Rp0.2, plateau stress) with Gibson--Ashby calibration ratios, validated against independently
+computed reference values. \emph{Direct implicit slicing} extracts solid intervals per scan line
+directly from the implicit field --- no triangle mesh --- with volume parity $\le$2\% against the
+mesh divergence measure and $\le$0.1\% hatch-volume fidelity after Common-Layer-Interface
+serialization. The accompanying \emph{printability audit} reports overhang statistics under the
+industrial convention $\alpha=\arccos(-\mathbf{N}\cdot\mathbf{b})$ with a deterministic
+Fibonacci-sphere orientation search; six measured specimens show TPMS lattices to be near
+isotropic (orientation gain $\approx\pm1$~pp), quantifying when slicer-side support control
+suffices. The \emph{CFD delivery chain} emits a runnable OpenFOAM case (SIMPLE steady, flow-rate
+inlet, kinematic pressure, embedded area-averaged pressure and wall-shear probes, Robin oxygen
+walls under a self-consistent mm unit system); a two-point Forchheimer post-processor separates
+$\Delta P=AQ+BQ^2$ and reports the intrinsic permeability as the Stokes intercept --- measured
+$2.34\times10^{-9}\,$m$^2$ on a WSL run, inside the bone-scaffold literature band, with the
+inertial fraction rising from 2.6\% to 21.1\% between the two flow rates. Finally, a
+\emph{radial-gradient family} (center-dilated metric remap, $K\in[1,3]$, arctanh radial and
+rational axial channels with wall-thickness compensation) exposes fields that are non-smooth at
+$|P|$ creases and max ridges, where Surface Nets' vertex interpolation is structurally
+non-manifold; a Marching Tetrahedra extractor with shared-corner ring ordering, corner-value
+regularization ($\eta=3\times10^{-3}$), and a shape-invariant degeneracy criterion
+($\mathrm{area}/\mathrm{maxedge}^2$) restores watertight output for all $K=1$--$2$ (sphere
+anchor $4\pi/3$ within 0.13\%), giving the platform a \emph{dual-extractor} architecture:
+Surface Nets for smooth fields, MT for the rest.
+
 \section{Quality control}
 Forty-four gates run via
 \texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
@@ -325,7 +383,7 @@ fixes covered by regression assertions.
 
 \section{Availability}
 \subsection{Current code version}
-v8.0.0-agentic-loop (MIT license).
+v9.1.0-dual-extractor-manufacturing-loop (MIT license).
 
 \subsection{Operating requirements}
 See Necessary resources; no backend, no telemetry, no build-time secrets.
@@ -334,10 +392,12 @@ See Necessary resources; no backend, no telemetry, no build-time secrets.
 Open \texttt{docs/platform/index.html} (static build) or run \texttt{npm install} and
 \texttt{npm run dev} in \texttt{tpms/tpms-platform}. CI: \texttt{npm run test:all}.
 A deterministic agent CLI (\texttt{tpms/agent/tpms.mjs}) exposes \texttt{list},
-\texttt{estimate}, \texttt{mesh}, \texttt{verify}, \texttt{solve}, and \texttt{scenario}
-subcommands with JSON output for scripting; \texttt{llm-agent.mjs} adds natural-language
-tool calling and \texttt{tpms-driver.mjs} closed-loop design verification (LLM API keys are
-supplied via environment variables and never committed).
+\texttt{estimate}, \texttt{mesh}, \texttt{verify}, \texttt{solve}, \texttt{scenario},
+\texttt{slice} (SVG/CLI layered output), \texttt{overhang} (printability audit), and
+\texttt{cfd-post} (Forchheimer permeability) subcommands with JSON output for scripting;
+\texttt{llm-agent.mjs} adds natural-language tool calling and \texttt{tpms-driver.mjs}
+closed-loop design verification (LLM API keys are supplied via environment variables and
+never committed).
 
 \begin{thebibliography}{9}
 
