@@ -589,8 +589,22 @@ function cmdMesh(a, json) {
       fourPatch: true,
       flowAxis: { x: 0, y: 1, z: 2 }[flowAxisS],
     });
+    // 可运行 case 模板（CFD 交付链完整化战役，2026-09-15）：0/{U,p,C}+system+constant+README，
+    // 使 zip 解压即 foamRun 可解——字典口径经 FEA_Bone_Scaffold 论文工程验证（SIMPLE 稳态/
+    // flowRateInletVelocity/运动压强/upwind/WSS 预埋），细节与坑见 zip 内 README.md
+    const flowRate = a['flow-rate'] === undefined ? 8.33e-9 : Number(a['flow-rate']);
+    if (!Number.isFinite(flowRate) || flowRate <= 0) die('--flow-rate 须为正体积流量 m³/s（默认 8.33e-9 = 0.5 mL/min）', usage);
+    const nuM = a.nu === undefined ? 1.45e-6 : Number(a.nu);
+    if (!Number.isFinite(nuM) || nuM <= 0) die('--nu 须为正运动黏度 m²/s（默认 1.45e-6 = DMEM@37°C）', usage);
+    const caseFiles = core.buildCaseFiles({
+      patches: ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'],
+      inletPatch: 'flow_inlet', outletPatch: 'flow_outlet',
+      wallPatches: ['casing_wall', 'tpms_scaffold_wetted'],
+      flowRateM3s: flowRate, nu: nuM,
+    });
     const enc = new TextEncoder();
     const entries = Object.entries(pm.files).map(([name, text]) => ({ name, data: enc.encode(text) }));
+    for (const [name, text] of Object.entries(caseFiles)) entries.push({ name, data: enc.encode(text) });
     const zipBuf = core.buildStoredZip(entries);
     const cfdFile = outFile.replace(/\.stl$/i, '') + '.polyMesh.zip';
     writeFileSync(cfdFile, Buffer.from(zipBuf));
@@ -598,8 +612,9 @@ function cmdMesh(a, json) {
       file: cfdFile, fileBytes: zipBuf.byteLength,
       fluidCells: pm.stats.cells, internalFaces: pm.stats.internalFaces,
       boundaryFaces: pm.stats.boundaryFaces, patches: pm.stats.patches,
-      flowAxis: flowAxisS,
-      note: '流体域=容器内∩非固相（体素口径）；物理尺度 = voxel 域全宽 periods mm（容器最长轴 0.95×periods）',
+      flowAxis: flowAxisS, flowRateM3s: flowRate, nu: nuM,
+      note: '流体域=容器内∩非固相（体素口径）；物理尺度 = voxel 域全宽 periods mm（容器最长轴 0.95×periods）；'
+        + 'zip 含可运行 case 模板（0/{U,p,C}+system+README——SIMPLE 稳态/WSS 预埋/两流量点渗透率见 README）',
     };
   }
   if (!watertight) {
@@ -984,6 +999,67 @@ function cmdOverhang(a, json) {
   }
 }
 
+function cmdCfdPost(a, json) {
+  const usage = '用法: node tpms.mjs cfd-post --q1 <m³/s> --dp1 <Pa> --q2 <m³/s> --dp2 <Pa> [--mu 1.45e-3] [--rho 1000] [--kinematic] [--box-mm 6] [--length-mm 6] [--wss <Pa>] [--json]\n'
+    + 'Forchheimer 两点分离：ΔP=A·Q+B·Q² → K_int=μL/(A_box·A)（Stokes 截距）；两个流量点来自同一几何两次 CFD；\n'
+    + '--kinematic：dp 输入为 mm 单位制 case 直提的运动压差 mm²/s²（自动 ×1e-6×ρ 转 Pa）';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const num = (k, def) => (a[k] === undefined ? def : Number(a[k]));
+  const q1 = num('q1', NaN), dp1 = num('dp1', NaN), q2 = num('q2', NaN), dp2 = num('dp2', NaN);
+  for (const [k, v] of [['q1', q1], ['dp1', dp1], ['q2', q2], ['dp2', dp2]]) {
+    if (!Number.isFinite(v) || v <= 0) die(`--${k} 须为正数（m³/s 或 Pa）`, usage);
+  }
+  const mu = num('mu', 1.45e-3);
+  if (!Number.isFinite(mu) || mu <= 0) die('--mu 须为正动力黏度 Pa·s（默认 1.45e-3 = DMEM@37°C）', usage);
+  const rho = num('rho', 1000);
+  if (!Number.isFinite(rho) || rho <= 0) die('--rho 须为正密度 kg/m³（默认 1000）', usage);
+  const kinematic = a.kinematic === true; // dp 输入为运动压差 mm²/s²（mm 单位制 case 直提）→ Pa = dp×1e-6×ρ
+  const boxMm = num('box-mm', 6), lenMm = num('length-mm', 6);
+  if (!Number.isFinite(boxMm) || boxMm <= 0 || boxMm > 1000) die('--box-mm 须 0 < L ≤ 1000（盒边长，默认 6 = periods）', usage);
+  if (!Number.isFinite(lenMm) || lenMm <= 0 || lenMm > 1000) die('--length-mm 须 0 < L ≤ 1000（轴向长，默认 6）', usage);
+  const wss = a.wss === undefined ? null : Number(a.wss);
+  if (wss !== null && (!Number.isFinite(wss) || wss < 0)) die('--wss 须为非负壁面剪应力 Pa（面积加权口径）', usage);
+
+  let r;
+  try {
+    if (Math.abs(q1 - q2) < 1e-30) die('两点分离要求 q1 ≠ q2（同流量两点方程奇异——改输入可解，exit2）', usage);
+    // kinematic 模式：dp 为 mm 单位制 case 直提的运动压差 mm²/s² → Pa = dp × 1e-6 × ρ
+    const toPa = (dp) => (kinematic ? dp * 1e-6 * rho : dp);
+    r = core.forchheimerTwoPoint({ q1, dp1: toPa(dp1), q2, dp2: toPa(dp2), mu, length: lenMm / 1000, area: (boxMm / 1000) ** 2 });
+    r = { ...r, dp1Pa: toPa(dp1), dp2Pa: toPa(dp2) };
+  } catch (e) {
+    console.error('✗ Forchheimer 分离失败: ' + (e?.message ?? String(e)));
+    process.exit(3);
+  }
+  // WSS 文献带诊断：10–30 mPa = 3D 灌注培养促矿化剪应力量级（PNAS 100(25):14683，论文核验口径）
+  let wssDiag = null;
+  if (wss !== null) {
+    const mPa = wss * 1000;
+    wssDiag = { wssPa: wss, wssMPa: mPa, inMineralizationBand: mPa >= 10 && mPa <= 30, bandMPa: [10, 30] };
+  }
+  const out = {
+    command: 'cfd-post', q1, dp1, q2, dp2, mu,
+    ...(kinematic ? { dp1Pa: r.dp1Pa, dp2Pa: r.dp2Pa, kinematicNote: `dp 输入 mm²/s² 运动压差，已 ×1e-6×ρ(${rho}) 转 Pa` } : {}),
+    boxMm, lengthMm: lenMm, areaM2: (boxMm / 1000) ** 2,
+    A_Pa_s_per_m3: r.A, B_Pa_s2_per_m6: r.B,
+    kInt_m2: r.kInt,
+    kApp_m2: r.kApp,
+    inertialFractionPct: r.inertialFraction.map((f) => f * 100),
+    ...(wssDiag ? { wss: wssDiag } : {}),
+    boundary: 'K_int=Stokes 截距（黏性固有渗透率）；两点若落非线性高段 A/B 为区间等效值；'
+      + '绝对值受网格敏感性影响（未做网格收敛研究前带区间披露，不报 GCI）；'
+      + 'WSS 带 10-30 mPa=3D 灌注培养促矿化量级（PNAS 100(25):14683）',
+  };
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.log('TPMS CFD 后处理（Forchheimer 两点分离，论文工程验证口径）');
+  console.log(`  输入         Q₁=${q1.toExponential(3)} m³/s @ ΔP₁=${dp1.toExponential(3)} Pa｜Q₂=${q2.toExponential(3)} @ ΔP₂=${dp2.toExponential(3)}`);
+  console.log(`  Stokes 阻抗  A = ${r.A.toExponential(4)} Pa·s/m³｜惯性系数 B = ${r.B.toExponential(4)} Pa·s²/m⁶`);
+  console.log(`  固有渗透率   K_int = ${r.kInt.toExponential(3)} m²（μL/(A_box·A)，μ=${mu.toExponential(2)}、L=${lenMm}mm、A_box=${((boxMm / 1000) ** 2).toExponential(2)} m²）`);
+  console.log(`  表观渗透率   K_app(Q₁)=${r.kApp[0].toExponential(3)}｜K_app(Q₂)=${r.kApp[1].toExponential(3)} m²`);
+  console.log(`  惯性占比     ${r.inertialFraction.map((f) => (f * 100).toFixed(1)).join('% / ')}%（B·Q²/ΔP）`);
+  if (wssDiag) console.log(`  WSS 诊断     ${wssDiag.wssMPa.toFixed(2)} mPa ${wssDiag.inMineralizationBand ? '∈' : '∉'} 促矿化带 [10, 30] mPa`);
+}
+
 function cmdScenario(a, json) {
   const usage = '用法: node tpms.mjs scenario --design <方案.json> [--json]\n'
     + '方案 JSON: { type, porosity, material 必填; resolution/periods/container/mode/tolerance/\n'
@@ -1203,12 +1279,13 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
   slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'format', 'out', 'json', 'help'],
   overhang: ['input', 'critical', 'search', 'json', 'help'],
+  'cfd-post': ['q1', 'dp1', 'q2', 'dp2', 'mu', 'rho', 'kinematic', 'box-mm', 'length-mm', 'wss', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -1230,6 +1307,7 @@ else if (cmd === 'verify') cmdVerify(core, a, json);
 else if (cmd === 'scenario') cmdScenario(a, json);
 else if (cmd === 'slice') cmdSlice(a, json);
 else if (cmd === 'overhang') cmdOverhang(a, json);
+else if (cmd === 'cfd-post') cmdCfdPost(a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环 + M5 场景模板）');
   console.log('用法:');
@@ -1240,6 +1318,7 @@ else {
   console.log('  node tpms.mjs verify --design 设计.json [--max-rounds 5] [--json]');
   console.log('  node tpms.mjs scenario --design 方案.json   # M5：一条指令 → STL+INP+验证报告');
   console.log('  node tpms.mjs overhang --input 模型.stl [--critical 45] [--search]   # 可打印性审计：悬垂角 + 最优摆盘');
+  console.log('  node tpms.mjs cfd-post --q1 8.33e-9 --dp1 0.5 --q2 8.33e-8 --dp2 15  # Forchheimer 两点分离 → K_int/WSS 诊断');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }

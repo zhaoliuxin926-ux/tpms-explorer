@@ -30,13 +30,15 @@ const BUNDLE = join(tmpdir(), 'tpms_cae_audit_bundle.mjs');
     `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
     `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
     `export { buildOpenfoamPolyMesh, buildStoredZip } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-polymesh-exporter.ts'))};`,
+    `export { buildCaseFiles } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-case-template.ts'))};`,
+    `export { forchheimerTwoPoint } from ${JSON.stringify(join(PLATFORM, 'src/physics/forchheimer.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip } = await import(pathToFileURL(BUNDLE));
+const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip, buildCaseFiles, forchheimerTwoPoint } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -260,8 +262,67 @@ console.log('\n[C] ZIP 容器完整性（STORED + CRC32）');
     crc(enc.encode('123456789'), 0, 9) === 0xCBF43926);
 }
 
+// ── E. CFD 交付链完整化（2026-09-15）：可运行 case 模板 + Forchheimer 后处理 ──
+// 字典口径经 WSL OpenFOAM v13 foamRun 真跑验证（论文工程借鉴战役）：mm 单位制自洽 +
+// p=PCG/DIC（GAMG 在六面体网格死锁的回归哨兵）+ 壁面 wall 类型（WSS functionObject 前提）
+console.log('\n[E] OpenFOAM 可运行 case 模板 + cfd-post Forchheimer');
+{
+  const files = buildCaseFiles({
+    patches: ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'],
+    inletPatch: 'flow_inlet', outletPatch: 'flow_outlet',
+    wallPatches: ['casing_wall', 'tpms_scaffold_wetted'],
+    flowRateM3s: 8.33e-9, nu: 1.45e-6,
+  });
+  const names = Object.keys(files);
+  check('E1 模板 9 件齐备（0/{U,p,C}+system×3+constant×2+README）',
+    names.length === 9 && ['0/U', '0/p', '0/C', 'system/controlDict', 'system/fvSchemes', 'system/fvSolution', 'constant/physicalProperties', 'constant/momentumTransport', 'README.md'].every((n) => names.includes(n)),
+    JSON.stringify(names));
+  const u = files['0/U'], pf = files['0/p'];
+  check('E2 0/U flowRateInletVelocity + mm 单位制 Q（8.33e-9 m³/s×1e9）+ 四 patch boundaryField 全覆盖',
+    u.includes('flowRateInletVelocity') && u.includes('8.330000e+0') && u.includes('noSlip')
+      && ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'].every((x) => u.includes(x)));
+  check('E3 0/p 运动压强 dimensions [0 2 -2] + outlet fixedValue 0 参考点',
+    pf.includes('[0 2 -2 0 0 0 0]') && pf.includes('fixedValue; value uniform 0'));
+  const bd = buildOpenfoamPolyMesh(buildVoxelModel(mkParams(), R), 1, { fourPatch: true, flowAxis: 2 }).files['constant/polyMesh/boundary'];
+  check('E4 fourPatch 壁面 patch=wall 类型（WSS functionObject 只认 wall；inlet/outlet 保持 patch）',
+    /casing_wall\s*\{\s*type\s+wall/.test(bd) && /tpms_scaffold_wetted\s*\{\s*type\s+wall/.test(bd)
+      && /flow_inlet\s*\{\s*type\s+patch/.test(bd));
+  check('E5 ν=1.45 mm²/s（mm 单位制）+ incompressibleFluid + WSS 预埋 + dP 预埋（pin/pout surfaceFieldValue）',
+    files['constant/physicalProperties'].includes('nu              [0 2 -1 0 0 0 0] 1.450000e+0')
+      && files['system/controlDict'].includes('solver          incompressibleFluid')
+      && files['system/controlDict'].includes('patches (casing_wall tpms_scaffold_wetted)')
+      && /patch flow_inlet; fields \(p\); operation areaAverage/.test(files['system/controlDict'])
+      && /patch flow_outlet; fields \(p\)/.test(files['system/controlDict']));
+  check('E6 fvSolution p=PCG/DIC（GAMG 六面体死锁回归哨兵，真跑定案 2026-09-15）',
+    files['system/fvSolution'].includes('p { solver PCG; preconditioner DIC') && !files['system/fvSolution'].includes('GAMG'));
+  check('E7 README 单位制披露 + v13 patchAverage 语法 + kinematic 用法',
+    files['README.md'].includes('× 1e-6 × ρ') && files['README.md'].includes('--kinematic')
+      && files['README.md'].includes("patchAverage(patch="));
+  const fr = forchheimerTwoPoint({ q1: 8.33e-9, dp1: 0.833346944, q2: 8.33e-8, dp2: 8.3646944, mu: 1.45e-3, length: 0.006, area: 36e-6 });
+  check('E8 Forchheimer 合成锚（A=1e8 / B=5e12 精确恢复）',
+    Math.abs(fr.A / 1e8 - 1) < 1e-6 && Math.abs(fr.B / 5e12 - 1) < 1e-4,
+    `A=${fr.A.toExponential(6)} B=${fr.B.toExponential(6)}`);
+  check('E8b K_int 量纲恒等式（K_int·A·A_box/(μL)=1，容差 1e-12）',
+    Math.abs((fr.kInt * fr.A * 36e-6) / (1.45e-3 * 0.006) - 1) < 1e-12);
+  const zipE = Buffer.from(buildStoredZip(Object.entries(files).map(([n, t]) => ({ name: n, data: new TextEncoder().encode(t) }))));
+  const dvE = new DataView(zipE.buffer, zipE.byteOffset + zipE.length - 22);
+  check('E8c 模板件入 STORED ZIP（EOCD 条目数=9）', dvE.getUint16(10, true) === 9);
+
+  const CLI_E = join(HERE, '../agent/tpms.mjs');
+  const runE = (...args) => spawnSync(process.execPath, [CLI_E, ...args], { encoding: 'utf8' });
+  const r1 = runE('cfd-post', '--q1', '5', '--dp1', '10', '--q2', '5', '--dp2', '20');
+  const r2 = runE('cfd-post', '--q1', '-1', '--dp1', '10', '--q2', '2', '--dp2', '20');
+  const r3 = runE('cfd-post', '--q1', '8.33e-9', '--dp1', '1', '--q2', '8.33e-8', '--dp2', '1.9', '--kinematic', '--json');
+  let j3 = null;
+  try { j3 = JSON.parse(r3.stdout); } catch { /* */ }
+  check('E9 CLI 守卫（同流量 exit2 / 负流量 exit2 / --kinematic ×1e-6×ρ 换算）',
+    r1.status === 2 && r2.status === 2 && r3.status === 0 && j3
+      && Math.abs(j3.dp1Pa - 1e-3) < 1e-9 && Math.abs(j3.dp2Pa - 1.9e-3) < 1e-9,
+    `exits=${r1.status}/${r2.status}/${r3.status}`);
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 46) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 46（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 57) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 57（E 组 CFD 交付链 +11，2026-09-15）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
