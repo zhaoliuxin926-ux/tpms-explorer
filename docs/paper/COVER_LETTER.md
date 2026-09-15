@@ -18,9 +18,13 @@ minimal surface (TPMS) architected materials. It couples a watertight Surface Ne
 pipeline with an exact analytic porosity solver, multifunctional physics estimators (mechanical,
 permeability, acoustic, thermal), CAE hand-off (Abaqus/OpenFOAM/G-code), v7.0 research-grade
 modules for generative implicit fields, yield envelopes, phononic bandgaps, and tissue-ingrowth
-dynamics, and a v8.0 agentic verification layer (schema-clamped LLM tool calling plus a
+dynamics, a v8.0 agentic verification layer (schema-clamped LLM tool calling plus a
 closed-loop design-verify driver with bounded repair menus and structured unreachability
-declarations).
+declarations), and a v9.x manufacturing loop: conformal filling of anatomical geometries,
+ISO 13314 experimental-curve inversion, direct implicit slicing with industrial CLI output,
+a printability audit, a runnable-OpenFOAM permeability chain (Forchheimer two-point
+separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architecture
+(Surface Nets + Marching Tetrahedra) covering a radial-gradient family.
 
 **Why we believe it fits SoftwareX.**
 

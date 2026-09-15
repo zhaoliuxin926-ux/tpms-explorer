@@ -1,7 +1,7 @@
 # TPMS Explorer: A Browser-Based Parametric Design and Multi-Physics Simulation Platform for Triply Periodic Minimal Surface Lattices
 
 > 投稿主稿：`latex/main.tex`（Elsevier SoftwareX 格式，pdflatex 编译 0 错误——v8.0 轮修复 v7.0 稿两处预存 LaTeX 缺陷：psmallmatrix 缺 mathtools、\doi 未定义，此前为 nonstopmode 带错出 PDF）。
-> 本文件为摘要导览，与 main.tex 同步更新（2026-09-12 对齐至 v8.0-agentic-loop + 44 门（2026-09-13 起含门 43 experimental_fit + 门 44 conformal_fill）+ (viii) agentic 验证层）。
+> 本文件为摘要导览，与 main.tex 同步更新（2026-09-15 对齐至 v9.1.0-dual-extractor-manufacturing-loop：+ (ix-xii) 制造闭环层——conformal filling / 实验曲线反演 / 直接层切+CLI / 可打印性审计 / 可运行 OpenFOAM+Forchheimer / 双提取器+radial-grad）
 
 ## Abstract
 
@@ -32,3 +32,5 @@ TPMS Explorer is an open-source, browser-based platform for parametric design, a
 **Availability**: MIT license（仓库根 LICENSE）, https://github.com/zhaoliuxin926-ux/tpms-explorer
 **Requirements**: Modern browser (Chrome/Firefox/Safari); WebGPU optional; Node.js ≥ 20 for CI
 **Dependencies**: Three.js r0.185 (bundled); zero other runtime dependencies
+
+10. **The v9.x manufacturing loop (v9.0-9.1)**: conformal filling of arbitrary anatomical STL (voxelized SDF containers, wall-side Gaussian deburr, divergence-volume porosity denominator eliminating a +30pp AABB artefact); ISO 13314 experimental-curve inversion (toe compensation / union-of-bands / Gibson-Ashby ratios vs independent references); direct implicit scan-line slicing (SVG + Common Layer Interface, hatch fidelity ≤0.1%); overhang printability audit (industrial α=arccos(−N·b) convention, Fibonacci-sphere orientation search, six-specimen near-isotropy finding ±1pp); runnable-OpenFOAM case export + two-point Forchheimer post-processor (K_int=2.34e-9 m² measured on WSL run, literature band); dual-extractor architecture — Marching Tetrahedra (shared-corner ring ordering / corner-value η regularization / shape-invariant degeneracy criterion) restoring watertight output for the non-smooth radial-gradient family (K=1-2, sphere anchor 0.13%).
