@@ -45,9 +45,13 @@
               "dd",
               "dg",
               "fcky",
-              "cdd"
+              "cdd",
+              "slotp",
+              "fs",
+              "qstar",
+              "ws"
             ],
-            "description": "TPMS 曲面族。别名对照：diamond=Schwarz D（金刚石）；schwarz=Schwarz P；iwp=I-WP；frd=F-RD；fks/fky/fcks=Fischer-Koch S/Y/C(S)；dp/dd/dg=Double P/D/G；dprime=D′；cdd=Complementary D；gprime=G′。用户用历史别名（如 Schwarz D）时须映射到本表 id。custom 公式沙箱未注册本工具，传入将被拒绝。"
+            "description": "TPMS 曲面族。别名对照：diamond=Schwarz D（金刚石）；schwarz=Schwarz P；iwp=I-WP；frd=F-RD；fks/fky/fcks=Fischer-Koch S/Y/C(S)；dp/dd/dg=Double P/D/G；dprime=D′；cdd=Complementary D；gprime=G′；slotp=Slotted P；fs=F；qstar=Q*；ws=W（后四者出自 jwf23 方程数据集）。用户用历史别名（如 Schwarz D）时须映射到本表 id。custom 公式沙箱未注册本工具，传入将被拒绝。"
           },
           "porosity": {
             "type": "number",
@@ -104,9 +108,13 @@
               "dd",
               "dg",
               "fcky",
-              "cdd"
+              "cdd",
+              "slotp",
+              "fs",
+              "qstar",
+              "ws"
             ],
-            "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。"
+            "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。slotp/fs/qstar/ws（C2 第六批）：R96 k2 全档可产（探针实测 open/nm/degen 全 0）；slotp R48 p0.5 miso 超阈，用 p0.6 档。"
           },
           "porosity": {
             "type": "number",
@@ -118,7 +126,7 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 12,
-            "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素"
+            "description": "周期数（每轴单胞数），默认 6；上限 12 保证 R≤96 时每周期 ≥8 体素。注意：官方容差矩阵标定域为 k≤5（R≤128），k=6 为非标定域——2026-09-10 k6 标定轮 11 案例实测 4 超阈（lidinoid k6 R96 nm=10368 / k6 R128 体积 −8.83% / diamond R96 体积 −6.22% / gyroid R48 miso 超阈），薄壁族建议 --periods ≤5（数据 k6_tolerance_table.json）"
           },
           "resolution": {
             "type": "integer",
@@ -240,7 +248,11 @@
               "dd",
               "dg",
               "fcky",
-              "cdd"
+              "cdd",
+              "slotp",
+              "fs",
+              "qstar",
+              "ws"
             ],
             "description": "TPMS 曲面族，枚举与 tpms_mesh 一致。别名对照同 tpms_mesh（diamond=Schwarz D 等）。闭环修复策略器可在后续轮次换族（薄壁自触族优先换低谐波曲面）。"
           },
@@ -263,7 +275,7 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 12,
-            "description": "周期数（每轴单胞数），默认 6；薄壁自触类失败时修复策略器会降周期数"
+            "description": "周期数（每轴单胞数），默认 6；薄壁自触类失败时修复策略器会降周期数。k=6 超官方容差矩阵标定域 k≤5（薄壁族建议 ≤5，mesh 工具 periods 描述有 k6 标定数据）"
           },
           "resolution": {
             "type": "integer",

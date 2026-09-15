@@ -169,6 +169,11 @@ const CASES = [
   { name: 'cdd solid60 k3 R96(谐波3×)', type: 'cdd', mode: 'solid_network', p: 0.60, k: 3, R: 96, tol2k: true },
   { name: 'diamond w=[1,1.2,0.8,1] solid75', type: 'diamond', mode: 'solid_network', p: 0.75, k: 3, R: 61, weights: [1, 1.2, 0.8, 1] },
   { name: 'gyroid w=[1.3,0.7,1.1] shell70', type: 'gyroid', mode: 'shell', p: 0.70, k: 3, R: 61, weights: [1.3, 0.7, 1.1, 1] },
+  // C2 第六批（2026-09-15，jwf23 数据集）：R96 k2 探针实测全档水密可产（slotp R48 p0.5 miso 超陈如实登记，案例用 p0.6 档）
+  { name: 'slotp solid60 k2 R96', type: 'slotp', mode: 'solid_network', p: 0.60, k: 2, R: 96 },
+  { name: 'fs solid60 k2 R96', type: 'fs', mode: 'solid_network', p: 0.60, k: 2, R: 96 },
+  { name: 'qstar solid60 k2 R96', type: 'qstar', mode: 'solid_network', p: 0.60, k: 2, R: 96 },
+  { name: 'ws solid60 k2 R96', type: 'ws', mode: 'solid_network', p: 0.60, k: 2, R: 96 },
   // 红队回归（2026-08-27 攻击战果的修复守护）
   { name: 'RT 全零权重→必须抛错', type: 'gyroid', mode: 'solid_network', p: 0.75, k: 2, R: 41, weights: [0, 0, 0, 0], expectThrow: true },
   { name: 'RT NaN 公式→必须抛错', type: 'custom', customFormula: 'sqrt(-1)', mode: 'solid_network', p: 0.5, k: 2, R: 41, expectThrow: true },

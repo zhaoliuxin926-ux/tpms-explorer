@@ -25,7 +25,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const TPMS = join(HERE, 'tpms.mjs');
 
 // ── 修复动作 schema（有界策略菜单；validateToolCalls 同源钳制）──
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
 const REPAIR_TOOL = {
   name: 'apply_repair',
   description: '根据 verify 失败诊断选择下一轮修复。规则：水密/非流形失败（薄壁自触族）优先降 periods 或换曲面族；分辨率不足优先提 resolution（≤128）；参数层错误按 paramErrors 逐项修正；确定不可达（如 cylinder+diamond 深水区）才 declare_unreachable。',

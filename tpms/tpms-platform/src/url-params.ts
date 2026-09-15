@@ -8,7 +8,7 @@ import { ENDPLATE_MAX_UI_MM, type BlendAxis } from './types';
 // import { getDefaultWeights } from './core/tpms-functions'; // TODO: restore when used
 
 const VALID = {
-  type: ['gyroid','diamond','schwarz','neovius','iwp','frd','lidinoid','splitp','octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd','custom'] as TpmType[],
+  type: ['gyroid','diamond','schwarz','neovius','iwp','frd','lidinoid','splitp','octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd','slotp','fs','qstar','ws','custom'] as TpmType[],
   model: ['surface','strut','solid'] as RenderModel[],
   structure: ['solid_network','shell','gradient_shell'] as StructureMode[],
   container: ['cube','cylinder'] as ContainerShape[],

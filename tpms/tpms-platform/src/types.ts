@@ -3,8 +3,8 @@
  * 所有模块共享的核心类型声明，确保主线程与 Worker 之间的契约一致。
  */
 
-/** 支持的 TPMS 曲面类型（C2 第一批：+octo/karcher/fks/fky/gprime；第三批：+dprime/dp/dd/dg；第四批：+fcky；第五批：+cdd，level-set 近似公式对标 MiniSurf（Hsieh & Valdevit 2020）官方源码） */
-export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'fcks' | 'dprime' | 'dp' | 'dd' | 'dg' | 'fcky' | 'cdd' | 'custom';
+/** 支持的 TPMS 曲面类型（C2 第一批：+octo/karcher/fks/fky/gprime；第三批：+dprime/dp/dd/dg；第四批：+fcky；第五批：+cdd，对标 MiniSurf；第六批（2026-09-15）：+slotp/fs/qstar/ws，对标 jwf23/Equation-Based-Lattice-Structure-Dataset（CC BY，27 曲面 low-order Fourier fit）） */
+export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'fcks' | 'dprime' | 'dp' | 'dd' | 'dg' | 'fcky' | 'cdd' | 'slotp' | 'fs' | 'qstar' | 'ws' | 'custom';
 
 /** 渲染模式 */
 export type RenderModel = 'surface' | 'strut' | 'solid';
@@ -342,6 +342,10 @@ export const TYPE_COLORS: Record<TpmType, string> = {
   dg: '#f472b6',
   fcky: '#34d399',
   cdd: '#fb923c',
+  slotp: '#a78bfa',
+  fs: '#38bdf8',
+  qstar: '#fbbf24',
+  ws: '#2dd4bf',
   custom: '#6b7280',
 };
 
