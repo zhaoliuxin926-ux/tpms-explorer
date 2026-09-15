@@ -32,13 +32,15 @@ const BUNDLE = join(tmpdir(), 'tpms_cae_audit_bundle.mjs');
     `export { buildOpenfoamPolyMesh, buildStoredZip } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-polymesh-exporter.ts'))};`,
     `export { buildCaseFiles } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-case-template.ts'))};`,
     `export { forchheimerTwoPoint } from ${JSON.stringify(join(PLATFORM, 'src/physics/forchheimer.ts'))};`,
+    `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
+    `import { radialGradTransform as rgT, radialGradThreshold as rgC, schwarzPPhase as rgP, C_UNIFORM_K1 } from ${JSON.stringify(join(PLATFORM, 'src/core/radial-grad.ts'))}; export { rgT, rgC, rgP, C_UNIFORM_K1 };`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip, buildCaseFiles, forchheimerTwoPoint } = await import(pathToFileURL(BUNDLE));
+const { buildVoxelModel, buildAbaqusInp, buildOpenfoamPolyMesh, buildStoredZip, buildCaseFiles, forchheimerTwoPoint, buildSurface, rgT, rgC, rgP, C_UNIFORM_K1 } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -67,6 +69,8 @@ for (const [label, params] of [
   const hMm = opts.specimenSizeMm / (2 * HALF) * model.hWc;
 
   check(`${label}: 单元数 == 固相体素数 (${elemCount})`, elemCount === model.solidCount);
+  check(`${label}: 历史输出（*OUTPUT, HISTORY + NSET_TOP 的 RF/U——压缩曲线数据源，S1-S11 吸收）`,
+    text.includes('*OUTPUT, HISTORY') && text.includes('*NODE OUTPUT, NSET=NSET_TOP') && /RF, U/.test(text));
   check(`${label}: 文件结构（*NODE/*ELEMENT/*NSET/*ELASTIC/*STEP 齐备）`,
     text.includes('*NODE') && text.includes('*ELEMENT, TYPE=C3D8') && text.includes('*NSET, NSET=NSET_BOTTOM')
     && text.includes('NSET_PBC_X0') && text.includes('*ELASTIC') && text.includes('*STEP'));
@@ -321,8 +325,58 @@ console.log('\n[E] OpenFOAM 可运行 case 模板 + cfd-post Forchheimer');
     `exits=${r1.status}/${r2.status}/${r3.status}`);
 }
 
+// ── F. M(r) 径向梯度构型（论文几何借鉴，2026-09-15）：数学层锚 + 提取器边界断言 ──
+console.log('\n[F] radial-grad M(r) 空间映射（论文公式移植 + surface-nets 边界定案）');
+{
+  // F1 论文记载数学不变量锚（context.md 数学节：A·C_rad=K 恒等式 / 双通道拉回极限 1/K）——
+  // 比同源第二实现对拍更强（不依赖复刻件的坐标换算正确性）
+  let idMax = 0;
+  for (const K of [1.25, 1.5, 2.0]) {
+    const A = Math.sqrt(K / (K - 1));            // R0=1 归一化渐近常数
+    const Crad = Math.sqrt(K * (K - 1));         // R0=1 径向衰减系数
+    idMax = Math.max(idMax, Math.abs(A * Crad - K));          // 恒等式 A·C_rad = K
+    const eps = 1e-3;  // 须 > rgT 内部 r1s=max(r1,1e-6) 防零保护带（论文同款 delta），否则极限断言失真
+    const [x2e] = rgT(eps, 0, 0, K);             // 径向拉回中心极限
+    const [, , z2e] = rgT(0, 0, eps, K);         // 轴向拉回中心极限
+    idMax = Math.max(idMax, Math.abs(x2e / eps - 1 / K), Math.abs(z2e / eps - 1 / K));
+    const [x2edge] = rgT(1, 0, 0, K);            // 边缘（r1=1）径向映射连续有限
+    const [, , z2edge] = rgT(1, 0, 1, K);        // 轴向边缘（r1=1, z=1）
+    idMax = Math.max(idMax, Math.abs(z2edge - 1));             // 轴向边缘恢复 1
+    if (!Number.isFinite(x2edge)) idMax = Infinity;
+  }
+  check('F1 论文数学不变量（A·C_rad=K 恒等式 / 双通道中心极限 1/K（atanh 线性区 O(u²)≈1e-7 残差容差）/ 轴向边缘恢复 1，K∈{1.25,1.5,2}）',
+    idMax < 1e-6, 'maxId=' + idMax.toExponential(2));
+  check('F2 K=1 退化（变换恒等 + 均匀阈值 C=0.871）',
+    rgT(0.4, -0.2, 0.7, 1)[0] === 0.4 && rgT(0.4, -0.2, 0.7, 1)[2] === 0.7 && rgC(0.5, 1, 1 / 6, 0.03, 0.03) === C_UNIFORM_K1);
+  let rgRes = null, rgErr = '';
+  try {
+    rgRes = buildSurface({
+      type: 'schwarz', iso: 0, periods: 12, resolution: 96, targetPorosity: undefined,
+      weights: [1, 1, 1, 1], structureMode: 'solid_network', containerShape: 'cylinder',
+      thickness: 1.0, gradientDir: 'z', customFormula: '', preview: false,
+      hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
+      radialGrad: { K: 1.5, sizeMm: 12, taMm: 0.2, tbMm: 0.322 },
+    });
+  } catch (e) { rgErr = String(e?.message ?? e); }
+  check('F3 K=1.5 构建成功 + 密度锚 [45,55]%（论文设计 ≈50%）',
+    rgRes !== null && rgRes.porosityEstimate > 0.45 && rgRes.porosityEstimate < 0.55,
+    rgErr || 'poro=' + ((rgRes?.porosityEstimate ?? 0) * 100).toFixed(2) + '%');
+  const CLI_F = join(HERE, '../agent/tpms.mjs');
+  const runF = (...args2) => spawnSync(process.execPath, [CLI_F, ...args2], { encoding: 'utf8' });
+  const rf = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '6', '--resolution', '64',
+    '--container', 'cylinder', '--radial-grad', '1.5', '--out', join(tmpdir(), 'tpms_f_rg_' + process.pid + '.stl'), '--json');
+  check('F4 水密门 fail-closed（exit3 + 非流形诊断——surface-nets 容器交线族边界，论文 MC 提取无此问题，登记待攻）',
+    rf.status === 3 && /非流形/.test(rf.stdout + rf.stderr), 'exit=' + rf.status);
+  const rf1 = runF('mesh', '--type', 'gyroid', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cylinder', '--radial-grad', '1.5');
+  const rf2 = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cube', '--radial-grad', '1.5');
+  const rf3 = runF('mesh', '--type', 'schwarz', '--porosity', '0.5', '--periods', '12', '--resolution', '64', '--container', 'cylinder', '--radial-grad', '1.5', '--ta', '0.05');
+  check('F5 守卫三连（type≠schwarz / cube 容器 / 亚体素壁厚 → exit2）',
+    rf1.status === 2 && rf2.status === 2 && rf3.status === 2,
+    'exits=' + rf1.status + '/' + rf2.status + '/' + rf3.status);
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 57) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 57（E 组 CFD 交付链 +11，2026-09-15）'); process.exit(1); }
+  if (passCount < 65) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 65（F 组 radial-grad +5，2026-09-15）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
