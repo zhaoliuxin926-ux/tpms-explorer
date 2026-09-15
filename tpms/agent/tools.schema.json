@@ -114,7 +114,7 @@
               "qstar",
               "ws"
             ],
-            "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。slotp/fs/qstar/ws（C2 第六批）：R96 k2 全档可产（探针实测 open/nm/degen 全 0）；slotp R48 p0.5 miso 超阈，用 p0.6 档。"
+            "description": "TPMS 曲面族。fcks/cdd（谐波 3×）：fcks 可产域=R120 k6（p0.5/0.6/0.7 均 nm=0，p0.6 偏差 0.35pp ~22s）∪ R128 k2（nm=0，偏差 0.13pp ~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避。cdd 可产域=R96 p0.6（偏差 0.16pp）；R48 fail-closed。slotp/fs/qstar/ws（C2 第六批）：R96 k2 全档可产（探针实测 p0.6 档四曲面均 exit0、p0.5 档除 qstar 外可产——qstar p0.5 差角非对称微非流形水密门拒产（R96 nm=28/R48 nm=12，升分辨率不收敛，用 p0.6 档）；slotp R48 p0.5 miso 超阈；k6 默认档四曲面均拒产（qstar nm=792）——降周期数可避。"
           },
           "porosity": {
             "type": "number",

@@ -83,7 +83,7 @@ function mulberry32(seed) {
 }
 
 // C2 三批扩容曲面全量纳入万点对拍（此前清单停留 8 族致 GPU IR 未被守门——fcks IR sin³ bug 即由此漏检，2026-09-09 修复）
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];  // 红队 C F1：第六批曾漏列（fcks 事故同模式）
 const HALF = Math.PI;
 const N_POINTS = 10000;
 
@@ -108,7 +108,7 @@ for (const type of TYPES) {
 }
 {
   // fcky/cdd/custom 一元负号必须发射为 `-reg` 而非 neg(reg)
-  for (const t of ['fcky', 'cdd']) {
+  for (const t of ['fcky', 'cdd', 'slotp', 'qstar']) {  // 红队 C F1：neg 发射守卫补列——仅列 IR 确实含 unary(neg) 的族（slotp×4/qstar×1）；fs 纯积、ws 用 sub 无需负号，不在此清单 {
     const k = compileFieldKernel(mkCfg(t));
     check(`${t}: WGSL 含一元负号发射`, /let t\d+ = -t\d+;/.test(k.wgsl) || k.wgsl.includes(' = -t'), k.wgsl.slice(0, 200));
   }

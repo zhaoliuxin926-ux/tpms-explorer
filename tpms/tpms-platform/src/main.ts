@@ -946,6 +946,28 @@ function runRadialGradPipeline(K: number, ta: number, tb: number, sizeMm: number
     scaleMm: sizeMm / 2,                                          // 归一域 [-1,1] 全宽 = sizeMm
   };
 }
+/** 边配对水密审计（UI 导出 fail-closed——红队 B m5：CLI 有 auditMeshIndices 门，UI 侧补齐；
+ * 数值键 a*2^19+b（双精度 53 位安全），80 万三角 ~1-2s 主线程，导出路径已有数秒等待） */
+function auditRadialMeshInline(indices: Uint32Array): { open: number; nm: number } {
+  const edge = new Map<number, { c: number; d: number }>();
+  for (let t = 0; t < indices.length; t += 3) {
+    for (let e = 0; e < 3; e++) {
+      const a = indices[t + e], b = indices[t + (e + 1) % 3];
+      if (a === b) continue;
+      const k = a < b ? a * 524288 + b : b * 524288 + a;
+      const rec = edge.get(k);
+      if (rec === undefined) edge.set(k, { c: 1, d: a < b ? 1 : 2 });
+      else { rec.c++; rec.d |= a < b ? 1 : 2; }
+    }
+  }
+  let open = 0, nm = 0;
+  for (const rec of edge.values()) {
+    if (rec.c === 1) open++;
+    else if (rec.c > 2) nm++;
+  }
+  return { open, nm };
+}
+
 function bindRadialGradCard(): void {
   const kS = document.getElementById('rg-k') as HTMLInputElement | null;
   const taS = document.getElementById('rg-ta') as HTMLInputElement | null;
@@ -975,6 +997,12 @@ function bindRadialGradCard(): void {
     if (s.structureMode !== 'solid_network') { flashToast('radial-grad 须 solid_network 模式'); return false; }
     if (s.containerShape !== 'cube') { flashToast('radial-grad 须 cube 容器（立方采样域 + 场内圆柱裁剪）'); return false; }
     if (meshCont) { flashToast('radial-grad 与外部 STL 容器互斥（归一化域即映射域）'); return false; }
+    // 红队 B MAJOR-1 补连：CLI 互斥守卫全集（tpms.mjs 同语义）——开启时静默放行
+    // 会产出与主视图状态语义矛盾的 MT 几何（「无静默回退」铁律）
+    if (s.isoGrad.enabled) { flashToast('radial-grad 与渐变等值场互斥（径向阈值场已由 C(r) 承担）'); return false; }
+    if (s.hybrid.enabled) { flashToast('radial-grad 与混合场互斥'); return false; }
+    // 红队 B MINOR-3：manifold warp 开启时预览会被 warp 而导出走独立管线不会——所见≠所导，拒绝
+    if (s.manifold.kind !== 'identity') { flashToast('radial-grad 与非欧映射互斥（预览会被 warp 而导出不会）'); return false; }
     return true;
   };
   gen.addEventListener('click', () => {
@@ -1008,7 +1036,12 @@ function bindRadialGradCard(): void {
     setTimeout(() => {
       try {
         const res = runRadialGradPipeline(Number(kS.value), Number(taS.value), Number(tbS.value), s.cellSize, 96);
-        exportBinarySTL(res.positions, res.indices, `tpms-radial-grad-K${kS.value}-ta${taS.value}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
+        const audit = auditRadialMeshInline(res.indices);
+        if (audit.open > 0 || audit.nm > 0) {
+          status.textContent = `✗ 水密审计拒绝（open=${audit.open} nm=${audit.nm}）——STL 不导出，与 CLI 水密门同标准`; 
+          return;
+        }
+        exportBinarySTL(res.positions, res.indices, `tpms-radial-grad-K${kS.value}-ta${taS.value}-tb${Number(tbS.value).toFixed(3)}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
         status.textContent = `✓ STL 已导出（HD R=96 · ${res.triCount.toLocaleString()} 三角 · 孔隙率 ${(res.porosity * 100).toFixed(1)}% · 直径 ${s.cellSize}mm）`;
       } catch (e) {
         status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
@@ -3137,6 +3170,7 @@ function bindHybridCustom(): void { // 多相混合与自定义公式
   document.querySelectorAll('[data-hybrid-type]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ hybrid: { ...getState().hybrid, typeB: btn.getAttribute('data-hybrid-type') as AppState['hybrid']['typeB'] } });
+      syncUI(getState());  // 红队 B m8：补高亮同步（data-hybrid-type handler 曾漏调——点击后 active 滞后到下次主状态变化）
       scheduleRebuild(false);
     });
   });
@@ -3926,10 +3960,14 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
 
 // ── 论文配图模式 ─────────────────────────────────────────────
 async function enterFigureMode(): Promise<void> {
+  // 红队 A F4 防重入：await 间隙（SDF 预热可达数秒）二次点击会并发两份下载且 saved 捕获错误相机
+  const figBtn = document.getElementById('btn-figure') as HTMLButtonElement | null;
+  if (figBtn?.disabled) return;
+  if (figBtn) figBtn.disabled = true;
   const s = getState();
   // 配图先确保导出级 HD 几何（与导出中心共享锁）：截屏走渲染结果，
   // 拖动后 preview 窗口期内进入配图曾产出低清配图与 sidecar
-  if (!(await ensureExportGradeGeometry(s))) return;
+  if (!(await ensureExportGradeGeometry(s))) { if (figBtn) figBtn.disabled = false; return; }
   const saved = {
     autoRotate: ctx.controls.autoRotate,
     camPos: ctx.camera.position.clone(),
@@ -3990,6 +4028,7 @@ async function enterFigureMode(): Promise<void> {
       ctx.renderer.setPixelRatio(saved.pixelRatio);
       ctx.renderer.setSize(saved.cssW, saved.cssH, false);
       ctx.composer.setSize(saved.cssW, saved.cssH);
+      if (figBtn) figBtn.disabled = false;
     }, 300);
   }, 400);
 }

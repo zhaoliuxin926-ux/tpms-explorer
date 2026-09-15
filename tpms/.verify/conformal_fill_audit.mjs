@@ -413,11 +413,45 @@ function fillTorus(blend) {
   Math.abs(frac - 2 * Math.PI * Math.PI * 14 * 36 / (mrC.domain.scale ** 3) / 8) <= 0.03
     ? ok('C7 容器体积锚：inside/R³ ≈ 解析 torus/域盒', (frac * 100).toFixed(2) + '%')
     : bad('C7 容器体积锚', 'frac=' + frac.toFixed(4));
-  // ③ 四 patch 全非空 + 边界面总数对账
+  // ③ patch 语义（红队 A F1 端面校验后重钉）：torus 无贯穿端口——管顶/底面的 z 向面是
+  // casing 侧壁而非端口（旧口径 in=1669/out=1194 全为误归）；流体域与容器壁仍非空
   const P = pm.stats.patches;
-  ['flow_inlet', 'flow_outlet', 'casing_wall', 'tpms_scaffold_wetted'].every((n) => P[n] > 0)
-    ? ok('C7 四 patch 全非空', JSON.stringify(P))
-    : bad('C7 四 patch 存在性', JSON.stringify(P));
+  P.flow_inlet === 0 && P.flow_outlet === 0 && P.casing_wall > 0 && P.tpms_scaffold_wetted > 0
+    ? ok('C7 torus 无贯穿端口（端面校验后侧壁归 casing）', JSON.stringify(P))
+    : bad('C7 torus patch 语义', JSON.stringify(P));
+  // ③b 贯穿容器案例（解析圆柱 SDF 直填，r=0.8 贯穿 z）：四 patch 全非空 + inlet 恰为
+  // z0 层柱内流体数（真端面语义锚——端面校验后侧壁阶梯不再污染端口）
+  {
+    const RC = 40, NC = RC + 1, RAD = 0.8;
+    const sdfC = new Float32Array(NC ** 3);
+    let z0Fluid = 0;
+    for (let z = 0; z < NC; z++) for (let y = 0; y < NC; y++) for (let x = 0; x < NC; x++) {
+      const px = x / RC * 2 - 1, py = y / RC * 2 - 1, pz = z / RC * 2 - 1;
+      const r = Math.hypot(px, py);
+      const inside = r < RAD && Math.abs(pz) < 1;
+      sdfC[(z * NC + y) * NC + x] = inside ? -0.1 : 0.1;
+      if (z === 0 && inside) z0Fluid++;
+    }
+    const voxC = buildVoxelModel({
+      type: 'gyroid', periods: 2, weights: [1, 1, 1, 1], structureMode: 'solid_network',
+      containerShape: 'cube', thickness: 1.0, targetPorosity: 0.6, iso: 0, customFormula: '',
+      containerSdf: sdfC,
+    }, RC);
+    const pmc = buildOpenfoamPolyMesh(voxC, 2, { fourPatch: true, flowAxis: 2 });
+    const Pc = pmc.stats.patches;
+    Pc.flow_inlet + Pc.flow_outlet > 0 && Pc.casing_wall > 0 && Pc.tpms_scaffold_wetted > 0
+      ? ok('C7b 贯穿圆柱端口+侧壁+浸润就绪（端口至少一端，另一端被 TPMS 固相堵死=几何事实）', JSON.stringify(Pc))
+      : bad('C7b 四 patch 存在性', JSON.stringify(Pc));
+    // z0 层柱内流体数（非固相）= inlet 面数上限（TPMS 固相扫除后 inlet ≤ 该数）
+    let z0Void = 0;
+    for (let y = 0; y < RC; y++) for (let x = 0; x < RC; x++) {
+      const i = x + y * RC; // z=0 层
+      if (voxC.inside[i] && !voxC.solid[i]) z0Void++;
+    }
+    Pc.flow_inlet > 0 && Pc.flow_inlet <= z0Void
+      ? ok(`C7b inlet 真端面语义（${Pc.flow_inlet} ≤ z0 层流体 ${z0Void}）`)
+      : bad('C7b inlet 语义', JSON.stringify(Pc));
+  }
   P.flow_inlet + P.flow_outlet + P.casing_wall + P.tpms_scaffold_wetted === pm.stats.boundaryFaces
     ? ok('C7 patch 面数总和 == boundaryFaces')
     : bad('C7 patch 总和对账', JSON.stringify(P) + ' vs ' + pm.stats.boundaryFaces);
@@ -467,7 +501,7 @@ function fillTorus(blend) {
     const zipOut = join(tmpdir(), 'tpms_c7_cfd_' + process.pid);
     const r3 = run('--type', 'gyroid', '--porosity', '0.6', '--resolution', '64', '--periods', '2', '--container-mesh', torusStl, '--cfd-polyMesh', '--flow-axis', 'z', '--out', zipOut + '.stl', '--json');
     let j3 = null; try { j3 = JSON.parse(r3.stdout); } catch { /* 忽略 */ }
-    const zipOk = r3.status === 0 && j3?.cfdPolyMesh?.patches && Object.values(j3.cfdPolyMesh.patches).every((v) => v > 0)
+    const zipOk = r3.status === 0 && j3?.cfdPolyMesh?.patches && j3.cfdPolyMesh.patches.flow_inlet === 0 && j3.cfdPolyMesh.patches.flow_outlet === 0 && j3.cfdPolyMesh.patches.casing_wall > 0 && j3.cfdPolyMesh.patches.tpms_scaffold_wetted > 0
       && typeof j3.stlSkipped === 'string' && existsSync(zipOut + '.polyMesh.zip');
     zipOk ? ok('C7 CLI happy-path：exit0 + 四 patch zip + stlSkipped 披露', JSON.stringify(j3.cfdPolyMesh.patches))
       : bad('C7 CLI happy-path', 'exit=' + r3.status + ' ' + (r3.stderr || '').slice(0, 80));

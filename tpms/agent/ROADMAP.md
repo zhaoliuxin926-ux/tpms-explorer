@@ -72,6 +72,22 @@
 
 ---
 
+## 寿极对抗审查轮 v3（2026-09-16 · 清欠轮 5ff3c38..92470e9 全量攻击 · 4 红队 · 0C+10M+20m · 全修）
+
+四路并行红队（A 几何/CFD、B UI/管线、C 四方同源/门禁、D 文档/定案），攻击脚本 %TEMP%	pms-audit-rt{a,b,c}\ 与直接 gh/git/浏览器实测，仓库零写入。**正面结论**：corner-air 修复/提取等价性/四方数值同源/DOI 真实性/44 门账实/剪切 b=0 定案均经独立攻击验证成立；缺口集中在披露面与守卫完备性。
+
+**MAJOR 全修明细**：
+1. 【B-M1】radial-grad UI guard 漏 isoGrad/hybrid 互斥（CLI die vs UI 静默放行实测实锤）→ guard 补三连（isoGrad/hybrid/manifold warp）+ 冒烟 B2 断言回归
+2. 【B-M2】rg-tb 滑块 step=0.05 把 nTop 标定表 0.322 量化成 0.30——UI 与 CLI 系统性偏差 1.8pp（三证据链定位）→ step=0.001，修复后预览 192,784/54.7% 与 CLI 表值逐位一致（冒烟实证）
+3. 【C-F1】webgpu_parity TYPES 漏第六批四曲面（fcks 事故同模式）→ +4（万点对拍 119 断言）；附带坑：neg 发射守卫清单初版误加 fs/ws（其 IR 用 sub 无需负号）——**守卫清单按「是否真含该发射模式」精确列，不是全族扫**
+4. 【C-F2】「R96 k2 全档可产 open/nm/degen 全 0」与探针数据矛盾（qstar p0.5 实测 nm=28 水密门拒产）→ schema description 改准（p0.6 档全可产/qstar p0.5 拒产如实披露）
+5. 【C-F3】BENCHMARKS 停在 20 族 vs README 宣称 24 → --md 重生（含 ws R48 dev 13.25pp 等如实公开）
+6-10. 【D-M1..M5】论文 jwf23 零引用（D 路挖到可引 DOI 10.1016/j.dib.2023.109612）→ bibitem×2+归属句（MiniSurf 10.1016/j.simpa.2020.100026 同补）；MANUSCRIPT 20 族/43 门、README_EN L18、PROJECT_SUMMARY×4、WORKFLOW_GUIDE×2、LEARNING_PATH×1、README 30 案例/282 全部修齐
+
+**MINOR 修复节选**：UI 导出水密 fail-closed 门（数值键边配对）/文件名+tb/mojibake×1/typeB syncUI/冒烟断言读 toast/各向异性注释口径/probe 注释/旧标签（run_ci_suite×2/ci.yml 39→44）/bugs.md 基线矛盾。**A 路 4 MINOR 中 2 项升级为真修复**：fourPatch flowAxis 端面校验（torus 无贯穿端口——旧 in=1669/out=1194 全为侧壁阶梯误归实锤，现归 casing；conformal C7 按新语义重钉+新增贯穿圆柱案例守真端面语义）；修复中暴露**二阶真缺陷**：空 patch startFace 写 0 断 boundary 链（Math.max(0,-1)遗留）→ 前缀累计写出。figure 防重入/体积锚/cell 顺序契约注释/CLI periods≥2 同批。
+
+**误报排除与维持口径**：D-m1（MATLAB R2025a 表述←探针实际跑 a，R2025b 无 bin 不完整）；D-m6（探针不进 CI 维持 volume_loss 先例）；D-m7（定案=非待办口径维持）；B 观察项 cellSize=5 预览 R48 拒/导出 R96 过（voxPerWall 设计口径，登记）。
+
 ## bugs.md 清欠轮（2026-09-15 · 用户授权「全部解决」· 七件套 + 定案收口 · 零挂账）
 
 **授权**：用户明确第一篇论文不归本会话管，只管 tpms；「bugs.md 有效未解项现在全部解决」。工程可解七件真修/实测；不可修者（数学/环境/数据证明）终局定案为披露，不假修。

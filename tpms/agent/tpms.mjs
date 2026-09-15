@@ -511,6 +511,7 @@ function cmdMesh(a, json) {
     if (container !== 'cube') die('--radial-grad 须 --container cube（立方采样域 + 场内圆柱裁剪——论文 export_stl.py 同方案，绕过壳场×容器交线盲区）', usage);
     if (isoGradM || hybridM) die('--radial-grad 与 --iso-grad/--hybrid 互斥', usage);
     if (a['container-mesh'] !== undefined) die('--radial-grad 与 --container-mesh 互斥（归一化域即映射域）', usage);
+    if (periods < 2) die('--radial-grad 须 periods ≥ 2（单周期域无径向梯度意义，与 validateRadialGrad 声明口径对齐）', usage);
     const ta = a.ta === undefined ? 0.2 : Number(a.ta);
     if (!Number.isFinite(ta) || ta <= 0 || ta > 2) die('--ta 须 0 < t ≤ 2 mm（中心壁厚，默认 0.2=论文 0.5 按 L 比例折算）', usage);
     let tb = a.tb === undefined ? (RG_TB_TABLE[K] ?? 0.3) : Number(a.tb);

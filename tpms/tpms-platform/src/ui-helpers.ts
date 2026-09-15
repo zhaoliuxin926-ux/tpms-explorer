@@ -90,7 +90,7 @@ export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {
   slotp:   [['−2(cos x cos y + cos y cos z + cos z cos x) − 2(cos 2x + cos 2y + cos 2z) + (cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)', 'a', 1]],
   fs:      [['cos x cos y cos z', 'a', 1]],
   qstar:   [['(cos x − 2 cos y)cos z − √3 sin z (cos(x−y) − cos x) + cos(x−y)cos z', 'a', 1]],
-  ws:      [['(cos 2x cos y + cos 2y cos z + cos 2z cos x) â (cos x cos 2y + cos y cos 2z + cos z cos 2x)', 'a', 1]],
+  ws:      [['(cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)', 'a', 1]],
 };
 
 export const MODEL_DESC: Record<string, string> = {

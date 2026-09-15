@@ -367,6 +367,8 @@ prevents stale asynchronous geometry from overwriting the preview, giving the pl
 
 \section{Quality control}
 Forty-four gates run via
+The C2 extension families are transcribed from the MiniSurf reference implementation~\cite{hsieh2020minisurf}
+and the equation-based lattice dataset of Fleck et~al.~\cite{fleck2023lattice} (CC~BY~4.0).
 \texttt{npm run test:all} on three platforms. Beyond CI, the exported MATLAB reconstruction
 scripts are executed on a real MATLAB R2025a runtime as a standalone three-branch smoke
 (default identity-manifold, second-harmonic, and non-Euclidean Poincar\'e geometries) --- the
@@ -439,6 +441,17 @@ Technology 99(1), 2--15. \doi{10.1115/1.3443401}
 \bibitem[{Hill(1948)}]{hill1948theory}
 Hill, R., 1948. A theory of the yielding and plastic flow of anisotropic metals. Proceedings of
 the Royal Society of London. Series A 193(1033), 281--297. \doi{10.1098/rspa.1948.0045}
+
+\bibitem[{Fleck(2023)}]{fleck2023lattice}
+J.~W. Fleck et~al., Equation-based lattice structure dataset: 27 triply periodic minimal
+surfaces with level-set approximations, \textit{Data in Brief} 51 (2023) 109612.
+\doi{10.1016/j.dib.2023.109612} Datasheet and MATLAB evaluation scripts (CC~BY~4.0) at
+\texttt{github.com/jwf23/Equation-Based-Lattice-Structure-Dataset}.
+
+\bibitem[{Hsieh(2020)}]{hsieh2020minisurf}
+M.-T. Hsieh, L.~Valdevit, MINISURF: parameterizing and generating triply periodic minimal
+surfaces for lightweight structural applications, \textit{Software Impacts} 6 (2020) 100026.
+\doi{10.1016/j.simpa.2020.100026}
 
 \end{thebibliography}
 
