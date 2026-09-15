@@ -2,7 +2,7 @@
 
 > **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v9.0.0--fullstack--cae--ecosystem-2563eb)
+![release](https://img.shields.io/badge/release-v9.1.0--dual--extractor--manufacturing--loop-2563eb)
 ![ci](https://img.shields.io/badge/CI-44%2F44%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -40,7 +40,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v9.0.0-fullstack-cae-ecosystem）
+### 科研与增材制造特性矩阵（v9.1.0-dual-extractor-manufacturing-loop）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -53,7 +53,7 @@
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **44 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 44/44 |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界钳制）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 34 条中英指令真实模型回归 34/34（glm-4.6）+ llm_provider_selftest 33 断言 |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界钳制）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 37/37 推荐，四档画像在案）+ llm_provider_selftest 33 断言 |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 56 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
@@ -71,7 +71,7 @@
 | 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 18 断言（合成曲线解析真值恢复 ≤2%） |
 | ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 43 断言（万点对拍 0.00e+0） |
 | 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
-| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步）与 polyMesh 五件套直通求解，免 snappyHexMesh | cae_mesh_audit 46 断言 |
+| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 66 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |
 | 🌿 多级分形 TPMS | F=F_macro+λ·F_micro(Nx) 双重孔隙，coarea 比表面积分离 + 微孔连通率 100% | hierarchical_audit 18 断言 |
 | 🎯 逆向设计引擎 | 目标 E*/κ/P 反解最优构型（Nelder-Mead+LM，8 型枚举，κ 下限约束） | inverse_design_audit 23 断言（逆向犯罪 ≤3%） |
@@ -79,8 +79,13 @@
 | 🔬 CAE 验证直通 | Abaqus/OpenFOAM 自动求解脚本 + E_FEM/σ_pl/κ/WSS 提取 + 对比矩阵 | cae_verification_audit 25 断言 |
 | 💥 冲击吸能与模态 | SEA(J/g)/密实化 εd/峰值 σ_peak + 等效梁 6 阶模态（正交简并对） | impact_modal_audit 11 断言 |
 | 🩻 Micro-CT 偏差分析 | Otsu+精确 3D EDT+SDF，制造偏差过充/欠肉热力图 | ct_reconstruction_audit 11 断言 |
+| 📐 直接隐式层切 (v9.0+) | 扫描线区间法跳过三角网格直出矢量层切：SVG 逐层扫描路径 + **CLI 工业格式**（Common Layer Interface，hatch 重算体积保真 ≤0.1%）+ 容器裁剪（cylinder 解析/C5 SDF 区间） | gcode_slicer_audit 32 断言（F1-F7：层切≡mesh 发散体积双口径 ≤2%/CLI 结构/悬垂审计） |
+| 🪜 可打印性审计 (v9.1) | 悬垂角面积统计（α=arccos(−N·b) 工业口径，九桶直方图）+ Fibonacci 球确定性最优摆盘寻优；实测 TPMS 晶格近各向同性=摆盘收益 ±1pp（支撑控制走切片器侧的定量依据） | gcode_slicer_audit F7 十断言（球面积极分解析锚 14.645%/立方体 1/6/critical=89° 方向语义钉/体对角零支撑） |
+| 🌊 CFD 交付链 (v9.1) | `--cfd-polyMesh` 直出**可运行 OpenFOAM case**（SIMPLE 稳态字典 + dP/WSS 预埋 + 传质 Robin 壁）+ `cfd-post` Forchheimer 两点分离（K_int=Stokes 截距 μL/(A_box·A)，实测 2.34×10⁻⁹ m² 落骨支架文献带）+ WSS 促矿化窗口诊断 | cae_mesh_audit E 组 11 断言；WSL OpenFOAM v13 foamRun 真跑闭环（GAMG 六面体死锁→PCG 定案在案） |
+| 🌀 径向梯度构型 radial-grad (v9.1) | 中心膨胀 K/边缘 1 的度规逆映射构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]，K=1 退化均匀基准）；K=1.5 实测设计密度 ≈50.6% | cae_mesh_audit F 组 5 断言（数学不变量锚 A·C_rad=K/双通道极限 1/K/密度锚） |
+| 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
 
-> 📝 **Release Notes**：[docs/RELEASE_NOTES_v8.0.0.md](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
+> 📝 **Release Notes**：[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。

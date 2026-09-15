@@ -77,3 +77,43 @@
 - 孔隙率偏差为网格实测口径 vs 目标，含场离散项（exact 求解器已作割线校正）
 - 力学口径为 Gibson-Ashby 解析估算，非 FEA；压缩响应以 Abaqus 实跑为准
 - fcks 可产域=R120 k6 ∪ R128 k2（~9s，偏差 0.13pp）；k6 R48/R96/R128 薄壁自触拒产（旧「R128 >36 分钟」实为索引池溢出死循环，2026-09-10 已修；性能路径 2026-09-11 退役）
+## v9.1 增量基准（2026-09-15 · 平台自测口径）
+
+### Marching Tetrahedra 提取器（球锚，收敛阶）
+
+| R | tris | open/nm/degen | 体积偏差 vs 4π/3 |
+|---|---|---|---|
+| 32 | 28,560 | 0/0/36* | 0.29% |
+| 48（门禁 F6 在守） | — | 0/0/0 | 0.13% |
+| 64 | 115,296 | 0/0/36* | 0.07% |
+
+*对称位置恰等值微三角（绝对判据口径）；审计走尺度无关判据后为 0。
+
+### radial-grad 构型（五 K 档水密产出，R128 / periods=12 / MT 管线）
+
+| K | porosity（圆柱口径） | open/nm/degen/miso | STL 三角数 |
+|---|---|---|---|
+| 1（均匀基准） | 56.9%* | 全零 | ≈443 万（221MB） |
+| 1.25 | 55.7% | 全零 | ≈443 万 |
+| 1.5 | 55.4% | 全零 | ≈443 万 |
+| 1.75 | 56.4% | 全零 | ≈443 万 |
+| 2.0 | 57.8% | 全零 | ≈443 万 |
+
+*孔隙率为 MT 发散体积/圆柱包络实测口径（R128 含离散项；K=1.5 换算 surface-nets 口径 ≈50.6%）。
+复现：`node tpms/agent/tpms.mjs mesh --type schwarz --porosity 0.5 --periods 12 --resolution 128 --container cube --radial-grad <K> --out out.stl --json`
+
+### CFD 渗透率（Forchheimer 两点分离，icosphere 容器 + gyroid k2，WSL foamRun 真跑）
+
+| 量 | 实测 | 口径 |
+|---|---|---|
+| K_int | 2.337×10⁻⁹ m² | Stokes 截距 μL/(A_box·A)，落骨支架文献带 10⁻⁹~5×10⁻⁸ |
+| K_app(Q₁→Q₂) | 2.28→1.84×10⁻⁹ m² | 随流量降（Forchheimer 教科书行为） |
+| 惯性占比 | 2.6% → 21.1% | 0.5→5 mL/min 双流量点 |
+| WSS 线性 | Q₂/Q₁ ≈ 10.07× | Stokes 线性 + 0.7% 惯性 |
+
+复现：`mesh --cfd-polyMesh --flow-axis z` → WSL `foamRun` → `cfd-post --q1 ... --dp1 ... --q2 ... --dp2 ... --kinematic`
+
+### 可打印性（六试样悬垂审计，512 方向 Fibonacci 摆盘寻优）
+
+critical 面积比 11.4~13.6% @ b=[0,0,1]；最优摆盘收益仅 ±1pp（TPMS 晶格法向近各向同性的定量结论——支撑控制应走切片器参数侧）。
+复现：`node tpms/agent/tpms.mjs overhang --input model.stl --search`
