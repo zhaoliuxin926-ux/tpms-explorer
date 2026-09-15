@@ -72,6 +72,20 @@
 
 ---
 
+## bugs.md 清欠轮（2026-09-15 · 用户授权「全部解决」· 七件套 + 定案收口 · 零挂账）
+
+**授权**：用户明确第一篇论文不归本会话管，只管 tpms；「bugs.md 有效未解项现在全部解决」。工程可解七件真修/实测；不可修者（数学/环境/数据证明）终局定案为披露，不假修。
+
+1. **corner-air 修复**：polyMesh exporter `fluidVox` 去 `four &&`——容器外一律不进网格（cylinder 角部体素曾计入流体；cube 逐字节不变；侧壁入 wall、端面只覆盖柱截面）。门 15 voidCount→insideCount−solidCount + cellVoxelList inside 过滤，66/66。「legacy 字节级保护」契约解除。
+2. **figure 配图 HD 锁**：handleExport HD 块提取共享函数 `ensureExportGradeGeometry`（115 行 1:1 迁移），enterFigureMode 入口 await——配图/sidecar 与导出同 HD 口径（2026-08-26 登记清欠）。
+3. **MATLAB 真机实测**：本机 R2025a/b 探明→拆 buildMatlabScript → `matlab -batch` 三案例 3/3（清「无环境目检过」欠）。**实测抓真缺陷**：非欧分支 isonormals 内部 interp3 假设 separable 网格必炸（R2025a 实锤）→ identity 分支才调用+flat 光照修复。探针 matlab_script_smoke.mjs（独立不进 CI）。
+4. **radial-grad UI 卡**：grp-view field 级内嵌（K/ta/tb+K=1 联动+MT 预览+HD STL），runRadialGradPipeline 与 CLI 同源；**竞态修复**：pending rebuild 覆盖 MT 预览（94.0k≠192k 实锤）→ 清 timer+invalidate+buildGeneration++；冒烟 radialgrad_card_check 6/6 入 run_all 第 8 套件（44 门不变）。
+5. **k=6 披露补齐**：mesh usage 注记+schema periods description ×2（k6 标定四案例数字）——mesh_audit 注释宣称的「CLI 文档建议」此前不存在（账实不符又一例）。
+6. **C2 第六批（Slotted P/F/Q*/W → 24 族）**：文献源=jwf23/Equation-Based-Lattice-Structure-Dataset（CC BY 4.0，27 曲面 Fourier fit，PMC10439271 配套论文）——「需文献源」瓶颈解除。四方同源 13 文件（qstar 差角和角展开 GPU 同原语）。**落地抓静默回退坑**：useLookup 白名单漏列→查表回退 schwarz（四曲面 iso 同值 -0.0341 实锤）→ useLookup+c2New 双白名单。可产域探针先行（R96 k2 全 0；slotp R48 p0.5 miso 超陈如实登记）。门禁：parity 282→314+mesh_audit 34 案例+schema 102+selftest 49+llm_provider 33+webgpu 101+run_all 8/8；README 双语 20→24 族。
+7. **文献定案**：lidinoid DOI 10.1039/FT9908600769 入库（旧登记过时）；Schoen TN D-5541 无 DOI 终局确认（NTRS 链接替代）；S3/剪切 b=0/LBM/ML/GPU 等全部终局定案（bugs.md §一 13 条披露）。
+
+**新增教训**：①新曲面接入 surface-nets 必须同步 useLookup/c2New 双白名单（静默回退无报错，唯一信号=iso/三角数与基准曲面雷同）；②多行补丁锚须完整回填被锚内容（cdd 行被吃）；③静态注释里的「文档建议」类宣称要 grep 实证。
+
 ## 对标研究（2026-09-05 · 开源生态调研）
 
 ### 现有格局
