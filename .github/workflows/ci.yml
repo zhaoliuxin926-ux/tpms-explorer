@@ -64,7 +64,7 @@ jobs:
         working-directory: tpms/.verify
         run: node diag_server_windows.mjs ../../docs/platform
 
-      - name: Run 39-gate suite
+      - name: Run 44-gate suite
         working-directory: tpms/tpms-platform
         run: |
           npm run test:all 2>&1 | tee ci_gates_${{ matrix.os }}.log

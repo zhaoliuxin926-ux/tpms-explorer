@@ -147,6 +147,14 @@ for (const [label, params] of [
   const build = buildOpenfoamPolyMesh(model, opts.specimenSizeMm);
   const st = build.stats;
   // corner-air 修复（2026-09-15）：流体域 = inside && !solid——cube 时 insideCount=R³ 等价旧口径
+  // 红队 A F2 体积锚（独立第三路径防掩码-计数同源盲区）：cylinder 容器内体素体积 vs 解析 π/4·specimen³，容差 5%
+  // （R=16 高斯格点涨落实测 3.45%，2% 会误报）
+  if (label === 'gyroid cylinder') {
+    const hU = opts.specimenSizeMm / (2 * HALF) * model.hWc;
+    const volIn = model.insideCount * hU ** 3;
+    const volAna = Math.PI / 4 * opts.specimenSizeMm ** 3;
+    check(`${label}: 容器体积锚（体素 ${(volIn / volAna * 100).toFixed(2)}% vs 解析 π/4）`, Math.abs(volIn / volAna - 1) < 0.05);
+  }
   const voidCount = model.insideCount - model.solidCount;
   check(`${label}: 五件套齐备`, Object.keys(build.files).length === 5
     && ['points', 'faces', 'owner', 'neighbour', 'boundary'].every((f) => build.files['constant/polyMesh/' + f]));
@@ -193,7 +201,8 @@ for (const [label, params] of [
   void cellCenter;
   let badOrient = 0, orientChecked = 0;
   const oStride = Math.max(1, Math.floor(st.internalFaces / 400));
-  // 重建 cell 中心映射：从 owner 分配反推（体素顺序 = cell 顺序；corner-air 修复后按 inside 过滤）
+  // 重建 cell 中心映射：从 owner 分配反推。【红队 A F3 隐式契约】本三重循环（z 外 y 中 x 内）必须与
+  // exporter 的 cellId 线性递增序（i = x+y·R+z·R²）严格同序——任一侧遍历顺序改动都会让法线断言大面积翻车（反序对照实测 2938/5032 反向）；corner-air 修复后按 inside 过滤
   const cellVoxelList = [];
   for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
     if (model.inside[ix + iy * R + iz * R * R] && !model.solid[ix + iy * R + iz * R * R]) cellVoxelList.push([ix + 0.5, iy + 0.5, iz + 0.5]);

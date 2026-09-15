@@ -37,12 +37,29 @@ try {
     return !!el && !!el.closest('#grp-view');
   });
   inView ? ok('A 卡片存在且内嵌 grp-view（field 级，sect 计数零扰动）') : bad('A 卡片定位');
-  // B. 默认 gyroid 守卫
+  // B. 默认 gyroid 守卫（红队 B m4 强化：读 toast 元素实证守卫真触发——旧写法只比 status 不变，守卫没跑也过）
   const st0 = await page.evaluate(() => document.getElementById('rg-status')?.textContent || '');
   await page.evaluate(() => document.getElementById('rg-gen')?.click());
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
+  const toastB = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
   const st1 = await page.evaluate(() => document.getElementById('rg-status')?.textContent || '');
-  st1 === st0 && !st1.includes('✓') ? ok('B 非 Schwarz P 点生成被守卫拦截（toast，无预览）') : bad('B 守卫失效', st1.slice(0, 60));
+  toastB.includes('须 Schwarz P') && st1 === st0
+    ? ok('B 非 Schwarz P 点生成 → toast 实证拦截（无预览）')
+    : bad('B 守卫失效', `toast=${toastB.slice(0, 40)} st=${st1.slice(0, 30)}`);
+  // B2. 红队 B MAJOR-1 回归：isoGrad 开启时点生成 → 互斥守卫 toast（此前曾静默放行）
+  await page.evaluate(() => {
+    document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());
+  await page.waitForTimeout(200);
+  await page.evaluate(() => document.getElementById('rg-gen')?.click());
+  await page.waitForTimeout(400);
+  const toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  toastB2.includes('互斥')
+    ? ok('B2 isoGrad 开启时生成 → 互斥守卫（红队 B MAJOR-1 修复回归）')
+    : bad('B2 isoGrad 互斥守卫失效', toastB2.slice(0, 40));
+  await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());  // 关回
   // C. 切 schwarz → 生成预览
   await page.evaluate(() => {
     document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
@@ -84,5 +101,5 @@ try {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 6) { console.error(`GUARD FAIL: ${pass} < 6`); process.exit(1); }
+if (pass < 7) { console.error(`GUARD FAIL: ${pass} < 7`); process.exit(1); }
 process.exit(fail ? 1 : 0);

@@ -196,8 +196,10 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number,
               // 非流体侧性质决定 patch：固相 → 浸润面；容器外/域外 → 容器壁（轴向端 → 端口）
               const nbSolid = isFluid1 ? s2 : s1;
               if (nbSolid === 1) patch = 3;                                    // tpms_scaffold_wetted
-              else if (d === opts.flowAxis) patch = isFluid1 ? 1 : 0;          // 出流(+axis)/进流(−axis)
-              else patch = 2;                                                  // casing_wall
+              // 红队 A F1（既有缺陷修复）：端口只认域端面（p===0/R）——横向流/非贯穿容器时，容器侧壁的
+              // flowAxis 向阶梯面曾被误入 inlet/outlet（实测 71% 误归），现归 casing_wall
+              else if (d === opts.flowAxis && (p === 0 || p === R)) patch = isFluid1 ? 1 : 0;
+              else patch = 2;                                                  // casing_wall（含容器侧壁阶梯面）
             } else {
               if (d === 2 && p === 0) patch = 0;
               else if (d === 2 && p === R) patch = 1;
@@ -261,12 +263,15 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number,
     + `\n${ordered.length}\n(\n` + ownerLines.join('\n') + '\n)\n';
   files['constant/polyMesh/neighbour'] = FOAM_HEAD('labelList', 'neighbour')
     + `\n${nInternal}\n(\n` + neighLines.join('\n') + '\n)\n';
+  // 空 patch 的 startFace 用前缀累计位置（红队 A F1 端面校验后暴露的二阶缺陷：旧写法 Math.max(0,-1)=0  // 断了 boundary startFace 链——OpenFOAM 要求 start 连续；非空 patch 值不变（r.start 仍为首面位置）
+
   const bEntries = patchNames.map((name) => {
+  let accStart = nInternal;
     const r = patchRanges[name];
     // fourPatch 壁面（casing_wall/tpms_scaffold_wetted）用 wall 类型：wallShearStress
     // functionObject 只对 wall patch 生效（论文工程验证坑）；legacy 路径保持 patch 不变（字节级保护）
-    const isWall = four && (name === 'casing_wall' || name === 'tpms_scaffold_wetted');
-    return `    ${name}\n    {\n        type            ${isWall ? 'wall' : 'patch'};\n        nFaces          ${r.n};\n        startFace       ${Math.max(0, r.start)};\n    }`;
+    accStart += r.n;    const isWall = four && (name === 'casing_wall' || name === 'tpms_scaffold_wetted');
+    return `    ${name}\n    {\n        type            ${isWall ? 'wall' : 'patch'};\n        nFaces          ${r.n};\n        startFace       ${r.n > 0 ? r.start : accStart};\n    }`;
   }).join('\n');
   files['constant/polyMesh/boundary'] = FOAM_HEAD('polyBoundaryMesh', 'boundary')
     + `\n${patchNames.length}\n(\n${bEntries}\n)\n`;

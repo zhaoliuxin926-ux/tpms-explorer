@@ -9,7 +9,7 @@
 
 交互式**三重周期极小曲面（TPMS）**参数探索与多物理场数字孪生平台。教学版 8 类经典曲面
 （Gyroid / Diamond / Schwarz P / Neovius / I-WP / F-RD / Lidinoid / Split-P）实时重建；
-工程版扩至 **20 族**（+Octo / Karcher / Fischer-Koch S·Y·C(S)·C(Y) / G′ / D′ / Double P·D·G / Complementary D，
+工程版扩至 **24 族**（+Octo / Karcher / Fischer-Koch S·Y·C(S)·C(Y) / G′ / D′ / Double P·D·G / Complementary D，
 公式逐字转录自 MiniSurf 官方源码并四方同源）。覆盖「设计 → 仿真 → 打印 → 验证 → Agentic 闭环」全链路。
 个人独立开源项目，面向初学者与科研复现。MIT，零后端零遥测，运行时唯一依赖 Three.js。
 
@@ -18,7 +18,7 @@
 ```
 （仓库根 = GitHub Pages 源）
 ├── README.md / README_EN.md   ← 项目总览 + 特性矩阵 + 文件导航（双语）
-├── BENCHMARKS.md              ← 公开几何基准（20 族可产性/水密/孔隙率偏差，一条命令复跑）
+├── BENCHMARKS.md              ← 公开几何基准（24 族可产性/水密/孔隙率偏差，一条命令复跑）
 ├── docs/                      ← 主交付（Pages）
 │   ├── index.html             ← 落地页（特性卡片 + 应用场景 + 展示图）
 │   ├── app.html               ← 单文件教学版（双击即开，8 经典族，无构建）
@@ -51,7 +51,7 @@
 ### core/ —— 数学与语义层
 | 文件 | 职责 |
 |---|---|
-| tpms-functions.ts | **20 族** TPMS 隐函数（弧度域，权重版）——唯一几何真源 |
+| tpms-functions.ts | **24 族** TPMS 隐函数（弧度域，权重版）——唯一几何真源 |
 | equation-parser.ts | 零依赖 AST 沙箱（无 eval）+ Dual Number AD 梯度/Hessian + NumPy/MATLAB 代码生成 |
 | hybrid-functions.ts | 双曲面 Sigmoid/线性融合场（波前物理域 + 度规坐标双域） |
 | gradient-functions.ts / hierarchical-functions.ts / stress-driven-field.ts | Z 向梯度 / 分形分级 / von Mises 应力引导（各向异性 warp + 壳致密化） |
@@ -134,7 +134,7 @@ schema_check 98（含 README 门数防漂移守卫）；gcode 32（直接层切 
 - **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（44 门徽章 1000+）+ LEARNING_PATH 入口
 - **WORKFLOW_GUIDE.md**：35 章实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
 - **RELEASE_NOTES_v2.4~v8.0**：七份双语发布说明
-- **BENCHMARKS.md**：20 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
+- **BENCHMARKS.md**：24 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
 - **paper/**：SoftwareX 投稿包（已对齐 v8.0；pdflatex 0 错误）
 - **agent_memory/**：context / progress / bugs 三件套 + archive
 

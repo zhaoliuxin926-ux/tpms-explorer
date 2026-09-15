@@ -67,10 +67,10 @@ const ANISOTROPY_MAP: Record<string, number> = {
   dg: 1.32,
   fcky: 1.32, // C2 扩展第四批：沿 fky 口径
   cdd: 1.42, // C2 扩展第五批：沿 Diamond 族口径
-  slotp: 1.0, // C2 第六批：P 族变体沿 Schwarz P 口径
-  fs: 1.0, // C2 第六批：P 族变体沿 Schwarz P 口径
-  qstar: 1.2, // C2 第六批：非对称差角族，沿 IWP 量级估值
-  ws: 1.0, // C2 第六批：P 族变体沿 Schwarz P 口径
+  slotp: 1.0, // C2 第六批：各向同性下界估值（未标定，如实披露）
+  fs: 1.0, // C2 第六批：各向同性下界估值（未标定）
+  qstar: 1.2, // C2 第六批：非对称差角族粗估（未标定）
+  ws: 1.0, // C2 第六批：各向同性下界估值（未标定）
   custom: 1.30,
 };
 

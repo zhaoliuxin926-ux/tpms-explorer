@@ -777,7 +777,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 ## 三十六、C2 曲面族扩展与可用域速查 🆕 v7.0+
 
-工程版内置 **20 族** TPMS level-set 曲面（教学单文件版保持 8 类经典聚焦）。公式源：
+工程版内置 **24 族** TPMS level-set 曲面（教学单文件版保持 8 类经典聚焦）。公式源：
 MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方 MATLAB 源码展示方程，
 四方同源（权威库 / 渲染求值 / GPU IR / Python+MATLAB 脚本）经 `parity_math` 万点对拍守门。
 
@@ -807,7 +807,7 @@ MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方 MATLAB 源码展示�
 1. 科研交付优先 **Gyroid / Diamond / Schwarz P**（可用域最宽、文献数据最多）
 2. 需要高比表面积可试 **FK 系 / Neovius**，务必用 `mesh` 或 `solve` 验证水密后再导出
 3. 谐波 3× 族（fcks/cdd）请直接用 R96–R128，或降周期数；不要在 R48 上硬啃
-4. 混合（hybrid）与渐变（isoGrad）对全部 20 族开放；脚本导出同步支持
+4. 混合（hybrid）与渐变（isoGrad）对全部 24 族开放；脚本导出同步支持
 
 ---
 

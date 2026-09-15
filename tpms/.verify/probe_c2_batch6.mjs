@@ -3,7 +3,7 @@
  *
  * 四曲面公式源：jwf23/Equation-Based-Lattice-Structure-Dataset（CC BY）。
  * 落地全链（13 文件四方同源）前先实测 surface-nets 可产域（C2 纪律）：
- * R{48,96} × p{0.5,0.6} × k2/k3 —— 输出 open/nm/degen/miso/孔隙率偏差。
+ * R{48,96} × p{0.5,0.6} × k2（固定）—— 输出 open/nm/degen/miso/孔隙率偏差。
  * 复跑：node probe_c2_batch6.mjs
  */
 import { writeFileSync, existsSync, readFileSync } from 'node:fs';
