@@ -7,7 +7,7 @@ const DOI_MAP: Record<string, string> = {
   'i-wp': '10.1016/j.mechmat.2022.104504',
   'f-rd': '',
   neovius: '10.1016/j.eml.2020.100688',
-  lidinoid: '',
+  lidinoid: '10.1039/FT9908600769', // Lidin & Larsson 1990 Faraday Trans.（2026-09-15 检索到——旧登记"无 DOI"过时）
   splitp: '',
   octo: '',
   karcher: '',
@@ -22,11 +22,18 @@ const DOI_MAP: Record<string, string> = {
   fcky: '',
   cdd: '',
   custom: '',
-  // f-rd / lidinoid / splitp：原始数学文献（Schoen 1970 NASA TR、Lidin & Larsson 1990）无 DOI，
-  // 亦未检索到可靠的现代专文 DOI，宁缺毋滥保持空——生成 BibTeX 时省略 doi 行。
+  slotp: '',
+  fs: '',
+  qstar: '',
+  ws: '',
+  // f-rd / splitp：原始数学文献（Schoen 1970 NASA TN D-5541）无 DOI 为定论（2026-09-15 复检确认），
+  // NTRS 永久链接 https://ntrs.nasa.gov/citations/19700020472 替代；宁缺毋滥保持空。
+  // lidinoid DOI 已补（2026-09-15：10.1039/FT9908600769，旧登记过时）。
   // C2 扩展族（含 fcks/fcky/cdd/dprime/dp/dd/dg）同口径：公式对标 MiniSurf
   // （Hsieh & Valdevit 2020, Software Impacts, DOI 10.1016/j.simpa.2020.100026——
-  // 该 DOI 归属软件论文本身，附于平台引用而非单曲面）
+  // 该 DOI 归属软件论文本身，附于平台引用而非单曲面）。
+  // slotp/fs/qstar/ws（第六批）：公式出自 jwf23/Equation-Based-Lattice-Structure-Dataset
+  // （CC BY 4.0，github.com/jwf23/Equation-Based-Lattice-Structure-Dataset）——数据集无单曲面 DOI。
 };
 
 function mapType(type: string): string {

@@ -166,6 +166,27 @@ const LIT = {
       - Math.sin(x) * Math.cos(y) * S3z - Math.cos(x) * Math.sin(y) * S3z
     );
   },
+  // ── C2 第六批（jwf23/Equation-Based-Lattice-Structure-Dataset，CC BY）──
+  slotp: (x, y, z, w) => {
+    const cx = Math.cos(x), cy = Math.cos(y), cz = Math.cos(z);
+    const c2x = Math.cos(2 * x), c2y = Math.cos(2 * y), c2z = Math.cos(2 * z);
+    return w[0] * (
+      -2 * (cx * cy + cy * cz + cz * cx) - 2 * (c2x + c2y + c2z) +
+      (c2x * cy + c2y * cz + c2z * cx) - (cx * c2y + cy * c2z + cz * c2x)
+    );
+  },
+  fs: (x, y, z, w) => w[0] * Math.cos(x) * Math.cos(y) * Math.cos(z),
+  qstar: (x, y, z, w) => {
+    const cx = Math.cos(x), sx = Math.sin(x), cy = Math.cos(y), sy = Math.sin(y);
+    const cz = Math.cos(z), sz = Math.sin(z);
+    const cxy = cx * cy + sx * sy;
+    return w[0] * ((cx - 2 * cy) * cz - Math.sqrt(3) * sz * (cxy - cx) + cxy * cz);
+  },
+  ws: (x, y, z, w) => {
+    const cx = Math.cos(x), cy = Math.cos(y), cz = Math.cos(z);
+    const c2x = Math.cos(2 * x), c2y = Math.cos(2 * y), c2z = Math.cos(2 * z);
+    return w[0] * ((c2x * cy + c2y * cz + c2z * cx) - (cx * c2y + cy * c2z + cz * c2x));
+  },
 };
 
 // 确定性伪随机（可复现）
@@ -253,6 +274,16 @@ for (const type of Object.keys(LIT)) {
   // cdd：原点值 = 3（cos3·cos·cos 三组各 1，其余 sin 项为 0）；循环置换不变
   check('解析锚点 cdd 原点值 3', near(F.cdd(0, 0, 0, W), 3), String(F.cdd(0, 0, 0, W)));
   check('解析锚点 cdd 循环置换不变（5 点）', cycOk(F.cdd));
+  // C2 第六批锚点（独立数学事实）：slotp 原点 = -2·3-2·3+3-3 = -12；fs 原点=1；
+  // qstar 原点=0 且非对称（cX-2cY）——用特征点 (π/2,0,0)=-2 锚；ws 原点=0；三者循环置换中 slotp/ws 不变
+  check('解析锚点 slotp 原点值 -12', near(F.slotp(0, 0, 0, W), -12), String(F.slotp(0, 0, 0, W)));
+  check('解析锚点 slotp 循环置换不变（5 点）', cycOk(F.slotp));
+  check('解析锚点 fs 原点值 1', near(F.fs(0, 0, 0, W), 1), String(F.fs(0, 0, 0, W)));
+  check('解析锚点 fs 特征点 (π/2,0,0)=0', near(F.fs(Math.PI / 2, 0, 0, W), 0), String(F.fs(Math.PI / 2, 0, 0, W)));
+  check('解析锚点 qstar 原点值 0', near(F.qstar(0, 0, 0, W), 0), String(F.qstar(0, 0, 0, W)));
+  check('解析锚点 qstar 特征点 (π/2,0,0)=-2', near(F.qstar(Math.PI / 2, 0, 0, W), -2), String(F.qstar(Math.PI / 2, 0, 0, W)));
+  check('解析锚点 ws 原点值 0', near(F.ws(0, 0, 0, W), 0), String(F.ws(0, 0, 0, W)));
+  check('解析锚点 ws 循环置换不变（5 点）', cycOk(F.ws));
 }
 
 // ── 2. iso 指纹：buildSurface 二分 vs 独立复刻 ────────────────
@@ -734,7 +765,7 @@ const { generateBibTeX } = (await imp(BUNDLE));
 }
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 280) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 280（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2 → 实测 282）'); process.exit(1); }
+  if (pass < 314) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 280（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2 → 282；2026-09-15 C2 第六批 slotp/fs/qstar/ws +32 → 314）'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

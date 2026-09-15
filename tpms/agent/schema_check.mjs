@@ -38,7 +38,7 @@ const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
 
 // 合法边界通过
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
@@ -83,6 +83,13 @@ for (const ty of TYPES) {
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    continue;
+  }
+  if (ty === 'slotp' || ty === 'fs' || ty === 'qstar' || ty === 'ws') {
+    // C2 第六批（jwf23 数据集）：默认周期数 k6 在 R48 触发薄壁自触（qstar nm=792 实测）——
+    // 与 gprime/lidinoid 同族「降周期数可避」；探针定案可产域 = k2 R48/R96 全档（probe_c2_batch6.mjs）
+    const r = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
+    r.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96 k2，第六批钉）`) : bad(`type enum ${ty} R96 k2`, (r.stderr || '').slice(-60));
     continue;
   }
   if (ty === 'fcky') {

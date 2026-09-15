@@ -44,7 +44,7 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 20 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D 等），可用域见 BENCHMARKS.md | parity_math 282 断言四方同源 + mesh_audit 30 案例 |
+| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域见 BENCHMARKS.md | parity_math 314 断言四方同源 + mesh_audit 34 案例 |
 | 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 30 案例审计门，开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |

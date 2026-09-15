@@ -372,6 +372,33 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       ]);
       return mulChain(b, [wreg(0), core]);
     }
+    // ── C2 扩展第六批（2026-09-15）：Slotted P / F / Q* / W（jwf23/Equation-Based-Lattice-Structure-Dataset）──
+    case 'slotp': {
+      const core = sumChain(b, [
+        b.unary('neg', mulChain(b, [b.load(2), sumChain(b, [mulChain(b, [cos(mx), cos(my)]), mulChain(b, [cos(my), cos(mz)]), mulChain(b, [cos(mz), cos(mx)])])])),
+        b.unary('neg', mulChain(b, [b.load(2), sumChain(b, [cos2(b, mx), cos2(b, my), cos2(b, mz)])])),
+        sumChain(b, [mulChain(b, [cos2(b, mx), cos(my)]), mulChain(b, [cos2(b, my), cos(mz)]), mulChain(b, [cos2(b, mz), cos(mx)])]),
+        b.unary('neg', sumChain(b, [mulChain(b, [cos(mx), cos2(b, my)]), mulChain(b, [cos(my), cos2(b, mz)]), mulChain(b, [cos(mz), cos2(b, mx)])])),
+      ]);
+      return mulChain(b, [wreg(0), core]);
+    }
+    case 'fs':
+      return mulChain(b, [wreg(0), cos(mx), cos(my), cos(mz)]);
+    case 'qstar': {
+      // cos(X−Y) 和角展开 = cX·cY + sX·sY（GPU 无差角原语，恒等式精确）
+      const cxy = sumChain(b, [mulChain(b, [cos(mx), cos(my)]), mulChain(b, [sin(mx), sin(my)])]);
+      const core = sumChain(b, [
+        mulChain(b, [b.binary('sub', cos(mx), mulChain(b, [b.load(2), cos(my)])), cos(mz)]),
+        b.unary('neg', mulChain(b, [b.load(Math.sqrt(3)), sin(mz), b.binary('sub', cxy, cos(mx))])),
+        mulChain(b, [cxy, cos(mz)]),
+      ]);
+      return mulChain(b, [wreg(0), core]);
+    }
+    case 'ws': {
+      const fwd = sumChain(b, [mulChain(b, [cos2(b, mx), cos(my)]), mulChain(b, [cos2(b, my), cos(mz)]), mulChain(b, [cos2(b, mz), cos(mx)])]);
+      const rev = sumChain(b, [mulChain(b, [cos(mx), cos2(b, my)]), mulChain(b, [cos(my), cos2(b, mz)]), mulChain(b, [cos(mz), cos2(b, mx)])]);
+      return mulChain(b, [wreg(0), b.binary('sub', fwd, rev)]);
+    }
   }
 }
 

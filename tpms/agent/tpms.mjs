@@ -160,7 +160,7 @@ function solveExactPorosity(core, type, pf, R, buildOnce, isoGrad = null) {
 }
 
 
-const BUILTIN_TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd'];
+const BUILTIN_TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
 const MATERIAL_LABELS = { tc4: 'Ti-6Al-4V', polymer: 'PLLA/PLA', thermal: '高导热复合材料(≈Al-SiC)' };
 const STRUCTURE_MODES = ['solid_network', 'shell', 'gradient_shell'];
 const CONTAINER_SHAPES = ['cube', 'cylinder'];
@@ -474,7 +474,7 @@ function cmdSolve(a, json) {
 }
 
 function cmdMesh(a, json) {
-  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]';
+  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]（注: 官方容差矩阵标定域 k≤5；k=6 非标定域，薄壁族建议 --periods ≤5）';
   if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
   const type = String(a.type ?? '');
   if (!BUILTIN_TYPES.includes(type)) die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}`, usage);

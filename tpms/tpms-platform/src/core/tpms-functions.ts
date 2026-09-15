@@ -254,10 +254,60 @@ const cdd: TpmsFunction = (mx, my, mz, w) => {
   );
 };
 
+// ── C2 曲面库扩展第六批（2026-09-15）：Slotted P / F / Q* / W ──
+// 出处：jwf23/Equation-Based-Lattice-Structure-Dataset（CC BY 4.0，Surface m Files 目录，
+// 配套论文 PMC10439271「27 曲面 low-order Fourier fit」验证体系）。C2 差集四曲面
+//（不在 MiniSurf 清单）的可靠文献源自此闭环。均 1 权重（w0 乘整体，数值系数按数据集原文）。
+
+/**
+ * Slotted P：1 权重（谐波 2× 混合积）
+ * −2(ccXY+ccYZ+ccZX) − 2(c2X+c2Y+c2Z) + (c2X·cY + c2Y·cZ + c2Z·cX) − (cX·c2Y + cY·c2Z + cZ·c2X)
+ */
+const slotp: TpmsFunction = (mx, my, mz, w) => {
+  const cx = Math.cos(mx), cy = Math.cos(my), cz = Math.cos(mz);
+  const c2x = Math.cos(2 * mx), c2y = Math.cos(2 * my), c2z = Math.cos(2 * mz);
+  return w[0] * (
+    -2 * (cx * cy + cy * cz + cz * cx) - 2 * (c2x + c2y + c2z) +
+    (c2x * cy + c2y * cz + c2z * cx) - (cx * c2y + cy * c2z + cz * c2x)
+  );
+};
+
+/**
+ * F（数据集命名；iso=0 时零面退化为 cos 平面并集——solid_network 二分 bias≠0 路径才有效）：1 权重
+ * cosX·cosY·cosZ
+ */
+const fs: TpmsFunction = (mx, my, mz, w) => w[0] * Math.cos(mx) * Math.cos(my) * Math.cos(mz);
+
+/**
+ * Q*（差角混合项；cos(X−Y) 经和角公式展开为 cX·cY+sX·sY，GPU IR 同原语）：1 权重
+ * (cX − 2cY)·cZ − √3·sZ·(cos(X−Y) − cX) + cos(X−Y)·cZ
+ */
+const qstar: TpmsFunction = (mx, my, mz, w) => {
+  const cx = Math.cos(mx), sx = Math.sin(mx);
+  const cy = Math.cos(my), sy = Math.sin(my);
+  const cz = Math.cos(mz), sz = Math.sin(mz);
+  const cxy = cx * cy + sx * sy;   // cos(X−Y) 和角展开
+  return w[0] * (
+    (cx - 2 * cy) * cz - Math.sqrt(3) * sz * (cxy - cx) + cxy * cz
+  );
+};
+
+/**
+ * W：1 权重（2× 积反对称对，与 slotp 共享 (c2X·cY+…)−(cX·c2Y+…) 结构）
+ * (c2X·cY + c2Y·cZ + c2Z·cX) − (cX·c2Y + cY·c2Z + cZ·c2X)
+ */
+const ws: TpmsFunction = (mx, my, mz, w) => {
+  const cx = Math.cos(mx), cy = Math.cos(my), cz = Math.cos(mz);
+  const c2x = Math.cos(2 * mx), c2y = Math.cos(2 * my), c2z = Math.cos(2 * mz);
+  return w[0] * (
+    (c2x * cy + c2y * cz + c2z * cx) - (cx * c2y + cy * c2z + cz * c2x)
+  );
+};
+
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
   gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
-  dprime, dp, dd, dg, fcky, cdd,
+  dprime, dp, dd, dg, fcky, cdd, slotp, fs, qstar, ws,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -273,6 +323,7 @@ export function getWeightCount(type: TpmType): number {
     case 'gprime': case 'fcks': case 'dprime': case 'dp': case 'dd': case 'dg': return 1;
     case 'fky': case 'fcky': return 2; // 低频 (ccc+sss) + 2 倍频组，各乘一个权重
     case 'cdd': return 1;
+    case 'slotp': case 'fs': case 'qstar': case 'ws': return 1;
     case 'custom': return 4;
     default: return 3;
   }
