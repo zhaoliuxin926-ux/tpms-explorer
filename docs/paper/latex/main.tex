@@ -31,9 +31,10 @@ physics simulation, and additive-manufacturing preparation of triply periodic mi
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
 with forty-four continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
 each gate carrying a minimum-assertion guard) that re-execute the exact code claim
-shipped to the user. The surface library spans 20 level-set families --- the eight canonical
+shipped to the user. The surface library spans 24 level-set families --- the eight canonical
 topologies plus C2 extensions (O,C-TO; Karcher; Fischer-Koch S/Y/C(S)/C(Y); G$'$; D$'$; Double
-P/D/G; Complementary D) transcribed from the MiniSurf reference implementation, with
+P/D/G; Complementary D; Slotted P, F, Q$^{*}$, W) transcribed from the MiniSurf reference
+implementation and the jwf23 equation-based lattice dataset, with
 four-way formula parity (TypeScript / Python / MATLAB / GPU IR) and a public geometric
 benchmark matrix. Version 7.0 adds five research-grade modules: (i) a sinusoidal-activation
 implicit neural field (SIREN) with an exactly periodic Fourier-feature input and an 8-dimensional
@@ -359,12 +360,18 @@ $|P|$ creases and max ridges, where Surface Nets' vertex interpolation is struct
 non-manifold; a Marching Tetrahedra extractor with shared-corner ring ordering, corner-value
 regularization ($\eta=3\times10^{-3}$), and a shape-invariant degeneracy criterion
 ($\mathrm{area}/\mathrm{maxedge}^2$) restores watertight output for all $K=1$--$2$ (sphere
-anchor $4\pi/3$ within 0.13\%), giving the platform a \emph{dual-extractor} architecture:
-Surface Nets for smooth fields, MT for the rest.
+anchor $4\pi/3$ within 0.13\%); a one-shot UI card mirrors the CLI pipeline (single-shot
+preview at $R{=}48$, HD STL export at $R{=}96$) behind a rebuild-invalidation guard that
+prevents stale asynchronous geometry from overwriting the preview, giving the platform a
+\emph{dual-extractor} architecture: Surface Nets for smooth fields, MT for the rest.
 
 \section{Quality control}
 Forty-four gates run via
-\texttt{npm run test:all} on three platforms. Every gate loads the shipped TypeScript through a
+\texttt{npm run test:all} on three platforms. Beyond CI, the exported MATLAB reconstruction
+scripts are executed on a real MATLAB R2025a runtime as a standalone three-branch smoke
+(default identity-manifold, second-harmonic, and non-Euclidean Poincar\'e geometries) --- the
+probe caught a latent \texttt{isonormals} failure unique to deformed (non-separable) grids,
+since fixed by gating the normal interpolation on separable meshes. Every gate loads the shipped TypeScript through a
 bundler and asserts behavior-level invariants (no mocked math), and every gate now carries a
 \emph{minimum-assertion guard}: a probe experiment showed that an auditor whose assertions are all
 neutralized still exits green under the historical \texttt{if (fail) exit} idiom, so each gate

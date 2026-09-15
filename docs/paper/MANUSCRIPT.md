@@ -5,7 +5,7 @@
 
 ## Abstract
 
-TPMS Explorer is an open-source, browser-based platform for parametric design, analysis, and fabrication preparation of triply periodic minimal surface (TPMS) lattices. The platform integrates **20 level-set surface families** (8 canonical + C2 extensions from the MiniSurf reference: O,C-TO / Karcher / Fischer-Koch S·Y·C(S)·C(Y) / G′ / D′ / Double P·D·G / Complementary D) with a constructively watertight meshing pipeline, native in-browser finite element homogenization (J-PCG), lattice Boltzmann/finite-difference permeability solving, stress-driven anisotropy (Wolff's law), hierarchical multi-scale architecture, inverse multi-objective design (Nelder-Mead + LM), Micro-CT deviation analysis, and direct G-code generation. Version 7.0 adds generative-biophysics modules (SIREN implicit fields, multiaxial yield envelopes, Bloch–Floquet phononic bands, tissue-ingrowth reaction–diffusion, level-set topology optimization). Version 8.0 adds an agentic verification layer: schema-clamped LLM tool calling plus a closed-loop design-verify driver with bounded repair menus and structured unreachability declarations. All computations run client-side with zero server dependencies (agent layer under Node.js).
+TPMS Explorer is an open-source, browser-based platform for parametric design, analysis, and fabrication preparation of triply periodic minimal surface (TPMS) lattices. The platform integrates **24 level-set surface families** (8 canonical + C2 extensions from the MiniSurf reference — O,C-TO / Karcher / Fischer-Koch S·Y·C(S)·C(Y) / G′ / D′ / Double P·D·G / Complementary D — and the jwf23 equation-based lattice dataset — Slotted P / F / Q* / W) with a constructively watertight meshing pipeline, native in-browser finite element homogenization (J-PCG), lattice Boltzmann/finite-difference permeability solving, stress-driven anisotropy (Wolff's law), hierarchical multi-scale architecture, inverse multi-objective design (Nelder-Mead + LM), Micro-CT deviation analysis, and direct G-code generation. Version 7.0 adds generative-biophysics modules (SIREN implicit fields, multiaxial yield envelopes, Bloch–Floquet phononic bands, tissue-ingrowth reaction–diffusion, level-set topology optimization). Version 8.0 adds an agentic verification layer: schema-clamped LLM tool calling plus a closed-loop design-verify driver with bounded repair menus and structured unreachability declarations. All computations run client-side with zero server dependencies (agent layer under Node.js).
 
 ## Key Features
 
@@ -25,7 +25,7 @@ TPMS Explorer is an open-source, browser-based platform for parametric design, a
 - Self-contained single-file teaching edition (docs/app.html, 8 canonical families)
 - Deterministic agent CLI with JSON output (tpms/agent/: list/estimate/mesh/verify/solve/scenario + NL tool-calling agent + closed-loop design-verify driver)
 - **43 CI gates / 1000+ assertions / 3-platform matrix (Ubuntu/Windows/macOS)**; every gate carries a minimum-assertion guard
-- Four-way parity: TS source ↔ docs/app.html ↔ Python ↔ MATLAB (+ GPU IR for all 20 families)
+- Four-way parity: TS source ↔ docs/app.html ↔ Python ↔ MATLAB (+ GPU IR for all 24 families)
 
 ## Statements
 
