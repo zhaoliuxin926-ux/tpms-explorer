@@ -271,12 +271,14 @@ function cmdEstimate(a, json) {
 // 自检口径与 .verify/mesh_audit.mjs 同源：开放边/非流形/退化面三硬指标，任一非零
 // 即判失败且【不产出 STL】——水密门不过不交货。
 
-function auditMeshIndices(positions, indices) {
+function auditMeshIndices(positions, indices, opts) {
   const triCount = indices.length / 3;
   const vertCount = positions.length / 3;
   const KM = vertCount + 1;
-  // 无向边 pack = (min*KM+max)*2 + 方向位（u<v→0）：整数 <2^53，Float64 精确；
-  // 排序聚合替代字符串 key Map（R96 165 万边，Map+装箱是 CLI 命令最大热点之一）
+  // 退化判据模式（radial-grad MT 管线解锁，2026-09-15）：'absolute'（默认，|cross|²≤1e-18，
+  // surface-nets 管线历史契约）| 'shape'（尺度无关 area/max_edge²<1e-12——manifold_audit
+  // 2026-09-11 先例判据：等边微楔片是相切带的真实离散几何计为合法，针形仍拦）
+  const shapeMode = opts?.degenMode === 'shape';
   const edgeKeys = new Float64Array(triCount * 3);
   let n = 0, degenTris = 0;
   for (let t = 0; t < triCount; t++) {
@@ -289,7 +291,11 @@ function auditMeshIndices(positions, indices) {
     const ax = positions[p1] - positions[p0], ay = positions[p1 + 1] - positions[p0 + 1], az = positions[p1 + 2] - positions[p0 + 2];
     const bx = positions[p2] - positions[p0], by = positions[p2 + 1] - positions[p0 + 1], bz = positions[p2 + 2] - positions[p0 + 2];
     const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
-    if (cx * cx + cy * cy + cz * cz <= 1e-18) degenTris++;
+    if (shapeMode) {
+      const maxE2 = Math.max(ax * ax + ay * ay + az * az, bx * bx + by * by + bz * bz,
+        (positions[p1] - positions[p2]) ** 2 + (positions[p1 + 1] - positions[p2 + 1]) ** 2 + (positions[p1 + 2] - positions[p2 + 2]) ** 2);
+      if (maxE2 > 0 && (cx * cx + cy * cy + cz * cz) / (4 * maxE2) < 1e-24) degenTris++;
+    } else if (cx * cx + cy * cy + cz * cz <= 1e-18) degenTris++;
   }
   const edges = edgeKeys.subarray(0, n);
   edges.sort(); // TypedArray 数值排序
@@ -502,7 +508,7 @@ function cmdMesh(a, json) {
     if (!Number.isFinite(K) || K < 1 || K > 3) die('--radial-grad K 须 1 ≤ K ≤ 3（1=均匀 P 基准；论文序列 1/1.25/1.5/1.75/2）', usage);
     if (type !== 'schwarz') die('--radial-grad 须 --type schwarz（论文口径 P 曲面）', usage);
     if (mode !== 'solid_network') die('--radial-grad 须 --mode solid_network', usage);
-    if (container !== 'cylinder') die('--radial-grad 须 --container cylinder（论文圆柱域 r1≤R0；cube 角区触发封口填实）', usage);
+    if (container !== 'cube') die('--radial-grad 须 --container cube（立方采样域 + 场内圆柱裁剪——论文 export_stl.py 同方案，绕过壳场×容器交线盲区）', usage);
     if (isoGradM || hybridM) die('--radial-grad 与 --iso-grad/--hybrid 互斥', usage);
     if (a['container-mesh'] !== undefined) die('--radial-grad 与 --container-mesh 互斥（归一化域即映射域）', usage);
     const ta = a.ta === undefined ? 0.2 : Number(a.ta);
@@ -565,9 +571,62 @@ function cmdMesh(a, json) {
   let porTrace;
   try {
     if (radialM) {
-      // M(r) 径向梯度：设计密度由公式决定（K=1.5 实测 ≈50% 对齐论文），跳过孔隙率求解器
-      params.targetPorosity = undefined;
-      res = core.buildSurface(params, core.globalBufferPool);
+      // M(r) 径向梯度：Marching Tetrahedra 提取管线（解锁战役定案）——surface-nets 对该场的
+      // |P| 折痕/max 尖点结构性非流形（三轮实测），MT 的 cell corner 二值化免疫之（论文 MC 同机理）；
+      // 复合场 = max(P²−C(r)², r1²−1, |Z|−1)：平方壳场 + 场内圆柱裁剪（论文 export_stl.py 方案）
+      const Ln = 2 / periods, invKP = 1 / (periods * Math.PI), rc = radialM;
+      // clip 边界内移半格（h=0.5/R）：节点网格含边界点，clip=|Z|−1 在 z=±1 节点恒 0
+      //（恰等值 corner 海量 → 插值顶点重合 → degen 三角 6.6 万拒产）——内移后边界 corner
+      // 恒负、等值面落最后两节点间；几何尺寸损 h（R128 时 0.4%，披露）
+      const h = 0.5 / resolution, rb = 1 - h;
+      const field = (X, Y, Z) => {
+        const [x2, y2, z2] = core.radialGradTransform(X, Y, Z, rc.K);
+        const P = core.schwarzPPhase(x2, y2, z2, Ln);
+        const C = core.radialGradThresholdAt(X, Y, rc, periods);
+        const r1 = Math.hypot(X, Y);
+        return Math.max(P * P - C * C, r1 * r1 - rb * rb, Math.abs(Z) - rb);
+      };
+      const mt = core.marchingTetrahedra(field, resolution);
+      // 顶点量化焊接（δ=1e-6，物理尺度 12nm——等值面贴角极限产生的近重合顶点合并；
+      // 微三角 → 自环 → 安全过滤[自环边零配对贡献]；删除路线已证死胡同：微三角占共享边，
+      // 直接删 open 爆 7004。焊接后边配对审计兜底（open/nm>0 即如实拒产 fail-closed））
+      {
+        const Pm = mt.positions, D = 1e6; // δ=1e-6（≈12nm）：只收编数值性近重合顶点；等边微楔片
+        // （相切带真实几何，实测 820 片/r1>0.95 占 64%/边 2e-5~7e-5）保留——审计走尺度无关判据
+        const weldMap = new Map();
+        const remap = new Int32Array(Pm.length / 3);
+        let wCount = 0;
+        for (let v = 0; v < remap.length; v++) {
+          const k = Math.round(Pm[v * 3] * D) + ',' + Math.round(Pm[v * 3 + 1] * D) + ',' + Math.round(Pm[v * 3 + 2] * D);
+          let id = weldMap.get(k);
+          if (id === undefined) { id = wCount++; weldMap.set(k, id); }
+          remap[v] = id;
+        }
+        const keep = [];
+        for (let t = 0; t < mt.indices.length; t += 3) {
+          const a = remap[mt.indices[t]], b = remap[mt.indices[t + 1]], c = remap[mt.indices[t + 2]];
+          if (a === b || b === c || a === c) continue;
+          keep.push(mt.indices[t], mt.indices[t + 1], mt.indices[t + 2]); // 原索引输出（位置未动），重映射仅过滤
+        }
+        mt.indices = Uint32Array.from(keep);
+        mt.triCount = keep.length / 3;
+      }
+      let vol6 = 0;
+      const Pp = mt.positions, Ii = mt.indices;
+      for (let t = 0; t < Ii.length; t += 3) {
+        const i0 = Ii[t] * 3, i1 = Ii[t + 1] * 3, i2 = Ii[t + 2] * 3;
+        vol6 += Pp[i0] * (Pp[i1 + 1] * Pp[i2 + 2] - Pp[i1 + 2] * Pp[i2 + 1])
+          + Pp[i0 + 1] * (Pp[i1 + 2] * Pp[i2] - Pp[i1] * Pp[i2 + 2])
+          + Pp[i0 + 2] * (Pp[i1] * Pp[i2 + 1] - Pp[i1 + 1] * Pp[i2]);
+      }
+      const volN = Math.abs(vol6) / 6;
+      res = {
+        positions: mt.positions, indices: mt.indices, normals: mt.normals, triCount: mt.triCount,
+        // 圆柱包络（归一域半径 1、高 2）体积 2π；孔隙率=1−固相/包络
+        porosityEstimate: Math.max(0, Math.min(1, 1 - volN / (2 * Math.PI))),
+        isoUsed: 0,
+        radialMtSignedVolume: Math.sign(vol6),
+      };
     } else if (solver === 'exact') {
       const buildOnce = (iso) => {
         core.globalBufferPool.reset();
@@ -587,7 +646,9 @@ function cmdMesh(a, json) {
     process.exit(3);
   }
 
-  const audit = auditMeshIndices(res.positions, res.indices);
+  // radial-grad MT 管线：degen 判据走尺度无关口径（manifold_audit 2026-09-11 先例——等边微楔片
+  // 为相切带真实离散几何；针形/自环仍拦）
+  const audit = auditMeshIndices(res.positions, res.indices, radialM ? { degenMode: 'shape' } : undefined);
   const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
   // porosityEstimate 平台口径为小数（=1−发散固相/包络，surface-nets 内建钳制），恒 ≤1
   const porEst = res.porosityEstimate;
@@ -602,7 +663,13 @@ function cmdMesh(a, json) {
     lastAuditCounts: audit,
     solver, porosityTrace: porTrace,
     scaleMmPerWc: core.wcToMmFactor(periods),
-    boundary: '水密自检 = mesh_audit 同款三硬指标（开放边/非流形/退化面，索引空间）；misoriented 为观测值不设门（导出翻转后全局定向一致性是平台已知盲区）；孔隙率为网格发散体积实测口径，与目标值的口径差随分辨率收敛',
+    boundary: (radialM
+      ? 'radial-grad MT 管线：Marching Tetrahedra 提取（论文 MC 同机理）+ 复合场（平方壳 P²−C(r)² + 场内圆柱裁剪 max(r1²−rb², |Z|−rb)）；'
+        + '退化判据=尺度无关（area/max_edge²<1e-12，manifold_audit 2026-09-11 先例）——相切带等边微楔片为真实离散几何；'
+        + 'clip 边界内移半格（尺寸损 1/R）+ corner 值 η=3e-3 正则化（等值面位移 ~24nm 级）；'
+        + 'R128/periods12 产出 ~443 万三角（STL ~221MB）——按需降 resolution/periods 减小；'
+      : '')
+      + '水密自检 = mesh_audit 同款三硬指标（开放边/非流形/退化面，索引空间）；misoriented 为观测值不设门（导出翻转后全局定向一致性是平台已知盲区）；孔隙率为网格发散体积实测口径，与目标值的口径差随分辨率收敛',
   };
   const outFile = String(a.out ?? `tpms-${type}-p${Math.round(pf * 100)}.stl`);
   // ── 【方向 C】C5 容器 polyMesh：体素流体域（inside∩¬solid）→ 四 patch → STORED ZIP ──
@@ -660,7 +727,7 @@ function cmdMesh(a, json) {
     console.error(`✗ 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 不产出 STL`);
     process.exit(3);
   }
-  const scale = meshDomain ? meshDomain.scale : core.wcToMmFactor(periods);
+  const scale = radialM ? periods / 2 : (meshDomain ? meshDomain.scale : core.wcToMmFactor(periods)); // MT 归一域 [−1,1] → mm 直径 periods
   const stl = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
   writeFileSync(outFile, Buffer.from(stl));
   out.file = outFile;

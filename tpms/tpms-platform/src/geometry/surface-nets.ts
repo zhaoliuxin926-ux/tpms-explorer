@@ -150,7 +150,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     validateRadialGrad(radialCfg, periods);
     if (mode !== 'solid_network') throw new Error('radial-grad 仅支持 solid_network 模式（实体语义 |P| ≤ C(r)）');
     if (type !== 'schwarz') throw new Error(`radial-grad 仅支持 schwarz（P 曲面，论文口径）；收到 "${type}"`);
-    if (container !== 'cylinder') throw new Error('radial-grad 须 --container cylinder（论文口径圆柱域 r1≤R0——cube 角区 r1>1 会触发封口截断 C=3 填实，几何语义失真）');
+    if (container !== 'cube') throw new Error('radial-grad 须 --container cube（立方采样域 + 场内圆柱裁剪 max(F, r1²−1, |z|−1)——论文 export_stl.py 同方案；不用 cylinder 容器机制：壳场×容器交线是平台既有盲区）');
     if (params.containerMeshSdf) throw new Error('radial-grad 与 mesh 容器互斥（归一化域即映射域）');
     if (params.isoGrad) throw new Error('radial-grad 与 isoGrad 互斥（径向阈值场已由 C(r) 承担）');
     if (hybridEnabled || stressOn || hierCfg || neuralOn) throw new Error('radial-grad 与 hybrid/stress/hierarchical/neural 互斥');
@@ -167,16 +167,25 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
 
   if (radialOn) {
-    // 度规坐标 mx=wc·k → 归一化物理 X=wc/π=mx/(kπ)；tpmFn 返回带符号 P（径向逆映射相位场）。
-    // 等值面走平方壳场 P²−C(r)²（tpmsAt radial 分支，t(r)=2C）——与 |P|=C 数学等价但场光滑：
-    // |P| 在 P=0 骨架面有折痕（K=1 实测非流形 992 边），平方场消除之（论文 MC 查表无此问题，
-    // surface-nets 顶点插值对折痕敏感——2026-09-15 定案）
+    // 度规坐标 mx=wc·k → 归一化物理 X=wc/π=mx/(kπ)。单一复合场函数（2026-09-15 解锁定案，
+    // 论文 export_stl.py「场内 max 裁剪」方案照搬）：
+    //   v = max( P² − C(r)²,  r1² − 1,  |Z| − 1 )
+    //   ① P²−C²：平方壳场（⟺|P|≤C 实体；|P| 在 P=0 骨架有折痕是 surface-nets 结构性毒药，
+    //      K=1 实测 nm=992——平方化消除，论文 MC 查表无此问题）
+    //   ② r1²−1 / |Z|−1：场内圆柱裁剪（立方采样域实现圆柱边界，等值面精确落位且水密——
+    //      绕过「壳场 × cylinder 容器交线」的容器裁剪机制：实测原生 shell×cylinder 也 nm=280
+    //      拒产，属平台既有盲区；论文 2026-08-13 同方案解决同问题）
+    // tpmsAt 走通用 solid_network 语义（bias=0：v<0 为固相），法线/投影对复合场数值差分
     const rCfg = radialCfg!;
     const Ln = 2 / periods;
     const invKP = 1 / (periods * Math.PI);
     tpmFn = (mx: number, my: number, mz: number) => {
-      const [x2, y2, z2] = radialGradTransform(mx * invKP, my * invKP, mz * invKP, rCfg.K);
-      return schwarzPPhase(x2, y2, z2, Ln);
+      const X = mx * invKP, Y = my * invKP, Z = mz * invKP;
+      const [x2, y2, z2] = radialGradTransform(X, Y, Z, rCfg.K);
+      const P = schwarzPPhase(x2, y2, z2, Ln);
+      const r1 = Math.sqrt(X * X + Y * Y);
+      const C = radialGradThresholdAt(X, Y, rCfg, periods);
+      return Math.max(P * P - C * C, r1 * r1 - 1, Math.abs(Z) - 1);
     };
   } else if (hybridEnabled) {
     const hf = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
@@ -412,12 +421,6 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   }
 
   const tpmsAt = (v: number, bias: number, tEff: number, px?: number, py?: number, pz?: number): number => {
-    // 【M(r) 径向梯度】平方壳场 P²−C(r)²（⟺ |P|≤C(r) 实体，与论文壳语义数学等价）：
-    // t(r)=2·C(r)（壁厚补偿+封口经阈值场传递），bias 恒 0——忽略入参 bias/tEff
-    if (radialOn) {
-      const tRad = 2 * radialGradThresholdAt(px!, py!, radialCfg!, periods);
-      return v * v - (tRad / 2) * (tRad / 2);
-    }
     if (mode === 'solid_network') return bias - v;
     const dv = v - bias;
     if (mode === 'gradient_shell') {

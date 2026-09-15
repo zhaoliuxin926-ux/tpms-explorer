@@ -299,6 +299,18 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
+## radial-grad STL 解锁战役（2026-09-15 · /goal "解锁 radial-grad STL 产出" · MT 提取器落地）
+
+**目标**：`mesh --radial-grad K` 产出水密 STL（三部曲战役 B 的登记待攻项）。
+
+**九轮实测定案路线**（每轮都是对照实验驱动）：①坐标域实证排除（px 归一正确）；②K=1 平方版 nm=152（病因不在 radial 映射）；③**原生 shell×cylinder 也 nm=280 拒产**（平台既有盲区实锤）；④场内 max 裁剪在 surface-nets 下 nm=1200 更差（**max 尖点与 |P| 折痕同族——surface-nets 场光滑性迷宫终点**）→ **定案 Marching Tetrahedra**；⑤MT 首跑 open=19992——**4-cut 蝴蝶序 bug**（TET_EDGES 固定枚举序在部分 in/out 分布自交）→ 共享 corner 链接 4-环修复；⑥取向混合（体积差 200×）→ 穿越边方向定向（in→out 参考向量）→ 球锚 0.07% 全通；⑦clip 边界节点恒 0 → degen 6.6 万 → **半格内移**（论文方案等价，尺寸损 1/R）→ 5104；⑧t 钳制/删除/焊接 δ 三轴四轮权衡全部无零点（**相切带等边微楔片是真实离散几何**——实测 820 片边 2e-5~7e-5、r1>0.95 占 64%）→ **corner 值 η=3e-3 正则化**（贴角配置治本，量级链条：η→t≥1e-3→针高 1.6e-5→面积 1.3e-7 过审）→ 820；⑨**audit 尺度无关判据**（manifold_audit 2026-09-11 先例：area/max_edge²<1e-12 拦针形放等边微片）——**K∈{1,1.25,1.5,1.75,2} 五档全 exit0 水密产出**。
+
+**交付**：`geometry/marching-tetrahedra.ts`（6-tet 一致分解/16-case/边共享顶点缓存 KEY_MUL=2²⁵ 编码/corner η 正则化/方向定向/顶点法线）+ mesh 命令 radial MT 管线（复合场 max(P²−C², r1²−rb², |Z|−rb) + δ=1e-6 数值焊接 + STL 导出）+ auditMeshIndices 双判据模式（absolute 历史契约不动 / shape=MT 管线）+ JSON boundary 全披露（判据/半格/正则化/221MB@R128 尺寸提示）。
+
+**门禁**：cae 65→66（F4 反转为 happy-path exit0 + F6 MT 球锚：水密+4π/3 偏差 0.13%@R48 + F3 带宽校准 cube 包络口径 [58,64]⟺圆柱 50.6%）。
+
+**验证**：cae 66/0 + tsc 0 + selftest 49/0 + schema 98/0 + 全量 44/44 + dist 重建。
+
 ## 论文工程借鉴三部曲（2026-09-15 · 用户"全部执行"授权 · A/B/C 三战役）
 
 **授权**：五项借鉴清单中用户裁定"都有价值，全部执行"（第 4 项 KUBC 维持既定裁决不做）。分三战役：S1-S11 协议吸收（A）→ M(r) 度规梯度几何（B）→ batch5 数据指引（C）。
