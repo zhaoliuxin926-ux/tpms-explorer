@@ -260,7 +260,10 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number,
     + `\n${nInternal}\n(\n` + neighLines.join('\n') + '\n)\n';
   const bEntries = patchNames.map((name) => {
     const r = patchRanges[name];
-    return `    ${name}\n    {\n        type            patch;\n        nFaces          ${r.n};\n        startFace       ${Math.max(0, r.start)};\n    }`;
+    // fourPatch 壁面（casing_wall/tpms_scaffold_wetted）用 wall 类型：wallShearStress
+    // functionObject 只对 wall patch 生效（论文工程验证坑）；legacy 路径保持 patch 不变（字节级保护）
+    const isWall = four && (name === 'casing_wall' || name === 'tpms_scaffold_wetted');
+    return `    ${name}\n    {\n        type            ${isWall ? 'wall' : 'patch'};\n        nFaces          ${r.n};\n        startFace       ${Math.max(0, r.start)};\n    }`;
   }).join('\n');
   files['constant/polyMesh/boundary'] = FOAM_HEAD('polyBoundaryMesh', 'boundary')
     + `\n${patchNames.length}\n(\n${bEntries}\n)\n`;

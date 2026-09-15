@@ -299,7 +299,26 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 
 **验证**：schema_check 75/75 + llm 自检 33/33 + tsc 0 错 + vite build + docs/platform 重建 + 全量 41 门复验。
 
-## 模型线真实验收轮（2026-09-14 · 用户 key 到位 · 四档画像 4-flash/4.6/5.3/5.3-flash）
+## CFD 交付链完整化（2026-09-15 · FEA_Bone_Scaffold 论文工程借鉴 · WSL 真跑五迭代闭环）
+
+**裁决**：用户开放 `D:\FEA_Bone_Scaffold`（第一篇论文工作目录，13 轮对抗审查封箱冻结——只读借鉴）。深入调研三层互文（M(ρ) 度规映射↔平台非欧映射族/KUBC 真解↔均质化失败史/Forchheimer+WSS 口径↔方向三空白）后裁决「CFD 交付链完整化」：polyMesh 从「网格就绪」升级为「解压即 foamRun 可解 + 一条命令出 K_int」。用户确认执行。
+
+**交付**：`physics/forchheimer.ts`（两点分离 ΔP=A·Q+B·Q²，K_int=μL/(A_box·A) Stokes 截距；q1≠q2/正值/A>0 三重 fail-closed）+ `export/openfoam-case-template.ts`（0/{U,p,C}+system×3+constant×2+README 九件；SIMPLE 稳态/flowRateInletVelocity/运动压强 [0 2 -2]/upwind/传质 Robin mixed 0.0625——字典口径经论文 62GB 工程验证）+ exporter fourPatch 壁面 patch type=wall（wallShearStress functionObject 前提；legacy 路径零扰动）+ CLI `cfd-post`（Forchheimer 分离+WSS 促矿化带 10-30 mPa 诊断+`--kinematic` mm²/s²→Pa 自动换算）+ `mesh --cfd-polyMesh --flow-rate/--nu`（zip 14 件）。
+
+**WSL OpenFOAM v13 foamRun 真跑五迭代（战役灵魂——每个都是纸面验证抓不出的）**：
+1. **单位制**：checkMesh bounding box ±0.958 揭露几何原生 mm vs SI 物理量错配 → mm 自洽单位制（Q×1e9/ν×1e6 写入，README 压降换算 Pa=Δp×1e-6×ρ）；
+2. **连通性**：k2 TPMS × k8 试样容器错配 → 流体域 74 个不连通区域 → GAMG FPE 崩溃；icosphere+k2 正确组合 regions=1（教训：CFD case 对容器/周期数组合敏感，错配不报错只碎域）；
+3. **GAMG 死锁**：六面体网格上 GAMG+DICGaussSeidel 500 迭代残差零进展且首步发散（论文 snappy 四面体不触发）→ PCG/DIC 600 步收敛 9.3e-9（模板定案+门禁 E6 回归哨兵）；owner<neighbour 约定排查合规（非病因）；
+4. **v13 语法**：命令行 `-func 'areaAverage(...) of p'`（ESI 语法）v13 不识别 → `patchAverage(patch=, fields=())` 键值式（论文输出标签误导）；最终 dP 提取预埋进 controlDict（pin/pout surfaceFieldValue）开箱即得；
+5. **writeFields 必填**：v13 surfaceFieldValue 缺 writeFields 关键字启动即 FATAL → writeFields false。
+
+**全链真跑数据（icosphere 容器 + gyroid k2 p0.6 R48，29530 cells）**：Q=0.5/5 mL/min 双流量点 600 步收敛（p 残差 9.3e-9/2.5e-9，同参数复跑逐位一致）；ΔP=2.653/32.76 Pa（mm 单位制 pin 预埋与命令行提取逐位一致 2.65325518e+03）；**K_int=2.337×10⁻⁹ m²**（落骨支架文献带 1e-9~5e-8）；K_app 2.28→1.84×10⁻⁹ 随流量降（Forchheimer 教科书行为）；惯性占比 2.6%→21.1%；WSS 场 Q2/Q1≈10.07 倍（Stokes 线性+0.7% 惯性自洽）。
+
+**坑（工具链）**：wsl bash -c 内联复合命令多层转义不可靠（$d 被吃空致 cd 落错目录——**WSL 复合命令一律脚本文件 + MSYS_NO_PATHCONV=1** 防 Git Bash 路径劫持 /mnt/c）；/mnt/c 跨文件系统 IO 显著慢于 WSL 原生。
+
+**门禁**：cae_mesh_audit 46→57（守卫 57）。E 组：模板 9 件/flowRateInletVelocity+四 patch 全覆盖/运动压强 dimensions/wall 类型（WSS 前提）/ν mm 口径+dP 预埋/PCG 死锁哨兵/README 单位披露/Forchheimer 合成锚（A=1e8/B=5e12 精确恢复+K_int 量纲恒等式 1e-12）/STORED ZIP 条目/CLI 三守卫（同流量 exit2——E9 抓到退出码契约漂移已修：参数层 die 而非核心函数 exit3）。
+
+**验证**：tsc 0 + cae 57/0 + selftest 49/0 + schema_check 98/0 + WSL foamRun 双 case 收敛 + docs/platform 零 diff（纯 Node 面）。
 
 **执行**：用户智谱 key 经环境变量注入（不落盘不入库）。四档全量 37 条结果：glm-4-flash 33/37 → glm-4.6 35/37（判定修复后）→ **glm-5.3-flash 37/37 一次全绿（推荐默认档）** → glm-5.3 满血 36/37×2 轮（失败项轮换 E2→C3，均为单条方差、直跑即过）。
 
