@@ -146,7 +146,8 @@ for (const [label, params] of [
   const model = buildVoxelModel(params, R);
   const build = buildOpenfoamPolyMesh(model, opts.specimenSizeMm);
   const st = build.stats;
-  const voidCount = R ** 3 - model.solidCount;   // cube 包络；cylinder 时 model.solidCount 已扣容器外
+  // corner-air 修复（2026-09-15）：流体域 = inside && !solid——cube 时 insideCount=R³ 等价旧口径
+  const voidCount = model.insideCount - model.solidCount;
   check(`${label}: 五件套齐备`, Object.keys(build.files).length === 5
     && ['points', 'faces', 'owner', 'neighbour', 'boundary'].every((f) => build.files['constant/polyMesh/' + f]));
 
@@ -192,10 +193,10 @@ for (const [label, params] of [
   void cellCenter;
   let badOrient = 0, orientChecked = 0;
   const oStride = Math.max(1, Math.floor(st.internalFaces / 400));
-  // 重建 cell 中心映射：从 owner 分配反推（体素顺序 = cell 顺序）
+  // 重建 cell 中心映射：从 owner 分配反推（体素顺序 = cell 顺序；corner-air 修复后按 inside 过滤）
   const cellVoxelList = [];
   for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
-    if (!model.solid[ix + iy * R + iz * R * R]) cellVoxelList.push([ix + 0.5, iy + 0.5, iz + 0.5]);
+    if (model.inside[ix + iy * R + iz * R * R] && !model.solid[ix + iy * R + iz * R * R]) cellVoxelList.push([ix + 0.5, iy + 0.5, iz + 0.5]);
   }
   for (let fi = 0; fi < st.internalFaces; fi += oStride) {
     const f = faces[fi];
