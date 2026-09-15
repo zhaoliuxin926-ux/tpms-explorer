@@ -492,13 +492,38 @@ function cmdMesh(a, json) {
   if (hybridM && a['porosity-solver'] === 'legacy') die('--hybrid 需 exact 求解器（legacy 体素二分无混合语义）', usage);
   if (hybridM && mode !== 'solid_network') die('--hybrid 暂仅支持 solid_network 模式', usage);
 
+  // ── 【M(r) 空间映射径向梯度】（论文几何借鉴，2026-09-15）：--radial-grad K 启用。
+  // periods 语义变为域内晶胞数（论文口径直径 12 晶胞）；ta/tb 默认按论文比例折算 L=1mm
+  //（论文 L=2.5mm/ta=0.5 → 平台 ta=0.2；tb=nTop 标定表 ×0.4）；设计密度由公式决定（禁二分）
+  const RG_TB_TABLE = { 1.25: 0.278, 1.5: 0.322, 1.75: 0.345, 2.0: 0.370 };
+  let radialM = null;
+  if (a['radial-grad'] !== undefined) {
+    const K = Number(a['radial-grad']);
+    if (!Number.isFinite(K) || K < 1 || K > 3) die('--radial-grad K 须 1 ≤ K ≤ 3（1=均匀 P 基准；论文序列 1/1.25/1.5/1.75/2）', usage);
+    if (type !== 'schwarz') die('--radial-grad 须 --type schwarz（论文口径 P 曲面）', usage);
+    if (mode !== 'solid_network') die('--radial-grad 须 --mode solid_network', usage);
+    if (container !== 'cylinder') die('--radial-grad 须 --container cylinder（论文圆柱域 r1≤R0；cube 角区触发封口填实）', usage);
+    if (isoGradM || hybridM) die('--radial-grad 与 --iso-grad/--hybrid 互斥', usage);
+    if (a['container-mesh'] !== undefined) die('--radial-grad 与 --container-mesh 互斥（归一化域即映射域）', usage);
+    const ta = a.ta === undefined ? 0.2 : Number(a.ta);
+    if (!Number.isFinite(ta) || ta <= 0 || ta > 2) die('--ta 须 0 < t ≤ 2 mm（中心壁厚，默认 0.2=论文 0.5 按 L 比例折算）', usage);
+    let tb = a.tb === undefined ? (RG_TB_TABLE[K] ?? 0.3) : Number(a.tb);
+    if (!Number.isFinite(tb) || tb <= 0 || tb > 2) die('--tb 须 0 < t ≤ 2 mm（边缘壁厚，默认按 nTop 标定表折算）', usage);
+    if (K === 1) tb = ta; // K=1 均匀分支 tb 不参与
+    // 壁厚体素比守卫（fail-fast，2026-09-15 实测：ta·R/periods≈1 时薄壁自触非流形 6444 边拒产）
+    const voxPerWall = (ta * resolution) / periods;
+    if (voxPerWall < 2) die(`壁厚体素数不足（ta·R/periods=${voxPerWall.toFixed(2)} < 2）——亚体素壁必致非流形拒产；升 --resolution（如 128）或降 --periods 或增 --ta`, usage);
+    radialM = { K, sizeMm: periods, taMm: ta, tbMm: tb };
+  }
+
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
     weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
     thickness: 1.0, gradientDir: 'z',
     customFormula: '', preview: false,
-    hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
+    hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
     isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
+    radialGrad: radialM,
   };
   // ── 【C5 v9.0】mesh 容器：外部流形 STL → 体素 SDF（fail-closed 于非水密输入）──
   // 【红队 A C-1 修复】本段曾在 1314fc7 被宣称实装但补丁静默失败（replace 未命中仍打印
@@ -539,7 +564,11 @@ function cmdMesh(a, json) {
   let res;
   let porTrace;
   try {
-    if (solver === 'exact') {
+    if (radialM) {
+      // M(r) 径向梯度：设计密度由公式决定（K=1.5 实测 ≈50% 对齐论文），跳过孔隙率求解器
+      params.targetPorosity = undefined;
+      res = core.buildSurface(params, core.globalBufferPool);
+    } else if (solver === 'exact') {
       const buildOnce = (iso) => {
         core.globalBufferPool.reset();
         return core.buildSurface({ ...params, iso, targetPorosity: undefined }, core.globalBufferPool);
@@ -1279,7 +1308,7 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'radial-grad', 'ta', 'tb', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],

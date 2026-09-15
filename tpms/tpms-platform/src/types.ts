@@ -226,6 +226,14 @@ export interface BuildParams {
    * 仅 solid_network 支持（壳类平方场的渐变语义需另定案）。
    */
   isoGrad?: import('./core/iso-grad').IsoGradSpec;
+  /**
+   * 【M(r) 空间映射径向梯度构型】（论文几何借鉴，2026-09-15）：中心膨胀 K、边缘 1 的
+   * 度规逆映射（arctanh 径向 + 有理轴向）+ 径向壁厚补偿阈值场。固体语义 |P| ≤ C(r)（壳），
+   * K=1 退化为均匀 P（C=0.871）。仅 solid_network + type=schwarz + cube 容器支持；
+   * 与 targetPorosity 二分/isoGrad/hybrid/stress/neural/hier/mesh 容器互斥（守卫显式抛错）。
+   * periods 在本模式下语义为域内晶胞数（论文口径：直径 12 晶胞）。
+   */
+  radialGrad?: import('./core/radial-grad').RadialGradConfig;
   /** 主线程按 UI 合法性校验后下发的着色模式；缺省或 'none' 时 Worker 不产颜色 */
   coloring?: ColoringMode;
   /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */

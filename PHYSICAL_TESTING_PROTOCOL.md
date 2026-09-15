@@ -73,6 +73,14 @@ node tpms/agent/tpms.mjs mesh --type fcky    --porosity 0.75 --resolution 96 --p
 每试样一份 CSV，列：`displacement_mm,force_N[,time_s]`；命名 `S{n}_{result}_{repeat}.csv`（如 S1_G60_r1.csv）。
 配套记录：材料牌号/批次、打印参数（层高/喷嘴/固化）、实测尺寸与质量、环境温湿度。
 
+**历史实验数据复用指引（2026-09-15）**：本地论文项目已有同族 PLA/TPMS 压缩数据
+（`D:\FEA_Bone_Scaffold\Compression_TestData\batch5\`，K_1 组=均匀 Schwarz P 50% 孔隙，
+几何族与本平台试样同族）——其 `batch5/results/summary_filtered.csv`（处理后的
+位移-力曲线汇总）可转换为上述两列格式后拖入平台「试验曲线反演」卡片试运行。
+⚠️ **红线：论文未发表的原始实验数据一律不入本仓库**（预公开损害论文原创性声明），
+仅本地路径引用；K_1.25~K_2 梯度组几何需 `--radial-grad`（M(r) 空间映射，数学层已移植，
+STL 产出受 surface-nets 容器交线边界限制见 ROADMAP 登记）才能与平台几何完全对口。
+
 ## 七、试验机原始数据预处理与上游信号调理建议（S3 终审结论落地）
 
 > 背景：v9 对抗审查 S3 议题（毛刺斜率反演）经六方案实测矩阵终审为**信息论 SNR 边界**——本节把该结论转化为试验操作规约：边界不可在下游算法中消除，只能在上游信号质量中预留裕度。
@@ -97,3 +105,22 @@ node tpms/agent/tpms.mjs mesh --type fcky    --porosity 0.75 --resolution 96 --p
 | 平台应力 σ_pl | Gibson-Ashby σ*/σs = 0.3·ρ̄^1.5（解析估算，非 FEA） | 与 ISO 13314 平台应力（20-40% 应变均值）对标 |
 | 初始模量 E* | E*/Es = C1·ρ̄²（C1 按曲面族各向异性比） | 与 quasi-elastic gradient 对标 |
 | 压溃数字孪生 | 体素 FEM，DT/GA ≈1.7-2.0 偏刚披露带 | 体素离散偏刚属离散属性——本试验用于**标定收窄**该带并量化不确定度 |
+
+## 九、仿真侧对照（Explicit 准静态路线判据，S1-S11 基线协议吸收）
+
+平台 `scenario` 命令导出的 INP 为 **\*STATIC** 求解（位移加载单步、顶/底面 NSET 直接约束）——
+适合 RVE 均质化与刚度核对，**不含惯性/率效应**。若需对试样做 Explicit 准静态压缩仿真
+（与试验曲线同口径对标），参照本地论文基线协议（`D:\FEA_Bone_Scaffold\ABAQUS\protocols\quasi_static_baseline_v1.0.md`，
+QS-BASE-v1.0-2026-08）执行，判据要点：
+
+| 判据 | 口径 | 平台侧对应 |
+|---|---|---|
+| 惯性 | ρ(ε̇L)²/σ_y ≪ 1（裕度 ≥10⁻⁴）且 t_load ≥ 100× 波渡越时间 | INP 侧由 timePeriod 反推式约束（ε̇_sim ≤ 100×min(ε̇_exp, 0.005/s)） |
+| 能量 | KE/IE < 5%（ALLIE≥1% 峰值帧门控） | 平台 STATIC 步 ALLKE 恒零无此判据——仅 Explicit 路线适用 |
+| 质量缩放 | DMASS 必记录并披露实际加质（披露制，无上限门） | 同上，Explicit 专属 |
+| 摩擦系数 μ | 文献区间 0.2-0.35；区间外须附敏感性 | 压板-试样接触参数 |
+| 材料折减 | k 单点标定 + k_implied 跨工况漂移披露 | 仿真卡 E 折减进卡，k 漂移随稿披露 |
+
+**平台 INP 已吸收项**（2026-09-15）：顶面 `*OUTPUT, HISTORY`（NSET_TOP 的 RF+U）——
+压缩曲线数据源；后处理口径 σ=ΣRF3/A0、ε=−U3/H0（与基线协议 S11 同口径），
+可直接对接 §六 数据交付格式喂给 experimental-fit 反演。

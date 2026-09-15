@@ -28,6 +28,7 @@ import { getGradientEvaluator } from '../core/gradient-functions';
 import { createHybridField } from '../core/hybrid-functions';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
+import { radialGradTransform, schwarzPPhase, radialGradThresholdAt, validateRadialGrad } from '../core/radial-grad';
 import { createHierarchicalField } from '../core/hierarchical-functions';
 import { createNeuralField } from '../core/neural-implicit-field';
 import { computeSurfaceArea, computeEnvelopeVolume, computeSvRatio } from '../physics/surface-area';
@@ -141,15 +142,43 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     neuralFn = createNeuralField(params.neural.z);   // 内部 sanitize（长度/有限性/clamp）
   }
   const neuralOn = neuralFn !== null;
+  // 【M(r) 空间映射径向梯度】（论文几何借鉴，2026-09-15）：tpmFn 返回 |P|（逆映射相位场
+  // 绝对值）、biasAt 返回壁厚补偿阈值 C(r)——实体 |P| ≤ C(r)（壳语义，K=1 退化均匀 P）。
+  // 逐点非线性 warp + 径向 bias ⇒ 查表失效，与 stress/isoGrad 各自同构接入
+  const radialCfg = params.radialGrad ?? null;
+  if (radialCfg) {
+    validateRadialGrad(radialCfg, periods);
+    if (mode !== 'solid_network') throw new Error('radial-grad 仅支持 solid_network 模式（实体语义 |P| ≤ C(r)）');
+    if (type !== 'schwarz') throw new Error(`radial-grad 仅支持 schwarz（P 曲面，论文口径）；收到 "${type}"`);
+    if (container !== 'cylinder') throw new Error('radial-grad 须 --container cylinder（论文口径圆柱域 r1≤R0——cube 角区 r1>1 会触发封口截断 C=3 填实，几何语义失真）');
+    if (params.containerMeshSdf) throw new Error('radial-grad 与 mesh 容器互斥（归一化域即映射域）');
+    if (params.isoGrad) throw new Error('radial-grad 与 isoGrad 互斥（径向阈值场已由 C(r) 承担）');
+    if (hybridEnabled || stressOn || hierCfg || neuralOn) throw new Error('radial-grad 与 hybrid/stress/hierarchical/neural 互斥');
+    if (customFormula) throw new Error('radial-grad 与 customFormula 互斥');
+    if (typeof targetPorosity === 'number') throw new Error('radial-grad 与 targetPorosity 二分互斥——设计密度由公式决定（K=1 ≈50%）；iso 传 0');
+  }
+  const radialOn = radialCfg !== null;
   // 含 2 倍频谐波/常偏置的曲面族无法使用 sin/cos 查表，需实时求值（C2 扩展 5 族与 lidinoid/splitp 同语义）
-  const useLookup = !hybridEnabled && !stressOn && !hierCfg && !neuralOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
+  const useLookup = !radialOn && !hybridEnabled && !stressOn && !hierCfg && !neuralOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
     type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime' && type !== 'fcks' &&
     type !== 'dprime' && type !== 'dp' && type !== 'dd' && type !== 'dg' && type !== 'fcky' && type !== 'cdd';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
 
-  if (hybridEnabled) {
+  if (radialOn) {
+    // 度规坐标 mx=wc·k → 归一化物理 X=wc/π=mx/(kπ)；tpmFn 返回带符号 P（径向逆映射相位场）。
+    // 等值面走平方壳场 P²−C(r)²（tpmsAt radial 分支，t(r)=2C）——与 |P|=C 数学等价但场光滑：
+    // |P| 在 P=0 骨架面有折痕（K=1 实测非流形 992 边），平方场消除之（论文 MC 查表无此问题，
+    // surface-nets 顶点插值对折痕敏感——2026-09-15 定案）
+    const rCfg = radialCfg!;
+    const Ln = 2 / periods;
+    const invKP = 1 / (periods * Math.PI);
+    tpmFn = (mx: number, my: number, mz: number) => {
+      const [x2, y2, z2] = radialGradTransform(mx * invKP, my * invKP, mz * invKP, rCfg.K);
+      return schwarzPPhase(x2, y2, z2, Ln);
+    };
+  } else if (hybridEnabled) {
     const hf = createHybridField(type, hybrid.typeB, hybrid, customFormula, customFormula, eqDyn);
     // 【2026-09-12 stress×hybrid 组合定案（bugs.md 登记项清欠）】混合场双坐标域：A/B 曲面在
     // wc·k 度规坐标求值、波前混合在物理坐标——应力 warp 只变换度规坐标，与 tpmFn 包装同构，
@@ -352,6 +381,9 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const isoGradCfg = params.isoGrad;
   let gradAmp = 0;
   const biasAt = (px: number, py: number, pz: number): number => {
+    // 【M(r) 径向梯度】bias 恒 0——阈值由 tpmsAt 的平方壳场接管（t(r)=2C(r)）；
+    // C(r) 的壁厚补偿与封口语义不变，仅场表达从 |P|−C 换为等价光滑式 P²−C²
+    if (radialOn) return 0;
     if (!isoGradCfg) return biasBase;
     const coord = isoGradCfg.dir === 'x' ? px : isoGradCfg.dir === 'y' ? py : pz;
     const st = isoGradCfg.stops;
@@ -380,6 +412,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   }
 
   const tpmsAt = (v: number, bias: number, tEff: number, px?: number, py?: number, pz?: number): number => {
+    // 【M(r) 径向梯度】平方壳场 P²−C(r)²（⟺ |P|≤C(r) 实体，与论文壳语义数学等价）：
+    // t(r)=2·C(r)（壁厚补偿+封口经阈值场传递），bias 恒 0——忽略入参 bias/tEff
+    if (radialOn) {
+      const tRad = 2 * radialGradThresholdAt(px!, py!, radialCfg!, periods);
+      return v * v - (tRad / 2) * (tRad / 2);
+    }
     if (mode === 'solid_network') return bias - v;
     const dv = v - bias;
     if (mode === 'gradient_shell') {
@@ -1229,7 +1267,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         // 【v7.0 Stage I】neural 场同理：解析查表法线与神经场无关 ⇒ 强制数值梯度
         // 【C2 扩展】新 5 族无解析梯度分支——不加守卫会静默落链尾 diamond 公式（v1 审计历史 bug 同款形态）
         const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky' || type === 'cdd';
-        const needNumericGrad = hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
+        const needNumericGrad = radialOn || hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
         if (needNumericGrad) {
           // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
           const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
@@ -1238,7 +1276,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
             const p2x = a / (k * Math.PI), p2y = b2 / (k * Math.PI), p2z = c2 / (k * Math.PI);
             const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : solidFn!(a, b2, c2, w);
             // solid 模式外法线 = +∇V（固相在 V 小的一侧）；shell 类直接对模式场差分（内外壁方向自动正确）
-            return mode === 'solid_network' ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
+            return mode === 'solid_network' && !radialOn ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
           };
           const mx = vx * k, my = vy * k, mz = vz * k;
           const h = 1e-4;

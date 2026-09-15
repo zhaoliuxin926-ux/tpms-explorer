@@ -139,6 +139,12 @@ export function buildAbaqusInp(model: VoxelModel, opts: AbaqusExportOptions): {
   push('S, E');
   push('*NODE OUTPUT');
   push('U');
+  // 历史输出（S1-S11 协议吸收，2026-09-15）：顶面 RF+U 历史是压缩曲线的数据源——
+  // 后处理口径 σ=ΣRF3/A0、ε=−U3 归一后/H0（论文基线协议 S11 同口径）；
+  // Static 步 ALLKE 恒零无惯性判据意义，KE/IE<5% 判据属 Explicit 准静态路线（协议 §九）
+  push('*OUTPUT, HISTORY');
+  push('*NODE OUTPUT, NSET=NSET_TOP');
+  push('RF, U');
   push('*END STEP');
 
   return { text: lines.join('\n') + '\n', nodeCount, elemCount };
