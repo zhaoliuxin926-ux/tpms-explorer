@@ -26,8 +26,9 @@ export interface PolyMeshBuild {
  * 【方向 C 2026-09-13】四 patch 模式选项（C5 mesh 容器）：
  *   flowAxis: 主流动轴向 0=x/1=y/2=z（必填于 fourPatch——任意流形自动识别 ill-posed，fail-closed 在 CLI 层）
  *   fourPatch: 启用 casing_wall / flow_inlet / flow_outlet / tpms_scaffold_wetted 四 patch 分类。
- * 流体域 = inside && !solid（容器外既非固相也非流体）；legacy 路径（cube/cylinder 三 patch）
- * 保持 !solid 口径与字节级输出不变——corner-air 为既有登记行为（cylinder 外包络角部体素计入流体）。
+ * 流体域 = inside && !solid（容器外既非固相也非流体）。2026-09-15 corner-air 修复后
+ * legacy 三 patch 路径同此口径：cube 输出逐字节不变；cylinder 角部体素不再计入流体
+ * （原「corner-air 既有登记行为」清欠终结，圆柱侧壁入 wall、端面 patch 只覆盖柱截面）。
  */
 export interface PolyMeshOptions {
   fourPatch?: boolean;
@@ -116,10 +117,12 @@ export function buildOpenfoamPolyMesh(model: VoxelModel, specimenSizeMm: number,
   if (four && (opts.flowAxis === undefined || ![0, 1, 2].includes(opts.flowAxis)))
     throw new Error('fourPatch 模式必须提供 flowAxis（0=x/1=y/2=z）——任意流形流向自动识别 ill-posed，fail-closed');
   const fluidVox = (x: number, y: number, z: number): 0 | 1 | 2 => {
-    // 0=流体 1=固相 2=容器外（fourPatch）；legacy 口径容器外视同流体（既有行为）
+    // 0=流体 1=固相 2=容器外；容器外不进网格（2026-09-15 corner-air 修复：cylinder 外包络
+    // 角部体素曾计入流体——cube 的 inside 全 1，输出逐字节不变；cylinder 圆柱侧壁面由此
+    // 正确落入 wall patch，端面 patch 只覆盖柱截面）
     const i = x + y * R + z * R * R;
     if (solid[i]) return 1;
-    if (four && model.inside && !model.inside[i]) return 2;
+    if (model.inside && !model.inside[i]) return 2;
     return 0;
   };
 
