@@ -21,6 +21,7 @@ const suites = [
   { name: 'verify_tip_toggle（tip 收纳 10 项）', cmd: ['node', 'redteam/verify_tip_toggle.mjs'], env: {} },
   { name: 'verify（单文件版 18 项）', cmd: ['node', 'verify.mjs'], env: { BASE: `http://localhost:${PORT_DOCS}/` } },
   { name: 'slicepv（直接层切预览 5 项）', cmd: ['node', 'slicepv_check.mjs'], env: {} },
+  { name: 'radialgrad（M(r) 径向梯度卡 7 项）', cmd: ['node', 'radialgrad_card_check.mjs'], env: {} },
 ];
 
 function startServer(port, dir) {

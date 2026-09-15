@@ -16,6 +16,8 @@ import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE
 import { fitExperimentalCurve } from './physics/experimental-fit';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { makeZGrad } from './core/iso-grad';
+import { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from './core/radial-grad';
+import { marchingTetrahedra } from './geometry/marching-tetrahedra';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
 import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './geometry/webgpu-evaluator';
@@ -884,6 +886,138 @@ function bindSlicePreview(): void {
 }
 bindSlicePreview();
 
+// ── 【M(r) 度规梯度构型】radial-grad 预览与导出（MT 提取器管线，2026-09-15）──
+// 与 CLI `mesh --radial-grad` 完全同源：radialGradTransform 坐标映射 + 平方壳场
+// max(P²−C², r1²−rb², |Z|−rb) + Marching Tetrahedra + δ=1e-6 顶点焊接 + 自环过滤。
+// surface-nets 在该场上 |P|² 折痕结构性非流形（战役 B 定案）——预览/导出均走 MT。
+// 一次性预览卡（层切卡同模式）：不进 rebuild 状态机、不写 URL/缓存。
+const RG_TB_TABLE: Record<string, number> = { '1.25': 0.278, '1.5': 0.322, '1.75': 0.345, '2': 0.370 };
+interface RadialGradBuild {
+  positions: Float32Array; normals: Float32Array; indices: Uint32Array; triCount: number;
+  porosity: number; scaleMm: number;
+}
+function runRadialGradPipeline(K: number, ta: number, tb: number, sizeMm: number, R: number): RadialGradBuild {
+  const voxPerWall = (ta * R) / sizeMm;
+  if (voxPerWall < 2) throw new Error(`壁厚体素数不足（ta·R/周期=${voxPerWall.toFixed(2)} < 2）——亚体素壁必致非流形；增 ta 或降周期`);
+  const h = 0.5 / R, rb = 1 - h;                 // clip 半格内移（CLI 同款：边界 corner 恒负防贴角退化）
+  const Ln = 2 / sizeMm;
+  const rc = { K, sizeMm, taMm: ta, tbMm: K === 1 ? ta : tb };
+  const field = (X: number, Y: number, Z: number) => {
+    const [x2, y2, z2] = radialGradTransform(X, Y, Z, K);
+    const P = schwarzPPhase(x2, y2, z2, Ln);
+    const C = radialGradThresholdAt(X, Y, rc, sizeMm);
+    const r1 = Math.hypot(X, Y);
+    return Math.max(P * P - C * C, r1 * r1 - rb * rb, Math.abs(Z) - rb);
+  };
+  const mt = marchingTetrahedra(field, R);
+  // δ=1e-6 顶点量化焊接 + 自环过滤（CLI mesh 同款——等值面贴角近重合顶点收编）
+  {
+    const Pm = mt.positions, D = 1e6;
+    const weldMap = new Map<string, number>();
+    const remap = new Int32Array(Pm.length / 3);
+    let wCount = 0;
+    for (let v = 0; v < remap.length; v++) {
+      const k = Math.round(Pm[v * 3] * D) + ',' + Math.round(Pm[v * 3 + 1] * D) + ',' + Math.round(Pm[v * 3 + 2] * D);
+      let id = weldMap.get(k);
+      if (id === undefined) { id = wCount++; weldMap.set(k, id); }
+      remap[v] = id;
+    }
+    const keep: number[] = [];
+    for (let t = 0; t < mt.indices.length; t += 3) {
+      const a = remap[mt.indices[t]], b = remap[mt.indices[t + 1]], c = remap[mt.indices[t + 2]];
+      if (a === b || b === c || a === c) continue;
+      keep.push(mt.indices[t], mt.indices[t + 1], mt.indices[t + 2]);
+    }
+    mt.indices = Uint32Array.from(keep);
+    mt.triCount = keep.length / 3;
+  }
+  let vol6 = 0;
+  const Pp = mt.positions, Ii = mt.indices;
+  for (let t = 0; t < Ii.length; t += 3) {
+    const i0 = Ii[t] * 3, i1 = Ii[t + 1] * 3, i2 = Ii[t + 2] * 3;
+    vol6 += Pp[i0] * (Pp[i1 + 1] * Pp[i2 + 2] - Pp[i1 + 2] * Pp[i2 + 1])
+      + Pp[i0 + 1] * (Pp[i1 + 2] * Pp[i2] - Pp[i1] * Pp[i2 + 2])
+      + Pp[i0 + 2] * (Pp[i1] * Pp[i2 + 1] - Pp[i1 + 1] * Pp[i2]);
+  }
+  const volN = Math.abs(vol6) / 6;
+  return {
+    positions: mt.positions, normals: mt.normals, indices: mt.indices, triCount: mt.triCount,
+    porosity: Math.max(0, Math.min(1, 1 - volN / (2 * Math.PI))),  // 圆柱包络（归一域 2π）
+    scaleMm: sizeMm / 2,                                          // 归一域 [-1,1] 全宽 = sizeMm
+  };
+}
+function bindRadialGradCard(): void {
+  const kS = document.getElementById('rg-k') as HTMLInputElement | null;
+  const taS = document.getElementById('rg-ta') as HTMLInputElement | null;
+  const tbS = document.getElementById('rg-tb') as HTMLInputElement | null;
+  const kV = document.getElementById('rg-k-value') as HTMLElement | null;
+  const taV = document.getElementById('rg-ta-value') as HTMLElement | null;
+  const tbV = document.getElementById('rg-tb-value') as HTMLElement | null;
+  const info = document.getElementById('rg-info') as HTMLElement | null;
+  const gen = document.getElementById('rg-gen') as HTMLButtonElement | null;
+  const exp = document.getElementById('rg-export') as HTMLButtonElement | null;
+  const status = document.getElementById('rg-status') as HTMLElement | null;
+  if (!kS || !taS || !tbS || !kV || !taV || !tbV || !info || !gen || !exp || !status) return;
+  const syncLabels = () => {
+    const K = Number(kS.value);
+    if (K === 1) { tbS.disabled = true; tbS.value = taS.value; }   // K=1 均匀分支 tb 不参与
+    else { tbS.disabled = false; if (tbS.dataset.auto !== '0') tbS.value = String(RG_TB_TABLE[String(K)] ?? 0.3); }
+    kV.textContent = String(K); taV.textContent = Number(taS.value).toFixed(2); tbV.textContent = Number(tbS.value).toFixed(2);
+    info.textContent = `K=${K}`;
+  };
+  kS.addEventListener('input', () => { tbS.dataset.auto = '1'; syncLabels(); });
+  taS.addEventListener('input', syncLabels);
+  tbS.addEventListener('input', () => { tbS.dataset.auto = '0'; syncLabels(); });
+  syncLabels();
+  const guard = (): boolean => {
+    const s = getState();
+    if (s.type !== 'schwarz') { flashToast('radial-grad 须 Schwarz P 曲面（论文口径，与 CLI 同守卫）'); return false; }
+    if (s.structureMode !== 'solid_network') { flashToast('radial-grad 须 solid_network 模式'); return false; }
+    if (s.containerShape !== 'cube') { flashToast('radial-grad 须 cube 容器（立方采样域 + 场内圆柱裁剪）'); return false; }
+    if (meshCont) { flashToast('radial-grad 与外部 STL 容器互斥（归一化域即映射域）'); return false; }
+    return true;
+  };
+  gen.addEventListener('click', () => {
+    if (!guard()) return;
+    const s = getState();
+    status.textContent = '⏳ MT 提取中（Marching Tetrahedra，R=48）…';
+    setTimeout(() => {
+      try {
+        // 使 pending 常规重建失效（导出 HD 锁同语义）：否则后到的 worker 响应
+        // 会用普通 schwarz 几何覆盖刚生成的 MT 预览（竞态实测 94.0k≠192k 实锤）
+        if (rebuildTimer) { clearTimeout(rebuildTimer); rebuildTimer = null; }
+        if (hdUpgradeTimer) { clearTimeout(hdUpgradeTimer); hdUpgradeTimer = null; }
+        bridge.invalidate();
+        activeBuild = null;
+        buildGeneration++;
+        const res = runRadialGradPipeline(Number(kS.value), Number(taS.value), Number(tbS.value), s.cellSize, 48);
+        // 预览视觉归一：MT 归一域 ±1 → 主视图 wc 域 ±π 尺度（导出走独立管线，不受影响）
+        const scaled = res.positions.map((v) => v * Math.PI) as Float32Array;
+        const scaledN = res.normals; // 法线方向不受均匀缩放影响
+        applyGeometry(scaled, scaledN, res.indices, scaled.length / 3, res.triCount);
+        status.textContent = `✓ K=${kS.value} · ${res.triCount.toLocaleString()} 三角 · 实测孔隙率 ${(res.porosity * 100).toFixed(1)}%（圆柱包络）——预览为一次性视图，改动参数后常规重建即恢复`;
+      } catch (e) {
+        status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
+      }
+    }, 30);
+  });
+  exp.addEventListener('click', () => {
+    if (!guard()) return;
+    const s = getState();
+    status.textContent = '⏳ HD MT 提取中（R=96，可能数秒）…';
+    setTimeout(() => {
+      try {
+        const res = runRadialGradPipeline(Number(kS.value), Number(taS.value), Number(tbS.value), s.cellSize, 96);
+        exportBinarySTL(res.positions, res.indices, `tpms-radial-grad-K${kS.value}-ta${taS.value}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
+        status.textContent = `✓ STL 已导出（HD R=96 · ${res.triCount.toLocaleString()} 三角 · 孔隙率 ${(res.porosity * 100).toFixed(1)}% · 直径 ${s.cellSize}mm）`;
+      } catch (e) {
+        status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
+      }
+    }, 30);
+  });
+}
+bindRadialGradCard();
+
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
 let nlPendingExport: 'stl' | '3mf' | null = null;
@@ -1141,7 +1275,7 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
   const out = document.getElementById('phonon-result');
   const canvas = document.getElementById('phonon-canvas') as HTMLCanvasElement | null;
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.hybrid.enabled || s.isoGrad.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.type === 'slotp' || s.type === 'fs' || s.type === 'qstar' || s.type === 'ws' || s.hybrid.enabled || s.isoGrad.enabled;
   if (unsupported) {
     if (out) { out.style.display = 'block'; out.textContent = '声子能带暂不支持 custom/lidinoid/splitp/C2扩展族/混合场（固相判定语义源限制）'; }
     return;
@@ -1253,7 +1387,7 @@ function tissueShowStat(): void {
 document.getElementById('btn-tissue')?.addEventListener('click', () => {
   const out = document.getElementById('tissue-result');
   const s = getState();
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.hybrid.enabled || s.isoGrad.enabled;
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.type === 'slotp' || s.type === 'fs' || s.type === 'qstar' || s.type === 'ws' || s.hybrid.enabled || s.isoGrad.enabled;
   if (unsupported) {
     if (out) { out.style.display = 'block'; out.textContent = '组织长入暂不支持 custom/lidinoid/splitp/C2扩展族/混合场（固相判定语义源限制）'; }
     return;
@@ -1354,7 +1488,7 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
     lsAccumSteps = 0;
     if (btnApply) btnApply.style.display = 'none';
   }
-  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.hybrid.enabled || s.isoGrad.enabled || s.structureMode !== 'solid_network';
+  const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.type === 'slotp' || s.type === 'fs' || s.type === 'qstar' || s.type === 'ws' || s.hybrid.enabled || s.isoGrad.enabled || s.structureMode !== 'solid_network';
   if (unsupported && !lsPhi) {
     if (out) { out.style.display = 'block'; out.textContent = '水平集演化需 solid_network + 内置曲面类型（custom/lidinoid/splitp/混合/壳模式不支持的语义源限制）'; }
     return;
@@ -3381,7 +3515,7 @@ function syncUI(s: AppState): void {
   });
   // C2 扩展族折叠：当前类型落在折叠区内时自动展开（URL 恢复 / 预设 / 点击均覆盖）
   {
-    const C2 = new Set(['octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd']);
+    const C2 = new Set(['octo','karcher','fks','fky','gprime','fcks','dprime','dp','dd','dg','fcky','cdd','slotp','fs','qstar','ws']);
     const more = document.getElementById('type-more-c2') as HTMLDetailsElement | null;
     if (more && C2.has(s.type)) more.open = true;
   }
@@ -3667,9 +3801,135 @@ async function runSweep(): Promise<void> {
   scheduleRebuild(false, true);
 }
 
+// ── 导出级 HD 几何确保（导出中心与配图模式共享）─────────────────
+/**
+ * 屏幕几何若非导出级（拖动滑块后 HD 升级未完成 / 参数已变），同步重建高清，
+ * 返回 false 表示构建失败（已 toast）。配图模式与导出中心共用——两入口产物
+ * 必须同为 HD 口径（figure 无 HD 锁曾致配图基于 preview 网格，2026-08-26 登记）。
+ */
+async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
+  if (!baseGeo || !baseGeo.index) {
+    flashToast('请先生成有效曲面再导出');
+    return false;
+  }
+  // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
+  // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
+  const hdR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+  const levelsetOverrideValid = levelsetOverrideStateKey === geometryStateKey(s);
+  const pendingRebuild = rebuildTimer !== null || hdUpgradeTimer !== null || activeBuild !== null;
+  const expectedHdKey = buildRequestKey(s, hdR);
+  // Resolution alone is insufficient: a freshly changed type/porosity can
+  // still have an older geometry at the same resolution.  A valid level-set
+  // override is the one intentional exception (it is a user-applied result).
+  if (!levelsetOverrideValid && (lastBuildResolution < hdR
+    || lastAppliedGeometryKey !== expectedHdKey
+    || pendingRebuild)) {
+    // 导出路径会在当前调用栈内直接完成高清构建。使尚未完成的 Worker
+    // 或 WebGPU 预计算失效，避免它们在本次导出后以旧分辨率覆盖屏幕。
+    if (rebuildTimer) {
+      clearTimeout(rebuildTimer);
+      rebuildTimer = null;
+    }
+    if (hdUpgradeTimer) {
+      clearTimeout(hdUpgradeTimer);
+      hdUpgradeTimer = null;
+    }
+    // B+ 专项：导出所需 SDF 档未缓存时异步预热（流式进度经 meshcont-status 展示），
+    // 就绪后继续同步导出链——此前该路径主线程同步算 SDF 是导出冻结源
+    if (meshCont && !meshCont.sdfCache.has(hdR + 1)) {
+      try { await meshSdfEnsure(hdR); } catch (e) {
+        flashToast('✗ ' + (e instanceof Error ? e.message : String(e)));
+        return false;
+      }
+    }
+    bridge.invalidate();
+    activeBuild = null;
+    buildGeneration++;
+    gpuSeq++;
+    let res: WorkerResponse;
+    try {
+      res = buildSurface({
+        type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
+        targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+        containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
+        hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
+        endplateMm: meshCont ? 0 : s.endplateMm,
+        ...(meshCont ? meshContParams(hdR) : {}), // 红队 A C-3：导出重建路径漏注入——竞态下屏幕 torus 保形、导出 cube 裁剪
+        coloring: effectiveColoring(s),
+        stress: s.stress,
+        hierarchical: s.hierarchical,
+        neural: s.neural,
+      });
+    } catch (err) {
+      onWorkerError(err instanceof Error ? err.message : String(err));
+      return false;
+    }
+    if (res.type !== 'result' || !res.positions || !res.normals || !res.indices
+      || !Number.isFinite(res.vertCount) || res.vertCount <= 0
+      || !Number.isFinite(res.triCount) || res.triCount <= 0) {
+      onWorkerError(res.error || '高清构建结果为空网格');
+      return false;
+    }
+
+    // Keep metadata in lockstep with the geometry. applyGeometry() refreshes
+    // the statistics panel synchronously, so these assignments must precede it.
+    lastBuildResolution = hdR;
+    lastIsoUsed = res.isoUsed ?? lastIsoUsed;
+    lastAppliedGeometryKey = expectedHdKey;
+    levelsetOverrideStateKey = null;
+    lastPorosityEstimate = res.porosityEstimate;
+    lastMeshSolidFraction = res.meshSolidFraction ?? null;
+    // 红队 V-3a：混叠公式的非流形边占比过高时给出采样定理警示。
+    {
+      const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
+      if (nmRatio > 0.02 && !nmWarned) {
+        nmWarned = true;
+        flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
+      } else if (nmRatio <= 0.02) {
+        nmWarned = false;
+      }
+    }
+    if (res.surfaceArea != null && res.envelopeVolume != null) {
+      lastPhysicsMetrics = computePhysicsMetrics(
+        s.type, res.porosityEstimate, res.surfaceArea, res.envelopeVolume,
+        s.material, s.structureMode,
+      );
+    } else {
+      lastPhysicsMetrics = null;
+    }
+    applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
+    if (s.slice < 100) schedulePercolation(80);
+    scheduleMicroPhysics(250);
+    updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
+    updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
+
+    geoCache.set(cacheKey(s, hdR), {
+      positions: new Float32Array(res.positions),
+      normals: new Float32Array(res.normals),
+      indices: new Uint32Array(res.indices),
+      vertCount: res.vertCount,
+      faceCount: res.triCount,
+      porosityEstimate: res.porosityEstimate,
+      meshSolidFraction: res.meshSolidFraction ?? null,
+      isoUsed: res.isoUsed,
+      surfaceArea: res.surfaceArea,
+      envelopeVolume: res.envelopeVolume,
+    });
+    if (geoCache.size > MAX_GEO_CACHE) {
+      const oldest = geoCache.keys().next().value;
+      if (oldest) geoCache.delete(oldest);
+    }
+    requestRender();
+  }
+  return true;
+}
+
 // ── 论文配图模式 ─────────────────────────────────────────────
-function enterFigureMode(): void {
+async function enterFigureMode(): Promise<void> {
   const s = getState();
+  // 配图先确保导出级 HD 几何（与导出中心共享锁）：截屏走渲染结果，
+  // 拖动后 preview 窗口期内进入配图曾产出低清配图与 sidecar
+  if (!(await ensureExportGradeGeometry(s))) return;
   const saved = {
     autoRotate: ctx.controls.autoRotate,
     camPos: ctx.camera.position.clone(),
@@ -3741,121 +4001,8 @@ async function handleExport(fmt: string | null): Promise<void> {
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
   const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf';
-  if (needGeo && (!baseGeo || !baseGeo.index)) {
-    flashToast('请先生成有效曲面再导出');
-    return;
-  }
-  if (needGeo) {
-    // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
-    // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
-    const hdR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
-    const levelsetOverrideValid = levelsetOverrideStateKey === geometryStateKey(s);
-    const pendingRebuild = rebuildTimer !== null || hdUpgradeTimer !== null || activeBuild !== null;
-    const expectedHdKey = buildRequestKey(s, hdR);
-    // Resolution alone is insufficient: a freshly changed type/porosity can
-    // still have an older geometry at the same resolution.  A valid level-set
-    // override is the one intentional exception (it is a user-applied result).
-    if (!levelsetOverrideValid && (lastBuildResolution < hdR
-      || lastAppliedGeometryKey !== expectedHdKey
-      || pendingRebuild)) {
-      // 导出路径会在当前调用栈内直接完成高清构建。使尚未完成的 Worker
-      // 或 WebGPU 预计算失效，避免它们在本次导出后以旧分辨率覆盖屏幕。
-      if (rebuildTimer) {
-        clearTimeout(rebuildTimer);
-        rebuildTimer = null;
-      }
-      if (hdUpgradeTimer) {
-        clearTimeout(hdUpgradeTimer);
-        hdUpgradeTimer = null;
-      }
-      // B+ 专项：导出所需 SDF 档未缓存时异步预热（流式进度经 meshcont-status 展示），
-      // 就绪后继续同步导出链——此前该路径主线程同步算 SDF 是导出冻结源
-      if (meshCont && !meshCont.sdfCache.has(hdR + 1)) {
-        try { await meshSdfEnsure(hdR); } catch (e) {
-          flashToast('✗ ' + (e instanceof Error ? e.message : String(e)));
-          return;
-        }
-      }
-      bridge.invalidate();
-      activeBuild = null;
-      buildGeneration++;
-      gpuSeq++;
-      let res: WorkerResponse;
-      try {
-        res = buildSurface({
-          type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
-          targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
-          containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
-          hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
-          endplateMm: meshCont ? 0 : s.endplateMm,
-          ...(meshCont ? meshContParams(hdR) : {}), // 红队 A C-3：导出重建路径漏注入——竞态下屏幕 torus 保形、导出 cube 裁剪
-          coloring: effectiveColoring(s),
-          stress: s.stress,
-          hierarchical: s.hierarchical,
-          neural: s.neural,
-        });
-      } catch (err) {
-        onWorkerError(err instanceof Error ? err.message : String(err));
-        return;
-      }
-      if (res.type !== 'result' || !res.positions || !res.normals || !res.indices
-        || !Number.isFinite(res.vertCount) || res.vertCount <= 0
-        || !Number.isFinite(res.triCount) || res.triCount <= 0) {
-        onWorkerError(res.error || '高清构建结果为空网格');
-        return;
-      }
-
-      // Keep metadata in lockstep with the geometry. applyGeometry() refreshes
-      // the statistics panel synchronously, so these assignments must precede it.
-      lastBuildResolution = hdR;
-      lastIsoUsed = res.isoUsed ?? lastIsoUsed;
-      lastAppliedGeometryKey = expectedHdKey;
-      levelsetOverrideStateKey = null;
-      lastPorosityEstimate = res.porosityEstimate;
-      lastMeshSolidFraction = res.meshSolidFraction ?? null;
-      // 红队 V-3a：混叠公式的非流形边占比过高时给出采样定理警示。
-      {
-        const nmRatio = res.nmEdgeCount != null && res.triCount > 0 ? res.nmEdgeCount / (res.triCount * 3) : 0;
-        if (nmRatio > 0.02 && !nmWarned) {
-          nmWarned = true;
-          flashToast('提示：公式变化太快，超出网格采样能力，导出质量会下降。建议降低公式里的频率（如 x*40 改成 x*20），或提高分辨率');
-        } else if (nmRatio <= 0.02) {
-          nmWarned = false;
-        }
-      }
-      if (res.surfaceArea != null && res.envelopeVolume != null) {
-        lastPhysicsMetrics = computePhysicsMetrics(
-          s.type, res.porosityEstimate, res.surfaceArea, res.envelopeVolume,
-          s.material, s.structureMode,
-        );
-      } else {
-        lastPhysicsMetrics = null;
-      }
-      applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
-      if (s.slice < 100) schedulePercolation(80);
-      scheduleMicroPhysics(250);
-      updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
-      updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
-
-      geoCache.set(cacheKey(s, hdR), {
-        positions: new Float32Array(res.positions),
-        normals: new Float32Array(res.normals),
-        indices: new Uint32Array(res.indices),
-        vertCount: res.vertCount,
-        faceCount: res.triCount,
-        porosityEstimate: res.porosityEstimate,
-        meshSolidFraction: res.meshSolidFraction ?? null,
-        isoUsed: res.isoUsed,
-        surfaceArea: res.surfaceArea,
-        envelopeVolume: res.envelopeVolume,
-      });
-      if (geoCache.size > MAX_GEO_CACHE) {
-        const oldest = geoCache.keys().next().value;
-        if (oldest) geoCache.delete(oldest);
-      }
-      requestRender();
-    }
-  }
+  // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
+  if (needGeo && !(await ensureExportGradeGeometry(s))) return;
   try {
     switch (fmt) {
       case 'stl': {
