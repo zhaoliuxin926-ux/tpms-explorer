@@ -377,6 +377,22 @@
   :root.dark .ob-btn.ghost:hover{background:#333b4d}
   :root.dark .preset-card{background:#141922;border-color:rgba(255,255,255,.1)}
   :root.dark .preset-card .pc-chain b{color:var(--ink)}
+
+/* 【概念视频】模态（三段式 B 站官方播放器，懒加载；离线时每卡有文字讲义兜底） */
+.video-overlay{position:fixed;inset:0;background:rgba(4,8,15,.82);backdrop-filter:blur(6px);z-index:1200;display:none;align-items:center;justify-content:center;padding:24px}
+.video-overlay.show{display:flex}
+.video-box{background:#111827;border:1px solid rgba(148,163,184,.25);border-radius:16px;max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:20px 22px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.video-box h4{margin:0 0 6px;font-size:1.05rem}
+.video-sub{color:#94a3b8;font-size:.8rem;margin:0 0 14px}
+.video-card{border:1px solid rgba(148,163,184,.18);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.video-card .vc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.video-card .vc-title{font-weight:700;font-size:.88rem}
+.video-card .vc-desc{color:#94a3b8;font-size:.76rem;margin:6px 0;line-height:1.55}
+.video-card iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;display:block;background:#000}
+.vc-play{border:1px solid rgba(148,163,184,.4);background:rgba(148,163,184,.1);color:inherit;border-radius:8px;padding:5px 14px;font-size:.76rem;cursor:pointer;white-space:nowrap}
+.vc-play:hover{background:rgba(148,163,184,.22)}
+.vc-src{color:#7dd3fc;font-size:.72rem;text-decoration:none;white-space:nowrap}
+.vc-offline{color:#94a3b8;font-size:.72rem}
 </style>
 </head>
 <body>
@@ -393,6 +409,10 @@
       <button class="onboard-btn" id="btn-onboard" title="重新打开新手引导">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         新手引导
+      </button>
+      <button class="onboard-btn" id="btn-videotour" title="概念视频：三段看懂 TPMS 的概念与应用">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>
+        概念视频
       </button>
       <div class="theme-switch" id="theme-switch" role="group" aria-label="主题切换">
         <button data-theme="light" aria-pressed="false" title="浅色">☀️ 浅</button>
@@ -465,6 +485,31 @@
       </div>
     </div>
 
+    <div class="video-overlay" id="video-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="概念视频">
+      <div class="video-box">
+        <div class="help-head" style="display:flex;justify-content:space-between;align-items:center">
+          <h4>三段看懂 TPMS —— 概念视频</h4>
+          <button class="pc-close" id="video-close" title="关闭" aria-label="关闭概念视频">×</button>
+        </div>
+        <p class="video-sub">从「什么是三周期极小曲面」到「它怎么变成骨支架/热交换器」，三个视频各讲一层（B 站源，需网络）。离线时每张卡的文字讲义同样成立。</p>
+        <div class="video-card" data-bvid="BV1DRhkzeE9R">
+          <div class="vc-head"><span class="vc-title">① 什么是 TPMS？怎么造出来？</span><span style="display:flex;gap:10px;align-items:center"><button class="vc-play">▶ 播放</button><a class="vc-src" href="https://www.bilibili.com/video/BV1DRhkzeE9R/" target="_blank" rel="noopener">去 B 站看</a></span></div>
+          <p class="vc-desc">本版工具所生成的曲面，就是视频里用 MATLAB/SolidWorks 等工具造的同一类结构——<b>三周期极小曲面（TPMS）</b>：一面沿 x/y/z 三个方向无限重复的“马鞍膜”，把空间切成两个互不相通的迷宫网络。拖动侧栏「周期数」滑块就是在改砖块大小。</p>
+          <div class="vc-frame"></div>
+        </div>
+        <div class="video-card" data-bvid="BV1buA6zJEHY">
+          <div class="vc-head"><span class="vc-title">② 为什么叫“极小”曲面？</span><span style="display:flex;gap:10px;align-items:center"><button class="vc-play">▶ 播放</button><a class="vc-src" href="https://www.bilibili.com/video/BV1buA6zJEHY/" target="_blank" rel="noopener">去 B 站看</a></span></div>
+          <p class="vc-desc">肥皂膜为什么是平的？因为表面张力把它拉成了“最省”的形状。极小曲面每一点的平均曲率都为零（两个主曲率大小相等、方向相反）——自然界与工程师都偏爱它：力学均匀、传质高效。</p>
+          <div class="vc-frame"></div>
+        </div>
+        <div class="video-card" data-bvid="BV1rm4y147z3">
+          <div class="vc-head"><span class="vc-title">③ 它真的能造东西：Gyroid 热交换器</span><span style="display:flex;gap:10px;align-items:center"><button class="vc-play">▶ 播放</button><a class="vc-src" href="https://www.bilibili.com/video/BV1rm4y147z3/" target="_blank" rel="noopener">去 B 站看</a></span></div>
+          <p class="vc-desc">从数学到产品：同一套 gyroid 几何，调一调孔隙率就能做轻量化结构、骨支架、热交换器。视频里的设计流程，本工具用浏览器就能走完（参数→网格→验证→导出打印/仿真文件）。</p>
+          <div class="vc-frame"></div>
+        </div>
+        <p class="vc-offline">离线/无法加载播放器时：三张卡的文字讲义即完整概念链；接入网络后点“播放”即可。</p>
+      </div>
+    </div>
     <div class="panel controls">
       <div class="sheet-handle" id="sheet-handle"></div>
       <details class="sect" open>
@@ -2073,7 +2118,7 @@ function showPresetCard(key){
 }
 function hidePresetCard(){ const card=document.getElementById('preset-card'); card.classList.remove('show'); card.setAttribute('aria-hidden','true'); }
 document.getElementById('pc-close').addEventListener('click', hidePresetCard);
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ hidePresetCard(); hideHelp(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ hidePresetCard(); hideHelp(); hideVideoTour(); } });
 
 document.getElementById('btn-rotate').addEventListener('click', e=>{ autoRotateWanted=!autoRotateWanted; controls.autoRotate=autoRotateWanted; e.currentTarget.classList.toggle('on', autoRotateWanted); e.currentTarget.setAttribute('aria-pressed', String(autoRotateWanted)); requestRender(); });
 // 键盘快捷键帮助层
@@ -2081,6 +2126,25 @@ const helpOverlay=document.getElementById('help-overlay');
 function showHelp(){ helpOverlay.classList.add('show'); helpOverlay.setAttribute('aria-hidden','false'); document.getElementById('help-close').focus(); }
 function hideHelp(){ helpOverlay.classList.remove('show'); helpOverlay.setAttribute('aria-hidden','true'); }
 document.getElementById('btn-help').addEventListener('click', ()=>{ helpOverlay.classList.contains('show') ? hideHelp() : showHelp(); });
+// 【概念视频】模态：懒加载官方播放器（首次点播放才注入 iframe，避免开页即拉三个播放器）
+const videoOverlay=document.getElementById('video-overlay');
+function showVideoTour(){ videoOverlay.classList.add('show'); videoOverlay.setAttribute('aria-hidden','false'); document.getElementById('video-close').focus(); }
+function hideVideoTour(){ videoOverlay.classList.remove('show'); videoOverlay.setAttribute('aria-hidden','true'); }
+document.getElementById('btn-videotour').addEventListener('click', ()=>{ videoOverlay.classList.contains('show') ? hideVideoTour() : showVideoTour(); });
+document.getElementById('video-close').addEventListener('click', hideVideoTour);
+videoOverlay.addEventListener('click', e=>{ if(e.target===videoOverlay) hideVideoTour(); });
+videoOverlay.querySelectorAll('.video-card').forEach(card=>{
+  card.querySelector('.vc-play').addEventListener('click', ()=>{
+    const holder=card.querySelector('.vc-frame');
+    if(!holder.querySelector('iframe')){
+      const f=document.createElement('iframe');
+      f.src='https://player.bilibili.com/player.html?bvid='+card.dataset.bvid+'&autoplay=1&high_quality=1&danmaku=0';
+      f.allow='fullscreen'; f.title='概念视频 '+card.dataset.bvid;
+      holder.appendChild(f);
+    }
+  });
+});
+if(new URLSearchParams(location.search).get('video')==='1') showVideoTour();
 document.getElementById('help-close').addEventListener('click', hideHelp);
 helpOverlay.addEventListener('click', e=>{ if(e.target===helpOverlay) hideHelp(); });
 document.addEventListener('keydown', e=>{ if(e.key==='?'){ e.preventDefault(); helpOverlay.classList.contains('show') ? hideHelp() : showHelp(); } });
