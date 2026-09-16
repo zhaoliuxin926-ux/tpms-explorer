@@ -1,4 +1,4 @@
-# TPMS Explorer 项目全貌总结（v9.1.0-dual-extractor-manufacturing-loop）
+# TPMS Explorer 项目全貌总结（v9.2.0-24families-hardened）
 
 > 生成：2026-08-29 ｜ 最近刷新：2026-09-15（v9.1：直接层切三部曲 + 可打印性审计 + CFD 交付链（可运行 case+cfd-post K_int）+ radial-grad 径向梯度构型 + Marching Tetrahedra 双提取器 + 模型线四档验收）｜ **44 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **20** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。
@@ -119,6 +119,16 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 - **radial-grad 径向梯度构型**：度规逆映射（arctanh 径向+有理轴向+壁厚补偿阈值场）+ **Marching Tetrahedra 提取器**（不光滑场免疫；4-cut 环排序/corner 正则化/尺度无关退化判据三定案）——K∈[1,3] 五档全水密 STL 产出，平台进入双提取器格局（surface-nets 光滑场 + MT 不光滑场）
 - **模型线四档验收**：glm-5.3-flash 推荐（37/37）；provider 超时三处对称 170s+env；对抗指令四档零透传
 - **诚实边界**：CFD 字典口径经真跑验证但几何为结构化六面体（绝对值须网格敏感性披露）；MT 管线退化判据=尺度无关口径（相切带等边微楔片为真实离散几何，manifold_audit 2026-09-11 先例）；radial-grad clip 边界半格内移（尺寸损 1/R）
+
+### v9.2.0 增量（2026-09-15~16 · bugs.md 清欠轮 + 寿极对抗审查 v3 ）
+
+- **曲面库 20→24 族**（C2 第六批：Slotted P/F/Q*/W，出自 jwf23 方程数据集 CC BY 4.0；四方同源 13 文件；parity 314/webgpu 119）
+- **radial-grad UI 卡**（MT 预览 R48 + HD STL 导出 R96 内置水密门；守卫七连与 CLI 同义；与 CLI 逐位同源实证）
+- **figure 配图 HD 锁**（提取 ensureExportGradeGeometry 共享函数）
+- **MATLAB 真机验证**（R2025a 无头三支路 3/3；抓出并修复非欧分支 isonormals 必炸；buildMatlabScript 可测试化）
+- **corner-air/fourPatch 端面语义/空 patch startFace** 修复（polyMesh CFD 口径三件；含二阶缺陷）
+- **寿极对抗审查 v3**（4 红队 0C+10M+20m 全修：UI 互斥守卫/tb 量化/GPU 对拍漏列/披露漂移 13+/论文 bibitem ×2）
+- **bugs.md 清欠零挂账**（七件套真修 + 13 条定案披露，历史 368 行归档）
 
 ## 五、门禁体系（44 项，run_ci_suite.mjs 调度，三平台矩阵）
 

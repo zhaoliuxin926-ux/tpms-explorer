@@ -1,6 +1,6 @@
-% main.tex — TPMS Explorer v9.1 SoftwareX-style manuscript (self-contained, pdflatex)
+% main.tex — TPMS Explorer v9.2 SoftwareX-style manuscript (self-contained, pdflatex)
 % 编译：pdflatex main && bibtex main && pdflatex main && pdflatex main
-% 【2026-09-15 对齐 v9.1.0-dual-extractor-manufacturing-loop】摘要/表/方法段/回归数/元数据全面对齐
+% 【2026-09-15 对齐 v9.1.0】；【2026-09-16 对齐 v9.2.0-24families-hardened】摘要 24 族/数据集引用条目/UI 卡句/MATLAB 真机句
 \documentclass[5p,times,authoryear]{elsarticle}
 \usepackage{amsmath,amssymb}
 \usepackage{mathtools} % psmallmatrix（声子节实化分块）；v7.0 稿缺失致 nonstopmode 带错出 PDF
@@ -26,7 +26,7 @@ and biophysical tissue-ingrowth dynamics}
 \address[a]{Independent Open-Source Project}
 
 \begin{abstract}
-We present TPMS Explorer v9.1, a browser-based, zero-backend ecosystem for parametric design,
+We present TPMS Explorer v9.2, a browser-based, zero-backend ecosystem for parametric design,
 physics simulation, and additive-manufacturing preparation of triply periodic minimal surface
 (TPMS) architected materials. The platform couples a watertight Surface Nets meshing pipeline
 with forty-four continuously executed CI gates ($>1{,}000$ assertions under strict per-line accounting,
@@ -104,7 +104,7 @@ chain, and a dual-extractor meshing architecture (Section~\ref{sec:v91}).
 
 \begin{table}[h]
 \centering
-\caption{v7.0--v9.1 modules and their CI gates.}
+\caption{v7.0--v9.2 modules and their CI gates.}
 \label{tab:gates}
 \begin{tabular}{@{}llp{5.2cm}l@{}}
 \toprule
