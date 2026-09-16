@@ -139,7 +139,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
   - selftest 29/29（新增 R96 ≤1pp 断言 + solver 默认值检查）
 - [x] A3 GitHub 门面国际化（2026-09-13 收敛勾选，三项完成一项余留）：英文 README ✅、issue/PR 模板 ✅、topics 标签 ✅（2026-09-06 经 GitHub API 设置并公开复核：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing）——**余项：showcase 截图**（低优先，随手补）
   - [ ] A3 余项：showcase 截图（仓库 README 或 GitHub Social Preview 图）
-- [ ] A4 教学素材：LEARNING_PATH 配动画/视频（自制 3 分钟概念动画或嵌入权威视频）——验证：落地页可播放
+- [x] A4 教学素材：LEARNING_PATH 配动画/视频 ✓（2026-09-16：用户拍板「网上有素材直接用」——教学版内嵌三段式 B 站官方播放器模态（什么是 TPMS/为什么极小/它能造什么，惒加载+离线文字讲义兜底）；入口=顶栏按钮+落地页双按钮（?video=1 自动开）；verify +5 断言基线 27）——验证：落地页可播放 ✓
 
 ### 阶段 B · Agent 化与学术化（1 ~ 2 月）
 - [x] B1 = M2 tool schema ✅（2026-09-05 完成；本行 2026-09-12 红队 C 核验补勾——tools.schema.json + schema_check 72 断言已转正进 CI 调度，验收即 M2 节）

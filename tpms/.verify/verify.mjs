@@ -226,9 +226,41 @@ async function reloadRetry(page, opts = {}) {
   await ctx.close();
 }
 
+// 【概念视频】模态（A4 教学素材：三段式 B 站源 + 离线文字讲义兜底，2026-09-16）
+{
+  const page = await browser.newPage();
+  await gotoRetry(page, BASE + '/app.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#btn-videotour', { state: 'attached', timeout: 30000 });
+  // V1 三卡齐备且 bvid 真实格式
+  const cards = await page.evaluate(() => [...document.querySelectorAll('#video-overlay .video-card')].map(c => c.dataset.bvid));
+  log('概念视频三卡齐备（真实 bvid 格式）', cards.length === 3 && cards.every(b => /^BV[A-Za-z0-9]{10}$/.test(b)), cards.join(','));
+  // V2 顶栏按钮开关 + aria 状态
+  await page.evaluate(() => document.getElementById('btn-videotour').click());
+  await page.waitForTimeout(250);
+  const opened = await page.evaluate(() => document.getElementById('video-overlay').classList.contains('show') && document.getElementById('video-overlay').getAttribute('aria-hidden') === 'false');
+  log('概念视频模态可开（顶栏按钮，aria 联动）', opened);
+  // V3 懒加载：初始零 iframe，点播放才注入官方播放器（断言不依赖外部可达性）
+  const before = await page.evaluate(() => document.querySelectorAll('#video-overlay iframe').length);
+  await page.evaluate(() => document.querySelector('#video-overlay .video-card .vc-play').click());
+  await page.waitForTimeout(300);
+  const src = await page.evaluate(() => { const f = document.querySelector('#video-overlay iframe'); return f ? f.src : ''; });
+  log('播放懒加载（初始 0 iframe → 注入官方播放器 URL）', before === 0 && src.includes('player.bilibili.com/player.html?bvid=BV'), src.slice(0, 60));
+  // V4 Esc 关闭恢复
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  const closed = await page.evaluate(() => !document.getElementById('video-overlay').classList.contains('show'));
+  log('Esc 关闭模态', closed);
+  // V5 ?video=1 自动打开（落地页入口路径）
+  await gotoRetry(page, BASE + '/app.html?video=1', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(400);
+  const auto = await page.evaluate(() => document.getElementById('video-overlay').classList.contains('show'));
+  log('?video=1 自动打开（落地页概念视频按钮路径）', auto);
+  await page.close();
+}
+
 await browser.close();
 
-if (results.length < 22) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 22（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+if (results.length < 27) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 22（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-16 概念视频 +5 → 27）'); process.exit(1); }
 const failed = results.filter(r => !r.ok);
 console.log('\n==== SUMMARY ====');
 console.log(`PASS ${results.length - failed.length} / ${results.length}`);
