@@ -2,7 +2,7 @@
 
 > **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v9.1.0--dual--extractor--manufacturing--loop-2563eb)
+![release](https://img.shields.io/badge/release-v9.2.0--24families--hardened-2563eb)
 ![ci](https://img.shields.io/badge/CI-44%2F44%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -40,7 +40,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v9.1.0-dual-extractor-manufacturing-loop）
+### 科研与增材制造特性矩阵（v9.2.0-24families-hardened）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -82,7 +82,7 @@
 | 📐 直接隐式层切 (v9.0+) | 扫描线区间法跳过三角网格直出矢量层切：SVG 逐层扫描路径 + **CLI 工业格式**（Common Layer Interface，hatch 重算体积保真 ≤0.1%）+ 容器裁剪（cylinder 解析/C5 SDF 区间） | gcode_slicer_audit 32 断言（F1-F7：层切≡mesh 发散体积双口径 ≤2%/CLI 结构/悬垂审计） |
 | 🪜 可打印性审计 (v9.1) | 悬垂角面积统计（α=arccos(−N·b) 工业口径，九桶直方图）+ Fibonacci 球确定性最优摆盘寻优；实测 TPMS 晶格近各向同性=摆盘收益 ±1pp（支撑控制走切片器侧的定量依据） | gcode_slicer_audit F7 十断言（球面积极分解析锚 14.645%/立方体 1/6/critical=89° 方向语义钉/体对角零支撑） |
 | 🌊 CFD 交付链 (v9.1) | `--cfd-polyMesh` 直出**可运行 OpenFOAM case**（SIMPLE 稳态字典 + dP/WSS 预埋 + 传质 Robin 壁）+ `cfd-post` Forchheimer 两点分离（K_int=Stokes 截距 μL/(A_box·A)，实测 2.34×10⁻⁹ m² 落骨支架文献带）+ WSS 促矿化窗口诊断 | cae_mesh_audit E 组 11 断言；WSL OpenFOAM v13 foamRun 真跑闭环（GAMG 六面体死锁→PCG 定案在案） |
-| 🌀 径向梯度构型 radial-grad (v9.1) | 中心膨胀 K/边缘 1 的度规逆映射构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]，K=1 退化均匀基准）；K=1.5 实测设计密度 ≈50.6% | cae_mesh_audit F 组 5 断言（数学不变量锚 A·C_rad=K/双通道极限 1/K/密度锚） |
+| 🌀 径向梯度构型 radial-grad (v9.1→v9.2) | 中心膨胀 K/边缘 1 的度规逆映构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]）；**v9.2 新增 UI 卡**（视图与工具组：MT 预览 R48 + HD STL 导出 R96 内置水密审计门，与 CLI 逐位同源） | cae_mesh_audit F 组 6 断言 + radialgrad 冒烟 7 断言（toast 实证/竞态回归） |
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
 
 > 📝 **Release Notes**：[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
