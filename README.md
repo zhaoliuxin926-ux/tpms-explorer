@@ -28,6 +28,16 @@
 ## 🅰 主项目：TPMS 结构参数探索器
 > 个人长期维护的独立开源项目。可交互的三重周期性极小曲面（TPMS）教学工具，帮初学者快速入门（入门配「三段看懂 TPMS」概念视频：什么是 TPMS / 为什么叫极小 / 它能造什么，B 站源懒加载 + 离线文字讲义兜底）。
 > 完整项目已归入独立子目录 `tpms/`，请直接看 **[`tpms/README.md`](tpms/README.md)**（项目中枢）。
+### 三屏速览（在线即玩）
+
+| 教学版：三段看懂 TPMS 概念视频 | 工程版：radial-grad M(r) 卡（MT 实时预览） | Agent 闭环：自然语言 → 水密交付 |
+|---|---|---|
+| ![教学版概念视频](tpms/docs/screenshots/teaching-video.png) | ![工程版 radial-grad](tpms/docs/screenshots/engineering-rg.png) | ![Agent 终端演示](tpms/docs/screenshots/agent-terminal.png) |
+
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环 m0-m5-全通)）。
+
+技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+
 
 ```
 （仓库根）
@@ -44,7 +54,7 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域见 BENCHMARKS.md | parity_math 314 断言四方同源 + mesh_audit 34 案例 |
+| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域与文献对照见 BENCHMARKS.md | parity_math 314 断言四方同源 + mesh_audit 34 案例 |
 | 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 34 案例审计门，开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
