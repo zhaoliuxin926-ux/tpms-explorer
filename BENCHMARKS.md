@@ -74,6 +74,23 @@
 | 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |
 | 曲面族 | 20 | 4 | 19 | 8+ |
 | 验证门禁 | 44 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |
+
+## 与文献实验数据的对照（诚实口径）
+
+平台力学预测为 Gibson–Ashby 解析工程口径（`E*/Es = C1·ρ̄²`、`σ*/σs = C2·ρ̄^1.5`，C1=0.38/C2=0.3），非针对具体打印件的 FEA。下表把模型行为与文献实验共识并排——**带内一致处与模型边界如实分列**：
+
+| 量 | 文献实验共识 | 平台（gyroid, Ti-6Al4V 110 GPa / σs≈880 MPa） | 判定 |
+|---|---|---|---|
+| E\* 标度指数 n | 1.5–2.5（AM-TPMS 弯曲/拉伸混合主导，综述带） | n=2（Gibson–Ashby 弯曲主导） | ✅ 落带中段 |
+| C1 系数量级 | 打印开孔件实测 0.1–1（理想开孔 1–4，缺陷压低） | C1=0.38 | ✅ 带内 |
+| σ\* 标度指数 | 1.5（Gibson–Ashby 经典） | n=1.5 | ✅ 一致 |
+| 族间序（同密度） | Maskery 2018 聚合物 AM 实测：P ≈ 2×(gyroid ≈ diamond) | G-A 各向同性近似**不区分族序**（仅各向异性因子） | ⚠️ 模型边界，如实披露 |
+
+平台侧实测数字（复现：`node tpms/agent/tpms.mjs estimate --type gyroid --porosity <30|50|70> --json`）：
+ρ̄=0.70 → E\*=20.48 GPa / σ\*=154.6 MPa；ρ̄=0.50 → E\*=10.45 GPa / σ\*=93.3 MPa；ρ̄=0.30 → E\*=3.76 GPa / σ\*=43.4 MPa。
+
+文献锚：Gibson & Ashby《Cellular Solids》（手稿 bibitem `gibson1997cellular`）；Maskery et al. 2018, *Polymer*（[ScienceDirect PII S0032386117311175](https://www.sciencedirect.com/science/article/pii/S0032386117311175)，手稿引用 Abueidda 2017 / Maskery 2018 同源标度数据）。打印件绝对值会随工艺缺陷（粉末边界/粗糙度）低于解析预测——上机试样的 Gibson-Ashby 标定比回填见 `PHYSICAL_TESTING_PROTOCOL.md §八`。
+
 | 孔隙率求解 | exact 解析求根+网格实测校正（R96 0.26pp） | 解析 NIntegrate | level-set 近似 | 数值 |
 | 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |
 | 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |
