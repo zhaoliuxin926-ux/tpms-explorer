@@ -31,7 +31,7 @@
 
 ```
 （仓库根）
-├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开）
+├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开；**功能冻结教学版**——仅随一致性/安全修复维护，全部新特性落工程版）
 │   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM/CFD/脚本/AST 沙箱/空间映射/RVE/红队矩阵）
 │   └── platform/           工程版在线部署
 └── tpms/
@@ -91,7 +91,7 @@
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
 
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
-- 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）。
+- 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错 / 39 道正式 CI 门禁全绿；`run_ci_suite` 顶层调度 44/44（额外包含 `ui_jump_check` 与 agent selftest/schema_check/llm_provider_selftest）。
 
