@@ -138,7 +138,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
   - 对标源码事实：RegionTPMS 为 Mathematica notebook（非 Python），方法 = NIntegrate(Boole) 解析体积分 + bisection 反解——与本项目实现的"解析 MC 求根"同构
   - selftest 29/29（新增 R96 ≤1pp 断言 + solver 默认值检查）
 - [x] A3 GitHub 门面国际化（2026-09-13 收敛勾选，三项完成一项余留）：英文 README ✅、issue/PR 模板 ✅、topics 标签 ✅（2026-09-06 经 GitHub API 设置并公开复核：tpms/lattice/bone-scaffold/webgpu/additive-manufacturing）——**余项：showcase 截图**（低优先，随手补）
-  - [ ] A3 余项：showcase 截图（仓库 README 或 GitHub Social Preview 图）
+  - [x] A3 余项：showcase 截图 ✓（2026-09-16 求职转化率战役 T1：三屏速览图 ×3 README + 社交预览图已备（API 上传 404 降级用户侧一键）+落地页 hero 轮播 + Agent 章节前置；720f0fe）
 - [x] A4 教学素材：LEARNING_PATH 配动画/视频 ✓（2026-09-16：用户拍板「网上有素材直接用」——教学版内嵌三段式 B 站官方播放器模态（什么是 TPMS/为什么极小/它能造什么，惒加载+离线文字讲义兜底）；入口=顶栏按钮+落地页双按钮（?video=1 自动开）；verify +5 断言基线 27）——验证：落地页可播放 ✓
 
 ### 阶段 B · Agent 化与学术化（1 ~ 2 月）
@@ -146,7 +146,7 @@ CLI 侧 C1/C2 能力补齐到浏览器 UI：构型设计组新增「渐变支架
 - [x] B2 = M3 LLM 接入 ✅（2026-09-12 验收翻转，commit 951ce3e/7007486；本行 2026-09-13 收敛勾选）：OpenAICompatProvider 接智谱 + 34 条中英指令真实模型回归 **34/34**（glm-4-flash 经济档 29/34，异常全被拦截器兜住）+ 对抗样例零透传 + 拦截器自检 33/33 纳管 CI——验证标准"30 条中英指令回归、零 LLM 直写数值"超额满足
 - [x] B3 = M4 闭环驱动器 ✅（2026-09-12：Mock 6/6+真实 glm-4.6 2/2，见 M4 节）
 - [ ] B4 SoftwareX 投稿（对标 RegionTPMS 同刊路径；docs/paper 手稿已在）——验证：获得投稿号；补充审稿人可复跑的门禁证据
-- [ ] B5 BENCHMARKS.md 公开基准：解析锚点 + 与文献实验数据（Ti6Al4V gyroid/diamond）对比表——验证：外部用户可一条命令复跑
+- [x] B5 BENCHMARKS.md 公开基准 ✓（2026-09-16 T4：可用域矩阵已公开多轮；文献对照表 4 行落地（标度律带 vs 平台解析+三档实测数字，族间序模型边界如实披露）；一条命令复跑=benchmarks.mjs+estimate JSON；c40e120）
 
 ### 阶段 C · 扩展与社区（3 ~ 6 月）
 - [x] C1 第一批（2026-09-08，渐变等值场 isoGrad）：solid_network + z 向分段线性 iso 场（n 平台 + 过渡带，`--iso-grad "v0,v1,...@band"`）——**三区梯度支架验收达标：gyroid R96 三区（±0.12@0.4）水密 nm=0 且解析/实测偏差 0.09pp（≤2pp 线）；R48 dev 0.34pp**；R64 过渡带薄壁自触 nm=56 fail-closed（敏感，与 frd 族同性质）。实现：surface-nets biasAt 逐点偏置（四调用点+投影判据）、exact 求解链透传（缓存 key 掺渐变形状指纹）、scenario design JSON isoGrad 字段（INP 体素模型暂不支持渐变→诚实跳过+报告声明）。语义决策：连续渐变（水密天然保持）优先于 RegionTPMS 式硬拼接（异族界面非水密风险，留第二批）
