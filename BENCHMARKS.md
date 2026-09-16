@@ -81,10 +81,10 @@
 
 | 量 | 文献实验共识 | 平台（gyroid, Ti-6Al4V 110 GPa / σs≈880 MPa） | 判定 |
 |---|---|---|---|
-| E\* 标度指数 n | 1.5–2.5（AM-TPMS 弯曲/拉伸混合主导，综述带） | n=2（Gibson–Ashby 弯曲主导） | ✅ 落带中段 |
-| C1 系数量级 | 打印开孔件实测 0.1–1（理想开孔 1–4，缺陷压低） | C1=0.38 | ✅ 带内 |
-| σ\* 标度指数 | 1.5（Gibson–Ashby 经典） | n=1.5 | ✅ 一致 |
-| 族间序（同密度） | Maskery 2018 聚合物 AM 实测：P ≈ 2×(gyroid ≈ diamond) | G-A 各向同性近似**不区分族序**（仅各向异性因子） | ⚠️ 模型边界，如实披露 |
+| E\* 标度指数 n | 1.5–2.5（综述带；手稿 bibitem `maskery2018` 同源标度拟合数据） | n=2（Gibson–Ashby 弯曲主导） | ✅ 落带中段 |
+| C1 系数量级 | 打印开孔件 0.1–1（理想 1–4；手稿 bibitem `gibson1997cellular` 经典带） | C1=0.38 | ✅ 带内 |
+| σ\* 标度指数 | 1.5（手稿 bibitem `gibson1997cellular` 经典） | n=1.5 | ✅ 一致 |
+| 族间序（同密度） | 聚合物 AM 实测 P ≈ 2×(gyroid ≈ diamond)（[PII S0032386117311175](https://www.sciencedirect.com/science/article/pii/S0032386117311175)） | G-A 各向同性近似**不区分族序**（仅各向异性因子） | ⚠️ 模型边界，如实披露 |
 
 平台侧实测数字（复现：`node tpms/agent/tpms.mjs estimate --type gyroid --porosity <30|50|70> --json`）：
 ρ̄=0.70 → E\*=20.48 GPa / σ\*=154.6 MPa；ρ̄=0.50 → E\*=10.45 GPa / σ\*=93.3 MPa；ρ̄=0.30 → E\*=3.76 GPa / σ\*=43.4 MPa。

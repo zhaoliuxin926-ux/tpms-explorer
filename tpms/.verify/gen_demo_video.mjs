@@ -24,6 +24,7 @@ const ctx = await browser.newContext({
   recordVideo: { dir: path.join(REPO, 'docs/screenshots'), size: { width: 1280, height: 800 } },
 });
 const page = await ctx.newPage();
+let dl = null;
 try {
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => /顶点\s*\d|三角/.test(document.body.innerText), { timeout: 120000 }).catch(() => {});
@@ -67,6 +68,14 @@ try {
   });
   await wait(6000);
 
+  // 幵.5：导出 STL（HD MT 提取 + 水密审计门 + 下载交付）——计划列明的「导出 STL」幕
+  const dlP = page.waitForEvent('download', { timeout: 180000 }).catch(() => null);
+  await page.evaluate(() => document.getElementById('rg-export')?.scrollIntoView({ block: 'center' }));
+  await page.evaluate(() => document.getElementById('rg-export')?.click());
+  dl = await dlP;
+  await page.waitForFunction(() => (document.getElementById('rg-status')?.textContent || '').includes('STL 已导出'), { timeout: 180000 }).catch(() => {});
+  await wait(3500);
+
   // 幕6：层位滑块扫几层
   for (const z of ['10', '60', '110']) {
     await page.evaluate((v) => {
@@ -82,5 +91,5 @@ try {
   const saved = await video?.path().catch(() => null);
   await browser.close().catch(() => {});
   try { server.kill(); } catch { /* 忽略 */ }
-  console.log('VIDEO:', saved || '(无)');
+  console.log('VIDEO:', saved || '(无)', '| download:', dl ? dl.suggestedFilename() : '(missing!)');
 }
