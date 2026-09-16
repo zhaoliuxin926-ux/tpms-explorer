@@ -18,6 +18,34 @@ Personal, independently maintained open-source project.
 | Status | **Feature-frozen teaching edition** (consistency/security fixes only; the only `file://` double-click build) | Active development — all v7+ capabilities live here |
 | Surface families | 8 canonical | **24** (canonical + C2: Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W …) |
 | Export | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / 3MF / GLB / Abaqus INP / OpenFOAM polyMesh / Python (PyVista) / MATLAB scripts |
+### Three-screen tour (live)
+
+| Teaching: concept videos | Engineering: radial-grad M(r) card | Agent loop: NL → watertight delivery |
+|---|---|---|
+| ![Teaching](tpms/docs/screenshots/teaching-video.png) | ![Engineering](tpms/docs/screenshots/engineering-rg.png) | ![Agent terminal](tpms/docs/screenshots/agent-terminal.png) |
+
+Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) | [engineering](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+
+
+## AI Agent loop (M0-M5, fully wired)
+
+**Natural language → schema-clamped interceptor → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or clamped by deterministic code:
+
+```
+"Design a 75%-porosity Gyroid bone scaffold"
+   → [interceptor: per-slot enum/range/path-traversal validation, reject on violation]
+   → tpms_mesh executes (constructively watertight Surface Nets)
+   → watertight gate: open edges=0, non-manifold=0, degenerate=0 → PASS → STL delivered (mm)
+```
+
+| Acceptance | Result |
+|---|---|
+| 37 bilingual instructions | **glm-5.3-flash 37/37** (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
+| Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
+| The interceptor itself | 33 offline deterministic assertions (incl. live `../x.stl` traversal block) |
+| Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
+
+Reproduce: `TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider openai --model glm-5.3-flash "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
 
 ## Highlights
 
