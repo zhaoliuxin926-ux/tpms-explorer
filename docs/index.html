@@ -85,6 +85,9 @@ img{max-width:100%;display:block}
   background:radial-gradient(circle at 50% 42%, #161b24 0%, #0c0f15 70%, #07090d 100%);
   box-shadow:0 30px 70px rgba(10,13,20,.28), 0 0 0 1px rgba(255,255,255,.04)}
 .hero-shot img{width:100%;height:auto;opacity:.96}
+.hero-iso-wrap{max-width:920px;margin:0 auto 18px;border-radius:14px;overflow:hidden;border:1px solid rgba(148,163,184,.22);background:#0a0f1c;position:relative}
+.hero-iso-wrap canvas{display:block;width:100%;height:auto}
+.hero-iso-cap{position:absolute;left:12px;bottom:10px;font-size:11.5px;color:#8b949e;background:rgba(10,15,28,.72);padding:3px 10px;border-radius:8px;pointer-events:none}
 /* 【T3 首开体验】hero 轮播：五图交叉淡入（reduced-motion 下停在首图） */
 .hero-shots-frame{position:relative}
 .hero-shots-frame img{position:absolute;inset:0;opacity:0;transition:opacity 1.1s ease}
@@ -262,6 +265,10 @@ img{max-width:100%;display:block}
     <div class="stat"><span class="num" data-count="8">0</span><div class="lbl">类经典曲面</div></div>
     <div class="stat"><span class="num" data-count="3">0</span><div class="lbl">种结构拓扑</div></div>
     <div class="stat"><span class="num" data-count="2">0</span><div class="lbl">种容器形态</div></div>
+  </div>
+  <div class="hero-iso-wrap" aria-hidden="true">
+    <canvas id="hero-iso" width="920" height="300"></canvas>
+    <div class="hero-iso-cap">Gyroid 实时等值线 · iso 参数扫描（本页即平台同源数学）</div>
   </div>
   <div class="hero-shot hero-shots-frame">
     <img src="shots/01-gyroid-surface.png" alt="Gyroid 曲面实时预览" fetchpriority="high">
@@ -527,6 +534,71 @@ img{max-width:100%;display:block}
     cur = (cur + 1) % imgs.length;
     imgs[cur].classList.add('hero-on');
   }, 3200);
+})();
+
+/* 【T3 补齐规格】hero 实时几何动画：gyroid 场 Canvas 2D 等值线，iso 10s 三角波扫描
+ * （数学与平台权威库同源；reduced-motion 用户渲染单帧静图，不启动动画——无障碍红线） */
+(function(){
+  var cv = document.getElementById('hero-iso');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  if (!ctx) return;
+  var W = cv.width, H = cv.height;
+  var N = 88;                       // 场网格（N×N 求值，等值线逐 cell 插值）
+  var T2 = 10000;                   // iso 扫描周期 10s
+  function field(ix, iy, isoPhase, t){
+    // gyroid 切片：z 相位随时间缓转；iso 由三角波驱动（规格：同族曲面 iso 渐变）
+    var x = (ix / N) * Math.PI * 2, y = (iy / N) * Math.PI * 2;
+    var z = t * 0.00035;
+    return Math.sin(x) * Math.cos(y) + Math.sin(y) * Math.cos(z) + Math.sin(z) * Math.cos(x) - isoPhase;
+  }
+  var vals = new Float64Array((N + 1) * (N + 1));
+  function render(tMs){
+    var ph = (tMs % T2) / T2;
+    var iso = ph < 0.5 ? (ph * 2 * 1.6 - 0.8) : ((1 - ph) * 2 * 1.6 - 0.8);
+    var t = tMs;
+    for (var iy = 0; iy <= N; iy++)
+      for (var ix = 0; ix <= N; ix++)
+        vals[iy * (N + 1) + ix] = field(ix, iy, iso, t);
+    ctx.fillStyle = '#0a0f1c';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(125,211,252,0.85)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    var sx = W / N, sy = H / N;
+    for (var cy = 0; cy < N; cy++) {
+      for (var cx = 0; cx < N; cx++) {
+        var v00 = vals[cy * (N + 1) + cx], v10 = vals[cy * (N + 1) + cx + 1];
+        var v01 = vals[(cy + 1) * (N + 1) + cx], v11 = vals[(cy + 1) * (N + 1) + cx + 1];
+        var s00 = v00 < 0 ? 1 : 0, s10 = v10 < 0 ? 1 : 0, s01 = v01 < 0 ? 1 : 0, s11 = v11 < 0 ? 1 : 0;
+        var code = s00 | (s10 << 1) | (s01 << 2) | (s11 << 3);
+        if (code === 0 || code === 15) continue;
+        // 边插值端点（gyroid 光滑场，线性插值等值点足够）
+        var X0 = cx * sx, X1 = (cx + 1) * sx, Y0 = cy * sy, Y1 = (cy + 1) * sy;
+        var eTop = [X0 + sx * (v00 / (v00 - v10)), Y0];
+        var eBot = [X0 + sx * (v01 / (v01 - v11)), Y1];
+        var eLft = [X0, Y0 + sy * (v00 / (v00 - v01))];
+        var eRgt = [X1, Y0 + sy * (v10 / (v10 - v11))];
+        function seg(a, b){ ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
+        switch (code) {
+          case 1: case 14: seg(eLft, eTop); break;
+          case 2: case 13: seg(eTop, eRgt); break;
+          case 4: case 11: seg(eLft, eBot); break;
+          case 8: case 7:  seg(eBot, eRgt); break;
+          case 3: case 12: seg(eLft, eRgt); break;
+          case 6: case 9:  seg(eTop, eBot); break;
+          case 5:  seg(eLft, eTop); seg(eBot, eRgt); break;
+          case 10: seg(eTop, eRgt); seg(eLft, eBot); break;
+        }
+      }
+    }
+    ctx.stroke();
+  }
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    render(0);                      // 静态单帧（iso 三角波起点），无动画循环
+  } else {
+    (function loop(t){ render(t || 0); requestAnimationFrame(loop); })(0);
+  }
 })();
 </script>
 
