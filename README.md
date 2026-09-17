@@ -36,7 +36,7 @@
 
 🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环 m0-m5-全通)）。
 
-技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](tpms/docs/blog/2026-09-17-agent-architecture.md) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
 
 ```
@@ -93,6 +93,7 @@
 | 🪜 可打印性审计 (v9.1) | 悬垂角面积统计（α=arccos(−N·b) 工业口径，九桶直方图）+ Fibonacci 球确定性最优摆盘寻优；实测 TPMS 晶格近各向同性=摆盘收益 ±1pp（支撑控制走切片器侧的定量依据） | gcode_slicer_audit F7 十断言（球面积极分解析锚 14.645%/立方体 1/6/critical=89° 方向语义钉/体对角零支撑） |
 | 🌊 CFD 交付链 (v9.1) | `--cfd-polyMesh` 直出**可运行 OpenFOAM case**（SIMPLE 稳态字典 + dP/WSS 预埋 + 传质 Robin 壁）+ `cfd-post` Forchheimer 两点分离（K_int=Stokes 截距 μL/(A_box·A)，实测 2.34×10⁻⁹ m² 落骨支架文献带）+ WSS 促矿化窗口诊断 | cae_mesh_audit E 组 11 断言；WSL OpenFOAM v13 foamRun 真跑闭环（GAMG 六面体死锁→PCG 定案在案） |
 | 🌀 径向梯度构型 radial-grad (v9.1→v9.2) | 中心膨胀 K/边缘 1 的度规逆映构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]）；**v9.2 新增 UI 卡**（视图与工具组：MT 预览 R48 + HD STL 导出 R96 内置水密审计门，与 CLI 逐位同源） | cae_mesh_audit F 组 6 断言 + radialgrad 冒烟 7 断言（toast 实证/竞态回归） |
+| 🧩 径向双族分区 region (2026-09-17) | 域内双构型：内区/外区各放一族（如外壳 gyroid+内核 diamond），过渡带 smoothstep 凸组合（同号不变性⟹无额外零面）；两族零面拓扑重组为 surface-nets 结构性非流形（实测 nm 20~52 与 blend 无关）→ MT 管线提取（radial-grad 先例同机理）；UI 卡与 CLI `mesh --region-inner` 同源；rSplit 端点=单族字节级退化锚 | probe_region 10 断言（退化锚/解析锚/连续性/同号不变性）+ region 冒烟 6 断言（CLI 实测矩阵 8/8 watertight） |
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
 
 > 📝 **Release Notes**：[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
