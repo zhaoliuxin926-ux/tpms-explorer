@@ -24,16 +24,27 @@ const ctx = await browser.newContext({
   recordVideo: { dir: path.join(REPO, 'docs/screenshots'), size: { width: 1280, height: 800 } },
 });
 const page = await ctx.newPage();
+const t0 = Date.now();  // 视频录制起点≈页面创建，幕边界标记以此为基准（误差≤1s）
 let dl = null;
 try {
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => /顶点\s*\d|三角/.test(document.body.innerText), { timeout: 120000 }).catch(() => {});
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  const mark = (s) => console.log(`SCENE ${s} @ ${((Date.now() - t0) / 1000).toFixed(2)}s`);
+
+  mark('firstframe');
+  // 关闭新手引导浮窗（headless 全新 context 750ms 后必弹，遮挡画面左上）
+  await wait(1100);
+  await page.evaluate(() => document.getElementById('ob-skip')?.click());
+  await wait(300);
+  mark('clean');
 
   // 幕1：默认几何自转展示（5s）
+  mark('s1-rotate');
   await wait(5000);
 
   // 幕2：切 24 族曲面轮播（每族 1.2s，取 8 族）
+  mark('s2-types');
   const types = ['diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'octo', 'karcher'];
   for (const t of types) {
     await page.evaluate((ty) => {
@@ -44,6 +55,7 @@ try {
   }
 
   // 幕3：孔隙率滑块拖动（75 → 45）
+  mark('s3-porosity');
   await page.evaluate(() => {
     const s = document.getElementById('porosity');
     if (s) { s.value = '45'; s.dispatchEvent(new Event('input', { bubbles: true })); s.scrollIntoView({ block: 'center' }); }
@@ -51,6 +63,7 @@ try {
   await wait(4000);
 
   // 幕4：radial-grad M(r) 卡生成（MT 实时预览）
+  mark('s4-rg-start');
   await page.evaluate(() => {
     document.querySelector('#grp-view .sgroup-h')?.dispatchEvent(new Event('click', { bubbles: true }));
     document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
@@ -59,9 +72,11 @@ try {
   await wait(600);
   await page.evaluate(() => document.getElementById('rg-gen')?.click());
   await page.waitForFunction(() => (document.getElementById('rg-status')?.textContent || '').includes('实测孔隙率'), { timeout: 120000 }).catch(() => {});
+  mark('s4-rg-done');
   await wait(6000);
 
   // 幕5：直接层切预览（扫描线视图）
+  mark('s5-slice');
   await page.evaluate(() => {
     document.getElementById('slicepv-gen')?.scrollIntoView({ block: 'center' });
     document.getElementById('slicepv-gen')?.click();
@@ -69,14 +84,17 @@ try {
   await wait(6000);
 
   // 幵.5：导出 STL（HD MT 提取 + 水密审计门 + 下载交付）——计划列明的「导出 STL」幕
+  mark('s55-export-start');
   const dlP = page.waitForEvent('download', { timeout: 180000 }).catch(() => null);
   await page.evaluate(() => document.getElementById('rg-export')?.scrollIntoView({ block: 'center' }));
   await page.evaluate(() => document.getElementById('rg-export')?.click());
   dl = await dlP;
   await page.waitForFunction(() => (document.getElementById('rg-status')?.textContent || '').includes('STL 已导出'), { timeout: 180000 }).catch(() => {});
+  mark('s55-export-done');
   await wait(3500);
 
   // 幕6：层位滑块扫几层
+  mark('s6-layers');
   for (const z of ['10', '60', '110']) {
     await page.evaluate((v) => {
       const s = document.getElementById('slicepv-z');
@@ -85,6 +103,7 @@ try {
     await wait(1500);
   }
   await wait(2000);
+  mark('end');
 } finally {
   const video = page.video();
   await ctx.close();  // 关闭上下文落盘视频
