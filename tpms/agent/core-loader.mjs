@@ -28,6 +28,7 @@ const CORE_EXPORTS = [
   `export { forchheimerTwoPoint } from ${JSON.stringify(join(PLATFORM, 'src/physics/forchheimer.ts'))};`,
   `export { marchingTetrahedra } from ${JSON.stringify(join(PLATFORM, 'src/geometry/marching-tetrahedra.ts'))};`,
   `export { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from ${JSON.stringify(join(PLATFORM, 'src/core/radial-grad.ts'))};`,
+  `export { regionWeight } from ${JSON.stringify(join(PLATFORM, 'src/core/region-grad.ts'))};`,
   `export { buildCaseFiles } from ${JSON.stringify(join(PLATFORM, 'src/export/openfoam-case-template.ts'))};`,
   `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');

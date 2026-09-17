@@ -135,7 +135,7 @@ const SCHEDULE = [
   ['conformal_fill_audit C5 保形填充（门44，28断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
   ['experimental_fit_audit ISO 13314 标定与反演（门43，18断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
-  ['run_all UI 回归（7 套件——+slicepv 直接层切预览冒烟）', 'UI 回归', 'run_all.mjs'],
+  ['run_all UI 回归（9 套件——+slicepv/radialgrad/region 冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],

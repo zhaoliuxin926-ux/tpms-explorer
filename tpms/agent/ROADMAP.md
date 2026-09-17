@@ -56,6 +56,7 @@
 - [x] **方向三 experimental-fit** ✅（2026-09-13）：experimental-fit.ts（ISO 13314 标定反演）+ 门禁 43（18 断言）+ UI 卡片「试验曲线反演」（grp-sim 第 9 sect，文件拖拽/canvas 曲线/GA 实时对标；check_expfit_card.mjs 冒烟 4/4）。真实数据回填待试验机上机（PHYSICAL_TESTING_PROTOCOL.md §六 CSV 格式）
 - [x] **C5 方向二（v9 旗舰）：任意解剖流形 STL 保形填充** ✅（2026-09-13：门禁 44 十断言全绿——SDF 解析对照 med 0.0003-0.0006、加权穿越符号 100%、相对水密（mesh nm 403 ≤ cube 1668）、贴合 max 0.0289≤半格口径、倒角壳 1.35×；详见下方 C5 收官注）——外部封闭三角网格输入（流形/水密自检）→ BVH 加速符号距离场 SDF_casing → 体素容器抽象扩展（cube/cylinder → 任意网格）→ Smooth-Max 场层过渡自愈（圆柱体验证过的算子复用，注：2026-09-06 曾证伪其解决 cylinder+diamond 薄壁自触的能力，此处用于**边界贴合倒角**是不同问题域）→ 门禁 44（非凸多面体+解剖骨切口用例，断言边界贴合度与水密性）。工程量大，独立长会话攻坚
 - [ ] 方向一（真实 Agentic CAE 闭环）：待 TPMS_LLM_API_KEY + Abaqus 无头可用性验证（双阻塞）
+- [x] **方向四：径向双族分区构型 region（bimodal scaffold）** ✅（2026-09-17）：域内双族（如外壳 gyroid+内核 diamond）+ 过渡带 smoothstep 凸组合；**关键实测定案：两族零面在过渡带拓扑重组为 surface-nets 结构性非流形（nm 20~52 与 blend 无关）→ MT 管线提取（radial-grad 先例同机理），CLI/UI 卡双端 MT 同源**；rSplit 端点=单族场级字节退化锚；交付 tpms.mjs `mesh --region-inner/--region-r/--region-blend` + grp-view 卡（R48 预览/R96 HD 导出+水密审计）+ probe_region 探针 10 断言 + region_card_check 6 断言（run_all 第 9 套件）；对齐 radial-grad 范围（不进 tools.schema/GPU IR/Py/MATLAB 链）
 
 ## 究极对抗审查轮 v2（2026-09-13 · 4 红队 + 补位 · 5C+20M 全修 · df2a429/2cb5919）
 

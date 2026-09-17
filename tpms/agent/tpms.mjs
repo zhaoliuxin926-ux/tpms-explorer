@@ -474,7 +474,7 @@ function cmdSolve(a, json) {
 }
 
 function cmdMesh(a, json) {
-  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]（注: 官方容差矩阵标定域 k≤5；k=6 非标定域，薄壁族建议 --periods ≤5）';
+  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]（注: 官方容差矩阵标定域 k≤5；k=6 非标定域，薄壁族建议 --periods ≤5；径向双族分区: --region-inner <族> [--region-r 0.55] [--region-blend 0.15]）';
   if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
   const type = String(a.type ?? '');
   if (!BUILTIN_TYPES.includes(type)) die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}`, usage);
@@ -523,6 +523,28 @@ function cmdMesh(a, json) {
     radialM = { K, sizeMm: periods, taMm: ta, tbMm: tb };
   }
 
+  // ── 【径向双族分区构型】（bimodal scaffold，2026-09-17）：--region-inner <族> 启用。
+  // 内区（r1<rSplit）放 inner 族、外区放 --type 族，过渡带 smoothstep 凸组合
+  // （凸组合同号不变性 ⟹ 无额外零面；C1 权重 ⟹ 法线连续——surface-nets 原生管线水密门同标准）。
+  // 两族共享 periods/thickness/iso；互斥面与 --radial-grad 同清单。
+  // 退化锚：--region-r 1 ⟹ 纯外族；--region-r 0 ⟹ 纯内族（与单族基准逐字节一致，探针用）。
+  let regionM = null;
+  if (a['region-inner'] !== undefined || a['region-r'] !== undefined || a['region-blend'] !== undefined) {
+    if (a['region-inner'] === undefined) die('--region-r/--region-blend 须与 --region-inner 成对出现', usage);
+    const inner = String(a['region-inner']);
+    if (!BUILTIN_TYPES.includes(inner)) die(`--region-inner 未知曲面族 "${inner}"（可选: ${BUILTIN_TYPES.join(' ')}）`, usage);
+    if (inner === type) die(`--region-inner 与 --type 同族（${type}）无分区语义`, usage);
+    if (mode !== 'solid_network') die('--region 须 --mode solid_network', usage);
+    if (container !== 'cube') die('--region 须 --container cube（分区半径按归一化圆柱半径 r1 定义）', usage);
+    if (isoGradM || hybridM || radialM) die('--region 与 --iso-grad/--hybrid/--radial-grad 互斥', usage);
+    if (a['container-mesh'] !== undefined) die('--region 与 --container-mesh 互斥', usage);
+    const rS = a['region-r'] === undefined ? 0.55 : Number(a['region-r']);
+    if (!Number.isFinite(rS) || rS < 0 || rS > 1) die('--region-r 须 0 ≤ r ≤ 1（归一化圆柱半径；0.55 默认；端点值=单族退化锚）', usage);
+    const bl = a['region-blend'] === undefined ? 0.15 : Number(a['region-blend']);
+    if (!Number.isFinite(bl) || bl < 0.02 || bl > 0.6) die('--region-blend 须 0.02 ≤ b ≤ 0.6（过渡带全宽，归一化域）', usage);
+    regionM = { innerType: inner, rSplit: rS, blend: bl };
+  }
+
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
     weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
@@ -531,6 +553,7 @@ function cmdMesh(a, json) {
     hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
     isoGrad: isoGradM ? { dir: 'z', stops: isoGradM.stops } : undefined,
     radialGrad: radialM,
+    regionGrad: regionM,
   };
   // ── 【C5 v9.0】mesh 容器：外部流形 STL → 体素 SDF（fail-closed 于非水密输入）──
   // 【红队 A C-1 修复】本段曾在 1314fc7 被宣称实装但补丁静默失败（replace 未命中仍打印
@@ -628,6 +651,61 @@ function cmdMesh(a, json) {
         isoUsed: 0,
         radialMtSignedVolume: Math.sign(vol6),
       };
+    } else if (regionM) {
+      // 径向双族分区：MT 提取管线（radial-grad 先例 1:1）——两族零面在过渡带拓扑重组处
+      // 是 surface-nets 结构性非流形（2026-09-17 实测 nm 20~52 与 blend 无关），MT 的 cell
+      // corner 二值化免疫之（radial 三轮实测定案同机理）。立方域裁剪（|X|,|Y|,|Z| − rb）
+      // 半格内移同 radial clip 语义：等值面完全落域内，MT 网格闭合。
+      const rS = regionM.rSplit, bl = regionM.blend, invKP = 1 / (periods * Math.PI);
+      const rb = 1 - 0.5 / resolution;
+      const fA = core.getTpmsFunction(type);
+      const fB = core.getTpmsFunction(regionM.innerType);
+      const wts = params.weights;
+      const field = (X, Y, Z) => {
+        const s = core.regionWeight(Math.hypot(X, Y), rS, bl);
+        // 归一化物理坐标 → 度规坐标 mx=wc·k（各族场以度规坐标求值）
+        const mx = X / invKP, my = Y / invKP, mz = Z / invKP;
+        const v = s * fA(mx, my, mz, wts) + (1 - s) * fB(mx, my, mz, wts);
+        return Math.max(v, Math.abs(X) - rb, Math.abs(Y) - rb, Math.abs(Z) - rb);
+      };
+      const mt = core.marchingTetrahedra(field, resolution);
+      // 顶点量化焊接 + 自环过滤（radial MT 分支同款，δ=1e-6）
+      {
+        const Pm = mt.positions, D = 1e6;
+        const weldMap = new Map();
+        const remap = new Int32Array(Pm.length / 3);
+        let wCount = 0;
+        for (let v = 0; v < remap.length; v++) {
+          const k = Math.round(Pm[v * 3] * D) + ',' + Math.round(Pm[v * 3 + 1] * D) + ',' + Math.round(Pm[v * 3 + 2] * D);
+          let id = weldMap.get(k);
+          if (id === undefined) { id = wCount++; weldMap.set(k, id); }
+          remap[v] = id;
+        }
+        const keep = [];
+        for (let t = 0; t < mt.indices.length; t += 3) {
+          const a = remap[mt.indices[t]], b = remap[mt.indices[t + 1]], c = remap[mt.indices[t + 2]];
+          if (a === b || b === c || a === c) continue;
+          keep.push(mt.indices[t], mt.indices[t + 1], mt.indices[t + 2]);
+        }
+        mt.indices = Uint32Array.from(keep);
+        mt.triCount = keep.length / 3;
+      }
+      let vol6 = 0;
+      const Pp = mt.positions, Ii = mt.indices;
+      for (let t = 0; t < Ii.length; t += 3) {
+        const i0 = Ii[t] * 3, i1 = Ii[t + 1] * 3, i2 = Ii[t + 2] * 3;
+        vol6 += Pp[i0] * (Pp[i1 + 1] * Pp[i2 + 2] - Pp[i1 + 2] * Pp[i2 + 1])
+          + Pp[i0 + 1] * (Pp[i1 + 2] * Pp[i2] - Pp[i1] * Pp[i2 + 2])
+          + Pp[i0 + 2] * (Pp[i1] * Pp[i2 + 1] - Pp[i1 + 1] * Pp[i2]);
+      }
+      const volN = Math.abs(vol6) / 6;
+      res = {
+        positions: mt.positions, indices: mt.indices, normals: mt.normals, triCount: mt.triCount,
+        // 立方包络（归一域 [-1,1]³ 体积 8）；孔隙率=1−固相/包络
+        porosityEstimate: Math.max(0, Math.min(1, 1 - volN / 8)),
+        isoUsed: 0,
+        regionMtSignedVolume: Math.sign(vol6),
+      };
     } else if (solver === 'exact') {
       const buildOnce = (iso) => {
         core.globalBufferPool.reset();
@@ -649,7 +727,7 @@ function cmdMesh(a, json) {
 
   // radial-grad MT 管线：degen 判据走尺度无关口径（manifold_audit 2026-09-11 先例——等边微楔片
   // 为相切带真实离散几何；针形/自环仍拦）
-  const audit = auditMeshIndices(res.positions, res.indices, radialM ? { degenMode: 'shape' } : undefined);
+  const audit = auditMeshIndices(res.positions, res.indices, (radialM || regionM) ? { degenMode: 'shape' } : undefined);
   const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
   // porosityEstimate 平台口径为小数（=1−发散固相/包络，surface-nets 内建钳制），恒 ≤1
   const porEst = res.porosityEstimate;
@@ -669,6 +747,12 @@ function cmdMesh(a, json) {
         + '退化判据=尺度无关（area/max_edge²<1e-12，manifold_audit 2026-09-11 先例）——相切带等边微楔片为真实离散几何；'
         + 'clip 边界内移半格（尺寸损 1/R）+ corner 值 η=3e-3 正则化（等值面位移 ~24nm 级）；'
         + 'R128/periods12 产出 ~443 万三角（STL ~221MB）——按需降 resolution/periods 减小；'
+      : '')
+      + (regionM
+      ? '径向双族分区 MT 管线：内区（r1<' + regionM.rSplit + '）族 ' + regionM.innerType + '、外区族 ' + type + '，过渡带 smoothstep 凸组合'
+        + '（带宽 ' + regionM.blend + '，归一化域）；Marching Tetrahedra 提取（两族零面在过渡带拓扑重组为 surface-nets 结构性非流形——'
+        + '2026-09-17 实测 nm 20~52 与 blend 无关，MT cell corner 二值化免疫，radial-grad 先例同机理）+ 立方域裁剪（边界内移半格，尺寸损 1/R）；'
+        + '两族共享 periods/iso=0，--porosity 仅作名义值进报告（分区密度由构型承担，未参与二分）；退化判据=尺度无关；'
       : '')
       + '水密自检 = mesh_audit 同款三硬指标（开放边/非流形/退化面，索引空间）；misoriented 为观测值不设门（导出翻转后全局定向一致性是平台已知盲区）；孔隙率为网格发散体积实测口径，与目标值的口径差随分辨率收敛',
   };
@@ -1376,7 +1460,7 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'radial-grad', 'ta', 'tb', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'radial-grad', 'ta', 'tb', 'region-inner', 'region-r', 'region-blend', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],
