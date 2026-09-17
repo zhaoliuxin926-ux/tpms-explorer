@@ -17,6 +17,7 @@ import { fitExperimentalCurve } from './physics/experimental-fit';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { makeZGrad } from './core/iso-grad';
 import { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from './core/radial-grad';
+import { regionWeight } from './core/region-grad';
 import { marchingTetrahedra } from './geometry/marching-tetrahedra';
 import { buildSurface } from './geometry/surface-nets';
 import { computeVertexColors } from './geometry/vertex-coloring';
@@ -1050,6 +1051,141 @@ function bindRadialGradCard(): void {
   });
 }
 bindRadialGradCard();
+
+// ── 【径向双族分区构型】bimodal 分区预览与导出（MT 提取器管线，2026-09-17）──
+// 与 CLI `mesh --region-inner` 完全同源：两族场 smoothstep 凸组合（过渡带无额外零面）+
+// 立方域裁剪（|X|,|Y|,|Z|−rb 半格内移）+ Marching Tetrahedra + δ=1e-6 焊接 + 自环过滤。
+// surface-nets 在两族零面拓扑重组处结构性非流形（CLI 实测 nm 20~52 与 blend 无关）——
+// 预览/导出均走 MT（radial-grad 先例同机理）。一次性预览卡：不进 rebuild 状态机、不写 URL/缓存。
+function runRegionPipeline(outerType: string, innerType: string, rSplit: number, blend: number, cellSize: number, R: number): RadialGradBuild {
+  const k = cellSize, invKP = 1 / (k * Math.PI);
+  const rb = 1 - 0.5 / R;                    // clip 半格内移（CLI 同款：边界 corner 恒负防贴角退化）
+  const fA = getTpmsFunction(outerType as Parameters<typeof getTpmsFunction>[0]);
+  const fB = getTpmsFunction(innerType as Parameters<typeof getTpmsFunction>[0]);
+  const w: Parameters<typeof fA>[3] = [1, 1, 1, 1];
+  const field = (X: number, Y: number, Z: number) => {
+    const s = regionWeight(Math.hypot(X, Y), rSplit, blend);
+    const mx = X / invKP, my = Y / invKP, mz = Z / invKP;   // 归一化物理 → 度规 mx=wc·k（CLI 同款）
+    const v = s * fA(mx, my, mz, w) + (1 - s) * fB(mx, my, mz, w);
+    return Math.max(v, Math.abs(X) - rb, Math.abs(Y) - rb, Math.abs(Z) - rb);
+  };
+  const mt = marchingTetrahedra(field, R);
+  // δ=1e-6 顶点量化焊接 + 自环过滤（CLI mesh 同款）
+  {
+    const Pm = mt.positions, D = 1e6;
+    const weldMap = new Map<string, number>();
+    const remap = new Int32Array(Pm.length / 3);
+    let wCount = 0;
+    for (let v = 0; v < remap.length; v++) {
+      const key = Math.round(Pm[v * 3] * D) + ',' + Math.round(Pm[v * 3 + 1] * D) + ',' + Math.round(Pm[v * 3 + 2] * D);
+      let id = weldMap.get(key);
+      if (id === undefined) { id = wCount++; weldMap.set(key, id); }
+      remap[v] = id;
+    }
+    const keep: number[] = [];
+    for (let t = 0; t < mt.indices.length; t += 3) {
+      const a = remap[mt.indices[t]], b = remap[mt.indices[t + 1]], c = remap[mt.indices[t + 2]];
+      if (a === b || b === c || a === c) continue;
+      keep.push(mt.indices[t], mt.indices[t + 1], mt.indices[t + 2]);
+    }
+    mt.indices = Uint32Array.from(keep);
+    mt.triCount = keep.length / 3;
+  }
+  let vol6 = 0;
+  const Pp = mt.positions, Ii = mt.indices;
+  for (let t = 0; t < Ii.length; t += 3) {
+    const i0 = Ii[t] * 3, i1 = Ii[t + 1] * 3, i2 = Ii[t + 2] * 3;
+    vol6 += Pp[i0] * (Pp[i1 + 1] * Pp[i2 + 2] - Pp[i1 + 2] * Pp[i2 + 1])
+      + Pp[i0 + 1] * (Pp[i1 + 2] * Pp[i2] - Pp[i1] * Pp[i2 + 2])
+      + Pp[i0 + 2] * (Pp[i1] * Pp[i2 + 1] - Pp[i1 + 1] * Pp[i2]);
+  }
+  const volN = Math.abs(vol6) / 6;
+  return {
+    positions: mt.positions, normals: mt.normals, indices: mt.indices, triCount: mt.triCount,
+    porosity: Math.max(0, Math.min(1, 1 - volN / 8)),   // 立方包络（归一域 [-1,1]³ 体积 8）
+    scaleMm: cellSize / 2,                              // 归一域 [-1,1] 全宽 = cellSize
+  };
+}
+
+const REGION_UI_TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'octo', 'karcher', 'gprime', 'dp', 'dd', 'dg'] as const;
+
+function bindRegionCard(): void {
+  const innerSel = document.getElementById('rgn-inner') as HTMLSelectElement | null;
+  const rS = document.getElementById('rgn-r') as HTMLInputElement | null;
+  const bS = document.getElementById('rgn-blend') as HTMLInputElement | null;
+  const rV = document.getElementById('rgn-r-value') as HTMLElement | null;
+  const bV = document.getElementById('rgn-blend-value') as HTMLElement | null;
+  const info = document.getElementById('rgn-info') as HTMLElement | null;
+  const gen = document.getElementById('rgn-gen') as HTMLButtonElement | null;
+  const exp = document.getElementById('rgn-export') as HTMLButtonElement | null;
+  const status = document.getElementById('rgn-status') as HTMLElement | null;
+  if (!innerSel || !rS || !bS || !rV || !bV || !info || !gen || !exp || !status) return;
+  for (const t of REGION_UI_TYPES) {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    innerSel.appendChild(opt);
+  }
+  innerSel.value = 'diamond';
+  const syncLabels = () => {
+    rV.textContent = Number(rS.value).toFixed(2); bV.textContent = Number(bS.value).toFixed(2);
+    info.textContent = `${innerSel.value} @ r=${Number(rS.value).toFixed(2)}`;
+  };
+  rS.addEventListener('input', syncLabels);
+  bS.addEventListener('input', syncLabels);
+  syncLabels();
+  const guard = (): boolean => {
+    const s = getState();
+    if (innerSel.value === s.type) { flashToast(`内区族（${innerSel.value}）与外区族同族，无分区语义`); return false; }
+    if (s.structureMode !== 'solid_network') { flashToast('分区构型须 solid_network 模式'); return false; }
+    if (s.containerShape !== 'cube') { flashToast('分区构型须 cube 容器（分区半径按归一化圆柱半径 r1 定义）'); return false; }
+    if (meshCont) { flashToast('分区构型与外部 STL 容器互斥'); return false; }
+    if (s.isoGrad.enabled) { flashToast('分区构型与渐变等值场互斥'); return false; }
+    if (s.hybrid.enabled) { flashToast('分区构型与混合场互斥'); return false; }
+    if (s.manifold.kind !== 'identity') { flashToast('分区构型与非欧映射互斥（预览会被 warp 而导出不会）'); return false; }
+    return true;
+  };
+  gen.addEventListener('click', () => {
+    if (!guard()) return;
+    const s = getState();
+    status.textContent = '⏳ MT 提取中（Marching Tetrahedra，R=48）…';
+    setTimeout(() => {
+      try {
+        // pending 常规重建失效（radial 卡同语义：否则后到 worker 响应覆盖一次性预览）
+        if (rebuildTimer) { clearTimeout(rebuildTimer); rebuildTimer = null; }
+        if (hdUpgradeTimer) { clearTimeout(hdUpgradeTimer); hdUpgradeTimer = null; }
+        bridge.invalidate();
+        activeBuild = null;
+        buildGeneration++;
+        const res = runRegionPipeline(s.type, innerSel.value, Number(rS.value), Number(bS.value), s.cellSize, 48);
+        const scaled = res.positions.map((v) => v * Math.PI) as Float32Array;
+        applyGeometry(scaled, res.normals, res.indices, scaled.length / 3, res.triCount);
+        status.textContent = `✓ 外区 ${s.type} / 内区 ${innerSel.value} @ r=${rS.value} · ${res.triCount.toLocaleString()} 三角 · 实测孔隙率 ${(res.porosity * 100).toFixed(1)}%（立方包络）——预览为一次性视图，改动参数后常规重建即恢复`;
+      } catch (e) {
+        status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
+      }
+    }, 30);
+  });
+  exp.addEventListener('click', () => {
+    if (!guard()) return;
+    const s = getState();
+    status.textContent = '⏳ HD MT 提取中（R=96，可能数秒）…';
+    setTimeout(() => {
+      try {
+        const res = runRegionPipeline(s.type, innerSel.value, Number(rS.value), Number(bS.value), s.cellSize, 96);
+        const audit = auditRadialMeshInline(res.indices);
+        if (audit.open > 0 || audit.nm > 0) {
+          status.textContent = `✗ 水密审计拒绝（open=${audit.open} nm=${audit.nm}）——STL 不导出，与 CLI 水密门同标准`;
+          return;
+        }
+        exportBinarySTL(res.positions, res.indices, `tpms-region-${s.type}-${innerSel.value}-r${Number(rS.value).toFixed(2)}-b${Number(bS.value).toFixed(2)}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
+        status.textContent = `✓ STL 已导出（HD R=96 · ${res.triCount.toLocaleString()} 三角 · 孔隙率 ${(res.porosity * 100).toFixed(1)}% · 边长 ${s.cellSize}mm）`;
+      } catch (e) {
+        status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
+      }
+    }, 30);
+  });
+}
+bindRegionCard();
 
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────

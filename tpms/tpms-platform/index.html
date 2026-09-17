@@ -1348,6 +1348,20 @@ window.addEventListener('error', function(e) {
           <div class="field-note" id="rg-status">【M(r) 度规梯度】论文同族几何：arctanh 径向映射让孔隙率沿半径连续变化（中心密→边缘疏）。MT 提取器管线（surface-nets 在该场结构性非流形）；须 Schwarz P + solid_network + cube；设计密度由公式决定（目标孔隙率滑块不参与）。导出为归一域 mm 圆柱试样。</div>
         </div>
         <div class="field">
+          <div class="lbl"><span>径向双族分区 (region)</span><span class="val" id="rgn-info">diamond @ r=0.55</span></div>
+          <div class="lbl" style="margin-top:6px"><span>内区曲面族（外区=当前曲面）</span></div>
+          <select id="rgn-inner" style="width:100%;margin-top:4px"></select>
+          <div class="lbl" style="margin-top:6px"><span>分界面半径 r</span><span class="val" id="rgn-r-value">0.55</span></div>
+          <input type="range" id="rgn-r" min="0.1" max="0.9" step="0.05" value="0.55">
+          <div class="lbl" style="margin-top:6px"><span>过渡带宽度 b</span><span class="val" id="rgn-blend-value">0.15</span></div>
+          <input type="range" id="rgn-blend" min="0.05" max="0.6" step="0.05" value="0.15">
+          <div class="opt-row" style="margin-top:6px">
+            <button class="opt" id="rgn-gen">生成预览 (MT)</button>
+            <button class="opt" id="rgn-export">导出 STL (HD)</button>
+          </div>
+          <div class="field-note" id="rgn-status">【双族分区】内区/外区各放一种 TPMS 族（如外壳 gyroid + 内核 diamond），过渡带 smoothstep 凸组合平滑衔接。MT 提取器管线（两族零面在过渡带拓扑重组，surface-nets 结构性非流形）；两族共享当前周期数；须 solid_network + cube；目标孔隙率滑块不参与。导出为归一域 mm 立方试样。</div>
+        </div>
+        <div class="field">
           <div class="lbl"><span>动态剖切 (Section Clipping)</span><span class="val" id="slice-value">完整</span></div>
           <div class="opt-row" style="margin-bottom:6px">
             <button class="opt active" data-slice-axis="z">Z 轴<span class="o-sub">Z</span></button>
