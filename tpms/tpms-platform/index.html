@@ -568,6 +568,16 @@
   }
   .panel.controls select:focus{border-color:rgba(79,195,247,0.4)}
   .panel.controls select option{background:#0d1220;color:#c8d6e5}
+  /* B3 真机体验：region 内区下拉自绘深色（appearance:none 消除 Windows 原生白底与深色仪表面板的割裂） */
+  .panel.controls #rgn-inner{
+    -webkit-appearance:none;appearance:none;
+    background-color:#0d1220;color:#c8d6e5;
+    border:1px solid rgba(79,195,247,0.25);border-radius:6px;
+    padding:5px 26px 5px 9px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%234fc3f7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 9px center;
+  }
+  .panel.controls #rgn-inner:focus{border-color:rgba(79,195,247,0.5);outline:none}
 
   /* 5. Buttons — instrument-style with subtle glow */
   .panel.controls .opt{
@@ -610,7 +620,7 @@
     background:rgba(13,18,32,0.6);border-color:rgba(79,195,247,0.1);
     color:rgba(160,180,200,0.8);
   }
-  .panel.controls .field-note{color:rgba(79,195,247,0.35)}
+  .panel.controls .field-note{color:rgba(160,180,200,0.78)}
   .panel.controls .formula{
     background:rgba(13,18,32,0.6);border-color:rgba(79,195,247,0.1);
   }
@@ -619,7 +629,7 @@
   .panel.controls .formula .eq .c{color:#4fc3f7}
   .panel.controls .formula .eq .term-hl{background:rgba(79,195,247,0.12)}
   .panel.controls .formula .eq .wcoef{color:#4fc3f7}
-  .panel.controls .fw-hint{color:rgba(79,195,247,0.35)}
+  .panel.controls .fw-hint{color:rgba(160,180,200,0.78)}
   .panel.controls .fw-tag{color:rgba(160,180,200,0.7)}
   .panel.controls .fw-tag.on{color:#4fc3f7}
   .panel.controls .fw-val{color:#4fc3f7}
@@ -659,7 +669,9 @@
   }
   #loader-canvas{border-radius:8px}
   #nl-fab{position:fixed;right:18px;bottom:18px;z-index:60;width:44px;height:44px;border-radius:50%;border:1px solid var(--panel-border);background:var(--panel-solid,#fff);font-size:1.2rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18)}
-  #nl-panel{position:fixed;right:18px;bottom:70px;z-index:60;width:320px;max-height:420px;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;border:1px solid var(--panel-border);background:var(--panel-solid,#fff);box-shadow:0 8px 24px rgba(0,0,0,.22)}
+  /* B1 真机体验：面板停在与右控制面板相邻的画布侧（right = 320px 面板 + 20px 网格边距 + 16px 间隙），不再悬浮遮挡「加载端板」控件行；窄屏（≤980px，控制面板变底部抽屉）回退为全宽上浮 */
+  #nl-panel{position:fixed;right:356px;bottom:70px;z-index:60;width:320px;max-width:calc(100vw - 390px);max-height:420px;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;border:1px solid var(--panel-border);background:var(--panel-solid,#fff);box-shadow:0 8px 24px rgba(0,0,0,.22)}
+  @media(max-width:980px){#nl-panel{right:12px;max-width:calc(100vw - 24px)}}
   #nl-log{overflow:auto;max-height:220px;font-size:.72rem;line-height:1.5;white-space:pre-wrap;color:var(--ink-2,#334155)}
   #nl-suggest{display:flex;gap:4px;flex-wrap:wrap}
   .nl-chip{font-size:.62rem;padding:3px 8px;border-radius:999px;border:1px solid var(--panel-border);background:rgba(15,23,42,.04);cursor:pointer;color:var(--ink-2,#334155)}
@@ -805,7 +817,7 @@ window.addEventListener('error', function(e) {
       </button>
     <div class="pills">
       <span class="pill"><span class="dot"></span>实时 TPMS 可视化</span>
-      <span class="pill">20 类曲面 · 3 种结构拓扑</span>
+      <span class="pill">24 类曲面 · 3 种结构拓扑</span>
     </div>
     <div class="theme-switch" id="theme-switch" role="group" aria-label="主题切换">
       <button class="theme-opt" data-theme-set="light" title="浅色" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
@@ -914,7 +926,7 @@ window.addEventListener('error', function(e) {
           <button class="opt" data-type="splitp" data-color="splitp">Split-P<span class="o-sub">分裂 P</span></button>
         </div>
         <details class="type-more" id="type-more-c2">
-          <summary class="type-more-h">C2 扩展族（12）<span class="tm-hint">Fischer-Koch / Double / Complementary</span></summary>
+          <summary class="type-more-h">C2 扩展族（16）<span class="tm-hint">Fischer-Koch / Double / Complementary</span></summary>
           <div class="opt-row">
             <button class="opt" data-type="octo" data-color="octo">O,C-TO<span class="o-sub">正交 TO</span></button>
             <button class="opt" data-type="karcher" data-color="karcher">K<span class="o-sub">Karcher</span></button>
@@ -934,6 +946,7 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-type="ws" data-color="ws">W<span class="o-sub">反对称</span></button>
           </div>
         </details>
+        <div class="field-note" style="margin-top:8px">一次性 MT 构型（径向梯度 / 双族分区）入口：<a href="#" id="jump-engview" style="color:#4fc3f7">径向梯度 M(r) · 双族分区 region ›</a></div>
       </details>
 
       <details class="sect">
@@ -1312,7 +1325,7 @@ window.addEventListener('error', function(e) {
       </section>
       <section class="sgroup" id="grp-view"><div class="sgroup-h" data-target="grp-view" title="跳转到该组"><span class="t">视图与工具</span><span class="n">5</span></div>
 
-      <details class="sect">
+      <details class="sect" id="sect-engview">
         <summary class="sect-h">工程观察</summary>
         <div class="opt-row two">
           <button class="opt active" data-container="cube">立方体容器<span class="o-sub">Cube</span></button>
