@@ -47,6 +47,8 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 Reproduce: `TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider openai --model glm-5.3-flash "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
 
+📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](tpms/docs/blog/2026-09-16-44-gates.md) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](tpms/docs/blog/2026-09-17-agent-architecture.md) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
+
 ## Highlights
 
 - **24 TPMS families** (engineering): 8 canonical + C2 extensions (O,C-TO, Karcher, Fischer-Koch S/Y/C(S)/C(Y), G′, D′, Double P/D/G, Complementary D, Slotted P/F/Q*/W from the jwf23 equation dataset) with four-way formula parity and a public [BENCHMARKS](BENCHMARKS.md) usable-domain matrix. Teaching edition keeps the 8 canonical families for focus. **The teaching edition is feature-frozen** (since v9.2): it receives consistency/security fixes only, while all new capabilities land in the engineering edition.
