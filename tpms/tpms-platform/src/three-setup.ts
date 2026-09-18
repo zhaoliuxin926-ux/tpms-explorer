@@ -74,14 +74,16 @@ export function initThree(container: HTMLElement): ThreeContext {
 
   // ─────────────────────────────────────────────────────
   // 2. 相机：调整位置与 FOV 更适合模型展示
+  //    C2 真机体验：FOV 38→30 且机位等比拉远（取景范围不变、透视变形收敛——
+  //    大几何俯视时近层面硕大曾吓到用户；复位按钮 / V 键与初始机位同参）
   // ─────────────────────────────────────────────────────
   const camera = new THREE.PerspectiveCamera(
-    38,
+    30,
     container.clientWidth / container.clientHeight,
     0.1,
     100
   );
-  camera.position.set(2.6, 1.4, 4.2);
+  camera.position.set(3.3, 1.8, 5.4);
 
   // ─────────────────────────────────────────────────────
   // 3. WebGL Renderer：物理光照 + 阴影 + 颜色管理

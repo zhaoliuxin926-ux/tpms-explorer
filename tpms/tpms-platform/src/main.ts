@@ -892,6 +892,8 @@ bindSlicePreview();
 // max(P²−C², r1²−rb², |Z|−rb) + Marching Tetrahedra + δ=1e-6 顶点焊接 + 自环过滤。
 // surface-nets 在该场上 |P|² 折痕结构性非流形（战役 B 定案）——预览/导出均走 MT。
 // 一次性预览卡（层切卡同模式）：不进 rebuild 状态机、不写 URL/缓存。
+// B5 真机体验：活跃一次性预览登记——常规重建接管时 toast 显式告知（此前静默冲掉，仅状态行小字提及）
+let oneShotPreview: 'radial-grad' | 'region' | null = null;
 const RG_TB_TABLE: Record<string, number> = { '1.25': 0.278, '1.5': 0.322, '1.75': 0.345, '2': 0.370 };
 interface RadialGradBuild {
   positions: Float32Array; normals: Float32Array; indices: Uint32Array; triCount: number;
@@ -1024,6 +1026,7 @@ function bindRadialGradCard(): void {
         const scaled = res.positions.map((v) => v * Math.PI) as Float32Array;
         const scaledN = res.normals; // 法线方向不受均匀缩放影响
         applyGeometry(scaled, scaledN, res.indices, scaled.length / 3, res.triCount);
+        oneShotPreview = 'radial-grad';
         status.textContent = `✓ K=${kS.value} · ${res.triCount.toLocaleString()} 三角 · 实测孔隙率 ${(res.porosity * 100).toFixed(1)}%（圆柱包络）——预览为一次性视图，改动参数后常规重建即恢复`;
       } catch (e) {
         status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
@@ -1132,6 +1135,8 @@ function bindRegionCard(): void {
   };
   rS.addEventListener('input', syncLabels);
   bS.addEventListener('input', syncLabels);
+  // C1 真机体验：内区族变更即时同步 info 徽标（此前只读 r/b 滑块触发，切族后徽标滞留旧族名）
+  innerSel.addEventListener('change', syncLabels);
   syncLabels();
   const guard = (): boolean => {
     const s = getState();
@@ -1159,6 +1164,7 @@ function bindRegionCard(): void {
         const res = runRegionPipeline(s.type, innerSel.value, Number(rS.value), Number(bS.value), s.cellSize, 48);
         const scaled = res.positions.map((v) => v * Math.PI) as Float32Array;
         applyGeometry(scaled, res.normals, res.indices, scaled.length / 3, res.triCount);
+        oneShotPreview = 'region';
         status.textContent = `✓ 外区 ${s.type} / 内区 ${innerSel.value} @ r=${rS.value} · ${res.triCount.toLocaleString()} 三角 · 实测孔隙率 ${(res.porosity * 100).toFixed(1)}%（立方包络）——预览为一次性视图，改动参数后常规重建即恢复`;
       } catch (e) {
         status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
@@ -1374,6 +1380,14 @@ wireNLChat();
     });
   });
 }
+
+// ── 【B4 真机体验】region / radial-grad 卡埋深入口锚：曲面类型组一键展开并跳转「工程观察」──
+document.getElementById('jump-engview')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  const sect = document.getElementById('sect-engview');
+  if (sect instanceof HTMLDetailsElement) sect.open = true;
+  document.querySelector<HTMLElement>('.sgroup-h[data-target="grp-view"]')?.click();
+});
 
 document.getElementById('btn-lpbf')?.addEventListener('click', () => {
   const out = document.getElementById('lpbf-result');
@@ -1894,6 +1908,11 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
 function scheduleRebuild(preview: boolean, skipHistory = false): void {
   // Any normal rebuild request supersedes a manually applied level-set result.
   levelsetOverrideStateKey = null;
+  // B5：常规重建接管一次性 MT 预览时显式告知（不再静默冲掉）
+  if (oneShotPreview) {
+    flashToast(oneShotPreview === 'region' ? '已退出「双族分区 region」一次性预览：常规重建已接管视图' : '已退出「径向梯度 radial-grad」一次性预览：常规重建已接管视图');
+    oneShotPreview = null;
+  }
   // 仅完整重建时记录历史；undo/redo 恢复后的重建跳过（否则会把恢复态压栈、丢弃 redo 分支）
   if (!preview && !skipHistory) pushHistory();
   if (rebuildTimer) clearTimeout(rebuildTimer);
@@ -2813,7 +2832,7 @@ function bindSliceAndSections(): void { // 剖切与分区调度
 function bindShareAndExport(): void { // 分享链接与 URL
 
   document.getElementById('btn-reset')?.addEventListener('click', () => {
-    ctx.camera.position.set(2.4, 1.5, 4.6);
+    ctx.camera.position.set(3.3, 1.8, 5.4);   // 与 three-setup 初始机位 / V 键复位同参（C2 透视收敛）
     ctx.controls.target.set(0, 0, 0);
     ctx.controls.update();
   });
@@ -3492,9 +3511,9 @@ function bindKeyboardUndo(): void { // 键盘快捷键与撤销
       return;
     }
 
-    // V 复位视角
+    // V 复位视角（与 three-setup 初始机位同参：C2 真机体验——拉远+收窄 FOV 减俯视透视变形）
     if (e.key.toLowerCase() === 'v') {
-      ctx.camera.position.set(2.6, 1.4, 4.2);
+      ctx.camera.position.set(3.3, 1.8, 5.4);
       ctx.controls.target.set(0, 0, 0);
       ctx.controls.update();
       flashToast('视角已复位');
@@ -3582,6 +3601,7 @@ function checkPorosityWarning(porosity: number): void {
 
 /** 简洁的浮动提示 */
 let toastTimer: number | undefined;
+let toastClearTimer: number | undefined;
 function flashToast(msg: string): void {
   let el = document.getElementById('toast');
   if (!el) {
@@ -3593,7 +3613,10 @@ function flashToast(msg: string): void {
   el.textContent = msg;
   el.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
+  if (toastClearTimer) clearTimeout(toastClearTimer);
   toastTimer = window.setTimeout(() => el!.classList.remove('show'), 1500);
+  // C1 真机体验：淡出后清空残留文本（无障碍树/DOM 不再滞留旧警告；新 toast 前 el 复用重建文本）
+  toastClearTimer = window.setTimeout(() => { if (el && !el.classList.contains('show')) el.textContent = ''; }, 1850);
 }
 
 /** 对比视图：捕获当前 3D 场景快照 */
