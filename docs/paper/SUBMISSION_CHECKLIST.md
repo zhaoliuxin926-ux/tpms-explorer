@@ -23,6 +23,7 @@
 - [x] GitHub Actions 三平台全绿（**run 59+60 双重 success @HEAD b6e5054**，2026-09-07）：https://github.com/zhaoliuxin926-ux/tpms-explorer/actions/runs/34047851986
 - [ ] main.pdf 人眼通读一遍（图表编号、引用、作者信息）——投稿重启时做
 - [x] 账实对齐轮（2026-09-19）：主稿/cover letter/MANUSCRIPT 三处旧数修正（42 门→44、34/34 回归→37/37 glm-5.3-flash、87 断言→106）；版本指针 v1.0.0-stable-epoch（2026-09-18 纪元重置同轮已切）；三连编译 0 错+PDF 四探针全中（106-assertion/37-instruction/forty-four/v1.0.0-stable-epoch）
+- ⏸ **投稿再度搁置（2026-09-19 用户决策）**：本轮仅做账实对齐（44 门/37 回归/106 断言+版本指针 v1.0.0），署名/EM/APC 全部顺延；材料不过期，重启时从下方待用户项续走
 - ⬜ 署名三项回填（作者拼写/单位行/LICENSE 版权行）+ cover letter 署名占位同步——**等用户提供**
 - ⬜ Editorial Manager 注册与提交（用户账号操作）
 - ⬜ APC 预算决定（SoftwareX 开放获取费用以官网为准）
