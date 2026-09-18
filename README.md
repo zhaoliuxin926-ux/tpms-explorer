@@ -36,7 +36,7 @@
 
 🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环 m0-m5-全通)）。
 
-技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](tpms/docs/blog/2026-09-17-agent-architecture.md) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](tpms/docs/blog/2026-09-17-agent-architecture.md) ｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
 
 ```
