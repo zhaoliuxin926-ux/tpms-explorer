@@ -2,7 +2,7 @@
 
 > **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v9.2.0--24families--hardened-2563eb)
+![release](https://img.shields.io/badge/release-v1.0.0--stable--epoch-2563eb)
 ![ci](https://img.shields.io/badge/CI-44%2F44%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -17,7 +17,7 @@
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十六章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
-| 🕘 历史版本变更 | [docs/RELEASE_NOTES_v8.0.0.md](docs/RELEASE_NOTES_v8.0.0.md)（v2.4~v7 同目录） |
+| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.0.0.md](docs/RELEASE_NOTES_v1.0.0.md)（当前·含版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
@@ -50,7 +50,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v9.2.0-24families-hardened）
+### 科研与增材制造特性矩阵（v1.0.0-stable-epoch）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -96,7 +96,7 @@
 | 🧩 径向双族分区 region (2026-09-17) | 域内双构型：内区/外区各放一族（如外壳 gyroid+内核 diamond），过渡带 smoothstep 凸组合（同号不变性⟹无额外零面）；两族零面拓扑重组为 surface-nets 结构性非流形（实测 nm 20~52 与 blend 无关）→ MT 管线提取（radial-grad 先例同机理）；UI 卡与 CLI `mesh --region-inner` 同源；rSplit 端点=单族字节级退化锚 | probe_region 10 断言（退化锚/解析锚/连续性/同号不变性）+ region 冒烟 6 断言（CLI 实测矩阵 8/8 watertight） |
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
 
-> 📝 **Release Notes**：[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
+> 📝 **Release Notes**：**[v1.0.0（版本纪元重置·稳定序列起点）](docs/RELEASE_NOTES_v1.0.0.md)**｜[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。

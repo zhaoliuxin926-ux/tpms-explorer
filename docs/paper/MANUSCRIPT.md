@@ -1,7 +1,7 @@
 # TPMS Explorer: A Browser-Based Parametric Design and Multi-Physics Simulation Platform for Triply Periodic Minimal Surface Lattices
 
 > 投稿主稿：`latex/main.tex`（Elsevier SoftwareX 格式，pdflatex 编译 0 错误——v8.0 轮修复 v7.0 稿两处预存 LaTeX 缺陷：psmallmatrix 缺 mathtools、\doi 未定义，此前为 nonstopmode 带错出 PDF）。
-> 本文件为摘要导览，与 main.tex 同步更新（2026-09-15 对齐至 v9.1.0-dual-extractor-manufacturing-loop：+ (ix-xii) 制造闭环层——conformal filling / 实验曲线反演 / 直接层切+CLI / 可打印性审计 / 可运行 OpenFOAM+Forchheimer / 双提取器+radial-grad）
+> 本文件为摘要导览，与 main.tex 同步更新（2026-09-18 对齐至 v1.0.0-stable-epoch——版本纪元重置，正文当前版本号 v1.0.0；2026-09-15 对齐至 v9.1.0-dual-extractor-manufacturing-loop：+ (ix-xii) 制造闭环层——conformal filling / 实验曲线反演 / 直接层切+CLI / 可打印性审计 / 可运行 OpenFOAM+Forchheimer / 双提取器+radial-grad）
 
 ## Abstract
 
