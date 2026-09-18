@@ -47,9 +47,10 @@ separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architect
    documented with before/after evidence (IWP R48 solid fraction +21.5 pp); (iii) an agentic
    closed-loop verification layer in which the LLM only fills schema-bounded slots under a
    deterministic clamping interceptor and selects repairs only from a bounded menu, while patch
-   application, execution, and acceptance remain deterministic — validated by a 34-instruction
-   bilingual production-LLM regression (34/34), an offline mock-driven closed-loop self-test, and
-   an 87-assertion schema↔CLI cross-check gate.
+   application, execution, and acceptance remain deterministic — validated by a 37-instruction
+   bilingual production-LLM regression (37/37 on glm-5.3-flash, with failure-slot rotation across
+   four model tiers ruling out pipeline defects), an offline mock-driven closed-loop self-test, and
+   a 106-assertion schema↔CLI cross-check gate.
 4. **Honest-boundary engineering.** Known limitations (Voigt upper-bound shear estimates,
    LBM→FD-Darcy substitution, voxel-topology fail-closed parameter ranges) are disclosed and
    guard-railed in the repository rather than left undocumented.
