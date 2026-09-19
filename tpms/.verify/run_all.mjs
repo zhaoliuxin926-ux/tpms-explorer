@@ -23,6 +23,7 @@ const suites = [
   { name: 'slicepv（直接层切预览 5 项）', cmd: ['node', 'slicepv_check.mjs'], env: {} },
   { name: 'radialgrad（M(r) 径向梯度卡 6 项）', cmd: ['node', 'radialgrad_card_check.mjs'], env: {} },
   { name: 'region（径向双族分区卡 6 项）', cmd: ['node', 'region_card_check.mjs'], env: {} },
+  { name: 'card_smoke（深水卡默认配置冒烟 11 项）', cmd: ['node', 'card_smoke_check.mjs'], env: {} },
 ];
 
 function startServer(port, dir) {

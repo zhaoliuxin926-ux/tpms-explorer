@@ -444,7 +444,7 @@ function updateImpactStats(): void {
 // 位移加载压至 4%，von Mises 逐帧映射顶点色（Cool-Warm 同源 LUT）。
 let plasRunning = false;
 
-function voxelizeCurrentTPMS(R: number): Uint8Array {
+function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
   const st = getState();
   const fn = getTpmsFunction(st.type, st.customFormula);
   const kk = st.cellSize;
@@ -482,7 +482,30 @@ function voxelizeCurrentTPMS(R: number): Uint8Array {
       }
     }
   }
-  return solid;
+  // 剪除不与网格边界 6 连通的孤立体素（与 gpu-plasticity-solver 连通性守卫同口径镜像）：
+  // R=6 粗网格 × 高孔隙支化几何天然产生悬浮碎片，保留则 K 必奇异——门 27/28 喂合成
+  // 连通掩码测不到该路径（2026-09-20 走查实证默认档 k=2/k=3 均 100% 失败）；
+  // 悬浮体素在单轴压溃中本就无承载路径，剔除物理正当，剔除量在结果文案如实披露
+  const seen = new Uint8Array(R * R * R);
+  const queue = new Int32Array(R * R * R);
+  let head = 0, tail = 0;
+  const push = (v: number) => { if (!seen[v] && solid[v]) { seen[v] = 1; queue[tail++] = v; } };
+  for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
+    if (ix === 0 || ix === R - 1 || iy === 0 || iy === R - 1 || iz === 0 || iz === R - 1) push(ix + iy * R + iz * R * R);
+  }
+  while (head < tail) {
+    const v = queue[head++];
+    const vx = v % R, vy = ((v / R) | 0) % R, vz = (v / (R * R)) | 0;
+    if (vx > 0) push(v - 1);
+    if (vx < R - 1) push(v + 1);
+    if (vy > 0) push(v - R);
+    if (vy < R - 1) push(v + R);
+    if (vz > 0) push(v - R * R);
+    if (vz < R - 1) push(v + R * R);
+  }
+  let pruned = 0;
+  for (let i = 0; i < R * R * R; i++) if (solid[i] && !seen[i]) { solid[i] = 0; pruned++; }
+  return { solid, pruned };
 }
 
 function drawPlasticityCurve(res: ReturnType<typeof runCompressionDigitalTwin>): void {
@@ -528,16 +551,21 @@ function runPlasticityDemo(): boolean {
     flashToast('弹塑性压溃目前仅支持实体网络模式（当前为 ' + st0.structureMode + '），已跳过');
     return false;
   }
-  if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=6 · 8 载荷步 · 主线程同步求解约 1–2 分钟，期间视图无响应）'; }
-  flashToast('弹塑性压溃：主线程同步求解约 1–2 分钟（R=6·8 步），期间视图暂不响应');
+  if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=8 · 8 载荷步 · 主线程同步求解，期间视图无响应）'; }
+  flashToast('弹塑性压溃：主线程同步求解（R=8·8 步），期间视图暂不响应');
   // 让 toast 先绘制
   setTimeout(() => {
     try {
       const st0 = getState();
-      const R = 6;
-      const solid = voxelizeCurrentTPMS(R);
+      // R=6（216 体素）实测：75% 孔隙率剪除孤岛后骨架不跨上下承载面，首步即发散
+      // （坍塌 @ε=null、PEEQ 0、DT/GA 全空读数）——R=8（512 体素）为默认档可解分辨率
+      const R = 8;
+      const { solid, pruned } = voxelizeCurrentTPMS(R);
       const mat = st0.material === 'auto' ? 'tc4' : st0.material;
-      const syRel = (BASE_YIELD_STRENGTH[mat] ?? 880) / (BASE_MODULUS[mat] ?? 110);
+      // 单位坑：BASE_YIELD_STRENGTH 为 MPa、BASE_MODULUS 为 GPa——σy/E 须 ×1e-3 换算
+      // （裸除曾得 8.0 vs 门 28 口径 0.008，屈服应变虚高 1000× → 求解器首步即退化，
+      // 2026-09-20 走查实证 PEEQ=0/坍塌@首步/DT-GA 读数全空）
+      const syRel = (BASE_YIELD_STRENGTH[mat] ?? 880) / ((BASE_MODULUS[mat] ?? 110) * 1000);
       const t0 = performance.now();
       const res = runCompressionDigitalTwin({
         R, solid, porosity: st0.porosity / 100, sigmaYRatio: syRel, failureStrain: 0.02,
@@ -572,9 +600,12 @@ function runPlasticityDemo(): boolean {
       }
       drawPlasticityCurve(res);
       if (out) {
-        out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain?.toFixed(3)}` : '未收敛步'}`} · ${dt}s · `
-          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · GA 预测比 ${res.gaPrediction.toFixed(3)}（DT/GA=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
-          + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`;
+        out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain != null ? res.collapseStrain.toFixed(3) : '首步'}` : '未收敛步'}`} · ${dt}s · `          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · GA 预测比 ${res.gaPrediction.toFixed(3)}（DT/GA=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
+          + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`
+          + (pruned > 0 ? ` · 已剔除 ${pruned} 个不承载孤立体素（粗网格碎片）` : '');
+        // 不收敛时的可操作指引（2026-09-20 探针实测可解域：cellSize=1×孔隙率≤65% 全步收敛
+        // 但 ~7 分钟主线程同步；75% 或 k≥2 真实掩码 NR 发散——研究级后续：预条件/异步化）
+        if (!res.allConverged) out.textContent += '——粗网格真实掩码下 NR 鲁棒性有限（实测可解域：cellSize=1 且孔隙率 ≤65%，完整求解为分钟级主线程同步）';
       }
     } catch (err) {
       if (out) out.textContent = `求解失败：${err instanceof Error ? err.message : String(err)}`;
@@ -3240,6 +3271,23 @@ function bindNeuralManifold(): void { // 神经场锚点与流形映射
   const MANIFOLD_LABEL: Record<string, string> = {
     identity: '无（平面周期）', cylinder: '圆柱弯曲', torus: '环面闭合', hyperbolic: '双曲径向', metric: '应力线各向异性', poincare: '庞加莱双曲度规',
   };
+  // 非欧映射几何约束守卫（提示不阻断——manifold-mapping.ts 注释口径：圆柱需 R>域半宽，
+  // 环面需 R₂=R×0.4>域半宽 且 R>R₂+域半宽；域半宽=π×单元尺寸。此前仅 field-note 文档
+  // 披露无运行时提示，2026-09-20 走查登记后补齐）
+  const warnManifoldRadius = () => {
+    const st = getState();
+    if (st.manifold.kind === 'identity') return;
+    const half = Math.PI * st.cellSize;
+    const R = st.manifold.radius;
+    if (st.manifold.kind === 'cylinder' && R <= half) {
+      flashToast(`非欧映射：圆柱 R=${R.toFixed(1)} ≤ 域半宽 ${half.toFixed(1)}（π×单元尺寸），弯曲可能自交——建议增大 R 或降低单元尺寸`);
+    } else if (st.manifold.kind === 'torus') {
+      const R2 = R * 0.4;
+      if (R2 <= half || R <= R2 + half) {
+        flashToast(`非欧映射：环面双半径约束不满足（需 R×0.4>${half.toFixed(1)} 且 R>R×0.4+${half.toFixed(1)}），弯曲可能自交`);
+      }
+    }
+  };
   const manifoldSel = document.getElementById('manifold-kind') as HTMLSelectElement | null;
   if (manifoldSel) {
     for (const [k, v] of Object.entries(MANIFOLD_LABEL)) {
@@ -3252,6 +3300,7 @@ function bindNeuralManifold(): void { // 神经场锚点与流形映射
       setState({ manifold: { ...st.manifold, kind: manifoldSel.value as AppState['manifold']['kind'] } });
       syncUI(getState());
       scheduleRebuild(false);
+      warnManifoldRadius();
     });
   }
   const manifoldRadius = document.getElementById('manifold-radius') as HTMLInputElement | null;
@@ -3263,7 +3312,7 @@ function bindNeuralManifold(): void { // 神经场锚点与流形映射
       if (mv) mv.textContent = (+manifoldRadius.value).toFixed(1);
       scheduleRebuild(true);
     });
-    manifoldRadius.addEventListener('change', () => scheduleRebuild(false));
+    manifoldRadius.addEventListener('change', () => { scheduleRebuild(false); warnManifoldRadius(); });
   }
 
   const hybridEnabled = document.getElementById('hybrid-enabled') as HTMLInputElement;
