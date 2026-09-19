@@ -1244,11 +1244,21 @@ function applyNLIntent(intent: NLIntent): void {
   const stateChanged = intent.actions.includes('reset') || Object.keys(patches).length > 0;
   if (intent.actions.includes('reset')) {
     setState({ ...DEFAULT_STATE });
+    const sNew = getState();
+    // 真机自体验抓漏：NL 路径此前不同步面板 UI（滑块滞留旧值，如状态 85% 面板仍显示 75%）——
+    // 与族按钮/滑块等路径的 setState→syncUI→updateBadges 统一模式对齐
+    syncUI(sNew);
+    updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);
+    scheduleHdUpgrade();
     nlAppend('助手：已恢复默认参数 ✓');
   } else if (Object.keys(patches).length > 0) {
     setState(patches);
+    const sNew = getState();
+    syncUI(sNew);
+    updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);   // 关键：NL 改参必须触发重建（曾缺失 → 视图不更新、导出旧几何）
+    scheduleHdUpgrade();      // 与滑块 change 路径同参：松手/应用后升级全高清
     nlAppend(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
   } else {
     nlAppend('助手：' + intent.reply);
