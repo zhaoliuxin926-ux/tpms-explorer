@@ -130,7 +130,9 @@ export function parseNL(input: string): NLIntent {
   if (poro !== null) {
     // 分数/百分数歧义：0<v<1 视为分数（"porosity 0.75"=75%）；曾直接钳制把 0.75 压成 5%
     const frac = poro > 0 && poro < 1 ? poro * 100 : poro;
-    patches.porosity = Math.max(5, Math.min(95, frac));
+    // 究极对抗审查：钳制域必须与 UI 滑块同域 [60,90]（红队 D 先例——域宽于面板会产出滑块
+    // 不可回拨状态：syncUI 写 95 被浏览器 max=90 夹显示，状态与 UI 静默分叉）
+    patches.porosity = Math.max(60, Math.min(90, frac));
     log.push({ field: '孔隙率', to: `${patches.porosity}%` });
   }
   // 端板
@@ -138,7 +140,8 @@ export function parseNL(input: string): NLIntent {
     /([0-9.]+)\s*mm\s*端板/i, /端板\s*([0-9.]+)\s*mm/i, /endplate\s*[:：]?\s*([0-9.]+)/i, /([0-9.]+)\s*毫米\s*端板/i,
   ]);
   if (ep !== null || /端板|endplate|实心端/i.test(text)) {
-    patches.endplateMm = ep !== null ? Math.max(0, Math.min(10, ep)) : 2;
+    // 端板域与 UI 滑块同域 [0,3.0]（ENDPLATE_MAX_UI_MM；曾 [0,10] 宽于面板）
+    patches.endplateMm = ep !== null ? Math.max(0, Math.min(3.0, ep)) : 2;
     log.push({ field: '端板厚度', to: `${patches.endplateMm}mm` });
   }
   // 单元尺寸
@@ -146,7 +149,8 @@ export function parseNL(input: string): NLIntent {
     /单元尺寸\s*([0-9.]+)/i, /cellsize\s*[:：]?\s*([0-9.]+)/i, /([0-9.]+)\s*mm\s*单元/i,
   ]);
   if (cs !== null) {
-    patches.cellSize = Math.max(1, Math.min(8, cs));
+    // 与 UI 单元密度滑块同域 [1,5]（曾 [1,8]）
+    patches.cellSize = Math.max(1, Math.min(5, cs));
     log.push({ field: '单元尺寸', to: `${patches.cellSize}mm` });
   }
   // 壁厚
@@ -154,7 +158,8 @@ export function parseNL(input: string): NLIntent {
     /壁厚\s*([0-9.]+)/i, /thickness\s*[:：]?\s*([0-9.]+)/i,
   ]);
   if (th !== null) {
-    patches.thickness = Math.max(0.2, Math.min(5, th));
+    // 与 UI 壁厚系数滑块同域 [0.5,2.0]（曾 [0.2,5]）
+    patches.thickness = Math.max(0.5, Math.min(2.0, th));
     log.push({ field: '壁厚', to: `${patches.thickness}` });
   }
   // 动作

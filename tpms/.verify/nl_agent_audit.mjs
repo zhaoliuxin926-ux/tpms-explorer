@@ -3,7 +3,7 @@
  *
  * A. 中文多参数指令解析（孔隙率/类型/端板 + 3MF 动作）
  * B. 英文指令解析（porosity/material/container/export stl）
- * C. 边界与安全：孔隙率钳制 [5,95]、端板钳制 [0,10]、unknown 不臆造
+ * C. 边界与安全：钳制域与 UI 滑块同域（孔隙率 [60,90]、端板 [0,3]、单元尺寸 [1,5]、壁厚 [0.5,2]——2026-09-19 究极对抗审查收窄，防面板不可回拨状态）、unknown 不臆造
  * D. 帮助/重置/仿真/骨支架预设意图
  *
  * 运行：node nl_agent_audit.mjs
@@ -67,9 +67,13 @@ console.log('\n[B] 英文指令');
 console.log('\n[C] 边界钳制与 unknown');
 {
   const it = parseNL('孔隙率 300');
-  check('孔隙率钳制 ≤95', it.patches.porosity === 95, String(it.patches.porosity));
+  check('孔隙率钳制 ≤90（UI 同域）', it.patches.porosity === 90, String(it.patches.porosity));
   const it2 = parseNL('端板 99mm');
-  check('端板钳制 ≤10', it2.patches.endplateMm === 10, String(it2.patches.endplateMm));
+  check('端板钳制 ≤3（UI 同域）', it2.patches.endplateMm === 3, String(it2.patches.endplateMm));
+  const it5 = parseNL('孔隙率 10%，单元尺寸 99，壁厚 9');
+  check('孔隙率钳制 ≥60（UI 同域）', it5.patches.porosity === 60, String(it5.patches.porosity));
+  check('单元尺寸钳制 ≤5（UI 同域）', it5.patches.cellSize === 5, String(it5.patches.cellSize));
+  check('壁厚钳制 ≤2（UI 同域）', it5.patches.thickness === 2, String(it5.patches.thickness));
   const it3 = parseNL('今天天气怎么样');
   check('unknown 不臆造参数', it3.kind === 'unknown' && Object.keys(it3.patches).length === 0);
   check('unknown 引导帮助', it3.reply.includes('帮助'));
@@ -103,7 +107,7 @@ console.log('\n[E] 毒化回归');
   const e4 = parseNL('钛 支架');
   check('E4 裸"钛"识别为 tc4', e4.patches.material === 'tc4', String(e4.patches.material));
   const e5 = parseNL('PLA 支架孔隙率 50');
-  check('E5 真 PLA 仍识别', e5.patches.material === 'polymer' && e5.patches.porosity === 50);
+  check('E5 真 PLA 仍识别（50 低于 UI 下限钳 60）', e5.patches.material === 'polymer' && e5.patches.porosity === 60);
   const e6 = parseNL('I-WP structure export stl');
   check('E6 I-WP 连字符识别', e6.patches.type === 'iwp', String(e6.patches.type));
   const e7 = parseNL('constructor eval process');
@@ -135,7 +139,7 @@ console.log('\n[E] 毒化回归');
 }
 
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
-  if (passCount < 42) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 42（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 +3 fcky/cdd；2026-09-12 +2 Schwarz D 别名）'); process.exit(1); }
+  if (passCount < 45) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 45（恒真/集体跳过防护，2026-09-04 纳管；09-11 +3；09-12 +2；2026-09-19 +3 UI 同域钳制）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
