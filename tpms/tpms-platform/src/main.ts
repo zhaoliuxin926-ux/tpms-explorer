@@ -2230,6 +2230,10 @@ function onWorkerError(err: string): void {
   console.error('[Main] Worker error:', err);
   // 红队 V-2：静默失败通道——公式 NaN/退化权重/超容量等构建错误必须让用户看见
   flashToast(`构建失败：${err}`);
+  // 究极对抗审查：toast 仅 1.5s——经分享链接恢复坏公式等场景下，用户面对的是
+  // 永久空白画布且无任何解释。错误持久化到空态文案（下次成功重建由 showEmpty(false) 隐藏，
+  // 再度 showEmpty(true) 时恢复默认引导文案）。
+  showEmpty(true, `构建失败：${err}——请调整参数或曲面后重试`);
 }
 
 // ── 材质管理 ─────────────────────────────────────────────
@@ -2543,9 +2547,13 @@ function disposeGeometry(): void {
 }
 
 // ── 空态显示 ─────────────────────────────────────────────
-function showEmpty(show: boolean): void {
+const EMPTY_DEFAULT_TEXT = '当前参数下未生成有效曲面，请适当降低孔隙率或单元密度。';
+function showEmpty(show: boolean, message?: string): void {
   const el = document.getElementById('empty');
-  if (el) el.style.display = show ? 'flex' : 'none';
+  if (!el) return;
+  el.style.display = show ? 'flex' : 'none';
+  if (message !== undefined) el.textContent = message;
+  else if (show) el.textContent = EMPTY_DEFAULT_TEXT;
 }
 
 // ── 统计更新 ─────────────────────────────────────────────
