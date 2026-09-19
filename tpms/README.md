@@ -173,12 +173,12 @@ npm run dev      # 访问 http://localhost:5173
 
 ### 验证（一键全量）
 ```bash
-cd tpms/.verify && node run_all.mjs     # 6 套 UI 回归（需先起服务，见下）
+cd tpms/.verify && node run_all.mjs     # 10 套 UI 回归（需先起服务，见下）
 node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 串联 39 道正式门禁（`run_all` UI 聚合为其中一门）；另有 `ui_jump_check` 顶层快检与 agent selftest/schema_check/llm_provider_selftest 三项 CLI 门，最终调度汇总显示 42/42（2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管——三者均有静默红事故史或 M3 验收产出）。
+> CI 数量口径：`run_ci_suite.mjs` 串联 39 道正式门禁（`run_all` UI 聚合为其中一门）；另有 `ui_jump_check` 顶层快检与 agent selftest/schema_check/llm_provider_selftest 三项 CLI 门，最终调度汇总显示 44/44（2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 
 ### 工程版部署到 GitHub Pages
 ```bash

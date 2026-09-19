@@ -1,0 +1,188 @@
+/**
+ * card_smoke_check.mjs —— 深水功能卡默认配置冒烟（声子同款 bug 类的永久拦截）
+ *
+ * 背景：2026-09-20 走查实证——声子卡 N=6×k=3 采样简并在默认配置 100% 失败、压溃卡
+ * σy/E 单位错（8.0 vs 0.008）+ 孤岛 K 奇异在默认配置 100% 失败，而 44 门全绿：门禁
+ * 盖物理模块（合成掩码），UI 卡默认配置接线无人走过。本门=「每张卡默认配置点一次，
+ * 断言结果区出正确数据或既有失败语义，不出新错误类」。
+ *
+ * A 声子能带（N=7 简并修复哨兵：默认 k=3 必须出读数不报「固相质点过少」）
+ * B RVE 均质化（E(n) 读数+画布）
+ * C 组织长入（28 天读数链）
+ * D LPBF（熔池/残余应力读数）
+ * E 屈服面（安全系数+包络半径带）
+ * F 逆向 solve+apply（三族解+标题/徽标同步——updateBadges 修复哨兵）
+ * G 压溃 wiring（σy/E=0.0080 单位哨兵+无 'undefined'+无孤岛求解失败+指引文案）
+ * H 参数扫描（9 帧完成+孔隙率还原）
+ * I 水平集（演化读数含柔度——主线程同步较重，宽超时）
+ * J 结构开关三连（应力引导/分形统计/混合选项——网格规模差分+还原）
+ * Z 全程 0 pageerror / 0 console.error
+ *
+ * 运行：node card_smoke_check.mjs（自起 4824 静态服务，服务 docs/platform 部署产物）
+ */
+import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { chromium } from 'playwright';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const PLATFORM_DIR = path.resolve(HERE, '../..');
+
+const PORT = 4824;
+const server = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(PORT), path.join(PLATFORM_DIR, 'docs/platform')], { detached: true, stdio: 'ignore' });
+await new Promise(r => setTimeout(r, 900));
+
+let pass = 0, fail = 0;
+const ok = (n) => { pass++; console.log('  ✓ ' + n); };
+const bad = (n, d = '') => { fail++; console.log('  ✗ ' + n + (d ? ' — ' + d : '')); };
+const errors = [];
+
+const browser = await chromium.launch({ channel: 'chrome', executablePath: process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : undefined, args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+try {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  page.setDefaultTimeout(60000);
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.getElementById('stat-tris')?.textContent?.includes('k'), null, { timeout: 120000, polling: 2000 }).catch(() => {});
+  await page.evaluate(() => { const ob = document.getElementById('ob-card'); if (ob?.classList.contains('show')) document.getElementById('ob-skip')?.click(); });
+  const readNote = (id) => page.evaluate((i) => (document.getElementById(i)?.textContent || '').replace(/\s+/g, ' ').trim(), id);
+  const clickBtn = (id) => page.evaluate((i) => document.getElementById(i)?.click(), id);
+
+  // A 声子能带（默认 k=3——N=7 简并修复哨兵）
+  await clickBtn('btn-phonon');
+  await page.waitForFunction(() => {
+    const t = document.getElementById('phonon-result')?.textContent || '';
+    return t.length > 10 && !/计算中/.test(t);
+  }, null, { timeout: 90000, polling: 1500 }).catch(() => {});
+  const phNote = await readNote('phonon-result');
+  (/零模态/.test(phNote) && !/固相质点过少/.test(phNote))
+    ? ok('A 声子能带默认配置出读数（N=7 简并修复在位）')
+    : bad('A 声子能带', phNote.slice(0, 80));
+
+  // B RVE
+  await clickBtn('btn-rve');
+  await page.waitForFunction(() => /E\(x\/y\/z\)/.test(document.getElementById('rve-readout')?.textContent || ''), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  const rveNote = await readNote('rve-readout');
+  (/E\(x\/y\/z\) = [\d.]+/.test(rveNote) && await page.evaluate(() => document.getElementById('rve-canvas').style.display !== 'none'))
+    ? ok('B RVE 均质化 E(n) 读数+画布')
+    : bad('B RVE', rveNote.slice(0, 80));
+
+  // C 组织长入
+  await clickBtn('btn-tissue');
+  await page.waitForFunction(() => /第 28 天/.test(document.getElementById('tissue-result')?.textContent || ''), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  const tgNote = await readNote('tissue-result');
+  (/第 28 天.*存活率 [\d.]+%/.test(tgNote))
+    ? ok('C 组织长入 28 天读数链')
+    : bad('C 组织长入', tgNote.slice(0, 80));
+
+  // D LPBF
+  await clickBtn('btn-lpbf');
+  await page.waitForFunction(() => /σ_res|熔池/.test([...document.querySelectorAll('[id*=lpbf]')].map(e => e.textContent).join('')), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  const lpbfTxt = await page.evaluate(() => [...document.querySelectorAll('[id*=lpbf]')].map(e => (e.textContent || '').trim()).filter(Boolean).join(' '));
+  (/峰值.*熔池.*σ_res/.test(lpbfTxt.replace(/\s+/g, ' ')))
+    ? ok('D LPBF 熔池+残余应力读数')
+    : bad('D LPBF', lpbfTxt.slice(0, 80));
+
+  // E 屈服面
+  await clickBtn('btn-yield');
+  await page.waitForFunction(() => /安全系数/.test(document.getElementById('yield-result')?.textContent || ''), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  const yNote = await readNote('yield-result');
+  (/安全系数 SF=[\d.]+/.test(yNote) && /包络半径带/.test(yNote))
+    ? ok('E 屈服面包络+安全系数')
+    : bad('E 屈服面', yNote.slice(0, 80));
+
+  // F 逆向 solve + apply（标题同步=updateBadges 哨兵；防最优解恰为 Gyroid 的边界：比对应用前后标题族名变化）
+  const titleBefore = await page.evaluate(() => document.title);
+  await clickBtn('btn-inv-solve');
+  await page.waitForFunction(() => /GPa/.test(document.getElementById('inverse-result')?.textContent || ''), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  const invNote = await readNote('inverse-result');
+  const m1 = invNote.match(/^1\.\s+(\S+[^P]*?)\s*P=/);
+  await clickBtn('btn-inv-apply');
+  await page.waitForFunction(() => document.title !== 'Gyroid · 实体网络 · TPMS 探索器' || !document.getElementById('stat-tris'), null, { timeout: 30000, polling: 800 }).catch(() => {});
+  await page.waitForTimeout(1500);
+  const titleAfter = await page.evaluate(() => document.title);
+  const familyKey = (m1?.[1] || '').trim().split(/\s+/)[0]?.toLowerCase() || '';
+  (m1 && titleAfter !== titleBefore && titleAfter.toLowerCase().includes(familyKey))
+    ? ok('F 逆向应用后标题同步（updateBadges 哨兵）')
+    : bad('F 逆向', `title=${titleAfter} sol=${(m1?.[1] || '').slice(0, 20)}`);
+
+  // G 压溃 wiring（默认配置同步求解——单位+孤岛+文案三哨兵；swiftshader 慢给宽超时）
+  await clickBtn('btn-plasticity');
+  await page.waitForFunction(() => /数字孪生压溃 R=/.test(document.getElementById('plas-result')?.textContent || ''), null, { timeout: 240000, polling: 2000 }).catch(() => {});
+  const plasNote = await readNote('plas-result');
+  (/σy\/E=0\.0080/.test(plasNote) && !/undefined/.test(plasNote) && !/求解失败：弹塑性求解：固相含/.test(plasNote) && /数字孪生压溃 R=8/.test(plasNote))
+    ? ok('G 压溃 σy/E 单位哨兵 0.0080+无孤岛求解失败+无 undefined')
+    : bad('G 压溃', plasNote.slice(0, 120));
+
+  // H 参数扫描（9 帧+还原到扫描前状态；F 已 apply 反演解，断言须状态相对而非写死默认值）
+  const poroBefore = await page.evaluate(() => {
+    const ps = [...document.querySelectorAll('input[type=range]')].find(s => s.closest('.field') && /孔隙率/.test(s.closest('.field').textContent));
+    return ps?.value;
+  });
+  await clickBtn('btn-sweep');
+  await page.waitForFunction(() => /已完成/.test(document.getElementById('sweep-status')?.textContent || '') || !document.querySelector('.sweep-card'), null, { timeout: 300000, polling: 3000 }).catch(() => {});
+  const sweepDone = await page.evaluate(() => {
+    const ps = [...document.querySelectorAll('input[type=range]')].find(s => s.closest('.field') && /孔隙率/.test(s.closest('.field').textContent));
+    return { status: document.getElementById('sweep-status')?.textContent || '', poro: ps?.value };
+  });
+  (/已完成/.test(sweepDone.status) && sweepDone.poro === poroBefore)
+    ? ok('H 参数扫描 9 帧完成+孔隙率还原（前=' + poroBefore + '）')
+    : bad('H 参数扫描', JSON.stringify({ ...sweepDone, poroBefore }));
+
+  // I 水平集（主线程同步演化较慢；一次演化即出柔度读数）
+  await clickBtn('btn-ls-evolve');
+  await page.waitForFunction(() => /累计演化.*柔度/.test(document.getElementById('ls-result')?.textContent || ''), null, { timeout: 240000, polling: 3000 }).catch(() => {});
+  const lsNote = await readNote('ls-result');
+  (/累计演化 \d+ 步：单位载荷柔度 [\d.e+]+/.test(lsNote))
+    ? ok('I 水平集演化柔度读数')
+    : bad('I 水平集', lsNote.slice(0, 80));
+
+  // J 结构开关三连（应力引导=激活态接线；分形=统计读数轮询等重建；混合=选项展开；网格规模还原）
+  const j = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const verts = () => document.getElementById('stat-verts')?.textContent;
+    const out = {};
+    out.base = verts();
+    document.querySelector('[data-stress="bending"]')?.click(); await sleep(2200);
+    out.stressActive = document.querySelector('[data-stress].active')?.dataset.stress === 'bending';
+    document.querySelector('[data-stress="none"]')?.click(); await sleep(2200);
+    document.getElementById('hier-enabled')?.click(); await sleep(300);
+    // 分形统计在重建完成后写入——轮询至 30s（swiftshader 首建远慢于真机）
+    for (let i = 0; i < 40 && !out.hierStats; i++) {
+      await sleep(750);
+      out.hierStats = (document.getElementById('hier-stats')?.textContent || '').includes('微孔连通率');
+    }
+    document.getElementById('hier-enabled')?.click(); await sleep(2600);
+    document.getElementById('hybrid-enabled')?.click(); await sleep(2600);
+    out.hybridOpts = getComputedStyle(document.getElementById('hybrid-options')).display !== 'none';
+    document.getElementById('hybrid-enabled')?.click(); await sleep(2200);
+    out.restored = verts();
+    return out;
+  });
+  j.stressActive && j.hierStats && j.hybridOpts && j.restored === j.base
+    ? ok('J 应力/分形/混合开关接线+网格还原（' + j.base + '→' + j.restored + '）')
+    : bad('J 结构开关', JSON.stringify(j).slice(0, 140));
+
+  // K GPU submit encoder.finish() 静态哨兵（缺 .finish() 曾致 TypeError 被 catch 吞 →
+  // GPU 加速自 v3.0 从未真跑、静默 CPU 回退——2026-09-20 真机走查抓出；CI 无 WebGPU
+  // 无法运行时验证，静态源断言是唯一可行门禁形态）
+  {
+    const gpuSrc = readFileSync(path.join(PLATFORM_DIR, 'tpms/tpms-platform/src/geometry/webgpu-evaluator.ts'), 'utf8');
+    /submit\(\[encoder\.finish\(\)/.test(gpuSrc) && !/submit\(\[encoder as/.test(gpuSrc)
+      ? ok('K GPU submit encoder.finish() 静态哨兵')
+      : bad('K GPU submit 哨兵', 'webgpu-evaluator.ts 缺 encoder.finish()');
+  }
+
+  // Z 全程零 pageerror / console.error
+  errors.length === 0 ? ok('Z 全程 0 pageerror / 0 console.error') : bad('Z 零错误', errors.slice(0, 3).join(' | ').slice(0, 150));
+} finally {
+  await browser.close().catch(() => {});
+  try { process.kill(-server.pid); } catch { /* windows 下 detached 进程组杀不干净由端口复用兜底 */ }
+  try { server.kill(); } catch {}
+}
+console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+process.exit(fail > 0 ? 1 : 0);

@@ -38,6 +38,7 @@ interface GpuDeviceLike {
   createCommandEncoder(): {
     beginComputePass(): { setPipeline(p: { __brand: 'pipeline' }): void; setBindGroup(g: number, bg: unknown): void; dispatchWorkgroups(x: number, y: number, z: number): void; end(): void };
     copyBufferToBuffer(src: GpuBufferLike, srcOff: number, dst: GpuBufferLike, dstOff: number, size: number): void;
+    finish(): { __brand: 'cmdBuf' };
   };
   queue: { submit(cmd: unknown): void; writeBuffer(buf: GpuBufferLike, off: number, data: ArrayBufferView): void };
   destroy(): void;
@@ -746,7 +747,11 @@ export async function evaluateFieldGPU(cfg: GpuFieldConfig, R: number): Promise<
       pass.dispatchWorkgroups(wg, wg, wg);
       pass.end();
       encoder.copyBufferToBuffer(storageBuf, 0, readBuf, 0, bytes);
-      device.queue.submit([encoder as unknown]);
+      device.queue.submit([encoder.finish()]);
+      // 2026-09-20 真机走查修复：此处曾直接 submit(encoder)（缺 .finish()）——TypeError
+      // 被 evaluateFieldGPU 的 catch 吞成 return null，GPU 加速自 v3.0 上线以来从未真正
+      // 执行过（状态行「可用·已启用」为真但求值永远静默回退 CPU；门禁对拍 jsEval VM
+      // 不触浏览器路径故全绿）。修复后 RX580 实测 129³ 节点场 ≈48ms/次。
 
       await readBuf.mapAsync(GPU_MAP_MODE.READ);
       const out = new Float32Array(readBuf.getMappedRange().slice(0));
