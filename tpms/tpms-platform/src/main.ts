@@ -1475,7 +1475,10 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
   }
   try {
     // 体素化固相掩码（与平台最终场同语义：percolation isSolidAt 单一语义源）
-    const N = 6;
+    // N 必须取奇数：N=6 与奇数周期 k=3 精确三角简并（全部格点 mx=(2i-5)kπ/6 落 cos 零点
+    // → 场恒 0 → 固相 0 点，默认 cellSize=3 必报「固相质点过少」）；
+    // 奇数 N 下 cos=0 条件 2k(2i+1-N)=N(2m+1) 左恒偶右恒奇无解，任意 k 免简并
+    const N = 7;
     const params: SectionAnalysisParams = {
       type: s.type, customFormula: s.customFormula, weights: s.weights,
       periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
@@ -3076,8 +3079,13 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
       porosity: Math.round(best.params.porosity * 100),
       cellSize: Math.max(1, Math.min(5, Math.round(best.params.cellSize))),
     });
-    syncUI(getState());
+    // 与 NL/预设等编程式应用路径统一：setState→syncUI→updateBadges→rebuild→HD
+    // （此前缺 updateBadges → 应用后 document.title/徽标滞留旧族名）
+    const sNew = getState();
+    syncUI(sNew);
+    updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);
+    scheduleHdUpgrade();
     flashToast(`已应用最优解：${best.type}（P=${(best.params.porosity * 100).toFixed(0)}%）`);
   });
 
