@@ -58,6 +58,26 @@ export interface PercolationResult {
  * phys 坐标 ∈ [−1,1]³；返回 true = 固体。
  * 供本模块与 tortuosity.ts 复用（单一语义源）。
  */
+/** 解析场求值（w 坐标域；与渲染查表版四方同源口径之一）。非解析族返回 null。 */
+export function analyticFieldValue(type: string, mx: number, my: number, mz: number, w: ArrayLike<number>): number | null {
+  switch (type) {
+    case 'gyroid': return w[0] * Math.sin(mx) * Math.cos(my) + w[1] * Math.sin(my) * Math.cos(mz) + w[2] * Math.sin(mz) * Math.cos(mx);
+    case 'diamond': return w[0] * Math.sin(mx) * Math.sin(my) * Math.sin(mz) + w[1] * Math.sin(mx) * Math.cos(my) * Math.cos(mz) + w[2] * Math.cos(mx) * Math.sin(my) * Math.cos(mz) + w[3] * Math.cos(mx) * Math.cos(my) * Math.sin(mz);
+    case 'schwarz': return w[0] * Math.cos(mx) + w[1] * Math.cos(my) + w[2] * Math.cos(mz);
+    case 'neovius': return w[0] * 3 * (Math.cos(mx) + Math.cos(my) + Math.cos(mz)) + w[1] * 4 * Math.cos(mx) * Math.cos(my) * Math.cos(mz);
+    case 'iwp': {
+      const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
+      return w[0] * 2 * (Math.cos(mx) * Math.cos(my) + Math.cos(my) * Math.cos(mz) + Math.cos(mz) * Math.cos(mx)) - w[1] * (C2x + C2y + C2z);
+    }
+    case 'frd': {
+      const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
+      return w[0] * 4 * Math.cos(mx) * Math.cos(my) * Math.cos(mz) - w[1] * (C2x * C2y + C2y * C2z + C2z * C2x);
+    }
+    default:
+      return null;
+  }
+}
+
 export function isSolidAt(params: SectionAnalysisParams, x: number, y: number, z: number): boolean {
   const k = params.periods;
   const PI = Math.PI;
@@ -82,31 +102,11 @@ export function isSolidAt(params: SectionAnalysisParams, x: number, y: number, z
   if (bound >= 0) return false;
 
   const mx = x * PI * k, my = y * PI * k, mz = z * PI * k;
-  const w = params.weights;
-  let v: number;
-  switch (params.type) {
-    case 'gyroid': v = w[0] * Math.sin(mx) * Math.cos(my) + w[1] * Math.sin(my) * Math.cos(mz) + w[2] * Math.sin(mz) * Math.cos(mx); break;
-    case 'diamond': v = w[0] * Math.sin(mx) * Math.sin(my) * Math.sin(mz) + w[1] * Math.sin(mx) * Math.cos(my) * Math.cos(mz) + w[2] * Math.cos(mx) * Math.sin(my) * Math.cos(mz) + w[3] * Math.cos(mx) * Math.cos(my) * Math.sin(mz); break;
-    case 'schwarz': v = w[0] * Math.cos(mx) + w[1] * Math.cos(my) + w[2] * Math.cos(mz); break;
-    case 'neovius': v = w[0] * 3 * (Math.cos(mx) + Math.cos(my) + Math.cos(mz)) + w[1] * 4 * Math.cos(mx) * Math.cos(my) * Math.cos(mz); break;
-    case 'iwp': {
-      const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
-      v = w[0] * 2 * (Math.cos(mx) * Math.cos(my) + Math.cos(my) * Math.cos(mz) + Math.cos(mz) * Math.cos(mx)) - w[1] * (C2x + C2y + C2z);
-      break;
-    }
-    case 'frd': {
-      const C2x = Math.cos(2 * mx), C2y = Math.cos(2 * my), C2z = Math.cos(2 * mz);
-      v = w[0] * 4 * Math.cos(mx) * Math.cos(my) * Math.cos(mz) - w[1] * (C2x * C2y + C2y * C2z + C2z * C2x);
-      break;
-    }
-    case 'lidinoid':
-    case 'splitp':
-    case 'custom':
-      // 非查表类型：与平台一致走实时求值由调用方注入的公式不可行（模块零依赖），
-      // 因此这三种类型由调用方通过 customSampler 注入；缺省按空气处理并由 UI 提示。
-      return false;
-    default:
-      return false;
+  const v = analyticFieldValue(params.type, mx, my, mz, params.weights);
+  if (v === null) {
+    // 非查表类型（lidinoid/splitp/custom 等）：与平台一致走实时求值由调用方注入的公式
+    // 不可行（模块零依赖），由调用方通过 customSampler 注入；缺省按空气处理并由 UI 提示。
+    return false;
   }
 
   if (params.mode === 'solid_network') {

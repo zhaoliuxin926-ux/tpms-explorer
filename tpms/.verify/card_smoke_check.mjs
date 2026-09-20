@@ -52,6 +52,40 @@ try {
   const readNote = (id) => page.evaluate((i) => (document.getElementById(i)?.textContent || '').replace(/\s+/g, ' ').trim(), id);
   const clickBtn = (id) => page.evaluate((i) => document.getElementById(i)?.click(), id);
 
+  // L undo/redo（初始默认态最干净——置于 A 前防后续状态污染；toast 元素 id=toast，1.5s TTL 内抓拍）
+  {
+    const ur = await page.evaluate(async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      const ps = [...document.querySelectorAll('input[type=range]')].find(s => s.closest('.field') && /孔隙率/.test(s.closest('.field').textContent));
+      const key = (k, opts) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
+      const out = {};
+      out.before = ps.value;
+      ps.value = '80';
+      ps.dispatchEvent(new Event('input', { bubbles: true }));
+      ps.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(1200);
+      out.afterChange = ps.value;
+      key('z', { ctrlKey: true });
+      await sleep(350);
+      out.undoToast = document.getElementById('toast')?.textContent || '';
+      await sleep(1300);
+      out.afterUndo = ps.value;
+      key('z', { ctrlKey: true, shiftKey: true });
+      await sleep(350);
+      out.redoToast = document.getElementById('toast')?.textContent || '';
+      await sleep(1300);
+      out.afterRedo = ps.value;
+      key('z', { ctrlKey: true });
+      await sleep(1500);
+      out.afterFinalUndo = ps.value;
+      return out;
+    });
+    ur.afterChange === '80' && /已撤销/.test(ur.undoToast) && ur.afterUndo === ur.before
+      && /已重做/.test(ur.redoToast) && ur.afterRedo === '80' && ur.afterFinalUndo === ur.before
+      ? ok('L undo/redo toast+滑块同步+空栈鲁棒（' + ur.before + '→80→' + ur.afterUndo + '→80→' + ur.afterFinalUndo + '）')
+      : bad('L undo/redo', JSON.stringify(ur));
+  }
+
   // A 声子能带（默认 k=3——N=7 简并修复哨兵）
   await clickBtn('btn-phonon');
   await page.waitForFunction(() => {
@@ -184,6 +218,27 @@ try {
     /submit\(\[encoder\.finish\(\)/.test(gpuSrc) && !/submit\(\[encoder as/.test(gpuSrc)
       ? ok('K GPU submit encoder.finish() 静态哨兵')
       : bad('K GPU submit 哨兵', 'webgpu-evaluator.ts 缺 encoder.finish()');
+  }
+
+  // M GPU 状态行实报毫秒（条件断言：本机有 WebGPU 时状态行必须含「V 场 X ms」运行时实证——
+  // 这是 submit finish() 修复的运行时哨兵；CI 无 WebGPU 环境显示「不可用 · CPU 回退」跳过）
+  {
+    const gpu = await page.evaluate(async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      document.getElementById('btn-gpu')?.click();
+      await sleep(400);
+      document.getElementById('btn-gpu')?.click();
+      await sleep(800);
+      const ps = [...document.querySelectorAll('input[type=range]')].find(s => s.closest('.field') && /孔隙率/.test(s.closest('.field').textContent));
+      ps.value = String(Math.max(+ps.min, Math.min(+ps.max, +ps.value === +ps.min ? +ps.min + 3 : +ps.value - 3)));
+      ps.dispatchEvent(new Event('input', { bubbles: true }));
+      ps.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(2800);
+      return document.getElementById('gpu-status')?.textContent?.trim() || '';
+    });
+    (/WebGPU V 场 [\d.]+ ms · \d+³/.test(gpu))
+      ? ok('M GPU 状态行实报毫秒（' + gpu + '）')
+      : (/不可用|回退/.test(gpu) ? ok('M GPU 不可用环境跳过（' + gpu.slice(0, 20) + '）') : bad('M GPU 状态行', gpu.slice(0, 60)));
   }
 
   // Z 全程零 pageerror / console.error

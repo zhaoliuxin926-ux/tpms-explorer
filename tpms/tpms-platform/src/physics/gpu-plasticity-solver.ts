@@ -697,12 +697,16 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       applyPrescribed(Utrial, sGoal);
       internalForce(Utrial, fint);
       const rNorm0 = freeResidualNorm(fint);
-      if (!Number.isFinite(rNorm0)) return { converged: false, iterations: iter + 1 };
+      if (!Number.isFinite(rNorm0)) {
+        // NaN 取证钩子（沿 __plasSubDbg 先例，未设置零开销）：定位非有限来自 U 污染还是本构计算
+        (globalThis as any).__plasNaNDbg?.(sGoal, U, Utrial, fint, nDof);
+        return { converged: false, iterations: iter + 1 };
+      }
       const fScale = Math.max(reactionMagnitude(), 1e-12);
       if (rNorm0 <= tol * fScale) { U.set(Utrial); return { converged: true, iterations: iter + 1 }; }
       // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代
       const pcgT = Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
-      solveIncrement(fint, du, pcgT);
+      const pcgIt = solveIncrement(fint, du, pcgT);
       // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
       // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
       {
@@ -711,9 +715,15 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         const cap = 0.2 * R;
         if (duMax > cap) { const sc = cap / duMax; for (let i = 0; i < nDof; i++) du[i] *= sc; }
       }
-      // 回溯线搜索：α ∈ {1, 1/2, 1/4} 取残差最小者；无改善则判失败（上层回退子步）
+      // 回溯线搜索：α ∈ {1, …, 1/512}（12 级）取残差最小者；无改善则判失败（上层回退子步）。
+      // 深回拓+非单调接受（2026-09-20 定案，二者缺一不可——实测单独深回溯仍败于步2）：
+      // 屈服启始折点处弹性预测方向过冲，深回溯找到微小 α 的最小残差点，但 Armijo 充分
+      // 下降仍无解——此时接受「未恶化」（≤1.5×）的最小残差步让 NR 继续迭代越过折点。
+      // p75 k1 实测可解前沿 ε=0.0063→0.0225（弹性段+平台成形，坍塌检测落真实软化区）；
+      // 失败阈值与 σy 应力水平精确重合即此机制。合成掩码（门 27/28）Armijo 恒成功不触发。
       let bestAlpha = 0, bestNorm = rNorm0;
-      for (let ls = 0; ls < 4; ls++) {
+      let minAlpha = 0, minRn = rNorm0;
+      for (let ls = 0; ls < 12; ls++) {
         const alpha = 0.5 ** ls;
         Utrial.set(U);
         for (let i = 0; i < nDof; i++) Utrial[i] += alpha * du[i];
@@ -721,8 +731,20 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         internalForce(Utrial, fint);
         const rn = freeResidualNorm(fint);
         if (rn < bestNorm * (1 - 1e-4)) { bestNorm = rn; bestAlpha = alpha; }
+        if (rn < minRn) { minRn = rn; minAlpha = alpha; }
       }
-      if (bestAlpha === 0) return { converged: false, iterations: iter + 1 };
+      if (bestAlpha === 0) {
+        if (minAlpha > 0 && minRn <= rNorm0 * 1.5) {
+          Utrial.set(U);
+          for (let i = 0; i < nDof; i++) Utrial[i] += minAlpha * du[i];
+          applyPrescribed(Utrial, sGoal);
+          U.set(Utrial);
+          continue;
+        }
+        // 线搜索取证钩子（沿 __plasSubDbg 先例，未设置零开销）
+        (globalThis as any).__plasLsDbg?.({ sGoal, rNorm0, fScale, pcgIt, pcgMaxIter, pcgT });
+        return { converged: false, iterations: iter + 1 };
+      }
       Utrial.set(U);
       for (let i = 0; i < nDof; i++) Utrial[i] += bestAlpha * du[i];
       applyPrescribed(Utrial, sGoal);

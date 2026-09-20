@@ -60,7 +60,7 @@ import {
 } from './physics/yield-surface';
 import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
 import { solvePhononicBands, type PhononicResult } from './physics/phononic-bandgap';
-import { isSolidAt, type SectionAnalysisParams } from './physics/percolation-analysis';
+import { isSolidAt, analyticFieldValue, type SectionAnalysisParams } from './physics/percolation-analysis';
 import { simulateTissueGrowth, type TissueResult } from './physics/tissue-growth';
 import { evolveLevelSet, phiToVField } from './core/levelset-optimizer';
 import {
@@ -455,7 +455,11 @@ function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
       const wy = kk * (-Math.PI + (2 * Math.PI * (iy + 0.5)) / R);
       for (let ix = 0; ix < R; ix++) {
         const wx = kk * (-Math.PI + (2 * Math.PI * (ix + 0.5)) / R);
-        V[ix + iy * R + iz * R * R] = fn(wx, wy, wz, st.weights);
+        // 解析族优先用与 isSolidAt 同源的解析场（单一语义源）：查表版插值噪声会翻转
+        // 边界格、劣化细长骨架的顶底承载路径（2026-09-20 探针实证：同参数解析掩码
+        // 收敛至 ε=2%、查表掩码步 2 即败）；非解析族回退查表
+        const av = analyticFieldValue(st.type, wx, wy, wz, st.weights);
+        V[ix + iy * R + iz * R * R] = av !== null ? av : fn(wx, wy, wz, st.weights);
       }
     }
   }
@@ -603,9 +607,10 @@ function runPlasticityDemo(): boolean {
         out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain != null ? res.collapseStrain.toFixed(3) : '首步'}` : '未收敛步'}`} · ${dt}s · `          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · GA 预测比 ${res.gaPrediction.toFixed(3)}（DT/GA=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
           + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`
           + (pruned > 0 ? ` · 已剔除 ${pruned} 个不承载孤立体素（粗网格碎片）` : '');
-        // 不收敛时的可操作指引（2026-09-20 探针实测可解域：cellSize=1×孔隙率≤65% 全步收敛
-        // 但 ~7 分钟主线程同步；75% 或 k≥2 真实掩码 NR 发散——研究级后续：预条件/异步化）
-        if (!res.allConverged) out.textContent += '——粗网格真实掩码下 NR 鲁棒性有限（实测可解域：cellSize=1 且孔隙率 ≤65%，完整求解为分钟级主线程同步）';
+        // 不收敛时的可操作指引（2026-09-20 探针+深回溯/非单调线搜索/解析体素化三修后实测：
+        // cellSize=1 全孔隙率段可解出弹性段+平台+真实坍塌检测（p75 坍塌@ε=1.5%·DT/GA=0.82），
+        // 典型 20s 主线程同步（低孔隙档可达分钟级）；k≥2 在 R=8 粗网格下骨架承载不足——研究级后续）
+        if (!res.allConverged) out.textContent += '——高孔隙粗掩码鲁棒性有限（实测可解域：cellSize=1，坍塌检测属正常物理输出，主线程同步典型 20s）';
       }
     } catch (err) {
       if (out) out.textContent = `求解失败：${err instanceof Error ? err.message : String(err)}`;
