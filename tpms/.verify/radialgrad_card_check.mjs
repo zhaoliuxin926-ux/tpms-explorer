@@ -46,16 +46,14 @@ try {
   toastB.includes('须 Schwarz P') && st1 === st0
     ? ok('B 非 Schwarz P 点生成 → toast 实证拦截（无预览）')
     : bad('B 守卫失效', `toast=${toastB.slice(0, 40)} st=${st1.slice(0, 30)}`);
-  // B2. 红队 B MAJOR-1 回归：isoGrad 开启时点生成 → 互斥守卫 toast（此前曾静默放行）
-  await page.evaluate(() => {
-    document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
-  });
-  await page.waitForTimeout(300);
-  await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());
-  await page.waitForTimeout(200);
   // B2. 红队 B MAJOR-1 回归：isoGrad 开启时点生成 → 互斥守卫 toast（此前曾静默放行）。
-  // 轮询 3s 而非单次 400ms 读（2026-09-20 windows CI 确定性红：toast 空串——慢跑者上
-  // 点击分发/守卫触发晚于单次读窗；本地/ubuntu/macos 三绿）；失败时转储 isoGrad 状态
+  // 时序根治（2026-09-20 macOS/windows CI 实锤）：前置类型切换用 synthetic Event('click')
+  // 偶发不落地 → 守卫走「须 Schwarz P」分支（无「互斥」字样）且 toast 被 1.85s TTL 清空
+  // → 终读空串假红。改为原生 .click() + title 落地等待 + isoVal 确认后再点生成
+  await page.evaluate(() => document.querySelector('[data-type="schwarz"]')?.click());
+  await page.waitForFunction(() => document.title.includes('Schwarz'), null, { timeout: 15000, polling: 200 }).catch(() => {});
+  await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());
+  await page.waitForFunction(() => (document.getElementById('iso-grad-value')?.textContent || '') === '渐变中', null, { timeout: 5000, polling: 200 }).catch(() => {});
   await page.evaluate(() => document.getElementById('rg-gen')?.click());
   let toastB2 = '';
   try {
@@ -65,12 +63,13 @@ try {
     toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
   }
   if (!toastB2.includes('互斥')) {
-    const dbg = await page.evaluate(() => ({ isoVal: document.getElementById('iso-grad-value')?.textContent, rgStatus: document.getElementById('rg-status')?.textContent?.slice(0, 60) }));
+    const dbg = await page.evaluate(() => ({ isoVal: document.getElementById('iso-grad-value')?.textContent, title: document.title.slice(0, 30), rgStatus: document.getElementById('rg-status')?.textContent?.slice(0, 60) }));
     bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" dbg=${JSON.stringify(dbg)}`);
   } else {
     ok('B2 isoGrad 开启时生成 → 互斥守卫（红队 B MAJOR-1 修复回归）');
   }
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());  // 关回
+  await page.waitForFunction(() => (document.getElementById('iso-grad-value')?.textContent || '') === '关闭', null, { timeout: 5000, polling: 200 }).catch(() => {});
   // C. 切 schwarz → 生成预览
   await page.evaluate(() => {
     document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
