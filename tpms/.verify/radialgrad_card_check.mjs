@@ -53,12 +53,23 @@ try {
   await page.waitForTimeout(300);
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());
   await page.waitForTimeout(200);
+  // B2. 红队 B MAJOR-1 回归：isoGrad 开启时点生成 → 互斥守卫 toast（此前曾静默放行）。
+  // 轮询 3s 而非单次 400ms 读（2026-09-20 windows CI 确定性红：toast 空串——慢跑者上
+  // 点击分发/守卫触发晚于单次读窗；本地/ubuntu/macos 三绿）；失败时转储 isoGrad 状态
   await page.evaluate(() => document.getElementById('rg-gen')?.click());
-  await page.waitForTimeout(400);
-  const toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
-  toastB2.includes('互斥')
-    ? ok('B2 isoGrad 开启时生成 → 互斥守卫（红队 B MAJOR-1 修复回归）')
-    : bad('B2 isoGrad 互斥守卫失效', toastB2.slice(0, 40));
+  let toastB2 = '';
+  try {
+    await page.waitForFunction(() => (document.getElementById('toast')?.textContent || '').includes('互斥'), null, { timeout: 3000, polling: 150 });
+    toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  } catch {
+    toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  }
+  if (!toastB2.includes('互斥')) {
+    const dbg = await page.evaluate(() => ({ isoVal: document.getElementById('iso-grad-value')?.textContent, rgStatus: document.getElementById('rg-status')?.textContent?.slice(0, 60) }));
+    bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" dbg=${JSON.stringify(dbg)}`);
+  } else {
+    ok('B2 isoGrad 开启时生成 → 互斥守卫（红队 B MAJOR-1 修复回归）');
+  }
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());  // 关回
   // C. 切 schwarz → 生成预览
   await page.evaluate(() => {
