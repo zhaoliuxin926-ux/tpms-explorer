@@ -121,7 +121,9 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
     steps: params.steps ?? 8,
     maxStrain: params.maxStrain ?? 0.04,
     tol: params.tol ?? 1e-5,
-    tangent: 'geo',
+    // elastic 切线（2026-09-20 定案）：geo matvec 修复后受压算子非 SPD，PCG 鲁棒性差；
+    // 坍塌物理在残差侧几何项（恒在），v1.0.2 的坍塌检测/DT-GA 结果本就等效 elastic 口径
+    tangent: 'elastic',
     stopOnDiverge: true,
     onStep: (ctx) => {
       // 最大（拉伸）主应变失效 → 单元生死；每步杀死上限 + 活性下限守卫

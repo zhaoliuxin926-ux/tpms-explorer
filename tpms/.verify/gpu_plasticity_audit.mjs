@@ -150,7 +150,7 @@ console.log('\n[D] Gyroid 格构压溃（R=8 · σy/E=0.01 · H/E=0.05 · 压至
   check('体素固相率 ∈ [0.32, 0.38]', frac > 0.32 && frac < 0.38, frac.toFixed(3));
   const res = sol.solvePlasticityCompression({
     R: 8, solid, nu: 0.3, sigmaY: 0.01, hardening: 0.05,
-    steps: 6, maxStrain: 0.03, tol: 1e-5, tangent: 'geo',
+    steps: 6, maxStrain: 0.03, tol: 1e-5, tangent: 'elastic',
   });
   check('全部载荷步收敛', res.allConverged);
   const last = res.steps[res.steps.length - 1];
@@ -169,17 +169,25 @@ console.log('\n[D] Gyroid 格构压溃（R=8 · σy/E=0.01 · H/E=0.05 · 压至
   })());
 }
 
-// ══ E. 切线口径解一致性 ══
-console.log('\n[E] elastic vs geo 切线口径解一致性');
+// ══ E. 切线口径：geo 活性 + 解一致性 ══
+// 2026-09-20 geo matvec 修复（行/列倒置曾致恒零=v6.0 起屈曲捕获死亡）后的三重钉：
+//  a) 双口径全步收敛（geo 增广算子受压非 SPD，只在温和应变档鲁棒——0.012 实测收敛域）
+//  b) 终态反力一致 ≤1%（切线影响路径不影响收敛解——matvec 正确性）
+//  c) 迭代总数不同（活性钉：死 geo 与 elastic 逐位同路径必同迭代数；活 geo 路径必分叉）
+console.log('\n[E] elastic vs geo 切线口径（geo 活性 + 解一致性）');
 {
   const { solid } = voxelizeGyroid(6, 0.35);
-  const base = { R: 6, solid, nu: 0.3, sigmaY: 0.01, hardening: 0.05, steps: 4, maxStrain: 0.02, tol: 1e-5 };
+  const base = { R: 6, solid, nu: 0.3, sigmaY: 0.01, hardening: 0.05, steps: 4, maxStrain: 0.012, tol: 1e-5 };
   const re = sol.solvePlasticityCompression({ ...base, tangent: 'elastic' });
   const rg = sol.solvePlasticityCompression({ ...base, tangent: 'geo' });
   const fe = re.steps[re.steps.length - 1].reaction;
   const fg = rg.steps[rg.steps.length - 1].reaction;
-  check(`两口径终态反力一致 ≤1%（e=${fe.toExponential(4)} g=${fg.toExponential(4)}）`, Math.abs(fe - fg) / Math.abs(fe) < 0.01);
+  const itE = re.steps.reduce((a, s) => a + s.iterations, 0);
+  const itG = rg.steps.reduce((a, s) => a + s.iterations, 0);
+  check('elastic 口径全步收敛', re.allConverged);
   check('geo 口径全步收敛', rg.allConverged);
+  check(`两口径终态反力一致 ≤1%（e=${fe.toExponential(4)} g=${fg.toExponential(4)}）`, Math.abs(fe - fg) / Math.abs(fe) < 0.01);
+  check(`geo 活性钉：迭代路径分叉（e=${itE} g=${itG}）`, itE !== itG);
 }
 
 // ══ F. 单元生死挂点 ══

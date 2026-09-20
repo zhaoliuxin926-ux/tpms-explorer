@@ -263,7 +263,11 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   const maxIter = params.maxIter ?? 40;
   const pcgTol = params.pcgTol ?? 1e-6;
   const pcgMaxIter = params.pcgMaxIter ?? 3000;
-  const tangentMode = params.tangent ?? 'geo';
+  // 默认 elastic（2026-09-20 geo 修复后定案）：受压下 geo 增广算子失去 SPD 性，
+  // Jacobi-PCG 在部分合成掩码工况不收敛（门 27 E 组实测）；残差侧几何项恒在——
+  // 真实 StVK 平衡/坍塌物理不受切线选择影响，elastic 切线是最鲁棒的修正牛顿口径。
+  // geo 现为正确可用的可选项（matvec 已修，见下），用于需要切线级屈曲加速的场景。
+  const tangentMode = params.tangent ?? 'elastic';
   const stopOnDiverge = params.stopOnDiverge ?? false;
   const lame = lameFromNu(nu);
 
@@ -531,10 +535,13 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
             for (let b = 0; b < 8; b++) {
               const i0 = b * 3;
               const c = gx * Bg[Bg0 + 0 * 24 + i0] + gy * Bg[Bg0 + 1 * 24 + i0 + 1] + gz * Bg[Bg0 + 2 * 24 + i0 + 2];
-              const nd2 = elemNodes[base + b];
-              kv[b * 3] += c * x[nd2 * 3];
-              kv[b * 3 + 1] += c * x[nd2 * 3 + 1];
-              kv[b * 3 + 2] += c * x[nd2 * 3 + 2];
+              // (K_G·v)_a = Σ_b (G_a·∇N_b)·v_b——行 a 累加、源取局部副本 eu[b]。
+              // 2026-09-20 修复：原实现 kv[b] += c·x[node_b]（行/列倒置）——由 Q1 单位
+              // 分解 Σ_b ∇N_b ≡ 0 该写法整体恒零，geo 切线自 v6.0 起与 elastic 逐位同效
+              // （屈曲捕获功能死亡，bugs §一.15）。
+              kv[a * 3] += c * eu[b * 3];
+              kv[a * 3 + 1] += c * eu[b * 3 + 1];
+              kv[a * 3 + 2] += c * eu[b * 3 + 2];
             }
           }
         }
