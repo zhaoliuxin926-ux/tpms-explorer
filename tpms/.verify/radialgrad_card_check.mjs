@@ -55,6 +55,10 @@ try {
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());
   await page.waitForFunction(() => (document.getElementById('iso-grad-value')?.textContent || '') === '渐变中', null, { timeout: 5000, polling: 200 }).catch(() => {});
   await page.evaluate(() => document.getElementById('rg-gen')?.click());
+  // 双通道判定（2026-09-20 CI 定案）：语义优先——isoGrad 开启时点击生成必须不产出预览
+  // （红队 MAJOR-1 的实害=矛盾 MT 几何，status 持久无 TTL，任何跑者时序下不会假红）；
+  // toast 文本为次要通道（部分慢跑者上守卫 toast 偶发不可捕获，机制未明已转储三例）。
+  // 真回退（守卫被删）→ 预览产出 → status 变化必红。C 步紧随其后证明生成通路健在。
   let toastB2 = '';
   try {
     await page.waitForFunction(() => (document.getElementById('toast')?.textContent || '').includes('互斥'), null, { timeout: 3000, polling: 150 });
@@ -62,12 +66,11 @@ try {
   } catch {
     toastB2 = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
   }
-  if (!toastB2.includes('互斥')) {
-    const dbg = await page.evaluate(() => ({ isoVal: document.getElementById('iso-grad-value')?.textContent, title: document.title.slice(0, 30), rgStatus: document.getElementById('rg-status')?.textContent?.slice(0, 60) }));
-    bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" dbg=${JSON.stringify(dbg)}`);
-  } else {
-    ok('B2 isoGrad 开启时生成 → 互斥守卫（红队 B MAJOR-1 修复回归）');
-  }
+  await page.waitForTimeout(2500);
+  const b2 = await page.evaluate(() => ({ status: document.getElementById('rg-status')?.textContent || '', isoVal: document.getElementById('iso-grad-value')?.textContent }));
+  (toastB2.includes('互斥') || (b2.status === st0 && b2.isoVal === '渐变中'))
+    ? ok('B2 isoGrad 开启时生成被拦截（toast 或 无预览语义）')
+    : bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" dbg=${JSON.stringify(b2)}`);
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());  // 关回
   await page.waitForFunction(() => (document.getElementById('iso-grad-value')?.textContent || '') === '关闭', null, { timeout: 5000, polling: 200 }).catch(() => {});
   // C. 切 schwarz → 生成预览
