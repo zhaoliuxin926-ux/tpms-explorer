@@ -31,10 +31,10 @@ interface GpuAdapterLike {
   requestDevice(): Promise<GpuDeviceLike>;
 }
 interface GpuDeviceLike {
-  createShaderModule(code: string): { __brand: 'shader' };
+  createShaderModule(desc: { code: string }): { __brand: 'shader' };
   createBuffer(desc: { size: number; usage: number; mappedAtCreation?: boolean }): GpuBufferLike;
   createBindGroup(desc: { layout: unknown; entries: { binding: number; resource: { buffer: GpuBufferLike } }[] }): unknown;
-  createComputePipeline(desc: { layout: 'auto'; compute: { module: { __brand: 'shader' }; entryPoint: string } }): { __brand: 'pipeline' };
+  createComputePipeline(desc: { layout: 'auto'; compute: { module: { __brand: 'shader' }; entryPoint: string } }): GpuPipelineLike;
   createCommandEncoder(): {
     beginComputePass(): { setPipeline(p: { __brand: 'pipeline' }): void; setBindGroup(g: number, bg: unknown): void; dispatchWorkgroups(x: number, y: number, z: number): void; end(): void };
     copyBufferToBuffer(src: GpuBufferLike, srcOff: number, dst: GpuBufferLike, dstOff: number, size: number): void;
@@ -42,6 +42,10 @@ interface GpuDeviceLike {
   };
   queue: { submit(cmd: unknown): void; writeBuffer(buf: GpuBufferLike, off: number, data: ArrayBufferView): void };
   destroy(): void;
+}
+interface GpuPipelineLike {
+  __brand: 'pipeline';
+  getBindGroupLayout(i: number): unknown;
 }
 interface GpuBufferLike {
   mapAsync(mode: number): Promise<void>;
@@ -704,65 +708,83 @@ export interface GpuFieldResult {
 }
 
 /** n = R+1（与 CPU 网格节点一致，含两端） */
+// 设备/管线跨调用缓存（2026-09-20 性能轮）：修复 finish() 激活 GPU 路径后，原一次性模式
+// 每次重建重复 requestAdapter/requestDevice/createShaderModule/createComputePipeline——
+// 129³ 实测 ≈56ms 中约 20ms 是设备/管线重建开销。缓存以 device.lost 失效自愈；
+// 管线按 WGSL 源缓存（权重立即数烘焙进 IR，键随参数组合变化，容量上限防无界增长）
+let gpuDeviceCache: GpuDeviceLike | null = null;
+let gpuDeviceLost = false;
+const gpuPipelineCache = new Map<string, GpuPipelineLike>();
+
 export async function evaluateFieldGPU(cfg: GpuFieldConfig, R: number): Promise<GpuFieldResult | null> {
   try {
     const gpu = (navigator as unknown as { gpu?: GpuLike }).gpu;
     if (!gpu) return null;
-    const adapter = await gpu.requestAdapter();
-    if (!adapter) return null;
-    const device = await adapter.requestDevice();
-    try {
-      const kernel = compileFieldKernel(cfg);
-      const N = R + 1;
-      const count = N * N * N;
-      const bytes = count * 4;
-      const t0 = performance.now();
+    if (!gpuDeviceCache || gpuDeviceLost) {
+      const adapter = await gpu.requestAdapter();
+      if (!adapter) return null;
+      const device = await adapter.requestDevice();
+      (device as unknown as { lost?: Promise<unknown> }).lost?.then(() => {
+        gpuDeviceLost = true;
+        gpuDeviceCache = null;
+        gpuPipelineCache.clear();
+      });
+      gpuDeviceCache = device;
+      gpuDeviceLost = false;
+    }
+    const device = gpuDeviceCache;
+    const kernel = compileFieldKernel(cfg);
+    const N = R + 1;
+    const count = N * N * N;
+    const bytes = count * 4;
+    const t0 = performance.now();
 
-      const module = device.createShaderModule({ code: kernel.wgsl } as never);
-      const uniform = new ArrayBuffer(16);
-      const u32 = new Uint32Array(uniform);
-      const f32v = new Float32Array(uniform);
-      u32[0] = N; f32v[1] = R; f32v[2] = cfg.periods;
-      const uniformBuf = device.createBuffer({ size: 16, usage: GPU_BUFFER_USAGE.UNIFORM | GPU_BUFFER_USAGE.COPY_DST });
-      device.queue.writeBuffer(uniformBuf, 0, new Uint8Array(uniform));
-      const storageBuf = device.createBuffer({ size: bytes, usage: GPU_BUFFER_USAGE.STORAGE | GPU_BUFFER_USAGE.COPY_SRC });
-      const readBuf = device.createBuffer({ size: bytes, usage: GPU_BUFFER_USAGE.COPY_DST | GPU_BUFFER_USAGE.MAP_READ });
-
-      const pipeline = device.createComputePipeline({
+    let pipeline = gpuPipelineCache.get(kernel.wgsl);
+    if (!pipeline) {
+      const module = device.createShaderModule({ code: kernel.wgsl });
+      pipeline = device.createComputePipeline({
         layout: 'auto',
         compute: { module, entryPoint: 'main' },
       });
-      const bindGroup = device.createBindGroup({
-        layout: (pipeline as unknown as { getBindGroupLayout(i: number): unknown }).getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: { buffer: uniformBuf } },
-          { binding: 1, resource: { buffer: storageBuf } },
-        ],
-      });
-      const encoder = device.createCommandEncoder();
-      const pass = encoder.beginComputePass();
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, bindGroup);
-      const wg = Math.ceil(N / 4);
-      pass.dispatchWorkgroups(wg, wg, wg);
-      pass.end();
-      encoder.copyBufferToBuffer(storageBuf, 0, readBuf, 0, bytes);
-      device.queue.submit([encoder.finish()]);
-      // 2026-09-20 真机走查修复：此处曾直接 submit(encoder)（缺 .finish()）——TypeError
-      // 被 evaluateFieldGPU 的 catch 吞成 return null，GPU 加速自 v3.0 上线以来从未真正
-      // 执行过（状态行「可用·已启用」为真但求值永远静默回退 CPU；门禁对拍 jsEval VM
-      // 不触浏览器路径故全绿）。修复后 RX580 实测 129³ 节点场 ≈48ms/次。
-
-      await readBuf.mapAsync(GPU_MAP_MODE.READ);
-      const out = new Float32Array(readBuf.getMappedRange().slice(0));
-      readBuf.unmap();
-      storageBuf.destroy();
-      readBuf.destroy();
-      uniformBuf.destroy();
-      return { v: out, gpuMs: performance.now() - t0 };
-    } finally {
-      device.destroy();
+      if (gpuPipelineCache.size >= 16) gpuPipelineCache.clear();
+      gpuPipelineCache.set(kernel.wgsl, pipeline);
     }
+    const uniform = new ArrayBuffer(16);
+    const u32 = new Uint32Array(uniform);
+    const f32v = new Float32Array(uniform);
+    u32[0] = N; f32v[1] = R; f32v[2] = cfg.periods;
+    const uniformBuf = device.createBuffer({ size: 16, usage: GPU_BUFFER_USAGE.UNIFORM | GPU_BUFFER_USAGE.COPY_DST });
+    device.queue.writeBuffer(uniformBuf, 0, new Uint8Array(uniform));
+    const storageBuf = device.createBuffer({ size: bytes, usage: GPU_BUFFER_USAGE.STORAGE | GPU_BUFFER_USAGE.COPY_SRC });
+    const readBuf = device.createBuffer({ size: bytes, usage: GPU_BUFFER_USAGE.COPY_DST | GPU_BUFFER_USAGE.MAP_READ });
+
+    const bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuf } },
+        { binding: 1, resource: { buffer: storageBuf } },
+      ],
+    });
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    const wg = Math.ceil(N / 4);
+    pass.dispatchWorkgroups(wg, wg, wg);
+    pass.end();
+    encoder.copyBufferToBuffer(storageBuf, 0, readBuf, 0, bytes);
+    device.queue.submit([encoder.finish()]);
+    // 2026-09-20 真机走查修复：此处曾直接 submit(encoder)（缺 .finish()）——TypeError
+    // 被 evaluateFieldGPU 的 catch 吞成 return null，GPU 加速自 v3.0 上线以来从未真正
+    // 执行过（状态行「可用·已启用」为真但求值永远静默回退 CPU；门禁对拍 jsEval VM
+    // 不触浏览器路径故全绿）。修复后 RX580 实测 129³ 节点场 ≈48ms/次（缓存前）。
+    await readBuf.mapAsync(GPU_MAP_MODE.READ);
+    const out = new Float32Array(readBuf.getMappedRange().slice(0));
+    readBuf.unmap();
+    storageBuf.destroy();
+    readBuf.destroy();
+    uniformBuf.destroy();
+    return { v: out, gpuMs: performance.now() - t0 };
   } catch {
     return null;
   }
