@@ -82,8 +82,9 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 ## 四、证据锚点速查（面试前刷新数字用）
 
 ```bash
-npm run test:all                          # 44 门全量（三平台）
-node tpms/agent/schema_check.mjs          # 106 断言
+# 以下均在仓库根执行；schema_check 含几何探针约 5–10 min，不适合面试前临场刷新
+cd tpms/tpms-platform && npm run test:all   # 44 门本地全量（三平台矩阵在 GitHub Actions）
+node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）
 node tpms/agent/selftest.mjs              # 49 断言
 node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
 node tpms/agent/tpms.mjs list --json      # 24 族
