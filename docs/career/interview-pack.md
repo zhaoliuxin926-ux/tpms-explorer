@@ -11,7 +11,7 @@
 
 **TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.07–至今）
 
-用 TypeScript/three.js 从零构建三周期极小曲面（TPMS）生成式设计平台：24 族解析曲面、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件；为平台构建 LLM Agent 闭环——自然语言直达水密 STL（智谱 GLM 四档回归，推荐档 glm-5.3-flash 37/37），核心是自研 tool-calling 安全层：JSON Schema 逐槽位钳制拦截器 + 106 断言契约对拍门禁 + 退出码分层契约。全仓 44 道 CI 门禁（1000+ 断言、三平台矩阵），五轮真机走查+红队累计抓出 14+ 真缺陷全修、收官 0 Critical。
+用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 引擎就绪、UI 入口未开放）；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 单轮 37/37（n=1，复测 36/37）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言契约对拍门禁 + 退出码分层契约。全仓 44 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
@@ -19,7 +19,7 @@
 
 ### English · one-paragraph (for English resume)
 
-**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (solo project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 analytical families, real-time WebGL, watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into watertight STL (37/37 on GLM-5.3-flash, best of a 4-model regression). Core contribution: a tool-calling safety layer — per-slot JSON-Schema clamping interceptor, a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 44-gate, 1000+-assertion, 3-platform CI matrix.
+**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 level-set families — classical closed forms + transcribed literature/dataset coefficients; real-time WebGL; watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 37 cases, 37/37 on GLM-5.3-flash in a single run n=1 / retest 36/37; end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 44-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
 
 ---
 
@@ -27,8 +27,8 @@
 
 ### Q1 "LLM 应用怎么保证不乱来？"（必问，主线故事）
 
-要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 钳制（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层）→ schema 与 CLI 实际校验由 106 断言门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、37 条回归保证"好的能通过"（统计性）、对抗指令四模型零透传。
-杀手锏补充：**红队六洞**——路径穿越正则首字符放行整串 `..`；崩溃被错误处理包装成"结构化拒绝"（语义污染）；校验函数存在但不在执行路径（校验死代码）；同一槽位两份 schema 口径分裂致链路死锁；`in` 原型链键误判（应 `Object.hasOwn`）；JSON 解析失败分支曾 exit 0。**没有一条是 LLM 骗过了系统，全是确定性代码自己的缝**——LLM 只是高频模糊测试器。
+要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 校验（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层；越界是拒绝不是钳制）→ schema 与 CLI 实际校验由 106 断言门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、37 条 dry-run 槽位回归保证"好的能通过"（统计性，glm-5.3-flash 单轮 37/37 n=1）、对抗指令四模型零**非法执行**（三形态：平台拒绝/模型拒绝/模型改发合法值；拦截器动作由离线 33 断言单独计量，不把模型自觉算进护栏战果）。
+杀手锏补充：**Agent 面红队两轮（实录 2H+7M+5L），下为六个代表性打穿**——路径穿越正则首字符放行整串 `..`；崩溃被错误处理包装成"结构化拒绝"（语义污染）；校验函数存在但不在执行路径（校验死代码）；同一槽位两份 schema 口径分裂致链路中断；`in` 原型链键误判（应 `Object.hasOwn`）；JSON 解析失败分支曾 exit 0。**没有一条是 LLM 骗过了系统，全是确定性代码自己的缝**——LLM 只是高频模糊测试器。
 证据：`node tpms/agent/llm_provider_selftest.mjs`（33 断言离线可跑）+ 博客二。
 
 ### Q2 "最难的 bug 是什么？"（讲这个：SDF 顶点区距离反转）
@@ -39,7 +39,7 @@
 ### Q3 "性能优化做过什么？"（三个有数字的）
 
 1. 自写静态服务器无 gzip：公网首屏 5–7s，静态资源 gzip 后体积显著下降（当前构建实测约 353KB gzip 量级，历史优化记录 624KB→约 160KB 为更早构建口径，面试引用请以现测为准），首屏回到 1s 内。
-2. 瓦片预烘焙（Canvas 合成图层项目沉淀，非 TPMS 仓内实测）：`drawImage` 每帧约 400 次→启动烘焙约 25 次/帧，预算断言进 CI。——若面试官要求指认命令，请改讲 GPU 三段实测（有 BENCHMARKS/RELEASE 出处）。
+2. （跨项目迁移，非本仓数字，不主动讲）瓦片预烘焙：Canvas `drawImage` 每帧约 400 次→启动烘焙约 25 次/帧。若被追问命令，如实说明出处在其他项目；本项目请讲 GPU 三段实测。
 3. Boids 类项目沉淀的 SoA+counting-sort 思路迁移：2000 个体 5.6ms/步（若被问泛化能力）。
 
 ### Q4 "CI 怎么组织的？跨平台踩过什么坑？"
@@ -54,13 +54,13 @@
 
 ### Q6 "AI 怎么用在工作流里？"（诚实版）
 
-AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能宣称必须指认一条跑过的命令**（曾抓出 CLI 假实装——补丁静默失败+门禁不覆盖该 flag 路径）；**性能/架构属性宣称须 grep 调用点核实**（"Worker 异步执行"实为主线程同步）。AI 也当红队——项目累计五轮真机走查+红队审查（含 v2 轮 4 路红队抓出 5C+20M 全修），抓出 14+ 真缺陷全部修复、收官 0 Critical；其中"空输出恒真断言"（vertCount=0 三断言零迭代全绿）就是变异测试实证抓出的。
+AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能宣称必须指认一条跑过的命令**（曾抓出 CLI 假实装——补丁静默失败+门禁不覆盖该 flag 路径）；**性能/架构属性宣称须 grep 调用点核实**（"Worker 异步执行"实为主线程同步）。AI 也当红队——对抗审查按轮入账：v2 轮（2026-09-13）4 路红队 5C+20M 全修；寿极 v3 轮（09-16）0C+10M+20m 全修；Agent 面另有两轮 2H+7M+5L。当前发布态 open Critical=0。其中"空输出恒真断言"（vertCount=0 三断言零迭代全绿）就是变异测试实证抓出的。
 
 ### Q7 领域题备胎（材料背景加分项）
 
 - 为什么 TPMS 适合骨支架：孔隙连通（营养输送）、比表面积、Gibson-Ashby 标度律 ρ̄² 可解析预测力学响应。
 - 目标孔隙率 vs 实测偏差：iso 二分格点分位与发散体积口径差，随分辨率收敛（gyroid 口径 R48 5.4pp→R96 1.0pp；倍频谐波族 R48 可达 24–28pp 为已登记可用域事实），CLI 如实披露双口径——**不粉饰口径差本身就是可信度卖点**。
-- 24 族曲线怎么来的：经典文献解析式 + CC BY 数据集 Fourier fit 逐字转录，四方同源（TS/Python/MATLAB/GPU IR）对拍位级一致。
+- 24 族曲线怎么来的：经典文献解析式 + CC BY 数据集系数（含 Fourier fit）逐字转录。**两层保真分开讲**：①实现保真＝四方互拍（TS/Python/MATLAB/GPU IR，容差 1e-9~1e-12；GPU f32 另门口径 ≤1e-6）防转录/移植错——注意这只证明四份实现一致（Q2 金句「共享原语对拍是假对拍」的反面教材：故互拍之外还有解析锚点/文献基准）；②模型保真＝与文献基准、解析特例、BENCHMARKS 对账。
 
 ---
 
@@ -68,7 +68,7 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ### 2 分钟版（开场自我介绍后）
 
-"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族解析曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，44 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言一句话直达水密 STL，四档真实模型回归推荐档 glm-5.3-flash 37/37。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位钳制拦截器和 106 断言契约对拍门禁，Agent 面独立红队打了两轮、抓出六个真实漏洞全部修复；项目整体五轮走查+红队累计 14+ 真缺陷全修、收官 0 Critical。整个过程写成两篇技术博客，每条宣称都带复现命令。"
+"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族 level-set 曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，44 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 单轮 37/37（n=1）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 106 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
 
 ### 5 分钟版追加（按面试官兴趣展开）
 
