@@ -14,7 +14,7 @@ Agent 链路分五层，每层只信任下一层的结构化输出，绝不跳�
 
 ```
 M0 纯数学 CLI      tpms.mjs list/estimate —— 无文件写、无网络，selftest 起步 14 断言
-M1 几何闭环        mesh 命令 —— 内建水密三硬门，非零即 exit 1 拒产 STL
+M1 几何闭环        mesh 命令 —— 内建水密三硬门，非零即 exit 3 拒产 STL
 M2 工具注册层      tools.schema.json —— 每个工具每个参数的 enum/min/max 硬边界
 M3 LLM 接入        llm-provider（Provider 抽象）+ 拦截器（LLM 产出逐槽位钳制）
 M4 闭环驱动器      propose → 执行 → 读结构化门禁输出 → 有界修复 → 重跑
