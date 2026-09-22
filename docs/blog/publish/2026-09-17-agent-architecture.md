@@ -1,6 +1,6 @@
 # 从一句话到水密 STL：给科研工具装 LLM Agent 的安全架构实录
 
-> 上一篇[《44 道门禁》](2026-09-16-44-gates.md)讲的是"如何让绿有精确语义"——验证方法论。这一篇讲另一面：当 LLM 成为工具的调用者，**如何让它产出的每一个参数都可被信任**。素材仍是 TPMS Explorer（三周期极小曲面设计平台）的真实工程实录：它的 Agent 链路从 2026-09-04 的纯数学 CLI 起步，到 09-12 完成自然语言直连闭环，中间被红队打穿六次。文中每个技术宣称都附复现命令。
+> 上一篇[《44 道门禁》](https://github.com/zhaoliuxin926-ux/tpms-explorer/blob/main/docs/blog/2026-09-16-44-gates.md)讲的是"如何让绿有精确语义"——验证方法论。这一篇讲另一面：当 LLM 成为工具的调用者，**如何让它产出的每一个参数都可被信任**。素材仍是 TPMS Explorer（三周期极小曲面设计平台）的真实工程实录：它的 Agent 链路从 2026-09-04 的纯数学 CLI 起步，到 09-12 完成自然语言直连闭环，中间被红队打穿六次。文中每个技术宣称都附复现命令。
 
 ## 一、问题：LLM 是最不可信的参数生产者
 
@@ -99,4 +99,4 @@ TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm_regression.mjs
 
 ---
 
-*项目地址：[github.com/zhaoliuxin926-ux/tpms-explorer](https://github.com/zhaoliuxin926-ux/tpms-explorer)（在线入口见 README）。上一篇：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](2026-09-16-44-gates.md)。*
+*项目地址：[github.com/zhaoliuxin926-ux/tpms-explorer](https://github.com/zhaoliuxin926-ux/tpms-explorer)（在线入口见 README）。上一篇：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](https://github.com/zhaoliuxin926-ux/tpms-explorer/blob/main/docs/blog/2026-09-16-44-gates.md)。*
