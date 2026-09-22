@@ -83,3 +83,6 @@ tpms/agent/.iso-cache.json
 tpms/agent/.iso-cache.json.tmp
 audit_ubuntu/
 specimens/
+
+# 红队子代理临时输出
+.rt_*.txt

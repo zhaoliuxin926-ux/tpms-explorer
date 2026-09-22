@@ -117,7 +117,7 @@
 
 **设备/管线跨重建缓存**（2026-09-20 第二轮）：一次性模式每次重建重复 requestAdapter/
 requestDevice/createShaderModule/createComputePipeline（约 20ms 开销）——缓存复用（device.lost
-自愈失效 + WGSL 键管线缓存容量 16）后实测稳态：129³ ≈15ms（3.4×）、97³ ≈7ms（8×）、
+自愈失效 + WGSL 键管线缓存容量 16）后实测稳态：129³ ≈15ms（≈3.7×，56/15 口径）、97³ ≈7ms（8×）、
 65³ ≈7ms（8×）；应用内预览档状态行 23.7ms → 7.6-8.8ms；场值逐点不变（absMax/非零计数全同）。
 
 - CPU 参照（同场 JS 单线程）：128³ 分钟级——GPU 路径为唯一可交互档。
