@@ -79,8 +79,9 @@ node tpms/agent/llm_provider_selftest.mjs
 关键观察是"**失败项轮换**"：满血模型这次挂的指令，直跑一次就过——仓库记录指向 **temp=0 下服务端负载/单条级方差**（不是简单归因"推理随机性"），且 n=1 不足以区分方差与管线缺陷。所以验收语义是三层而不是一层：**拦截器保证"错的不执行"（确定性），回归保证"好的能通过"（统计性），对抗指令保证"坏的进不来"（四模型零非法执行=平台拒绝/模型拒绝/模型改发合法值三形态；拦截器动作由离线 33 断言单独证明）**。把统计性验收当成确定性保证来宣传，是 Agent 评测最常见的造假姿势。
 
 ```bash
-# 复现：真实模型回归（需 TPMS_LLM_API_KEY 环境变量，key 不入库）
-TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm_regression.mjs
+# 复现：真实模型回归（需 TPMS_LLM_API_KEY + TPMS_LLM_BASE_URL，key 不入库）
+# bash: TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm_regression.mjs
+# PowerShell: $env:TPMS_LLM_TIMEOUT_MS=170000; node tpms/agent/llm_regression.mjs
 ```
 
 ## 六、闭环驱动器：LLM 只选策略，应用与验收全确定性
