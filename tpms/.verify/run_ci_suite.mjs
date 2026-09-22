@@ -6,7 +6,7 @@
 //   cd tpms/tpms-platform && npm run test:all
 //   （等价于 node ../.verify/run_ci_suite.mjs）
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -26,6 +26,24 @@ if (!existsSync(path.join(DEPLOYED, 'index.html'))) {
   console.error(`  先执行: cd tpms/tpms-platform && npm run build`);
   console.error(`  再拷贝 dist/* → docs/platform/（删除 assets/*.map）`);
   process.exit(2);
+}
+
+// ── Pages dist hash 一致性守卫（只警告不失败）──
+// CI Deploy 步会 rm+cp 覆盖 docs/platform；本地可能只有部署产物没有 dist，
+// 故 dist 缺失时跳过，不一致也仅提示，绝不导致 exit。
+{
+  const assetHash = (file) => {
+    const m = readFileSync(file, 'utf8').match(/assets\/index-([A-Za-z0-9_-]+)\.js/);
+    return m ? m[1] : null;
+  };
+  const distIndex = path.join(ROOT, 'tpms/tpms-platform/dist/index.html');
+  if (existsSync(distIndex)) {
+    const deployedHash = assetHash(path.join(DEPLOYED, 'index.html'));
+    const distHash = assetHash(distIndex);
+    if (deployedHash && distHash && deployedHash !== distHash) {
+      console.warn(`${C.ylw}⚠ docs/platform 与 dist hash 不一致（${deployedHash} vs ${distHash}）——改 src 后忘记重建部署？本地跑门用 docs/platform，CI 会自行覆盖${C.rst}`);
+    }
+  }
 }
 
 // ── 端口兜底清扫（win32）：门自清；中途崩死留下孤儿监听时按端口强杀（仅 LISTENING 态）──
@@ -96,51 +114,51 @@ function runStep(name, script) {
 
 // ── 调度清单（[汇报名, 步骤名, 脚本]；顺序 = 历史顺序，执行 = 并发池）──
 const SCHEDULE = [
-  ['mesh_audit 几何质量门（34 案例）', '几何质量门', 'mesh_audit.mjs'],
-  ['parity_math 数学同源（314 断言）', '数学同源', 'parity_math.mjs'],
+  ['mesh_audit 几何质量门（30 案例）', '几何质量门', 'mesh_audit.mjs'],
+  ['parity_math 数学同源（332 断言）', '数学同源', 'parity_math.mjs'],
   ['state_url_audit 状态隔离+分享恢复（门37）', '状态与分享审计', 'state_url_audit.mjs'],
   ['worker_bridge_audit Worker生命周期（门38，11断言）', 'Worker生命周期审计', 'worker_bridge_audit.mjs'],
   ['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', '仿真导出校验', 'sim_export_check.mjs'],
   ['endplate_audit 端板专项（水密/满填/体积增量）', '端板审计', 'endplate_audit.mjs'],
   ['micro_physics_audit 迂曲度+各向异性刚度', '微物理审计', 'micro_physics_audit.mjs'],
-  ['hybrid_audit 多相混合（水密/极限/双语言残差）', '混合审计', 'hybrid_audit.mjs'],
-  ['industrial_export_audit 工业格式（GLB+3MF）', '工业格式审计', 'industrial_export_audit.mjs'],
+  ['hybrid_audit 多相混合（水密/极限/双语言残差，9断言）', '混合审计', 'hybrid_audit.mjs'],
+  ['industrial_export_audit 工业格式（GLB+3MF+VTK/VTI，24 断言）', '工业格式审计', 'industrial_export_audit.mjs'],
   ['custom_equation_audit 自定义公式沙箱（AST+AD+代码生成）', '自定义公式审计', 'custom_equation_audit.mjs'],
   ['homogenization_audit RVE 均质化+方向模量', '均质化审计', 'homogenization_audit.mjs'],
-  ['manifold_audit 非欧度规空间映射', '流形映射审计', 'manifold_audit.mjs'],
+  ['manifold_audit 非欧度规空间映射（14断言）', '流形映射审计', 'manifold_audit.mjs'],
   ['redteam_matrix_audit 红队极端工况矩阵', '红队矩阵审计', 'redteam_matrix_audit.mjs'],
-  ['webgpu_parity_audit WebGPU 数学同源（门13）', 'WebGPU 同源审计', 'webgpu_parity_audit.mjs'],
+  ['webgpu_parity_audit WebGPU 数学同源（门13，119断言）', 'WebGPU 同源审计', 'webgpu_parity_audit.mjs'],
   ['periodic_rve_audit 周期性RVE/PBC（门14）', '周期RVE审计', 'periodic_rve_audit.mjs'],
-  ['cae_mesh_audit Abaqus/OpenFOAM体网格（门15）', 'CAE体网格审计', 'cae_mesh_audit.mjs'],
+  ['cae_mesh_audit Abaqus/OpenFOAM体网格（门15，67断言）', 'CAE体网格审计', 'cae_mesh_audit.mjs'],
   ['hierarchical_audit 多级分形+应力单调性（门16）', '分级TPMS审计', 'hierarchical_audit.mjs'],
   ['inverse_design_audit 逆向设计引擎（门17）', '逆向设计审计', 'inverse_design_audit.mjs'],
-  ['poincare_metric_audit 庞加莱双曲映射（门18）', '庞加莱映射审计', 'poincare_metric_audit.mjs'],
+  ['poincare_metric_audit 庞加莱双曲映射（门18，14断言）', '庞加莱映射审计', 'poincare_metric_audit.mjs'],
   ['cae_verification_audit CAE验证链（门19）', 'CAE验证链审计', 'cae_verification_audit.mjs'],
   ['impact_modal_audit 冲击吸能与模态（门20）', '冲击模态审计', 'impact_modal_audit.mjs'],
   ['ct_reconstruction_audit CT重构偏差（门21）', 'CT重构审计', 'ct_reconstruction_audit.mjs'],
-  ['native_cae_solver_audit 原生CAE求解器（门22）', '原生CAE审计', 'native_cae_solver_audit.mjs'],
+  ['native_cae_solver_audit 原生CAE求解器（门22，20断言）', '原生CAE审计', 'native_cae_solver_audit.mjs'],
   ['boundary_picker_audit 边界拾取器（门23）', '边界拾取审计', 'boundary_picker_audit.mjs'],
   ['bone_morphometry_audit DICOM与骨计量（门24）', '骨计量审计', 'bone_morphometry_audit.mjs'],
-  ['gcode_slicer_audit G-code切片引擎（门25，23断言——直接层切+容器裁剪+CLI 工业格式封底）', 'G-code切片审计', 'gcode_slicer_audit.mjs'],
+  ['gcode_slicer_audit G-code切片引擎（门25，32断言——直接层切+容器裁剪+CLI 工业格式封底）', 'G-code切片审计', 'gcode_slicer_audit.mjs'],
   ['ml_pareto_audit ML代理Pareto（门26）', 'ML Pareto审计', 'ml_pareto_audit.mjs'],
-  ['gpu_plasticity_audit WebGPU弹塑性大变形（门27）', '弹塑性审计', 'gpu_plasticity_audit.mjs'],
+  ['gpu_plasticity_audit WebGPU弹塑性大变形（门27，57断言）', '弹塑性审计', 'gpu_plasticity_audit.mjs'],
   ['digital_twin_compression_audit 数字孪生压溃失效（门28）', '数字孪生审计', 'digital_twin_compression_audit.mjs'],
   ['wasm_navier_stokes_audit Navier-Stokes微流体（门29）', '微流体审计', 'wasm_navier_stokes_audit.mjs'],
   ['lpbf_thermo_mechanical_audit LPBF热-力耦合（门30）', 'LPBF审计', 'lpbf_thermo_mechanical_audit.mjs'],
-  ['nl_agent_audit 自然语言CAD代理（门31）', 'NL代理审计', 'nl_agent_audit.mjs'],
+  ['nl_agent_audit 自然语言CAD代理（门31，45断言）', 'NL代理审计', 'nl_agent_audit.mjs'],
   ['neural_implicit_audit 隐式神经场SIREN（门32）', '神经场审计', 'neural_implicit_audit.mjs'],
   ['yield_surface_audit 多轴屈服包络面（门33）', '屈服面审计', 'yield_surface_audit.mjs'],
   ['phononic_bandgap_audit 声子能带与禁带（门34）', '声子能带审计', 'phononic_bandgap_audit.mjs'],
   ['tissue_growth_audit 组织长入反应扩散（门35）', '组织长入审计', 'tissue_growth_audit.mjs'],
   ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
-  ['conformal_fill_audit C5 保形填充（门44，28断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
-  ['experimental_fit_audit ISO 13314 标定与反演（门43，18断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
+  ['conformal_fill_audit C5 保形填充（门44，30断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
+  ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['run_all UI 回归（10 套件——+slicepv/radialgrad/region/card_smoke 冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
-  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义）', 'CLI 自检', '../agent/selftest.mjs'],
-  ['schema_check 契约与可用域（98 断言，2026-09-13 +README 防漂移守卫）', 'Schema 契约', '../agent/schema_check.mjs'],
+  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，49断言）', 'CLI 自检', '../agent/selftest.mjs'],
+  ['schema_check 契约与可用域（106 断言实测/98 基线，2026-09-13 +README 防漂移守卫）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 钳制/路径狱/畸形拒绝）离线自检，无外部依赖
   ['llm_provider_selftest M3 拦截器自检（33 断言，离线）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
 ];

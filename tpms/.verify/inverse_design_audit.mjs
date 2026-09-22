@@ -122,8 +122,22 @@ console.log('\n[E] LM 精化不劣性');
   check(`J_LM ${jLm.toExponential(3)} ≤ J_NM ${jNm.toExponential(3)} + 1e-12`, jLm <= jNm + 1e-12);
 }
 
+// ── F. UI 应用口径哨兵（2026-09-22 定案）──
+console.log('\n[F] UI 应用钳制口径（求解宽域 [0.02,0.98] → 回 UI [60,90]）');
+{
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const path = await import('node:path');
+  const mainSrc = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../tpms-platform/src/main.ts'), 'utf8');
+  check('btn-inv-apply 存在', mainSrc.includes("btn-inv-apply"));
+  check('回 UI 钳制 [60,90] 在案', /Math\.max\(\s*60\s*,\s*Math\.min\(\s*90\s*,\s*rawP\s*\)/.test(mainSrc));
+  check('钳制披露 toast 在案', mainSrc.includes('超出 UI 域 [60,90]'));
+  const invSrc = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../tpms-platform/src/physics/inverse-design.ts'), 'utf8');
+  check('求解器宽域 clampP [0.02,0.98] 未收窄', invSrc.includes('Math.min(0.98, Math.max(0.02, p))'));
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 23) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 23（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 27) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 27（含 F 段 UI 钳制哨兵）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

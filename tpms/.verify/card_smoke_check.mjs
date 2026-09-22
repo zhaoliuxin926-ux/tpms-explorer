@@ -11,6 +11,7 @@
  * C 组织长入（28 天读数链）
  * D LPBF（熔池/残余应力读数）
  * E 屈服面（安全系数+包络半径带）
+ * N yield-viewer 静态哨兵（create/dispose 幂等 + RAF/renderer 释放）
  * F 逆向 solve+apply（三族解+标题/徽标同步——updateBadges 修复哨兵）
  * G 压溃 wiring（σy/E=0.0080 单位哨兵+无 'undefined'+无孤岛求解失败+指引文案）
  * H 参数扫描（9 帧完成+孔隙率还原）
@@ -241,6 +242,17 @@ try {
       : (/不可用|回退/.test(gpu) ? ok('M GPU 不可用环境跳过（' + gpu.slice(0, 20) + '）') : bad('M GPU 状态行', gpu.slice(0, 60)));
   }
 
+  // N yield-viewer 静态哨兵（模块 0 运行时单测缺口；dispose/RAF 释放源断言，2026-09-22 P1-12）
+  {
+    const yvSrc = readFileSync(path.join(PLATFORM_DIR, 'tpms/tpms-platform/src/viewers/yield-viewer.ts'), 'utf8');
+    /export function createYieldViewer\(/.test(yvSrc) && /if \(disposed\) return;/.test(yvSrc) && /get disposed\(\)/.test(yvSrc)
+      ? ok('N yield-viewer create/dispose 幂等静态哨兵')
+      : bad('N yield-viewer 幂等', 'createYieldViewer/disposed 契约缺失');
+    /cancelAnimationFrame\(rafId\)/.test(yvSrc) && /renderer\.dispose\(\)/.test(yvSrc)
+      ? ok('N yield-viewer dispose 释放 RAF+renderer')
+      : bad('N yield-viewer 释放', '缺 cancelAnimationFrame 或 renderer.dispose');
+  }
+
   // Z 全程零 pageerror / console.error
   errors.length === 0 ? ok('Z 全程 0 pageerror / 0 console.error') : bad('Z 零错误', errors.slice(0, 3).join(' | ').slice(0, 150));
 } finally {
@@ -249,4 +261,5 @@ try {
   try { server.kill(); } catch {}
 }
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
+if (pass < 16) { console.error(`GUARD FAIL: ${pass} < 16（14 + yield-viewer 2，2026-09-22 P1-12）`); process.exit(1); }
 process.exit(fail > 0 ? 1 : 0);

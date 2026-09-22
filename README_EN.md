@@ -22,7 +22,7 @@ Personal, independently maintained open-source project.
 
 | Teaching: concept videos | Engineering: radial-grad M(r) card | Agent loop: NL → watertight delivery |
 |---|---|---|
-| ![Teaching](tpms/docs/screenshots/teaching-video.png) | ![Engineering](tpms/docs/screenshots/engineering-rg.png) | ![Agent terminal](tpms/docs/screenshots/agent-terminal.png) |
+| ![Teaching](docs/screenshots/teaching-video.png) | ![Engineering](docs/screenshots/engineering-rg.png) | ![Agent terminal](docs/screenshots/agent-terminal.png) |
 
 Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) | [engineering](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
@@ -47,7 +47,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 Reproduce: `TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider openai --model glm-5.3-flash "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
 
-📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](tpms/docs/blog/2026-09-16-44-gates.md) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](tpms/docs/blog/2026-09-17-agent-architecture.md) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
+📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](docs/blog/2026-09-16-44-gates.md) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](docs/blog/2026-09-17-agent-architecture.md) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
 
 ## Highlights
 

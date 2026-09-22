@@ -4,13 +4,15 @@
 // 用法: node tpms/agent/benchmarks.mjs [--md 仓库根/BENCHMARKS.md] [--json 路径] [--quick(R48-only)]
 // 诚实口径：拒产/超时如实记录（fail-closed 是平台行为的一部分）；fcks 可产域=R120 中段孔隙率（p0.5-0.7 实测可产）。
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, 'tpms.mjs');
-const OUT = 'C:/Users/qi/AppData/Local/Temp/tpms-bench/_bench.stl';
+const OUT = join(tmpdir(), 'tpms-bench', '_bench.stl');
+mkdirSync(join(tmpdir(), 'tpms-bench'), { recursive: true });
 const args = process.argv.slice(2);
 const mdPath = args.includes('--md') ? args[args.indexOf('--md') + 1] : null;
 const jsonPath = args.includes('--json') ? args[args.indexOf('--json') + 1] : join(HERE, 'benchmarks-latest.json');

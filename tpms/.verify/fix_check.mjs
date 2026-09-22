@@ -195,11 +195,34 @@ const toastText = await page.evaluate(() => document.body.innerText.match(/1-8 �
 toastText.includes('1-8 曲面') && toastText.includes('9 材料') && toastText.includes('R 旋转') && toastText.includes('V 复位视角')
   ? ok('B4 帮助文案与实际一致') : bad('B4 帮助文案', toastText);
 
+// ── B5 measure 工具接线（bbox/caliper 开关 + slice-svg 空截面 alert 兜底，2026-09-22 P1-12）──
+await page.evaluate(() => document.body.focus());
+await domClick('#btn-bbox');
+let bbOn = await page.evaluate(() => document.getElementById('btn-bbox')?.classList.contains('on'));
+bbOn ? ok('B5 bbox 标注开') : bad('B5 bbox 开', 'class 无 on');
+await domClick('#btn-bbox');
+let bbOff = await page.evaluate(() => !document.getElementById('btn-bbox')?.classList.contains('on'));
+bbOff ? ok('B5 bbox 标注关') : bad('B5 bbox 关', 'class 仍 on');
+await domClick('#btn-caliper');
+let cpOn = await page.evaluate(() => document.getElementById('btn-caliper')?.classList.contains('on'));
+cpOn ? ok('B5 caliper 开') : bad('B5 caliper 开', 'class 无 on');
+await domClick('#btn-caliper');
+let cpOff = await page.evaluate(() => !document.getElementById('btn-caliper')?.classList.contains('on'));
+cpOff ? ok('B5 caliper 关') : bad('B5 caliper 关', 'class 仍 on');
+{
+  let dialogMsg = '';
+  page.once('dialog', (d) => { dialogMsg = d.message(); d.accept().catch(() => {}); });
+  await domClick('#btn-slice-svg');
+  await page.waitForTimeout(500);
+  // 有交线则静默下载（无 dialog），空截面则 alert——两种合法路径都不该 pageerror（末尾统一断言）
+  ok('B5 slice-svg 点击路径执行' + (dialogMsg ? '（空截面 alert）' : '（导出或无交线静默）'));
+}
+
 // ── 汇总 ──
 if (errors.length) { bad('运行时错误', errors.slice(0, 5).join(' | ')); }
 else ok('全程 0 pageerror / 0 console.error');
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-  if (pass < 23) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 23（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 28) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 28（23 + measure 5，2026-09-22 P1-12）'); process.exit(1); }
 await browser.close();
 process.exit(fail > 0 ? 1 : 0);

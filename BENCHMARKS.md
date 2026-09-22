@@ -72,8 +72,12 @@
 | 能力 | 本项目 | RegionTPMS | MiniSurf | microgen |
 |---|---|---|---|---|
 | 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |
-| 曲面族 | 20 | 4 | 19 | 8+ |
+| 曲面族 | 24 | 4 | 19 | 8+ |
 | 验证门禁 | 44 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |
+| 孔隙率求解 | exact 解析求根+网格实测校正（R96 0.26pp） | 解析 NIntegrate | level-set 近似 | 数值 |
+| 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |
+| 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |
+| 仿真交付 | STL/INP/OBJ/GLB/3MF/VTI/G-code | STL | STL/INP | STL/mesh |
 
 ## 与文献实验数据的对照（诚实口径）
 
@@ -90,11 +94,6 @@
 ρ̄=0.70 → E\*=20.48 GPa / σ\*=154.6 MPa；ρ̄=0.50 → E\*=10.45 GPa / σ\*=93.3 MPa；ρ̄=0.30 → E\*=3.76 GPa / σ\*=43.4 MPa。
 
 文献锚：Gibson & Ashby《Cellular Solids》（手稿 bibitem `gibson1997cellular`）；Maskery et al. 2018, *Polymer*（[ScienceDirect PII S0032386117311175](https://www.sciencedirect.com/science/article/pii/S0032386117311175)，手稿引用 Abueidda 2017 / Maskery 2018 同源标度数据）。打印件绝对值会随工艺缺陷（粉末边界/粗糙度）低于解析预测——上机试样的 Gibson-Ashby 标定比回填见 `PHYSICAL_TESTING_PROTOCOL.md §八`。
-
-| 孔隙率求解 | exact 解析求根+网格实测校正（R96 0.26pp） | 解析 NIntegrate | level-set 近似 | 数值 |
-| 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |
-| 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |
-| 仿真交付 | STL/INP/OBJ/GLB/3MF/VTI/G-code | STL | STL/INP | STL/mesh |
 
 ## 5. 诚实边界
 

@@ -1,7 +1,7 @@
 /**
  * industrial_export_audit.mjs —— 工业交换格式专项审计（第八道门）
  *
- * 断言（GLB + 3MF 双格式）：
+ * 断言（GLB + 3MF + VTK/VTI 四格式）：
  *   GLB（二进制 glTF 2.0）
  *     · Magic 0x46546C67 ('glTF')、version=2、总长守恒
  *     · JSON chunk 可解析：POSITION/NORMAL/COLOR_0 accessor 齐备
@@ -30,6 +30,7 @@ const BUNDLE = join(tmpdir(), 'tpms_industrial_bundle.mjs');
     'src/geometry/buffer-pool.ts:globalBufferPool',
     'src/export/glb-exporter.ts:buildGLB',
     'src/export/3mf-exporter.ts:build3MF',
+    'src/export/vtk-exporter.ts:buildVTK,buildVTI',
     'src/core/units.ts:wcToMmFactor',
   ];
   writeFileSync(entry, mods.map((m) => {
@@ -40,7 +41,7 @@ const BUNDLE = join(tmpdir(), 'tpms_industrial_bundle.mjs');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { buildSurface, globalBufferPool, buildGLB, build3MF, wcToMmFactor } =
+const { buildSurface, globalBufferPool, buildGLB, build3MF, buildVTK, buildVTI, wcToMmFactor } =
   await import(pathToFileURL(BUNDLE));
 
 let pass = 0, fail = 0;
@@ -155,6 +156,49 @@ for (const [type, ep] of [['gyroid', 0], ['gyroid', 1.2]]) {
   }
 }
 
+// ── VTK PolyData + VTI ImageData（2026-09-22 P1-12 补覆盖，buildVTK/buildVTI 纯函数）──
+{
+  const res = build('gyroid', 0, false);
+  const mm = wcToMmFactor(3);
+  const vtk = buildVTK(res.positions, res.indices, mm);
+  vtk.startsWith('# vtk DataFile Version 3.0\n') ? ok('VTK 文件头 magic') : bad('VTK 文件头', vtk.slice(0, 40));
+  /ASCII\nDATASET POLYDATA\n/.test(vtk) ? ok('VTK ASCII POLYDATA') : bad('VTK dataset 声明');
+  const ptsM = vtk.match(/POINTS (\d+) float\n/);
+  const polyM = vtk.match(/POLYGONS (\d+) (\d+)\n/);
+  ptsM && Number(ptsM[1]) === res.vertCount ? ok('VTK POINTS 顶点守恒', `${ptsM[1]}`) : bad('VTK POINTS', ptsM ? ptsM[1] : '缺失');
+  polyM && Number(polyM[1]) === res.triCount && Number(polyM[2]) === res.triCount * 4
+    ? ok('VTK POLYGONS 面数守恒', `${polyM[1]}×4`)
+    : bad('VTK POLYGONS', polyM ? polyM.slice(1).join('/') : '缺失');
+  {
+    const first = vtk.split('POINTS')[1].split('\n')[1].trim().split(/\s+/).map(Number);
+    const expect = [res.positions[0] * mm, res.positions[1] * mm, res.positions[2] * mm];
+    first.every((v, i) => Math.abs(v - expect[i]) < 1e-5)
+      ? ok('VTK scale=mm 生效（首点）', first.map((v) => v.toFixed(4)).join(','))
+      : bad('VTK scale', `${first} vs ${expect}`);
+  }
+
+  const field = new Float32Array([0, 0.1, -0.2, 0.3, 0.4, -0.5, 0.6, 0.7]);
+  const vti = buildVTI(field, [2, 2, 2], { cellSizeMm: 3, isoUsed: -0.5, type: 'gyroid', structureMode: 'solid_network' });
+  /<VTKFile type="ImageData"/.test(vti) ? ok('VTI XML ImageData 头') : bad('VTI 头', vti.slice(0, 60));
+  /Origin="-1\.500000 -1\.500000 -1\.500000" Spacing="3\.000000 3\.000000 3\.000000"/.test(vti)
+    ? ok('VTI Origin/Spacing 按 cellSize mm')
+    : bad('VTI Origin/Spacing', (vti.match(/Origin="[^"]+" Spacing="[^"]+"/) || [''])[0]);
+  /WholeExtent="0 1 0 1 0 1"/.test(vti) && /<Piece Extent="0 1 0 1 0 1">/.test(vti)
+    ? ok('VTI WholeExtent/Piece 与 dimensions 一致')
+    : bad('VTI extent');
+  /Name="isoUsed"[^>]*>-0\.5</.test(vti) && /Name="cellSizeMm"[^>]*>3</.test(vti)
+    ? ok('VTI FieldData isoUsed/cellSizeMm')
+    : bad('VTI FieldData', (vti.match(/<FieldData>[\s\S]*?<\/FieldData>/) || [''])[0].slice(0, 80));
+  /solid_network 直接 contour at isoUsed/.test(vti) ? ok('VTI solid_network re-contour 注释') : bad('VTI solid 注释');
+  const vtiShell = buildVTI(field, [2, 2, 2], { cellSizeMm: 3, isoUsed: 0.5, type: 'gyroid', structureMode: 'shell' });
+  /shell\/gradient_shell 需先变换 F=\(V\)\^2-\(t\/2\)\^2 再 contour 0/.test(vtiShell)
+    ? ok('VTI shell re-contour 注释')
+    : bad('VTI shell 注释');
+  /0\.0000 0\.1000 -0\.2000 0\.3000 0\.4000 -0\.5000/.test(vti)
+    ? ok('VTI 体素场 ascii 行格式（toFixed 4 + 6/行）')
+    : bad('VTI 场数据格式', (vti.match(/<DataArray[^>]*>[\s\S]{0,80}/) || [''])[0]);
+}
+
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-  if (pass < 12) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 24) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 24（GLB+3MF 12 + VTK/VTI 12，2026-09-22 P1-12 补覆盖）'); process.exit(1); }
 process.exit(fail ? 1 : 0);

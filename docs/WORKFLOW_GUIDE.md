@@ -459,7 +459,7 @@ computed via shortest fluid path on a 64³ voxelization"*；引用文献
 | `endplate_audit` | 端板专项（水密 / 端面满填充 / 体积增量 / CFD 兼容 / 幂等） | 26 断言全过；**体积增量实测 ≤1.79%**；水密 100% |
 | `micro_physics_audit` | 三向迂曲度（8 曲面贯通/带宽）+ 立方对称模量/Zener + 未贯通分支 | 17 断言全过；对称模量偏差 ≤1% |
 | `hybrid_audit` | 多相混合（水密 / 极限逼近 / py-TS 双语言残差 1000 点） | 5 断言全过；双语言残差 ≤1e-12 |
-| `industrial_export_audit` | GLB（magic/COLOR_0/守恒）+ 3MF（ZIP/XML/端板元数据） | 12 断言全过 |
+| `industrial_export_audit` | GLB（magic/COLOR_0/守恒）+ 3MF（ZIP/XML/端板元数据）+ VTK/VTI（头/守恒/scale/FieldData） | 24 断言全过 |
 | `run_all` | UI 回归（求值器安全 / 接线 / 红队复验 / 遗留修复 / tip / 单文件版） | 6 套件 108 项全过 |
 
 **对抗验证履历**（数字来源见 `agent_memory/`）：
@@ -516,7 +516,7 @@ redteam_matrix_audit（100+ 案例）：孔隙率极端 {1%, 99%} × 8 曲面 ×
 
 **v3.0 新增四门**：webgpu_parity_audit（34 断言：指令 IR 双后端完备性 + 8 内置/4 custom/2 hybrid 万点对拍 0.00e+0 + 模板逐字同步 + 端到端水密 + 无 GPU 优雅降级）；periodic_rve_audit（88 断言：16 门内拓扑最重——3×3×3 拼接内部缝合 100% 水密、PBC 面配对 100% 覆盖、v_right−v_left=(L,0,0) ≤1e-5、五重守卫抛错）；cae_mesh_audit（46 断言：INP 面闭合/Jacobian=h³/PBC 集不交 + polyMesh owner<neighbour/法线定向/patch 连续/cell-face 关联精确守恒 + ZIP CRC32 逐条目）；hierarchical_audit（18 断言：分级水密/λ=0 退化/微孔连通率 ≥95%/双重比表面积 coarea 分离/应力-相对密度 vm 五分桶单调递增）。合计 **16 门 · 658+ 断言**。
 
-**v4.0 新增四门**：inverse_design_audit（23 断言：10 组逆向犯罪测试 100% 收敛且前向误差 ≤3%、κ 下限约束语义、确定性、LM 不劣性）；poincare_metric_audit（12 断言：det(J)>0 全域 9000 采样、径向单射含延拓段、水密拓扑继承、有向边配对、py 静态同源）；cae_verification_audit（25 断言：runner 语法 ast/内容完备、脚本↔导出器节点集/patch 交叉核对、FoamFile 规范、ZIP 完整性）；impact_modal_audit（11 断言：SEA∈[5,60] J/g 物理带、ε_d 解析、正交简并对、√ρ̄ 标度）+ ct_reconstruction_audit（11 断言：Otsu 谷区、EDT 暴力逐体素一致、bias 注入恢复 ≤0.1mm）。合计 **21 门 · 780+ 断言**。
+**v4.0 新增四门**：inverse_design_audit（27 断言：10 组逆向犯罪测试 100% 收敛且前向误差 ≤3%、κ 下限约束语义、确定性、LM 不劣性、UI 应用钳制口径哨兵）；poincare_metric_audit（12 断言：det(J)>0 全域 9000 采样、径向单射含延拓段、水密拓扑继承、有向边配对、py 静态同源）；cae_verification_audit（25 断言：runner 语法 ast/内容完备、脚本↔导出器节点集/patch 交叉核对、FoamFile 规范、ZIP 完整性）；impact_modal_audit（11 断言：SEA∈[5,60] J/g 物理带、ε_d 解析、正交简并对、√ρ̄ 标度）+ ct_reconstruction_audit（11 断言：Otsu 谷区、EDT 暴力逐体素一致、bias 注入恢复 ≤0.1mm）。合计 **21 门 · 780+ 断言**。
 
 
 ## 十三、Abaqus 有限元单胞均质化与 PBC 施加教程 🆕 v3.0
@@ -811,7 +811,7 @@ MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方 MATLAB 源码展示�
 
 ---
 
-### v7.0 变更总览（36 门 · 1000+ 断言；历史口径，现 41 门）
+### v7.0 变更总览（36 门 · 1000+ 断言；历史口径，现 44 门）
 
 | 阶段 | 模块 | 门禁 | 断言 |
 |---|---|---|---|

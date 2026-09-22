@@ -411,7 +411,7 @@ console.log('\n[F] radial-grad M(r) 空间映射（论文公式移植 + surface-
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 65) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 66（F 组 radial-grad +5，2026-09-15）'); process.exit(1); }
+  if (passCount < 65) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 65（F 组 radial-grad +5，2026-09-15；实测 67@2026-09-22）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

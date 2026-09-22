@@ -3,7 +3,7 @@
  *
  * 轻量 Three.js 视口：惰性创建 WebGL 渲染器（首次点击才实例化，不占启动 WebGL 上下文），
  * 自动慢旋转 + 指针拖拽交互；包络面半透明 + 当前工作应力状态点标记。
- * dispose() 释放几何/材质/渲染器（run_all UI 回归含创建→销毁→再创建稳定性断言）。
+ * dispose() 释放几何/材质/渲染器（card_smoke 静态哨兵：创建/dispose 幂等/RAF+renderer 释放）。
  */
 
 import * as THREE from 'three';

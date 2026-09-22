@@ -180,5 +180,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 30) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 30`); process.exit(1); }
+if (pass < 33) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 33`); process.exit(1); }
 process.exit(fail ? 1 : 0);

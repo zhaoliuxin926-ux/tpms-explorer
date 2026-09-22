@@ -439,5 +439,5 @@ console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
 // 【2026-09-12 桥接轮基线更新】72→87（tpms_design_verify 五工具 + 3d 节 9 断言 + 语义覆盖映射扩容）
 // 【2026-09-13 小冲刺第二枪】守卫校准至实测基线 98（v9 加固轮 87→92 未同步旧守卫，本轮 +6 防漂移节后实跑 98）
-if (pass < 98) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 93`); process.exit(1); }
+if (pass < 98) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 98`); process.exit(1); }
 process.exit(fail ? 1 : 0);
