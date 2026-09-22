@@ -9,9 +9,9 @@
 
 ### 中文 · 一段版（简历主项目栏）
 
-**TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.08–至今）
+**TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.07–至今）
 
-用 TypeScript/three.js 从零构建三周期极小曲面（TPMS）生成式设计平台：24 族解析曲面、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件；为平台构建 LLM Agent 闭环——自然语言直达水密 STL（智谱 GLM 四档模型回归 37/37），核心是自研 tool-calling 安全层：JSON Schema 逐槽位钳制拦截器 + 106 断言契约对拍门禁 + 退出码分层契约。全仓 44 道 CI 门禁（1000+ 断言、三平台矩阵），4 轮独立红队 0 Critical 收官。
+用 TypeScript/three.js 从零构建三周期极小曲面（TPMS）生成式设计平台：24 族解析曲面、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件；为平台构建 LLM Agent 闭环——自然语言直达水密 STL（智谱 GLM 四档回归，推荐档 glm-5.3-flash 37/37），核心是自研 tool-calling 安全层：JSON Schema 逐槽位钳制拦截器 + 106 断言契约对拍门禁 + 退出码分层契约。全仓 44 道 CI 门禁（1000+ 断言、三平台矩阵），五轮真机走查+红队累计抓出 14+ 真缺陷全修、收官 0 Critical。
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
@@ -19,7 +19,7 @@
 
 ### English · one-paragraph (for English resume)
 
-**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (solo project, Aug 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 analytical families, real-time WebGL, watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into watertight STL (37/37 on a 4-model GLM regression). Core contribution: a tool-calling safety layer — per-slot JSON-Schema clamping interceptor, a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 44-gate, 1000+-assertion, 3-platform CI matrix.
+**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (solo project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 analytical families, real-time WebGL, watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into watertight STL (37/37 on GLM-5.3-flash, best of a 4-model regression). Core contribution: a tool-calling safety layer — per-slot JSON-Schema clamping interceptor, a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 44-gate, 1000+-assertion, 3-platform CI matrix.
 
 ---
 
@@ -54,7 +54,7 @@
 
 ### Q6 "AI 怎么用在工作流里？"（诚实版）
 
-AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能宣称必须指认一条跑过的命令**（曾抓出 CLI 假实装——补丁静默失败+门禁不覆盖该 flag 路径）；**性能/架构属性宣称须 grep 调用点核实**（"Worker 异步执行"实为主线程同步）。AI 也当红队——四轮独立红队 5C+20M+0C 收官，其中"空输出恒真断言"（vertCount=0 三断言零迭代全绿）就是变异测试实证抓出的。
+AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能宣称必须指认一条跑过的命令**（曾抓出 CLI 假实装——补丁静默失败+门禁不覆盖该 flag 路径）；**性能/架构属性宣称须 grep 调用点核实**（"Worker 异步执行"实为主线程同步）。AI 也当红队——项目累计五轮真机走查+红队审查（含 v2 轮 4 路红队抓出 5C+20M 全修），抓出 14+ 真缺陷全部修复、收官 0 Critical；其中"空输出恒真断言"（vertCount=0 三断言零迭代全绿）就是变异测试实证抓出的。
 
 ### Q7 领域题备胎（材料背景加分项）
 
@@ -68,7 +68,7 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ### 2 分钟版（开场自我介绍后）
 
-"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族解析曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，44 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言一句话直达水密 STL，四档真实模型回归 37/37。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位钳制拦截器和 106 断言契约对拍门禁，独立红队打了两轮，抓出六个真实漏洞全部修复，零 Critical 收官。整个过程写成两篇技术博客，每条宣称都带复现命令。"
+"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族解析曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，44 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言一句话直达水密 STL，四档真实模型回归推荐档 glm-5.3-flash 37/37。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位钳制拦截器和 106 断言契约对拍门禁，Agent 面独立红队打了两轮、抓出六个真实漏洞全部修复；项目整体五轮走查+红队累计 14+ 真缺陷全修、收官 0 Critical。整个过程写成两篇技术博客，每条宣称都带复现命令。"
 
 ### 5 分钟版追加（按面试官兴趣展开）
 
