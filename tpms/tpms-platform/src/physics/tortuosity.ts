@@ -121,7 +121,6 @@ function shortestPathAlongAxis(
 export function analyzeTortuosity3D(
   params: SectionAnalysisParams,
   sampleN = 64,
-  debug = false,
 ): TortuosityResult {
   const coordOf = (i: number) => -1 + (2 * i) / (sampleN - 1);
   const fluid = new Uint8Array(sampleN ** 3);
@@ -141,14 +140,6 @@ export function analyzeTortuosity3D(
         if (isFluid) fluidCount++;
       }
     }
-  }
-  if (debug) {
-    let z0 = 0, zLast = 0;
-    for (let a = 0; a < sampleN; a++) for (let b = 0; b < sampleN; b++) {
-      z0 += fluid[a + b * sampleN];
-      zLast += fluid[a + b * sampleN + sampleN * sampleN * (sampleN - 1)];
-    }
-    console.log(`[tortuosity debug] iz=0 fluid=${z0}/${sampleN * sampleN} | iz=${sampleN - 1} fluid=${zLast}/${sampleN * sampleN}`);
   }
   const fluidFraction = fluidCount / fluid.length;
 

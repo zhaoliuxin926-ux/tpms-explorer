@@ -244,5 +244,5 @@ function toCsvPairs(pairs, sep = ',') {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 18) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 18（恒真/集体跳过防护）`); process.exit(1); }
+if (pass < 19) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 19（恒真/集体跳过防护）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

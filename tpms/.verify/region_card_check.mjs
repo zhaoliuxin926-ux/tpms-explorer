@@ -94,5 +94,5 @@ try {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 5) { console.error(`GUARD FAIL: ${pass} < 5`); process.exit(1); }
+if (pass < 6) { console.error(`GUARD FAIL: ${pass} < 6`); process.exit(1); }
 process.exit(fail ? 1 : 0);

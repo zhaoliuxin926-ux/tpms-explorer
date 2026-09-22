@@ -66,7 +66,7 @@
 └── tpms/                      ← 工程化与开发辅助（不参与 Pages）
     ├── README.md              ← 你正在看的项目中枢
     ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185）
-    │   └── 75 个源文件 · Web Worker 重建 · 10+ 种导出格式
+    │   └── 86 个源文件 · Web Worker 重建 · 10+ 种导出格式
     ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
     ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
     ├── .verify/               ← 回归验证脚本（已入库；run_all.mjs 一键全量 + parity_math.mjs 数学一致性）
@@ -178,7 +178,7 @@ node parity_math.mjs                     # 数学/导出一致性（纯 Node，�
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 串联 39 道正式门禁（`run_all` UI 聚合为其中一门）；另有 `ui_jump_check` 顶层快检与 agent selftest/schema_check/llm_provider_selftest 三项 CLI 门，最终调度汇总显示 44/44（2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
+> CI 数量口径：`run_ci_suite.mjs` 调度 **44/44** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门（2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 
 ### 工程版部署到 GitHub Pages
 ```bash
@@ -191,4 +191,4 @@ cd tpms/tpms-platform && rm -rf dist && npm run build
 ⚠️ 必须是传统 `<script>` 加载（不能用 ESM/importmap）：file:// 协议下 Chrome CORS 完全阻断本地 ESM（origin=null）。
 
 ### 数学一致性守护
-`.verify/parity_math.mjs` 断言：8 曲面公式三处实现互证（tpms-functions / surface-nets / app.html）、iso 指纹、法线方向、网格拓扑、STL 字节包围盒、导出脚本与平台语义对齐。**改公式或导出逻辑前先跑它。**
+`.verify/parity_math.mjs` 断言：8 曲面公式三处实现互证（tpms-functions / surface-nets / app.html）、iso 指纹、法线方向、网格拓扑、STL 字节包围盒、导出脚本与平台语义对齐、region-grad 数学锚、measure 三件套 mm 换算静态。**改公式或导出逻辑前先跑它。**

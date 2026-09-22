@@ -4,6 +4,11 @@ tpms/agent_memory/
 tpms/.zcode/
 tpms/.diag/
 .workbuddy/
+.mimocode/
+
+# 控制台输出误存
+/sc_c.txt
+/sc_*.txt
 
 # 依赖（所有项目的 node_modules）
 **/node_modules/

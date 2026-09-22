@@ -3,13 +3,28 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'tpms/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'tpms/**'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
+
+# 同 ref 新提交直接取消旧 run，省 runner 配额
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   test:
     name: ${{ matrix.os }} · 44 gates
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +46,21 @@ jobs:
         working-directory: tpms/tpms-platform
         run: npm ci
 
+      # playwright 浏览器缓存（~ 在 cache action 内可靠展开；Windows 的 %LocalAppData% 不做变量展开，故分两步）
+      - name: Cache playwright browsers (linux/mac)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.61.1-${{ runner.os }}
+
+      - name: Cache playwright browsers (windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/ms-playwright
+          key: playwright-1.61.1-${{ runner.os }}
+
       # UI 门禁依赖 playwright（本地装在 tpms/.verify/node_modules，gitignored 不随仓库走）
       # --no-save + --no-package-lock：不动 package-lock（防 @emnapi/* optional 条目被改写，历史教训）
       - name: Install playwright (UI gates)
@@ -40,6 +70,7 @@ jobs:
       # hybrid_audit / custom_equation_audit 的代码生成对拍脚本 import numpy
       # 必须用 python3 -m pip：与门禁非 win 平台 spawn 的 python3 同解释器
       #（--break-system-packages 兜底 ubuntu-24.04 的 PEP 668 外部托管限制）
+      # 注：numpy 走系统 python3 + pip，非 setup-python，暂不加 pip 缓存（改动收益低、平台差异风险高）
       - name: Install numpy (codegen gates)
         run: python3 -m pip install numpy || python3 -m pip install --break-system-packages numpy
 
@@ -47,9 +78,10 @@ jobs:
         working-directory: tpms/tpms-platform
         run: npx tsc --noEmit
 
+      # type check 已由前步承担，这里只跑 vite 构建（package.json 的 build 脚本保持 tsc && vite build 不动）
       - name: Build
         working-directory: tpms/tpms-platform
-        run: npm run build
+        run: npx vite build
 
       - name: Deploy docs/platform (CI-local copy)
         run: |
@@ -76,7 +108,6 @@ jobs:
         with:
           name: audit-${{ matrix.os }}
           path: |
-            tpms/agent_memory/progress.md
             tpms/tpms-platform/ci_gates_${{ matrix.os }}.log
           if-no-files-found: ignore
           retention-days: 7

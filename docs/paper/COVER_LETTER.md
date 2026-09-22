@@ -34,8 +34,8 @@ separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architect
    address adjacent stages of the same workflow and share the 1-period-equals-1-mm convention for
    interoperability.
 2. **Verification culture as the core differentiator.** Every headline claim in the manuscript is
-   re-executable: a 42-item CI suite (37 formal behavior audit gates + two UI-regression entries +
-   three agent-layer self-checks, >1,000 assertions
+   re-executable: a 44-item CI suite (39 formal behavior audit gates + one UI navigation quick
+   check + one UI-regression aggregation suite + three agent-layer self-checks, >1,000 assertions
    under strict per-line accounting, each gate carrying a minimum-assertion guard) runs on a
    three-platform GitHub Actions matrix; a clean clone reproduces all claims via
    `npm install && npm run test:all`.

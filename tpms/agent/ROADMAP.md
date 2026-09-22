@@ -19,7 +19,7 @@
 - 边界：misorientedEdges（定向错）为 mesh_audit 容差项非硬门，CLI 内建自检未复刻该指标（与 mesh_audit ok 判定的三硬指标口径一致）
 
 ### M2 工具注册层 — ✅ 已完成（2026-09-05；本节 2026-09-12 状态修正，原"未开始"为过时口径）
-- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario / tpms_design_verify 五工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐；第五工具为 2026-09-12 M3→M4 桥接增补）+ `schema_check.mjs`（现 87 断言）
+- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario / tpms_design_verify 五工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐；第五工具为 2026-09-12 M3→M4 桥接增补）+ `schema_check.mjs`（现 106 断言@2026-09-22 实测；GUARD 基线 98）
 - 验收：nl-agent 参数类意图 100% 覆盖；每个数值参数都有硬边界；schema_check+selftest 自 2026-09-10 起转正进 run_ci_suite 调度（39→41 门）。过程与口径详见下方 B-t2
 
 ### M3 LLM 接入 — ✅ 全线达成（2026-09-12 真实模型回归 34/34）
@@ -310,7 +310,7 @@ GitHub Actions 三平台矩阵自门禁 rolldown 化以来从未绿过（上次 
 - [已修·MINOR] `'k in props'` 原型链键名绕过未知属性拒绝 → `Object.hasOwn` 全量替换
 - [已修·MINOR] mock provider 不带 `--dry-run` 可真实落盘 → 默认拒绝 exit 2
 - [已修·MINOR] 数值/布尔强制转换怪象（"75"→75、[5]→5、true→1）→ 严格 typeof 校验
-- [登记·待用户决策] llm_provider_selftest 33/33（守卫 30）尚未注册进 run_ci_suite——注册改变 41 门矩阵计数，按本文件约定留单独决策
+- [已注册·2026-09-12] llm_provider_selftest 33/33 已纳入 run_ci_suite（run_ci_suite.mjs:145，守卫 33@2026-09-22 对齐实测）——历史「待决策」条目结案
 - 攻击不可行清单（审查深度证据）：spawnSync 数组参数无 shell 注入、原型污染写入、越界数值/未知字段到 CLI、`out:"--resolution=1"` flag 混淆、Ollama 非 200/非 JSON/空 tool_calls、深嵌套 JSON——全部被既有层拦截
 
 ### B 路（fcky/cdd 四方同源——公式层全绿）

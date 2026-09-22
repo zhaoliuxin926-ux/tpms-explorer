@@ -45,7 +45,7 @@ import { computeCrush, computeModal } from './physics/impact-energy';
 import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite, directSlice } from './export';
-import { downloadBlob } from './export/download';
+import { downloadBlob, downloadText } from './export/download';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
@@ -3109,10 +3109,13 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
   document.getElementById('btn-inv-apply')?.addEventListener('click', () => {
     if (!inverseReport) { flashToast('请先执行反演寻优'); return; }
     const best = inverseReport.solutions[0];
+    // 口径定案（2026-09-22）：求解器保持 [0.02,0.98] 宽域，回 UI 与滑块同域 [60,90] 钳制（NL/红队 D 同策略）
+    const rawP = Math.round(best.params.porosity * 100);
+    const porosity = Math.max(60, Math.min(90, rawP));
     pushHistory();
     setState({
       type: best.type,
-      porosity: Math.round(best.params.porosity * 100),
+      porosity,
       cellSize: Math.max(1, Math.min(5, Math.round(best.params.cellSize))),
     });
     // 与 NL/预设等编程式应用路径统一：setState→syncUI→updateBadges→rebuild→HD
@@ -3122,7 +3125,8 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);
     scheduleHdUpgrade();
-    flashToast(`已应用最优解：${best.type}（P=${(best.params.porosity * 100).toFixed(0)}%）`);
+    const clampNote = porosity !== rawP ? `；孔隙率 ${rawP}% 超出 UI 域 [60,90]，已钳制为 ${porosity}%` : '';
+    flashToast(`已应用最优解：${best.type}（P=${porosity}%）${clampNote}`);
   });
 
   // 【v4.0 阶段 V】CT 重构与制造偏差
@@ -4445,16 +4449,6 @@ async function handleExport(fmt: string | null): Promise<void> {
   } catch (err) {
     flashToast('导出失败：' + (err instanceof Error ? err.message : String(err)));
   }
-}
-
-/** 通用文本文件下载 */
-function downloadText(text: string, filename: string, mime: string): void {
-  const blob = new Blob([text], { type: mime });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 /**

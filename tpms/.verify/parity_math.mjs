@@ -41,6 +41,7 @@ const BUNDLE = join(tmpdir(), 'tpms_parity_bundle.mjs');
     'src/export/script-exporter.ts:exportPythonScript',
     'src/export/stl-exporter.ts:buildBinarySTL',
     'src/physics/tortuosity.ts:analyzeTortuosity3D',
+    'src/core/region-grad.ts:regionWeight,validateRegionGrad',
   ];
   writeFileSync(entry, mods.map((m) => {
     const [f, names] = m.split(':');
@@ -763,9 +764,55 @@ const { generateBibTeX } = (await imp(BUNDLE));
     }
   }
 }
+// ── 11. region-grad 数学锚（2026-09-22 P1-12；probe_region B 组 CI 化，不新增门）──
+{
+  const { regionWeight, validateRegionGrad } = await imp(BUNDLE);
+  const w = regionWeight;
+  check('region 端点 rSplit≥1 ⟹ 恒 1', w(0.3, 1, 0.15) === 1 && w(0.9, 1, 0.15) === 1);
+  check('region 端点 rSplit≤0 ⟹ 恒 0', w(0.1, 0, 0.15) === 0 && w(0.9, 0, 0.15) === 0);
+  check('region 带起点 s=0 / 带终点 s=1', w(0.5 - 0.075, 0.55, 0.15) === 0 && w(0.55 + 0.075, 0.55, 0.15) === 1);
+  check('region 带中点 s≈0.5（smoothstep(0.5)=0.5）', Math.abs(w(0.55, 0.55, 0.15) - 0.5) < 1e-12);
+  let mono = true;
+  for (let i = 1; i <= 100; i++) if (w(-1 + 2 * i / 100, 0.55, 0.15) < w(-1 + 2 * (i - 1) / 100, 0.55, 0.15)) mono = false;
+  check('region 全域单调不减', mono);
+  check('region smoothstep 公式值（t=0.25 ⟹ 0.15625）', Math.abs(w(0.475 + 0.25 * 0.15, 0.55, 0.15) - 0.15625) < 1e-12);
+  const throws = (fn) => { try { fn(); return false; } catch { return true; } };
+  check('region validate 合法放行', !throws(() => validateRegionGrad({ innerType: 'diamond', rSplit: 0.5, blend: 0.15 })));
+  check('region validate 拒 custom', throws(() => validateRegionGrad({ innerType: 'custom', rSplit: 0.5, blend: 0.15 })));
+  check('region validate 拒 rSplit>1', throws(() => validateRegionGrad({ innerType: 'diamond', rSplit: 1.2, blend: 0.15 })));
+  check('region validate 拒 blend<0.02', throws(() => validateRegionGrad({ innerType: 'diamond', rSplit: 0.5, blend: 0.01 })));
+  check('region validate 拒 blend>0.6', throws(() => validateRegionGrad({ innerType: 'diamond', rSplit: 0.5, blend: 0.7 })));
+}
+
+// ── 12. measure 三件套 mm 换算与接线静态（2026-09-22 P1-12）──
+{
+  const caliperSrc = readFileSync(join(PLATFORM, 'src/measure/caliper.ts'), 'utf-8');
+  const bboxSrc = readFileSync(join(PLATFORM, 'src/measure/bounding-box-annotation.ts'), 'utf-8');
+  const svgSrc = readFileSync(join(PLATFORM, 'src/measure/svg-slice-exporter.ts'), 'utf-8');
+  const unitsSrc = readFileSync(join(PLATFORM, 'src/core/units.ts'), 'utf-8');
+  check('caliper: mm = (dist/DISPLAY_SCALE)·wcToMmFactor(cellSize)',
+    /const mm = \(dist \/ DISPLAY_SCALE\) \* wcToMmFactor\(this\.cellSize\)/.test(caliperSrc));
+  check('bbox: 三轴 mm = size/DISPLAY_SCALE · wcToMmFactor',
+    /const xmm = \(size\.x \/ DISPLAY_SCALE\) \* f;/.test(bboxSrc)
+    && /const ymm = \(size\.y \/ DISPLAY_SCALE\) \* f;/.test(bboxSrc)
+    && /const zmm = \(size\.z \/ DISPLAY_SCALE\) \* f;/.test(bboxSrc));
+  check('units: DISPLAY_SCALE=0.33 单一来源', /export const DISPLAY_SCALE = 0\.33;/.test(unitsSrc));
+  check('units: wcToMmFactor = cellSize/(2π)', /return cellSize \/ \(2 \* Math\.PI\);/.test(unitsSrc));
+  check('svg-slice: exportSliceSVG + 800 画布',
+    /export function exportSliceSVG\(/.test(svgSrc) && /const SVG_SIZE = 800;/.test(svgSrc));
+  check('main: btn-bbox/caliper/slice-svg 三接线 + exportSliceSVG 调用',
+    /getElementById\('btn-bbox'\)\?\.addEventListener/.test(mainSrc)
+    && /getElementById\('btn-caliper'\)\?\.addEventListener/.test(mainSrc)
+    && /getElementById\('btn-slice-svg'\)\?\.addEventListener/.test(mainSrc)
+    && /exportSliceSVG\(baseGeo, localPlane/.test(mainSrc));
+  check('measure 双源 import units（DISPLAY_SCALE + wcToMmFactor）',
+    /import \{ DISPLAY_SCALE, wcToMmFactor \} from '\.\.\/core\/units'/.test(caliperSrc)
+    && /import \{ DISPLAY_SCALE, wcToMmFactor \} from '\.\.\/core\/units'/.test(bboxSrc));
+}
+
 // ── 汇总 ────────────────────────────────────────────────────
 console.log(`\nparity_math: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 314) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 280（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky +4 / cdd +2 → 282；2026-09-15 C2 第六批 slotp/fs/qstar/ws +32 → 314）'); process.exit(1); }
+  if (pass < 332) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 332（恒真/集体跳过防护，2026-09-04 审查纳管；历史 280→282→314→332（2026-09-22 P1-12 region-grad +11 / measure +7））'); process.exit(1); }
 if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

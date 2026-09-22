@@ -1,6 +1,6 @@
 # 工作区 · 总导航
 
-> **English** · [中文](README_EN.md) — English overview: [README_EN.md](README_EN.md)
+> **中文** · [English](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
 ![release](https://img.shields.io/badge/release-v1.0.0--stable--epoch-2563eb)
 ![ci](https://img.shields.io/badge/CI-44%2F44%20gates%C2%B71000%2B%20assertions-16a34a)
@@ -32,11 +32,11 @@
 
 | 教学版：三段看懂 TPMS 概念视频 | 工程版：radial-grad M(r) 卡（MT 实时预览） | Agent 闭环：自然语言 → 水密交付 |
 |---|---|---|
-| ![教学版概念视频](tpms/docs/screenshots/teaching-video.png) | ![工程版 radial-grad](tpms/docs/screenshots/engineering-rg.png) | ![Agent 终端演示](tpms/docs/screenshots/agent-terminal.png) |
+| ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
 
-🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环 m0-m5-全通)）。
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
-技术博客：[《44 道门禁：LLM 时代的验证方法论》](tpms/docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](tpms/docs/blog/2026-09-17-agent-architecture.md) ｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md) ｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
 
 ```
@@ -54,21 +54,21 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域与文献对照见 BENCHMARKS.md | parity_math 314 断言四方同源 + mesh_audit 34 案例 |
-| 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 34 案例审计门，开放边 = 0 |
+| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域与文献对照见 BENCHMARKS.md | parity_math 332 断言四方同源 + mesh_audit 30 案例 |
+| 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 30 案例审计门，开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
-| 📐 曲率热力图 | 平均/高斯曲率（数值 Hessian）+ 场权重/高度着色 | 数值健壮性断言（混叠工况无 NaN） |
-| 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 314/314 |
-| 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明） | industrial_export_audit 12 断言 |
+| 📐 曲率热力图 | 平均/高斯曲率（数值 Hessian）+ 场权重/高度着色 | sim_export_check 曲率数值健壮性（混叠工况无 NaN） |
+| 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 332/332 |
+| 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **44 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 44/44 |
 | 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界钳制）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 37/37 推荐，四档画像在案）+ llm_provider_selftest 33 断言 |
-| 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 56 断言 |
+| 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
 | 🔥 LPBF 热-力耦合 | 高斯体热源瞬态场 + 冷却速率 G×R + 残余应力/翘曲 + 工艺窗口（v6.0） | lpbf_thermo_mechanical_audit 18 断言 |
-| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界钳制不臆造（v6.0） | nl_agent_audit 32 断言 |
+| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界钳制不臆造（v6.0） | nl_agent_audit 45 断言 |
 | 🧠 隐式神经场生成拓扑 | SIREN 四层正弦 MLP（精确 2π 周期）+ 5 专家蒸馏 + 8 维潜在空间流形插值（v7.0） | neural_implicit_audit 43 断言 |
 | ⚖️ 多轴屈服包络面 | Hill-48/Tsai-Wu/Gurson/Drucker-Prager 统一射线距离 + 3D 交互视口 + 安全系数（v7.0） | yield_surface_audit 35 断言 |
 | 📡 声子晶体能带 | Bloch-Floquet 点阵动力学 + 两轮 deflate-Lanczos + Γ 三零模态 + 路径禁带 BG%（v7.0） | phononic_bandgap_audit 18 断言 |
@@ -78,14 +78,14 @@
 | 🌀 RVE 均质化 + E(n) 曲面 | Voigt–Reuss 精确界 + 迂曲度调制方向刚度 + 方向模量球面热力图 | homogenization_audit 13 断言 |
 | 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 14 断言 |
 | 🥊 红队极端工况矩阵 | 100+ 案例：孔隙率/容器/长宽比/高频/鞍点/极端权重三硬指标 | redteam_matrix_audit 100/100 |
-| 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 18 断言（合成曲线解析真值恢复 ≤2%） |
-| ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 43 断言（万点对拍 0.00e+0） |
+| 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 19 断言（合成曲线解析真值恢复 ≤2%） |
+| ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 119 断言（万点对拍 0.00e+0） |
 | 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
-| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 66 断言 |
+| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 67 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |
 | 🌿 多级分形 TPMS | F=F_macro+λ·F_micro(Nx) 双重孔隙，coarea 比表面积分离 + 微孔连通率 100% | hierarchical_audit 18 断言 |
-| 🎯 逆向设计引擎 | 目标 E*/κ/P 反解最优构型（Nelder-Mead+LM，8 型枚举，κ 下限约束） | inverse_design_audit 23 断言（逆向犯罪 ≤3%） |
-| 🌀 庞加莱双曲映射 | 2R₀²r/(R₀²−r²) 骨套筒外密内疏 + 截断延拓保单射 | poincare_metric_audit 12 断言 |
+| 🎯 逆向设计引擎 | 目标 E*/κ/P 反解最优构型（Nelder-Mead+LM，8 型枚举，κ 下限约束） | inverse_design_audit 27 断言（逆向犯罪 ≤3% + UI 钳制口径哨兵） |
+| 🌀 庞加莱双曲映射 | 2R₀²r/(R₀²−r²) 骨套筒外密内疏 + 截断延拓保单射 | poincare_metric_audit 14 断言 |
 | 🔬 CAE 验证直通 | Abaqus/OpenFOAM 自动求解脚本 + E_FEM/σ_pl/κ/WSS 提取 + 对比矩阵 | cae_verification_audit 25 断言 |
 | 💥 冲击吸能与模态 | SEA(J/g)/密实化 εd/峰值 σ_peak + 等效梁 6 阶模态（正交简并对） | impact_modal_audit 11 断言 |
 | 🩻 Micro-CT 偏差分析 | Otsu+精确 3D EDT+SDF，制造偏差过充/欠肉热力图 | ct_reconstruction_audit 11 断言 |
@@ -104,13 +104,13 @@
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
-- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错 / 39 道正式 CI 门禁全绿；`run_ci_suite` 顶层调度 44/44（额外包含 `ui_jump_check` 与 agent selftest/schema_check/llm_provider_selftest）。
+- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 44/44（口径：39 道行为审计 + `ui_jump_check` 快检 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门）。
 
 ---
 
 ## 🗂 开发 / 记忆辅助（不参与交付）
 - `tpms/agent_memory/` —— 项目进度 / 上下文 / 缺陷 / 审计报告（gitignored）
-- `tpms/.verify/` —— 自研审计门禁（38 道）+ Playwright UI 回归脚本
+- `tpms/.verify/` —— 自研审计门禁（39 道）+ Playwright UI 回归脚本
 - `tpms/.zcode/plans` —— 计划文件
 - `.git` / `.gitignore`
 

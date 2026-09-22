@@ -307,7 +307,7 @@ console.log('\n[H] 无 GPU 环境优雅降级');
 
 // ── 汇总 ──
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 100) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 100（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 红队 +22 WGSL neg 守卫 → 实测 101）'); process.exit(1); }
+  if (passCount < 119) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 119（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 红队 +22 WGSL neg 守卫 → 101；C2 第六批四曲面 +18 → 实测 119@2026-09-22）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

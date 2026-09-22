@@ -9,13 +9,12 @@ import { downloadBlob } from './download';
  * @param normals 可选顶点法线：提供时按法线翻转三角形缠绕序（与 stl-exporter 同一约定），
  *                保证 ParaView 中面片定向一致。
  */
-export function exportVTK(
+export function buildVTK(
   positions: Float32Array,
   indices: Uint32Array,
-  filename: string,
   scale = 1,
   normals?: Float32Array
-): void {
+): string {
   const vertCount = positions.length / 3;
   const triCount = indices.length / 3;
 
@@ -58,7 +57,17 @@ export function exportVTK(
   }
   parts.push(cellsBuf.join(''));
 
-  downloadBlob(new Blob([parts.join('')], { type: 'application/vnd.vtk' }), filename);
+  return parts.join('');
+}
+
+export function exportVTK(
+  positions: Float32Array,
+  indices: Uint32Array,
+  filename: string,
+  scale = 1,
+  normals?: Float32Array
+): void {
+  downloadBlob(new Blob([buildVTK(positions, indices, scale, normals)], { type: 'application/vnd.vtk' }), filename);
 }
 
 /**
@@ -67,12 +76,11 @@ export function exportVTK(
  *             solid_network 等值面取 iso（二分结果），shell 类取 0（场已变换为 (v-b)²-(t/2)²）。
  *             Origin/Spacing 按 mm（1 period = 1 mm，模型总宽 = cellSize mm）。
  */
-export function exportVTI(
+export function buildVTI(
   field: Float32Array,
   dimensions: [number, number, number],
-  filename: string,
   meta?: { cellSizeMm: number; isoUsed: number | null; type: string; structureMode: string }
-): void {
+): string {
   const [nx, ny, nz] = dimensions;
   const numPoints = nx * ny * nz;
   const cellSize = meta?.cellSizeMm ?? 1;
@@ -126,5 +134,14 @@ export function exportVTI(
   parts.push('  </ImageData>\n');
   parts.push('</VTKFile>');
 
-  downloadBlob(new Blob([parts.join('')], { type: 'application/xml' }), filename);
+  return parts.join('');
+}
+
+export function exportVTI(
+  field: Float32Array,
+  dimensions: [number, number, number],
+  filename: string,
+  meta?: { cellSizeMm: number; isoUsed: number | null; type: string; structureMode: string }
+): void {
+  downloadBlob(new Blob([buildVTI(field, dimensions, meta)], { type: 'application/xml' }), filename);
 }

@@ -592,23 +592,6 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   if (meshSdf && containerInside < Math.max(64, Math.floor(N * N * N * 0.005)))
     throw new Error('容器特征小于采样格距（内部格点 ' + containerInside + '/' + (N * N * N) + '），请升分辨率或检查 STL 几何尺度（红队 A M-1）');
 
-  // 诊断日志（仅开发模式启用，Vite 生产构建会 tree-shake 掉）
-  if (import.meta.env?.DEV) {
-    let posCount = 0, negCount = 0, zeroCount = 0;
-    for (let i = 0; i < N * N * N; i++) {
-      const f = field[i];
-      if (f > 0) posCount++;
-      else if (f < 0) negCount++;
-      else zeroCount++;
-    }
-    console.log('[buildSurface diag]', {
-      type, mode, R, biasBase, tEffBase,
-      containerInside,
-      minV, maxV,
-      fieldPos: posCount, fieldNeg: negCount, fieldZero: zeroCount,
-    });
-  }
-
   // ──────────────────────────────────────────────────────────────
   // 7. Surface Nets 顶点生成
   // ──────────────────────────────────────────────────────────────
