@@ -39,13 +39,18 @@ import {
   generateBibTeX,
   generateJSONSidecar,
 } from './export';
-import { evaluateField, getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
+import { getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
 import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite, directSlice } from './export';
 import { downloadBlob, downloadText } from './export/download';
+import { buildVtiField, baseIso } from './export/vti-field';
+import { hashArray } from './utils/hash-array';
+import { geoCache, MAX_GEO_CACHE, cacheKey } from './geometry/geo-cache';
+import { initTheme } from './ui/theme';
+import { flashToast } from './ui/toast';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
 import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
 import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
@@ -113,28 +118,6 @@ let isFirstBuild = true;
 
 // 材质缓存
 const materialCache = new Map<string, MeshPhysicalMaterial>();
-
-/** Geometry 结果 LRU 缓存：参数回退时瞬间恢复 */
-interface GeoCacheEntry {
-  positions: Float32Array;
-  normals: Float32Array;
-  indices: Uint32Array;
-  vertCount: number;
-  faceCount: number;
-  /** Worker-side observables needed to restore stats on a cache hit. */
-  porosityEstimate: number;
-  meshSolidFraction: number | null;
-  isoUsed: number;
-  surfaceArea?: number;
-  envelopeVolume?: number;
-}
-const geoCache = new Map<string, GeoCacheEntry>();
-const MAX_GEO_CACHE = 12;
-
-function cacheKey(s: Readonly<AppState>, R: number): string {
-  const m = s.manifold;
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.isoGrad.enabled ? `IG${s.isoGrad.hard}/${s.isoGrad.soft}b${s.isoGrad.band}` : ''}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
-}
 
 // ── 多级分形统计（v3.0 阶段 V）：双重比表面积 + 微孔连通率 ──
 let hierStatsTimer: ReturnType<typeof setTimeout> | null = null;
@@ -305,52 +288,7 @@ void probeGpuAvailability().then((ok) => {
   setGpuStatusText(ok ? 'WebGPU 可用 · 完整重建自动启用' : 'WebGPU 不可用 · CPU 管线');
 });
 
-// ── 主题切换（明 / 暗 / 系统）─────────────────────────────
-const THEME_KEY = 'tpms-theme-platform';
-type ThemePref = 'light' | 'dark' | 'system';
-
-function applyTheme(pref: ThemePref): void {
-  const resolved: 'light' | 'dark' =
-    pref === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : pref;
-  document.documentElement.setAttribute('data-theme', resolved);
-  try { localStorage.setItem(THEME_KEY, pref); } catch { /* ignore */ }
-  document.querySelectorAll<HTMLButtonElement>('.theme-opt').forEach((btn) => {
-    const active = btn.dataset.themeSet === pref;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-}
-
-function initTheme(): void {
-  let saved: ThemePref = 'system';
-  try {
-    const v = localStorage.getItem(THEME_KEY);
-    if (v === 'light' || v === 'dark' || v === 'system') saved = v;
-  } catch { /* ignore */ }
-  applyTheme(saved);
-  document.querySelectorAll<HTMLButtonElement>('.theme-opt').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const pref = btn.dataset.themeSet as ThemePref;
-      applyTheme(pref);
-    });
-  });
-  // 用户选择“跟随系统”时，实时响应系统偏好变化
-  const mq = window.matchMedia('(prefers-color-scheme: dark)');
-  const onChange = (): void => {
-    let pref: ThemePref = 'system';
-    try {
-      const v = localStorage.getItem(THEME_KEY);
-      if (v === 'light' || v === 'dark' || v === 'system') pref = v;
-    } catch { /* ignore */ }
-    if (pref === 'system') applyTheme('system');
-  };
-  if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
-  else if (typeof (mq as unknown as { addListener?: (cb: () => void) => void }).addListener === 'function') {
-    (mq as unknown as { addListener: (cb: () => void) => void }).addListener(onChange);
-  }
-}
+// theme → ui/theme.ts
 
 // ── 初始化 ─────────────────────────────────────────────
 window.addEventListener('load', () => {
@@ -2545,15 +2483,7 @@ function runPercolation(): void {
   if (note) note.textContent = warn.length ? '⚠ ' + warn.join('；') : '截面拓扑健康：贯通通道连续，无 3D 悬空孤岛。';
 }
 
-// ── 基础等值 ─────────────────────────────────────────────
-function baseIso(s: AppState): number {
-  // 简化版：直接返回 0，让二分搜索在 Worker 中精确计算
-  let iso = 0;
-  if (s.model === 'solid') {
-    iso -= (s.thickness - 1) * 0.12;
-  }
-  return iso;
-}
+// baseIso → export/vti-field.ts
 
 // ── 清理几何 ─────────────────────────────────────────────
 function disposeGeometry(): void {
@@ -3683,25 +3613,7 @@ function checkPorosityWarning(porosity: number): void {
   }
 }
 
-/** 简洁的浮动提示 */
-let toastTimer: number | undefined;
-let toastClearTimer: number | undefined;
-function flashToast(msg: string): void {
-  let el = document.getElementById('toast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'toast';
-    el.className = 'toast';
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.classList.add('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  if (toastClearTimer) clearTimeout(toastClearTimer);
-  toastTimer = window.setTimeout(() => el!.classList.remove('show'), 1500);
-  // C1 真机体验：淡出后清空残留文本（无障碍树/DOM 不再滞留旧警告；新 toast 前 el 复用重建文本）
-  toastClearTimer = window.setTimeout(() => { if (el && !el.classList.contains('show')) el.textContent = ''; }, 1850);
-}
+// flashToast → ui/toast.ts
 
 /** 对比视图：捕获当前 3D 场景快照 */
 let compareVisible = false;
@@ -4451,36 +4363,4 @@ async function handleExport(fmt: string | null): Promise<void> {
   }
 }
 
-/**
- * 在主线程重采样 TPMS 隐函数标量场，供 VTI 体素导出使用。
- * 物理域 [-1,1]³ 映射到弧度域：m = π · cellSize · p（与 surface-nets 一致）。
- * 注：导出基础场（type A），异构混合/壳变换不写入，供 ParaView 自由 re-contour。
- */
-function buildVtiField(s: AppState): { field: Float32Array; dims: [number, number, number] } {
-  const R = l2Resolution(s.type, s.structureMode, s.gradientDir, s.cellSize);   // 倍频曲面密度同步加倍
-  const N = R + 1;
-  const field = new Float32Array(N * N * N);
-  const k = s.cellSize;
-  const w = s.weights;
-  let idx = 0;
-  for (let iz = 0; iz < N; iz++) {
-    const mz = ((iz / R) * 2 - 1) * Math.PI * k;
-    for (let iy = 0; iy < N; iy++) {
-      const my = ((iy / R) * 2 - 1) * Math.PI * k;
-      for (let ix = 0; ix < N; ix++) {
-        const mx = ((ix / R) * 2 - 1) * Math.PI * k;
-        field[idx++] = evaluateField(s.type, mx, my, mz, w, s.customFormula, { k: s.cellSize, t: s.thickness, iso: baseIso(s) });
-      }
-    }
-  }
-  return { field, dims: [N, N, N] };
-}
-
-function hashArray(arr: Float32Array): string {
-  let h = 0;
-  // 全量 hash：此前只取前 3000 分量（约前 1000 顶点），不同网格可能碰撞出相同 cite key
-  for (let i = 0; i < arr.length; i++) {
-    h = ((h * 31) ^ Math.floor(arr[i] * 1000)) >>> 0;
-  }
-  return h.toString(36) + '-' + (arr.length / 3 | 0);
-}
+// buildVtiField → export/vti-field.ts；hashArray → utils/hash-array.ts
