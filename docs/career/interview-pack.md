@@ -82,12 +82,16 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 ## 四、证据锚点速查（面试前刷新数字用）
 
 ```bash
-# 以下均在仓库根执行；schema_check 含几何探针约 5–10 min，不适合面试前临场刷新
-cd tpms/tpms-platform && npm run test:all   # 45 门本地全量（三平台矩阵在 GitHub Actions）
-node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）
+# 以下均在仓库根执行
+node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收 48 断言（跳过几何探针）
 node tpms/agent/selftest.mjs              # 49 断言
 node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
 node tpms/agent/tpms.mjs list --json      # 24 族
+node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 41+（秒级）
+
+# 完整几何对拍（含 R48–R128 探针，约 5–10 min）——展示/归档用，不必临场
+node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）
+cd tpms/tpms-platform && npm run test:all   # 45 门本地全量（三平台矩阵在 GitHub Actions）
 ```
 
 博客：《44 道门禁》`docs/blog/2026-09-16-44-gates.md` ｜ Agent 架构 `docs/blog/2026-09-17-agent-architecture.md`。
