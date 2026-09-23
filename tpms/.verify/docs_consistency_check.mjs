@@ -39,8 +39,8 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
 
   const readme = read('README.md');
   const readmeEn = read('README_EN.md');
-  /44\/44|44 道|44 gates|44-gate/i.test(readme + readmeEn)
-    ? ok('README 宣称 44 门') : bad('README 宣称 44 门');
+  /44\/44|44 道|45 gates|44-gate/i.test(readme + readmeEn)
+    ? ok('README 宣称 45 门') : bad('README 宣称 45 门');
   readme.includes('332') ? ok('README 引用 parity 332') : bad('README 引用 parity 332');
   readme.includes('inverse_design_audit 27') ? ok('README 反演 27 断言') : bad('README 反演 27 断言');
 }

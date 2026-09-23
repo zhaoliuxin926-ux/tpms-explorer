@@ -1,6 +1,6 @@
 // run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6 → 2026-09-06 并行化）
 //
-// 调度：44 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
+// 调度：45 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
 //       结果按原序汇报。并发度 CI_JOBS 可调（默认 4；18 核机器实测安全）。
 // 用法：
 //   cd tpms/tpms-platform && npm run test:all
@@ -154,6 +154,7 @@ const SCHEDULE = [
   ['conformal_fill_audit C5 保形填充（门44，30断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
   ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
+  ['docs_consistency_check 文档数字一致性（GUARD↔宣称/禁句/publish 同源/徽章↔tag，41 断言）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（10 套件——+slicepv/radialgrad/region/card_smoke 冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度

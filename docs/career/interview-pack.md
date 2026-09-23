@@ -11,15 +11,15 @@
 
 **TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.07–至今）
 
-用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 引擎就绪、UI 入口未开放）；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 单轮 37/37（n=1，复测 36/37）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言契约对拍门禁 + 退出码分层契约。全仓 44 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
+用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 引擎就绪、UI 入口未开放）；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 单轮 37/37（n=1，复测 36/37）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言契约对拍门禁 + 退出码分层契约。全仓 45 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
-为科研级几何平台自建 LLM Agent 安全层（schema 钳制拦截器/契约对拍门禁/有界修复闭环，四模型对抗零透传），并配套 44 道 CI 门禁的验证体系——理念：LLM 产出按不可信输入处理，确定性代码守住交付物。技术叙事见博客《44 道门禁》《LLM Agent 的安全架构实录》。
+为科研级几何平台自建 LLM Agent 安全层（schema 钳制拦截器/契约对拍门禁/有界修复闭环，四模型对抗零透传），并配套 45 道 CI 门禁的验证体系——理念：LLM 产出按不可信输入处理，确定性代码守住交付物。技术叙事见博客《44 道门禁》《LLM Agent 的安全架构实录》。
 
 ### English · one-paragraph (for English resume)
 
-**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 level-set families — classical closed forms + transcribed literature/dataset coefficients; real-time WebGL; watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 37 cases, 37/37 on GLM-5.3-flash in a single run n=1 / retest 36/37; end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 44-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
+**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 level-set families — classical closed forms + transcribed literature/dataset coefficients; real-time WebGL; watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 37 cases, 37/37 on GLM-5.3-flash in a single run n=1 / retest 36/37; end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 45-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
 
 ---
 
@@ -44,7 +44,7 @@
 
 ### Q4 "CI 怎么组织的？跨平台踩过什么坑？"
 
-44 道门禁三平台矩阵（Ubuntu/Windows/macOS），1000+ 断言。核心机制：行为级断言（rolldown 把真实 TS 源码打包进测试进程，禁 mock 数学）、最小断言数守卫（防"断言集体跳过仍绿灯"）、fail-closed 交付门（水密三硬指标任一非零拒产 STL）。
+45 道门禁三平台矩阵（Ubuntu/Windows/macOS），1000+ 断言。核心机制：行为级断言（rolldown 把真实 TS 源码打包进测试进程，禁 mock 数学）、最小断言数守卫（防"断言集体跳过仍绿灯"）、fail-closed 交付门（水密三硬指标任一非零拒产 STL）。
 跨平台坑实录（挑两个讲）：win32 假设六层剥离（.cmd shim/路径分隔符/chromePath/swiftshader/404 形态/python 漂移+CRLF）；"本地假绿"三形态——改 UI 不重建部署目录=CI 测旧站；分支 workflow 只在 main 触发=长活分支 21 提交零次真 CI 无人发现。
 证据：博客一 + `npm run test:all`。
 
@@ -68,7 +68,7 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ### 2 分钟版（开场自我介绍后）
 
-"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族 level-set 曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，44 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 单轮 37/37（n=1）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 106 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
+"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族 level-set 曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，45 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 单轮 37/37（n=1）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 106 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
 
 ### 5 分钟版追加（按面试官兴趣展开）
 
@@ -83,7 +83,7 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ```bash
 # 以下均在仓库根执行；schema_check 含几何探针约 5–10 min，不适合面试前临场刷新
-cd tpms/tpms-platform && npm run test:all   # 44 门本地全量（三平台矩阵在 GitHub Actions）
+cd tpms/tpms-platform && npm run test:all   # 45 门本地全量（三平台矩阵在 GitHub Actions）
 node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）
 node tpms/agent/selftest.mjs              # 49 断言
 node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
