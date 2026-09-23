@@ -92,6 +92,23 @@ console.log('\n[C] publish 粘贴版同源');
     const A = stripLinks(read(a)), B = stripLinks(read(b));
     A === B ? ok(path.basename(a) + ' 正式/粘贴内容同源') : bad(path.basename(a) + ' 正式/粘贴内容漂移', '（忽略链接形态后不等）');
   }
+  // 链接绝对化与正式版→粘贴版变换同源（与 sync-publish.mjs 对拍，防「改正式版忘粘贴版」）
+  try {
+    execSync('node tpms/agent/sync-publish.mjs --check', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
+    ok('sync-publish --check 粘贴版未漂移');
+  } catch (e) {
+    bad('sync-publish --check 失败', String(e.stdout || e.message).slice(0, 120));
+  }
+}
+
+// ── 3b. 工程版调色预设单例（防 8 连插重复块回归）──
+console.log('\n[C2] 调色预设结构');
+{
+  const html = read('tpms/tpms-platform/index.html');
+  const cssBlocks = (html.match(/:root\[data-palette="teach"\]/g) || []).length;
+  cssBlocks === 1 ? ok('teach 调色 CSS 块恰好 1 份') : bad('teach 调色 CSS 块重复/缺失', `count=${cssBlocks}`);
+  html.includes('data-palette-set="engine"') && html.includes('data-palette-set="teach"')
+    ? ok('顶栏 engine/teach 切换按钮在位') : bad('调色切换按钮缺失');
 }
 
 // ── 4. 版本徽章 ↔ 最新 tag ──

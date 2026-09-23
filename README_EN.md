@@ -87,6 +87,13 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ## Verification
 
 ```bash
+# Fast checks (seconds — pre-commit / pre-interview)
+node tpms/agent/schema_check.mjs --fast           # contract/static/reject, 48 assertions
+node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 44 assertions
+node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
+
+# Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
+node tpms/agent/schema_check.mjs                  # 106 assertions (guard baseline 98)
 cd tpms/tpms-platform && npm run test:all   # 45/45 gates, ~6–10 min
 ```
 
