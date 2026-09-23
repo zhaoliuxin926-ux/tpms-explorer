@@ -29,7 +29,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 ## AI Agent loop (M0-M5, fully wired)
 
-**Natural language → schema-clamped interceptor → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or clamped by deterministic code:
+**Natural language → schema-validating interceptor (reject on violation) → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or validated by deterministic code:
 
 ```
 "Design a 75%-porosity Gyroid bone scaffold"

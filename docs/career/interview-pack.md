@@ -1,6 +1,6 @@
 # 求职素材包：TPMS Explorer 项目（AI 应用开发岗对齐版）
 
-> 自用素材，不进站点导航。三个部分：①简历项目描述（中英，两档长度）②面试深挖问题+回答弹药（全部来自真实工程实录，附证据锚点）③口述脚本（2 分钟版/5 分钟版）。
+> 自用素材，不进站点导航。三个部分：①简历项目描述（中英，两档长度）②面试深挖问题+回答弹药（全部来自真实工程实录，附证据锚点）③口述脚本（中/英 2 分钟版 + 中文 5 分钟追加）。
 > 使用原则：**只讲能被追问三层的故事**——下面每个弹药都标了证据位置，讲之前先跑一遍命令确认数字仍是当前值。
 
 ---
@@ -15,11 +15,16 @@
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
-为科研级几何平台自建 LLM Agent 安全层（schema 钳制拦截器/契约对拍门禁/有界修复闭环，四模型对抗零透传），并配套 45 道 CI 门禁的验证体系——理念：LLM 产出按不可信输入处理，确定性代码守住交付物。技术叙事见博客《44 道门禁》《LLM Agent 的安全架构实录》。
+为科研级几何平台自建 LLM Agent 安全层（schema 逐槽位校验拦截器——越界拒绝非钳制 / 契约对拍门禁 / 有界修复闭环，对抗指令零**非法执行**，fail-closed 三形态：平台拒/模型拒/模型改发合法值），并配套 45 道 CI 门禁的验证体系——理念：LLM 产出按不可信输入处理，确定性代码守住交付物。技术叙事见博客《44 道门禁》《LLM Agent 的安全架构实录》。
 
 ### English · one-paragraph (for English resume)
 
 **TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 level-set families — classical closed forms + transcribed literature/dataset coefficients; real-time WebGL; watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 37 cases, 37/37 on GLM-5.3-flash in a single run n=1 / retest 36/37; end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 106-assertion contract-parity gate, and exit-code-tiered rejection semantics — inside a 45-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
+
+### English · two-sentence (multi-project resume)
+
+Built an LLM-agent safety layer for a research-grade geometry platform (per-slot JSON-Schema validating interceptor — reject, not clamp / contract-parity gate / bounded repair loop; adversarial prompts yield **zero illegal executions**, fail-closed in three forms: platform reject / model reject / model self-corrects to a legal call), backed by a 45-gate CI system — thesis: treat LLM output as untrusted user input and let deterministic code own the deliverable. Narrative: *44 Gates* and *Agent Safety Architecture* (tech blogs).
+
 
 ---
 
@@ -69,6 +74,10 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 ### 2 分钟版（开场自我介绍后）
 
 "我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族 level-set 曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，45 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 单轮 37/37（n=1）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 106 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
+
+### 2-minute English (after the opener)
+
+"My most important personal project is TPMS Explorer — a browser-based 3D surface design platform for bone-scaffold and additive manufacturing: 24 level-set families, real-time rendering, one-click watertight STL and Abaqus/OpenFOAM export. Two engineering tracks: first, a **verification system** — 45 CI gates, 3 platforms, 1000+ assertions, centered on behavior-level checks and a fail-closed delivery gate; second, an **LLM agent loop** — natural language into a verifiable delivery chain, dry-run slot regression 37/37 on GLM-5.3-flash (n=1). On the agent side I care most about safety: treat LLM output as untrusted input. I built a per-slot JSON-Schema validating interceptor (reject, not clamp) and a 106-assertion contract-parity gate; two agent-face red-team rounds produced six representative breaches, all fixed. Project-wide reviews are tallied per round (v2 once 5 Critical + 20 Major, all fixed); no open Critical at release. Every engineering number I cite has a reproduce command."
 
 ### 5 分钟版追加（按面试官兴趣展开）
 
