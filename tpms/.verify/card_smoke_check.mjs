@@ -17,6 +17,7 @@
  * H 参数扫描（9 帧完成+孔隙率还原）
  * I 水平集（演化读数含柔度——主线程同步较重，宽超时）
  * J 结构开关三连（应力引导/分形统计/混合选项——网格规模差分+还原）
+ * O 调色预设 engine/teach（切换+localStorage+active）
  * Z 全程 0 pageerror / 0 console.error
  *
  * 运行：node card_smoke_check.mjs（自起 4824 静态服务，服务 docs/platform 部署产物）
@@ -253,6 +254,37 @@ try {
       : bad('N yield-viewer 释放', '缺 cancelAnimationFrame 或 renderer.dispose');
   }
 
+  // O 调色预设 engine/teach（2026-09-23 顶栏一键切；localStorage 记忆）
+  {
+    const thSrc = readFileSync(path.join(PLATFORM_DIR, 'tpms/tpms-platform/src/ui/theme.ts'), 'utf8');
+    /PALETTE_KEY = 'tpms-palette-platform'/.test(thSrc) && /applyPalette/.test(thSrc) && /data-palette/.test(thSrc)
+      ? ok('O 调色 applyPalette/PALETTE_KEY 契约静态哨兵')
+      : bad('O 调色契约', 'theme.ts 缺 applyPalette/data-palette/PALETTE_KEY');
+    const pal = await page.evaluate(async () => {
+      const teach = document.querySelector('.palette-opt[data-palette-set="teach"]');
+      const engine = document.querySelector('.palette-opt[data-palette-set="engine"]');
+      if (!teach || !engine) return { err: 'buttons missing' };
+      teach.click();
+      await new Promise(r => setTimeout(r, 50));
+      const afterTeach = {
+        attr: document.documentElement.getAttribute('data-palette'),
+        stored: localStorage.getItem('tpms-palette-platform'),
+        teachActive: teach.classList.contains('active'),
+      };
+      engine.click();
+      await new Promise(r => setTimeout(r, 50));
+      const afterEngine = {
+        attr: document.documentElement.getAttribute('data-palette'),
+        stored: localStorage.getItem('tpms-palette-platform'),
+        engineActive: engine.classList.contains('active'),
+      };
+      return { afterTeach, afterEngine };
+    });
+    const okPal = pal.afterTeach?.attr === 'teach' && pal.afterTeach?.stored === 'teach' && pal.afterTeach?.teachActive
+      && pal.afterEngine?.attr === 'engine' && pal.afterEngine?.stored === 'engine' && pal.afterEngine?.engineActive;
+    okPal ? ok('O 调色 teach/engine 切换+localStorage+active')
+      : bad('O 调色切换', JSON.stringify(pal).slice(0, 120));
+  }
   // Z 全程零 pageerror / console.error
   errors.length === 0 ? ok('Z 全程 0 pageerror / 0 console.error') : bad('Z 零错误', errors.slice(0, 3).join(' | ').slice(0, 150));
 } finally {
@@ -261,5 +293,5 @@ try {
   try { server.kill(); } catch {}
 }
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 16) { console.error(`GUARD FAIL: ${pass} < 16（14 + yield-viewer 2，2026-09-22 P1-12）`); process.exit(1); }
+if (pass < 18) { console.error(`GUARD FAIL: ${pass} < 18（14 + yield-viewer 2 + 调色 2，2026-09-23）`); process.exit(1); }
 process.exit(fail > 0 ? 1 : 0);
