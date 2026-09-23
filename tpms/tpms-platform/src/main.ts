@@ -46,6 +46,7 @@ import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-
 import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
 import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite, directSlice } from './export';
 import { downloadBlob, downloadText } from './export/download';
+import { sliceMesh, compileGcode } from './export/gcode-slicer';
 import { buildVtiField, baseIso } from './export/vti-field';
 import { hashArray } from './utils/hash-array';
 import { geoCache, MAX_GEO_CACHE, cacheKey } from './geometry/geo-cache';
@@ -4194,7 +4195,7 @@ async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
-  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf';
+  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode';
   // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
   if (needGeo && !(await ensureExportGradeGeometry(s))) return;
   try {
@@ -4221,6 +4222,30 @@ async function handleExport(fmt: string | null): Promise<void> {
         export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, wcToMmFactor(getState().cellSize), {
           configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
         });
+        break;
+      }
+      case 'gcode': {
+        // 原生切片引擎直出（诚实边界：单壁轮廓 + 扫描线填充，非工业全特征切片器）
+        const gPos = baseGeo!.attributes.position.array as Float32Array;
+        const gIdx = baseGeo!.index!.array as Uint32Array;
+        const gScale = meshCont ? meshCont.scale : wcToMmFactor(s.cellSize);
+        const mm = new Float32Array(gPos.length);
+        let zMin = Infinity, zMax = -Infinity;
+        for (let i = 0; i < gPos.length; i += 3) {
+          const x = gPos[i] * gScale, y = gPos[i + 1] * gScale, z = gPos[i + 2] * gScale;
+          mm[i] = x; mm[i + 1] = y; mm[i + 2] = z;
+          if (z < zMin) zMin = z;
+          if (z > zMax) zMax = z;
+        }
+        const gOpts = {
+          layerHeightMm: 0.2, lineWidthMm: 0.4, zMinMm: zMin, zMaxMm: zMax,
+          filamentDiameterMm: 1.75, printerPreset: 'reprap' as const,
+          nozzleTempC: 210, bedTempC: 60, feedrateMmMin: 1800,
+        };
+        const sliced = sliceMesh(mm, gIdx, (gIdx.length / 3) | 0, gOpts);
+        const g = compileGcode(sliced.layers, sliced.modelVolumeMm3, gOpts);
+        downloadText(g.gcode, `${base}.gcode`, 'text/plain');
+        flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}%（单壁+扫描填充）`);
         break;
       }
       case 'cfdstl': {
