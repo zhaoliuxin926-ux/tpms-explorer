@@ -631,7 +631,7 @@ function bindExperimentalFit(): void {
       drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
     } catch (err) {
       out.style.display = 'block';
-      out.textContent = '✗ 反演失败: ' + (err instanceof Error ? err.message : String(err));
+      out.textContent = '✗ 反演失败：' + (err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -697,7 +697,7 @@ function meshSdfEnsure(R: number): Promise<void> {
     w.onerror = (e) => {
       w.terminate();
       sdfEnsureJobs.delete(n);
-      reject(new Error('SDF Worker 加载失败: ' + e.message));
+      reject(new Error('SDF Worker 加载失败：' + e.message));
     };
     w.postMessage({ ab, n, id });
   });
@@ -712,7 +712,7 @@ function meshSdfFor(R: number): Float32Array | null {
     // 缓存 miss：触发异步预热，完成后重入重建——绝不主线程同步算（冻结源）
     meshSdfEnsure(R)
       .then(() => scheduleRebuild(false))
-      .catch((e) => flashToast('✗ ' + (e instanceof Error ? e.message : String(e))));
+      .catch((e) => flashToast('失败：' + (e instanceof Error ? e.message : String(e))));
     return null;
   }
   return sdf;
@@ -761,7 +761,7 @@ function bindMeshContainer(): void {
         if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast('STL 容器与端板互斥：端板已禁用'); }
         scheduleRebuild(false);
       };
-      meshcontW.onerror = (e) => { status.textContent = '✗ Worker 失败: ' + (e.message ?? '未知'); };
+      meshcontW.onerror = (e) => { status.textContent = '✗ Worker 失败：' + (e.message ?? '未知'); };
       const abForW = ab.slice(0); // 单一副本：消息体与 transfer 列表必须同对象（曾用两次 slice 生成不同副本——transfer 失效且多拷贝）
       meshcontW.postMessage({ ab: abForW, n: R0 + 1, id: myId }, [abForW]);
     };
@@ -3947,7 +3947,7 @@ async function runSweep(): Promise<void> {
   }
 
   if (!sweepAbort && !sweepError) {
-    status.textContent = '扫描完成，正在下载...';
+    status.textContent = '扫描完成，正在下载…';
     bar.style.width = '100%';
 
     // 逐帧下载 PNG（250ms 间隔，降低浏览器连发下载拦截概率）
@@ -4028,7 +4028,7 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     // 就绪后继续同步导出链——此前该路径主线程同步算 SDF 是导出冻结源
     if (meshCont && !meshCont.sdfCache.has(hdR + 1)) {
       try { await meshSdfEnsure(hdR); } catch (e) {
-        flashToast('✗ ' + (e instanceof Error ? e.message : String(e)));
+        flashToast('失败：' + (e instanceof Error ? e.message : String(e)));
         return false;
       }
     }
