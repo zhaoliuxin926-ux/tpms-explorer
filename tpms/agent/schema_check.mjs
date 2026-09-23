@@ -22,7 +22,8 @@ const FAST = process.argv.includes('--fast');
 let pass = 0, fail = 0;
 const ok = (n) => { pass++; console.log('PASS', n); };
 const bad = (n, i = '') => { fail++; console.log('FAIL', n, i); };
-const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+// 超时 120s：防 spawnSync 无界长挂（bugs.md；残留 _schema_tmp_ / 脏环境曾卡本地）
+const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: 120_000 });
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
