@@ -32,3 +32,21 @@
 
 - 两平台文章链接回填到 `tpms/agent_memory/job_narrative.md` 第四节「投递检查清单」勾项
 - GitHub README 的博客区可追加知乎/掘金链接（可选，发回给 AI 一句话即可代改）
+
+## 附：现成文案（可直接粘贴）
+
+**知乎/掘金摘要（第一篇《44 道门禁》）**  
+> 用 TPMS Explorer 的真实工程实录，讲一套 AI 辅助项目可复用的验证方法论：行为级断言、最小断言数守卫、fail-closed 交付门、宣称绑定命令。三个真实事故（MATLAB 假通过 / 同源宣称漂移 / 门禁清单漂移）+ 红队实录 + 可迁移清单，每个关键数字附复现命令。
+
+**知乎/掘金摘要（第二篇《Agent 安全架构》）**  
+> 当 LLM 成为工具调用者，如何让它产出的每个参数可被信任？五层信任边界（M0–M5 六阶段）、schema 逐槽位校验拦截器、六个代表性打穿（全是确定性代码的缝，不是模型骗过系统）、三层验收语义拆分「模型自觉」与「护栏功劳」。
+
+**GitHub About 一句话**  
+> TPMS Explorer — 浏览器端三周期极小曲面生成式设计平台：24 族 level-set、水密 STL/Abaqus/OpenFOAM 交付、LLM Agent 安全闭环，44 道 CI 门禁三平台矩阵。
+
+**B 站正片简介（BV1hVeS6jEBM）**  
+> TPMS Explorer 操作演示（104s）：曲面轮播 / 孔隙率实时重建 / radial-grad 径向梯度 / 直接层切 / HD 水密 STL 导出。在线体验：https://zhaoliuxin926-ux.github.io/tpms-explorer/ ｜ 源码与 44 道 CI 门禁：https://github.com/zhaoliuxin926-ux/tpms-explorer
+
+**标签建议**  
+掘金：`前端` `测试` `AI编程`（第一篇）/ `AI大模型` `架构` `安全`（第二篇）  
+知乎：`编程` `软件工程` `人工智能`（第一篇）/ `大模型` `AI编程`（第二篇）
