@@ -124,6 +124,15 @@ console.log('\n[C2] 调色预设结构');
   appHtml.includes('flashToast') && appHtml.includes('.toast')
     ? ok('教学版 toast 契约在位') : bad('教学版 toast 缺失');
 
+  // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
+  const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
+  /失败: /.test(uiSrc)
+    ? bad('UI 文案半角冒号「失败: 」', '应全角「失败：」')
+    : ok('UI 失败文案冒号统一');
+  /初始化中\.\.\.|准备中\.\.\.|正在下载\.\.\./.test(uiSrc + html)
+    ? bad('UI 省略号仍为 ...', '应 …')
+    : ok('UI 省略号统一为 …');
+
   // 部署产物卫生：禁 sourcemap 外泄、禁旧 hash 主包残留（2026-09-23 实锤 index-Nm2 孤儿）
   const assetsDir = path.join(ROOT, 'docs/platform/assets');
   const assets = existsSync(assetsDir) ? readdirSync(assetsDir) : [];
