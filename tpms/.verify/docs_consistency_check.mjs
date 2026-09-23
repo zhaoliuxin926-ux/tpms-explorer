@@ -6,7 +6,7 @@
  *
  * 运行：node tpms/.verify/docs_consistency_check.mjs   （仓库根）
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -109,6 +109,19 @@ console.log('\n[C2] 调色预设结构');
   cssBlocks === 1 ? ok('teach 调色 CSS 块恰好 1 份') : bad('teach 调色 CSS 块重复/缺失', `count=${cssBlocks}`);
   html.includes('data-palette-set="engine"') && html.includes('data-palette-set="teach"')
     ? ok('顶栏 engine/teach 切换按钮在位') : bad('调色切换按钮缺失');
+
+  // 部署产物卫生：禁 sourcemap 外泄、禁旧 hash 主包残留（2026-09-23 实锤 index-Nm2 孤儿）
+  const assetsDir = path.join(ROOT, 'docs/platform/assets');
+  const assets = existsSync(assetsDir) ? readdirSync(assetsDir) : [];
+  const maps = assets.filter((f) => f.endsWith('.map'));
+  maps.length === 0 ? ok('docs/platform 无 .map 外泄') : bad('docs/platform 残留 sourcemap', maps.join(','));
+  const entryJs = assets.filter((f) => /^index-.*\.js$/.test(f));
+  entryJs.length === 1 ? ok('docs/platform 主包唯一 index-*.js') : bad('docs/platform 主包残留/缺失', entryJs.join(','));
+  const deployed = read('docs/platform/index.html');
+  const ref = deployed.match(/assets\/(index-[^"]+\.js)/);
+  ref && entryJs[0] === ref[1]
+    ? ok('index.html 引用主包与 assets 一致')
+    : bad('index.html 主包引用漂移', ref ? ref[1] : '未找到');
 }
 
 // ── 4. 版本徽章 ↔ 最新 tag ──
