@@ -393,6 +393,8 @@
 .vc-play:hover{background:rgba(148,163,184,.22)}
 .vc-src{color:#7dd3fc;font-size:.72rem;text-decoration:none;white-space:nowrap}
 .vc-offline{color:#94a3b8;font-size:.72rem}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:rgba(15,23,42,.92);color:#f1f5f9;padding:10px 16px;border-radius:10px;font-size:.85rem;z-index:1000;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:min(92vw,480px);text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -1847,12 +1849,25 @@ function rebuild(preview=false){
   const rq = lastRequest; lastRequest = null;
   return rebuildSync(rq);
 }
+function flashToast(msg){
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(flashToast._t);
+  flashToast._t = setTimeout(function(){ el.classList.remove('show'); }, 2800);
+}
 function rebuildSync(rq){
   let bs;
   try {
     bs = buildSurface(rq.type, rq.iso, rq.periods, rq.R, rq.options);
   } catch (e) {
-    alert('构建失败：' + (e && e.message ? e.message : e));
+    flashToast('构建失败：' + (e && e.message ? e.message : e));
     const loading = document.getElementById('loading');
     if (loading) loading.classList.remove('show');
     return false;
@@ -1864,7 +1879,7 @@ function onWorkerMessage(e){
   const d = e.data;
   if (d.reqId !== latestBuildReq) return; // 过期请求丢弃（新请求已发出）
   if (!d.ok) {
-    alert('构建失败：' + d.error);
+    flashToast('构建失败：' + d.error);
     const loading = document.getElementById('loading');
     if (loading) loading.classList.remove('show');
     return;
@@ -2215,16 +2230,16 @@ document.getElementById('btn-anim').addEventListener('click', exportSectionAnima
 function exportSectionAnimation(){
   const canvas = renderer.domElement;
   if(typeof MediaRecorder === 'undefined' || !canvas.captureStream){
-    alert('当前浏览器不支持画布录制（需要 MediaRecorder + captureStream）。可改用「保存截图 PNG」逐帧记录。');
+    flashToast('当前浏览器不支持画布录制（需要 MediaRecorder + captureStream）。可改用「保存截图 PNG」逐帧记录。');
     return;
   }
   const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=> MediaRecorder.isTypeSupported(t)) || 'video/webm';
   const fps = 30, duration = 4000;
   let stream;
-  try{ stream = canvas.captureStream(fps); }catch(e){ alert('无法捕获画布流：'+(e&&e.message||e)); return; }
+  try{ stream = canvas.captureStream(fps); }catch(e){ flashToast('无法捕获画布流：'+(e&&e.message||e)); return; }
   let recorder;
   try{ recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 }); }
-  catch(e){ alert('无法初始化录像：'+(e&&e.message||e)); return; }
+  catch(e){ flashToast('无法初始化录像：'+(e&&e.message||e)); return; }
   const chunks = [];
   recorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
   const btn = document.getElementById('btn-anim');
