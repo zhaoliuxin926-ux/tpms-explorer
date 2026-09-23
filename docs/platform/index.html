@@ -67,6 +67,16 @@
   .theme-opt{appearance:none;border:none;background:transparent;color:var(--ink-3);width:30px;height:28px;border-radius:999px;display:grid;place-items:center;cursor:pointer;transition:all .18s var(--ease-out)}
   .theme-opt:hover{color:var(--ink)}
   .theme-opt.active{background:var(--accent-soft);color:var(--accent-3);box-shadow:inset 0 0 0 1px rgba(8,145,178,.4)}
+  /* 调色预设：engine=工程青蓝（默认）；teach=教学青绿（app.html 同源） */
+  :root[data-palette="teach"]{
+    --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
+    --accent-2:#14b8a6; --accent-3:#2dd4bf;
+  }
+  .palette-switch{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(15,23,42,0.05);border:1px solid var(--panel-border);margin-left:6px}
+  :root[data-theme="dark"] .palette-switch{background:rgba(255,255,255,0.05)}
+  .palette-opt{appearance:none;border:none;background:transparent;color:var(--ink-3);height:28px;padding:0 10px;border-radius:999px;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .18s var(--ease-out)}
+  .palette-opt:hover{color:var(--ink)}
+  .palette-opt.active{background:var(--accent-soft);color:var(--accent-d);box-shadow:inset 0 0 0 1px var(--accent)}
   /* 暗色组件覆盖块已移至样式表末尾（2026-09-11 深度重构：利用层叠顺序替代 !important） */
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
@@ -792,7 +802,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Nm2_P6-z.js"></script>
+  <script type="module" crossorigin src="./assets/index-BR6dinf6.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -825,6 +835,10 @@ window.addEventListener('error', function(e) {
       <button class="theme-opt" data-theme-set="light" title="浅色" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
       <button class="theme-opt" data-theme-set="dark" title="深色" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
       <button class="theme-opt" data-theme-set="system" title="跟随系统" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></button>
+    </div>
+    <div class="palette-switch" role="group" aria-label="配色预设">
+      <button class="palette-opt" data-palette-set="engine" title="工程青蓝" aria-pressed="false">工程</button>
+      <button class="palette-opt" data-palette-set="teach" title="教学青绿（与教学版同源）" aria-pressed="false">教学</button>
     </div>
   </div>
 

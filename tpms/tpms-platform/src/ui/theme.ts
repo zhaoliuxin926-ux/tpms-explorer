@@ -1,5 +1,8 @@
 export const THEME_KEY = 'tpms-theme-platform';
+export const PALETTE_KEY = 'tpms-palette-platform';
 export type ThemePref = 'light' | 'dark' | 'system';
+/** engine=工程青蓝（默认）；teach=教学青绿（与 app.html 同源 #0d9488） */
+export type PalettePref = 'engine' | 'teach';
 
 export function applyTheme(pref: ThemePref): void {
   const resolved: 'light' | 'dark' =
@@ -10,6 +13,16 @@ export function applyTheme(pref: ThemePref): void {
   try { localStorage.setItem(THEME_KEY, pref); } catch { /* ignore */ }
   document.querySelectorAll<HTMLButtonElement>('.theme-opt').forEach((btn) => {
     const active = btn.dataset.themeSet === pref;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+export function applyPalette(pref: PalettePref): void {
+  document.documentElement.setAttribute('data-palette', pref);
+  try { localStorage.setItem(PALETTE_KEY, pref); } catch { /* ignore */ }
+  document.querySelectorAll<HTMLButtonElement>('.palette-opt').forEach((btn) => {
+    const active = btn.dataset.paletteSet === pref;
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
@@ -42,4 +55,16 @@ export function initTheme(): void {
   else if (typeof (mq as unknown as { addListener?: (cb: () => void) => void }).addListener === 'function') {
     (mq as unknown as { addListener: (cb: () => void) => void }).addListener(onChange);
   }
+
+  let pal: PalettePref = 'engine';
+  try {
+    const v = localStorage.getItem(PALETTE_KEY);
+    if (v === 'teach' || v === 'engine') pal = v;
+  } catch { /* ignore */ }
+  applyPalette(pal);
+  document.querySelectorAll<HTMLButtonElement>('.palette-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyPalette(btn.dataset.paletteSet as PalettePref);
+    });
+  });
 }
