@@ -116,6 +116,14 @@ console.log('\n[C2] 调色预设结构');
     ? ok('G-code 导出入口接线（menu + handleExport）')
     : bad('G-code 导出入口缺失', 'menu 或 main.ts case 未接');
 
+  // 教学版禁止原生 alert（toast 对齐工程版）
+  const appHtml = read('docs/app.html');
+  /alert\(/.test(appHtml)
+    ? bad('教学版仍有 alert()', '应改 flashToast')
+    : ok('教学版无 alert（flashToast）');
+  appHtml.includes('flashToast') && appHtml.includes('.toast')
+    ? ok('教学版 toast 契约在位') : bad('教学版 toast 缺失');
+
   // 部署产物卫生：禁 sourcemap 外泄、禁旧 hash 主包残留（2026-09-23 实锤 index-Nm2 孤儿）
   const assetsDir = path.join(ROOT, 'docs/platform/assets');
   const assets = existsSync(assetsDir) ? readdirSync(assetsDir) : [];
