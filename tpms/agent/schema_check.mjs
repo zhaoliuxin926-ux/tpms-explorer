@@ -7,6 +7,7 @@
 //  4. nl-agent 语义覆盖映射完整（TYPE/MATERIAL/MODE/CONTAINER 全覆盖；动作类如实声明）
 //
 // 运行: node schema_check.mjs
+// 快检: node schema_check.mjs --fast   （跳过几何探针，只跑契约/静态/拒收；面试前 ~30s 刷新）
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,6 +17,7 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, 'tpms.mjs');
 const schema = JSON.parse(readFileSync(join(HERE, 'tools.schema.json'), 'utf8'));
+const FAST = process.argv.includes('--fast');
 
 let pass = 0, fail = 0;
 const ok = (n) => { pass++; console.log('PASS', n); };
@@ -36,9 +38,11 @@ for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_ver
 const props = tool('tpms_mesh').parameters.properties;
 const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
-
-// 合法边界通过
 const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
+
+// 几何探针（spawn mesh 构建 R48–R128）—— --fast 跳过，契约/拒收仍跑
+if (!FAST) {
+// 合法边界通过
 for (const [label, args, check] of [
   ['resolution 下限 48 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut())], (r) => r.status === 0],
   ['resolution 96 通过', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 0],
@@ -189,8 +193,9 @@ for (const ty of TYPES) {
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
   r.status === 0 ? ok(`type enum 值 ${ty} 可构建`) : bad(`type enum ${ty}`, (r.stderr || '').slice(-60));
 }
+} // end !FAST 几何探针
 
-// 非法值拒绝（schema 之外 → CLI 必拒）
+// 非法值拒绝（schema 之外 → CLI 必拒）—— 契约层，--fast 保留
 for (const [label, args] of [
   ['type 不在 enum 被拒', ['--type', 'warpdrive', '--porosity', '0.5', '--resolution', '24']],
   ['resolution 129 越上界被拒', ['--type', 'gyroid', '--porosity', '0.5', '--resolution', '129']],
@@ -210,12 +215,14 @@ for (const [label, args] of [
 // 2026-09-08 实测：gyroid 三区平台（-0.12,0,0.12@0.4）R96 水密 nm=0 且解析/实测偏差 0.09pp（≤2pp 验收线）；
 // R48 水密可产（dev 0.34pp）；R64 过渡带薄壁自触 nm=56 fail-closed（对分辨率/过渡带敏感，与 frd/lidinoid 同族）。
 {
-  const r48 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()), '--json');
-  let j48 = null;
-  try { j48 = JSON.parse(r48.stdout); } catch { /* 忽略 */ }
-  r48.status === 0 && j48?.watertight === true
-    ? ok('iso-grad 三区梯度 R48 可产（水密门通过）')
-    : bad('iso-grad R48 行为漂移', `exit=${r48.status}`);
+  if (!FAST) {
+    const r48 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()), '--json');
+    let j48 = null;
+    try { j48 = JSON.parse(r48.stdout); } catch { /* 忽略 */ }
+    r48.status === 0 && j48?.watertight === true
+      ? ok('iso-grad 三区梯度 R48 可产（水密门通过）')
+      : bad('iso-grad R48 行为漂移', `exit=${r48.status}`);
+  }
   const rBad = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--iso-grad', 'nonsense', '--out', join(tmpOut()));
   rBad.status === 2 ? ok('iso-grad 非法格式被拒 [exit2]') : bad('iso-grad 格式守卫', `exit=${rBad.status}`);
   const rShell = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--mode', 'shell', '--iso-grad', '-0.12,0,0.12@0.4', '--out', join(tmpOut()));
@@ -253,12 +260,14 @@ for (const [label, args] of [
     writeFileSync(p, JSON.stringify(obj));
     return p;
   };
-  // 合法方案端到端交付（R48 快档）
+  // 合法方案端到端交付（R48 快档）—— 几何探针，--fast 跳过
   const dOk = writeDesign({ type: 'gyroid', porosity: 0.65, material: 'tc4', resolution: 48, periods: 4, out: join(HERE, `_schema_tmp_scn_out_${process.pid}`) });
-  const rOk = run('scenario', '--design', dOk, '--json');
-  const jOk = j(rOk.stdout);
-  rOk.status === 0 && jOk?.files?.length === 2 && jOk.geometry?.watertight?.openEdges === 0
-    ? ok('scenario 合法方案 exit0 交付（STL+INP+双报告）') : bad('scenario 合法方案', (rOk.stderr || '').slice(-80));
+  if (!FAST) {
+    const rOk = run('scenario', '--design', dOk, '--json');
+    const jOk = j(rOk.stdout);
+    rOk.status === 0 && jOk?.files?.length === 2 && jOk.geometry?.watertight?.openEdges === 0
+      ? ok('scenario 合法方案 exit0 交付（STL+INP+双报告）') : bad('scenario 合法方案', (rOk.stderr || '').slice(-80));
+  }
   // 参数层结构化拒绝（未知材料 → exit3 + stage=parameter + paramErrors，与 verify 同构）
   const dBad = writeDesign({ type: 'gyroid', porosity: 0.65, material: 'unobtanium' });
   const rBad = run('scenario', '--design', dBad, '--json');
@@ -334,7 +343,8 @@ for (const [label, args] of [
   agentSrc.includes("'tpms_design_verify'") && agentSrc.includes('runDesignVerify') && agentSrc.includes('tpms-driver.mjs')
     ? ok('llm-agent 桥接分支注册（tpms_design_verify → tpms-driver）') : bad('llm-agent 桥接分支缺失');
 
-  // 端到端（离线闭环回归：mock 槽位 + TPMS_ALLOW_MOCK_EXEC 逃生门 + 真实 verify 执行，temp cwd 不污染仓库）
+  // 端到端（离线闭环回归：mock 槽位 + TPMS_ALLOW_MOCK_EXEC 逃生门 + 真实 verify 执行）—— 几何探针，--fast 跳过
+  if (!FAST) {
   const work = mkdtempSync(join(tmpdir(), 'schema-bridge-'));
   const runAgent = (mockCalls, { extraEnv = {}, allow = true, dryRun = false } = {}) => {
     const env = { ...process.env, TPMS_MOCK_TOOLCALLS: JSON.stringify(mockCalls), ...extraEnv };
@@ -377,6 +387,7 @@ for (const [label, args] of [
       ? ok('mock 真实执行默认拒绝守卫保持（TPMS_ALLOW_MOCK_EXEC 显式逃生门）') : bad('mock 守卫失效', `exit=${r.exit}`);
   }
   rmSync(work, { recursive: true, force: true });
+  } // end !FAST 桥接 e2e
 }
 
 function existsBridgeDesign(work) {
@@ -439,5 +450,8 @@ console.log(`\nSCHEMA-CHECK ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-06 终审补：恒真断言专项口径——断言被集体中和/跳过时不得绿灯）
 // 【2026-09-12 桥接轮基线更新】72→87（tpms_design_verify 五工具 + 3d 节 9 断言 + 语义覆盖映射扩容）
 // 【2026-09-13 小冲刺第二枪】守卫校准至实测基线 98（v9 加固轮 87→92 未同步旧守卫，本轮 +6 防漂移节后实跑 98）
-if (pass < 98) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 98`); process.exit(1); }
+// --fast: skip geometry probes; contract/static/reject baseline 40 (full 98 stays for docs_consistency literal)
+if (FAST) {
+  if (pass < 40) { console.error(`GUARD FAIL(--fast): pass ${pass} < fast baseline 40`); process.exit(1); }
+} else if (pass < 98) { console.error(`GUARD FAIL: pass ${pass} < baseline 98`); process.exit(1); }
 process.exit(fail ? 1 : 0);
