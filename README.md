@@ -34,7 +34,7 @@
 |---|---|---|
 | ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
 
-🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位钳制拦截器 → 确定性执行 → 水密验收，回归 37/37、对抗零透传——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，回归 37/37、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md) ｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md) ｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
@@ -63,12 +63,12 @@
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **45 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 45/45 |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界钳制）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 37/37 推荐，四档画像在案）+ llm_provider_selftest 33 断言 |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 37/37 推荐，四档画像在案）+ llm_provider_selftest 33 断言 |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
 | 🔥 LPBF 热-力耦合 | 高斯体热源瞬态场 + 冷却速率 G×R + 残余应力/翘曲 + 工艺窗口（v6.0） | lpbf_thermo_mechanical_audit 18 断言 |
-| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界钳制不臆造（v6.0） | nl_agent_audit 45 断言 |
+| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界拒绝不臆造（v6.0） | nl_agent_audit 45 断言 |
 | 🧠 隐式神经场生成拓扑 | SIREN 四层正弦 MLP（精确 2π 周期）+ 5 专家蒸馏 + 8 维潜在空间流形插值（v7.0） | neural_implicit_audit 43 断言 |
 | ⚖️ 多轴屈服包络面 | Hill-48/Tsai-Wu/Gurson/Drucker-Prager 统一射线距离 + 3D 交互视口 + 安全系数（v7.0） | yield_surface_audit 35 断言 |
 | 📡 声子晶体能带 | Bloch-Floquet 点阵动力学 + 两轮 deflate-Lanczos + Γ 三零模态 + 路径禁带 BG%（v7.0） | phononic_bandgap_audit 18 断言 |
