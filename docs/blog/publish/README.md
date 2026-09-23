@@ -42,10 +42,10 @@
 > 当 LLM 成为工具调用者，如何让它产出的每个参数可被信任？五层信任边界（M0–M5 六阶段）、schema 逐槽位校验拦截器、六个代表性打穿（全是确定性代码的缝，不是模型骗过系统）、三层验收语义拆分「模型自觉」与「护栏功劳」。
 
 **GitHub About 一句话**  
-> TPMS Explorer — 浏览器端三周期极小曲面生成式设计平台：24 族 level-set、水密 STL/Abaqus/OpenFOAM 交付、LLM Agent 安全闭环，44 道 CI 门禁三平台矩阵。
+> TPMS Explorer — 浏览器端三周期极小曲面生成式设计平台：24 族 level-set、水密 STL/Abaqus/OpenFOAM 交付、LLM Agent 安全闭环，45 道 CI 门禁三平台矩阵。
 
 **B 站正片简介（BV1hVeS6jEBM）**  
-> TPMS Explorer 操作演示（104s）：曲面轮播 / 孔隙率实时重建 / radial-grad 径向梯度 / 直接层切 / HD 水密 STL 导出。在线体验：https://zhaoliuxin926-ux.github.io/tpms-explorer/ ｜ 源码与 44 道 CI 门禁：https://github.com/zhaoliuxin926-ux/tpms-explorer
+> TPMS Explorer 操作演示（104s）：曲面轮播 / 孔隙率实时重建 / radial-grad 径向梯度 / 直接层切 / HD 水密 STL 导出。在线体验：https://zhaoliuxin926-ux.github.io/tpms-explorer/ ｜ 源码与 45 道 CI 门禁：https://github.com/zhaoliuxin926-ux/tpms-explorer
 
 **标签建议**  
 掘金：`前端` `测试` `AI编程`（第一篇）/ `AI大模型` `架构` `安全`（第二篇）  
