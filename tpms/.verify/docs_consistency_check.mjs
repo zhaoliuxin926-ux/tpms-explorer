@@ -110,6 +110,12 @@ console.log('\n[C2] 调色预设结构');
   html.includes('data-palette-set="engine"') && html.includes('data-palette-set="teach"')
     ? ok('顶栏 engine/teach 切换按钮在位') : bad('调色切换按钮缺失');
 
+  // 导出中心 G-code 入口在位（引擎+门禁已就绪，UI 面）
+  const srcMain = read('tpms/tpms-platform/src/main.ts');
+  html.includes('data-export="gcode"') && srcMain.includes("case 'gcode'") && srcMain.includes('compileGcode')
+    ? ok('G-code 导出入口接线（menu + handleExport）')
+    : bad('G-code 导出入口缺失', 'menu 或 main.ts case 未接');
+
   // 部署产物卫生：禁 sourcemap 外泄、禁旧 hash 主包残留（2026-09-23 实锤 index-Nm2 孤儿）
   const assetsDir = path.join(ROOT, 'docs/platform/assets');
   const assets = existsSync(assetsDir) ? readdirSync(assetsDir) : [];

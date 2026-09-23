@@ -639,7 +639,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 ## 二十四、网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南 🆕 v5.0
 
-切片引擎与验证门禁（门禁 25：层数/体积/回抽/预设）已就绪；**UI 导出入口暂未开放**（gcode-slicer 当前仅由审计门与脚本链路消费，浏览器「导出中心」无 G-code 项——接入为后续工作）。
+切片引擎与验证门禁（门禁 25：层数/体积/回抽/预设）已就绪；**UI 导出入口已开放**（导出中心「G-code 原生切片」；诚实边界：单壁轮廓+扫描填充，非工业全特征切片器——生产件请用 PrusaSlicer/Bambu Studio 再切）。
 
 - **切片**：三角网格 z 等距切片 → 2D 轮廓链合 → 扫描线填充（80% 线距保证粘结）。
 - **G-code**：Marlin/Klipper/Bambu 三预设头部；回抽（长 travel 自动 retract/unretract）；E = 路径长 × 线宽 × 层高 / 耗材截面。

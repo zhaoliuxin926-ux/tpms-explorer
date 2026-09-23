@@ -11,7 +11,7 @@
 
 **TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.07–至今）
 
-用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 引擎就绪、UI 入口未开放）；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 单轮 37/37（n=1，复测 36/37）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言契约对拍门禁 + 退出码分层契约。全仓 45 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
+用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 原生切片已进导出中心（单壁+扫描填充，非工业全特征切片））；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 单轮 37/37（n=1，复测 36/37）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言契约对拍门禁 + 退出码分层契约。全仓 45 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
