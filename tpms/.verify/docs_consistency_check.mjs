@@ -30,7 +30,7 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
   const schema = read('tpms/agent/schema_check.mjs');
   const inv = read('tpms/.verify/inverse_design_audit.mjs');
 
-  const guardOf = (src, n) => src.includes(`pass < ${n}`) || src.includes(`passCount < ${n}`);
+  const guardOf = (src, n) => new RegExp(`\\bpass(?:Count)?\\s*<\\s*${n}\\b`).test(src);
   guardOf(parity, 332) ? ok('parity_math GUARD 332') : bad('parity_math GUARD 332');
   guardOf(selftest, 49) ? ok('selftest GUARD 49') : bad('selftest GUARD 49');
   guardOf(llmp, 33) ? ok('llm_provider GUARD 33') : bad('llm_provider GUARD 33');
@@ -39,7 +39,7 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
 
   const readme = read('README.md');
   const readmeEn = read('README_EN.md');
-  /44\/44|44 道|45 gates|44-gate/i.test(readme + readmeEn)
+  (/45\/45|45 道|45 gates/i.test(readme + readmeEn))
     ? ok('README 宣称 45 门') : bad('README 宣称 45 门');
   readme.includes('332') ? ok('README 引用 parity 332') : bad('README 引用 parity 332');
   readme.includes('inverse_design_audit 27') ? ok('README 反演 27 断言') : bad('README 反演 27 断言');
@@ -49,6 +49,8 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
 console.log('\n[B] 过期/夸大口径扫描（发布物）');
 {
   const targets = [
+    'README.md',
+    'README_EN.md',
     'docs/blog/2026-09-16-44-gates.md',
     'docs/blog/2026-09-17-agent-architecture.md',
     'docs/blog/publish/2026-09-16-44-gates.md',
@@ -94,7 +96,7 @@ console.log('\n[C] publish 粘贴版同源');
   }
   // 链接绝对化与正式版→粘贴版变换同源（与 sync-publish.mjs 对拍，防「改正式版忘粘贴版」）
   try {
-    execSync('node tpms/agent/sync-publish.mjs --check', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
+    execSync('node tpms/agent/sync-publish.mjs --check', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe', timeout: 30_000 });
     ok('sync-publish --check 粘贴版未漂移');
   } catch (e) {
     bad('sync-publish --check 失败', String(e.stdout || e.message).slice(0, 120));

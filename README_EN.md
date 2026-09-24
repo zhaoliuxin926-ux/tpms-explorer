@@ -5,7 +5,7 @@
 An interactive, browser-based explorer for **Triply Periodic Minimal Surfaces (TPMS)** — the lattice geometries behind bone scaffolds, lightweight parts, heat exchangers and catalyst supports.
 Personal, independently maintained open-source project.
 
-**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **45 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 30 audit cases).
+**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **45 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 34 audit cases).
 
 ---
 
@@ -40,7 +40,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 | Acceptance | Result |
 |---|---|
-| 37 bilingual instructions | **glm-5.3-flash 37/37** (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
+| 37 bilingual instructions | **glm-5.3-flash 37/37** (single run n=1; retest 36/37) (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
 | The interceptor itself | 33 offline deterministic assertions (incl. live `../x.stl` traversal block) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
@@ -96,8 +96,8 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 
 ```bash
 # Fast checks (seconds — pre-commit / pre-interview)
-node tpms/agent/schema_check.mjs --fast           # contract/static/reject, 68 assertions
-node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 68 assertions
+node tpms/agent/schema_check.mjs --fast           # contract/static/reject (GUARD 40)
+node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 80 assertions
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)

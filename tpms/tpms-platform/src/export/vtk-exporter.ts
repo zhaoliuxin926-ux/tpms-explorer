@@ -20,7 +20,7 @@ export function buildVTK(
 
   const parts: string[] = [
     '# vtk DataFile Version 3.0\n',
-    'TPMS Structure; units=mm; 1 period = 1 mm\n',
+    'TPMS Structure; units=mm; uniform scale (cellSize or normalized domain mm)\n',
     'ASCII\n',
     'DATASET POLYDATA\n',
     `POINTS ${vertCount} float\n`,
@@ -74,7 +74,7 @@ export function exportVTK(
  * 导出 VTI (VTK ImageData) — 体素场格式，含隐函数标量场
  * @param meta 元数据：写入 FieldData 供第三方 re-contour 对齐平台孔隙率——
  *             solid_network 等值面取 iso（二分结果），shell 类取 0（场已变换为 (v-b)²-(t/2)²）。
- *             Origin/Spacing 按 mm（1 period = 1 mm，模型总宽 = cellSize mm）。
+ *             Origin/Spacing 按 mm（uniform scale (cellSize or normalized domain mm)，模型总宽 = cellSize mm）。
  */
 export function buildVTI(
   field: Float32Array,

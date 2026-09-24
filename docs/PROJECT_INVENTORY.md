@@ -33,7 +33,7 @@ tpms-explorer/
 │   ├── index.html / app.html     # 落地页 / 教学版
 │   ├── platform/                 # 工程版部署产物（无 .map）
 │   ├── QUICKSTART.md             # 5 分钟三 Demo
-│   ├── WORKFLOW_GUIDE.md         # 36 章实战指南
+│   ├── WORKFLOW_GUIDE.md         # 36+ 章实战指南（TOC 1–36，另有零散章）
 │   ├── LEARNING_PATH.md          # 学习路径
 │   ├── HONESTY_BOUNDARIES.md     # 诚实边界表（自动生成）
 │   ├── regression-matrix.md      # 拦截器覆盖矩阵
@@ -75,10 +75,10 @@ tpms-explorer/
 
 | 层 | 内容 | 当前值 |
 |---|---|---|
-| 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | **45 门**（39 行为 + ui_jump + run_all + 3 CLI + docs_consistency） |
-| 断言示例 | parity 332 / schema 106 / webgpu 119 / docs_consistency **67** | GUARD 锁下限 |
+| 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****45 门**（main 现态；**tag v1.0.3 时为 44**，docs_consistency 于 tag 后入列） |
+| 断言示例 | parity 332 / schema 106 / webgpu 119 / docs_consistency **68** | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
-| 快检 | `schema_check --fast`（~28s）+ matrix + boundary + docs + sync-publish | ~1 min |
+| 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |
 | 博客同源 | `sync-publish.mjs --check` | 粘贴版漂移 exit 1 |
 | 版本哨兵 | 导出物 v1.0.3 / 落地页「原型期」/ fcky / fit 诚实 | docs 门禁内 |
@@ -101,7 +101,7 @@ tpms-explorer/
 | 资产 | 路径 | 状态 |
 |---|---|---|
 | 5 分钟上手 | `docs/QUICKSTART.md` | 可用 |
-| 实战 36 章 | `docs/WORKFLOW_GUIDE.md` | 可用 |
+| 实战指南（TOC 1–36） | `docs/WORKFLOW_GUIDE.md` | 可用 |
 | 面试包 | `docs/career/interview-pack.md` | 中英对称 |
 | 博客×2 | `docs/blog/` + `publish/` | 粘贴就绪，**未发布** |
 | SoftwareX | `docs/paper/` | 材料齐，**投稿搁置** |
@@ -111,7 +111,7 @@ tpms-explorer/
 
 ## 7. 当前状态与余项
 
-**已完成（本轮）**：版本纪元对齐 · G-code UI+工艺 · 教学 toast · 文案统一 · 三主线交付 · 红队假绿全修 · 路径/超时硬化。
+**已完成（本轮）**：版本纪元对齐 · G-code UI+工艺 · 教学 toast · 文案统一 · 三主线交付 · 红队已修项与登记余险 · 路径/超时硬化。
 
 **待用户**：社交图、发博客、论文/试样拍板、试验 CSV。
 

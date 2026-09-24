@@ -1,4 +1,4 @@
-# 快速开始 · 5 分钟出一件可打印 STL
+# 快速开始 · 最短出件路径
 
 > 产品版本 **v1.0.3**。三条最短路径，任选其一；命令均在仓库根执行。
 
@@ -21,7 +21,7 @@ node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.75 --resolution 64 --pe
 # 见工程版侧栏「G-code 工艺」参数后从导出中心导出
 ```
 
-## Demo 3 · 自然语言 Agent（需 API key 或 mock）
+## Demo 3 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）
 
 ```bash
 node tpms/agent/llm-agent.mjs --provider mock --dry-run --json "孔隙率 75% 的 Gyroid 骨支架"

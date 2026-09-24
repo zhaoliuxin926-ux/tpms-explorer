@@ -20,7 +20,7 @@ const outIdx = process.argv.indexOf('--out');
 const OUT = outIdx >= 0 ? process.argv[outIdx + 1] : 'specimens';
 const ONCE = process.argv.includes('--once');
 const toIdx = process.argv.indexOf('--timeout');
-const TIMEOUT_MS = toIdx >= 0 ? Number(process.argv[toIdx + 1]) || 300_000 : 300_000;
+const TIMEOUT_MS = toIdx >= 0 ? (Number(process.argv[toIdx + 1]) > 0 ? Number(process.argv[toIdx + 1]) : 300_000) : 300_000;
 const outAbs = resolve(ROOT, OUT);
 const relOut = relative(ROOT, outAbs);
 if (isAbsolute(relOut) || relOut.startsWith('..' + sep) || relOut === '..') {
@@ -50,7 +50,7 @@ for (const m of MATRIX) {
     const r = spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: TIMEOUT_MS });
     const errPath = join(outAbs, `${id}.err`);
     const jsonPath = join(outAbs, `${id}.json`);
-    if (r.status === 0) {
+    if (r.status === 0 && existsSync(stl)) {
       try { writeFileSync(jsonPath, r.stdout ?? '{}', 'utf8'); } catch { /* */ }
       writeFileSync(errPath, '', 'utf8');
       console.log('OK  ', id);

@@ -93,11 +93,11 @@ for (const ty of TYPES) {
   if (ty === 'slotp' || ty === 'fs' || ty === 'qstar' || ty === 'ws') {
     // C2 第六批（jwf23 数据集）：默认周期数 k6 在 R48 触发薄壁自触（qstar nm=792 实测）——
     // 与 gprime/lidinoid 同族「降周期数可避」；可产域 = k2 p0.6 全四 exit0（qstar p0.5 微非流形拒产见 tools.schema 披露）
-    const r48k6 = run('mesh', '--type', 'qstar', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+    const r48k6 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
     const r48k6Ok = r48k6.status === 3 && (() => { try { return JSON.parse(r48k6.stdout).lastAuditCounts?.nonManifoldEdges === 792; } catch { return false; } })();
     r48k6Ok
-      ? ok(`type enum 值 qstar k6 R48 已登记 fail-closed（nm=792 数值钉，红队 C F4）`)
-      : bad(`type enum qstar k6 R48 行为漂移`, `exit=${r48k6.status}`);
+      ? ok(`type enum 值 ${ty} k6 R48 已登记 fail-closed（nm=792 数值钉，红队 C F4）`)
+      : bad(`type enum ${ty} k6 R48 行为漂移`, `exit=${r48k6.status}`);
     const r = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96 k2，第六批钉）`) : bad(`type enum ${ty} R96 k2`, (r.stderr || '').slice(-60));
     continue;
@@ -208,7 +208,7 @@ for (const [label, args] of [
   ['mesh 未知属性被拒（--weapon）', ['mesh', '--type', 'gyroid', '--porosity', '0.5', '--resolution', '48', '--weapon', 'laser']],
   ['estimate 非法值拒绝为 exit 2（参数错误语义）', ['estimate', '--type', 'nope', '--porosity', '0.5']],
 ]) {
-  const r = run('mesh', ...args);
+  const r = args[0] === 'estimate' || args[0] === 'mesh' ? run(...args) : run('mesh', ...args);
   r.status === 2 ? ok(label + ' [exit2]') : bad(label + ' 未拒绝或退出码非 2', `exit=${r.status}`);
 }
 

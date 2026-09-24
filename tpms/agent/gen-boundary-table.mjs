@@ -28,7 +28,7 @@ for (const m of section.matchAll(/^(\d+)\. \*\*(.+?)\*\*[：:]\s*([\s\S]*?)(?=\n
   const title = m[2];
   const body = m[3].replace(/\s+/g, ' ').trim();
   // 已修复/移除出清单的定案不得留在边界表（红队 MED）
-  if (/已修复|从边界清单移除|此条从边界/.test(title + body.slice(0, 80))) continue;
+  if (/已修复|从边界清单移除|此条从边界/.test(title + body)) continue;
   items.push({ n: m[1], title, body });
 }
 
@@ -54,6 +54,10 @@ if (CHECK) {
   }
   const cur = readFileSync(outPath, 'utf8');
   const curN = (cur.match(/^\| \d+ \|/gm) || []).length;
+  if (!items.length) {
+    console.error('BOUNDARY EMPTY: 定案解析 0 条');
+    process.exit(1);
+  }
   const expect = items.map((it) => `${it.n} | ${it.title}`).join('\n');
   const got = items.map((it) => {
     const row = cur.split('\n').find((l) => l.startsWith(`| ${it.n} |`));

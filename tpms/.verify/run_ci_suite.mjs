@@ -114,7 +114,7 @@ function runStep(name, script) {
 
 // ── 调度清单（[汇报名, 步骤名, 脚本]；顺序 = 历史顺序，执行 = 并发池）──
 const SCHEDULE = [
-  ['mesh_audit 几何质量门（30 案例）', '几何质量门', 'mesh_audit.mjs'],
+  ['mesh_audit 几何质量门（34 案例）', '几何质量门', 'mesh_audit.mjs'],
   ['parity_math 数学同源（332 断言）', '数学同源', 'parity_math.mjs'],
   ['state_url_audit 状态隔离+分享恢复（门37）', '状态与分享审计', 'state_url_audit.mjs'],
   ['worker_bridge_audit Worker生命周期（门38，11断言）', 'Worker生命周期审计', 'worker_bridge_audit.mjs'],
@@ -154,7 +154,7 @@ const SCHEDULE = [
   ['conformal_fill_audit C5 保形填充（门44，30断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
   ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
-  ['docs_consistency_check 文档数字一致性（GUARD↔宣称/禁句/publish 同源+sync-publish/调色单例/徽章↔tag，68 断言）', '文档一致性', 'docs_consistency_check.mjs'],
+  ['docs_consistency_check 文档数字一致性（GUARD↔宣称/禁句/publish 同源+sync-publish/调色单例/徽章↔tag，80 断言）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（10 套件——+slicepv/radialgrad/region/card_smoke 冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
