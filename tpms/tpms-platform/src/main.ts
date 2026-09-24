@@ -13,73 +13,34 @@ import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
 import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH } from './physics/gibson-ashby';
-import { fitExperimentalCurve } from './physics/experimental-fit';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { makeZGrad } from './core/iso-grad';
 import { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from './core/radial-grad';
 import { regionWeight } from './core/region-grad';
 import { marchingTetrahedra } from './geometry/marching-tetrahedra';
 import { buildSurface } from './geometry/surface-nets';
-import { computeVertexColors } from './geometry/vertex-coloring';
+import { computeVertexColors, sampleCoolWarmInto } from './geometry/vertex-coloring';
 import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './geometry/webgpu-evaluator';
-import { analyzeSection, analyzeIslands3D } from './physics/percolation-analysis';
-import { EQUATION_PRESETS, validateEquation } from './core/equation-parser';
+import { analyzeSection, analyzeIslands3D, isSolidAt, analyticFieldValue, type SectionAnalysisParams } from './physics/percolation-analysis';
 import { mapGeometry } from './core/manifold-mapping';
-import { sampleDirectionalGrid, directionalModulus, orthotropicCompliance } from './physics/homogenization';
 import type { PhysicsMetrics } from './types';
-import {
-  exportBinarySTL,
-  exportMultiSolidSTL,
-  exportGLB,
-  export3MF,
-  exportVTK,
-  exportVTI,
-  exportPythonScript,
-  exportMatlabScript,
-  generateBibTeX,
-  generateJSONSidecar,
-} from './export';
 import { getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
-import { generateDemoCT, sampleDeviation, deviationColors } from './geometry/ct-reconstruction';
-import { solveInverse, INVERSE_PRESETS, type InverseReport, type DesignTargets } from './physics/inverse-design';
-import { buildVoxelModel, exportAbaqusInp, exportOpenfoamPolyMesh, exportVerificationSuite, directSlice } from './export';
 import { downloadBlob, downloadText } from './export/download';
-import { sliceMesh, compileGcode } from './export/gcode-slicer';
-import { buildVtiField, baseIso } from './export/vti-field';
+import { baseIso, buildVtiField } from './export/vti-field';
 import { hashArray } from './utils/hash-array';
 import { geoCache, MAX_GEO_CACHE, cacheKey } from './geometry/geo-cache';
 import { initTheme } from './ui/theme';
 import { flashToast } from './ui/toast';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
-import { runCompressionDigitalTwin } from './physics/digital-twin-compression';
-import { simulateLPBF } from './physics/lpbf-thermo-mechanical';
 import { parseNL, type NLIntent } from './core/nl-agent';
-import {
-  deriveScaffoldYieldConfigs,
-  buildEnvelopeMesh,
-  safetyFactor,
-  criticalMode,
-  YIELD_CRITERIA_LABEL,
-  type YieldCriterionKind,
-} from './physics/yield-surface';
-import { createYieldViewer, type YieldViewer } from './viewers/yield-viewer';
-import { solvePhononicBands, type PhononicResult } from './physics/phononic-bandgap';
-import { isSolidAt, analyticFieldValue, type SectionAnalysisParams } from './physics/percolation-analysis';
-import { simulateTissueGrowth, type TissueResult } from './physics/tissue-growth';
-import { evolveLevelSet, phiToVField } from './core/levelset-optimizer';
-import {
-  expertName,
-  expertCount,
-  mixtureWeights,
-  nearestExpertIndex,
-  neuralAnchor,
-  sanitizeLatent,
-} from './core/neural-implicit-field';
+import type { YieldCriterionKind } from './physics/yield-surface';
+import type { YieldViewer } from './viewers/yield-viewer';
+import type { PhononicResult } from './physics/phononic-bandgap';
+import type { TissueResult } from './physics/tissue-growth';
+import type { InverseReport, DesignTargets } from './physics/inverse-design';
 import { DEFAULT_STATE } from './types';
-import { mapElementFieldToVertexColors } from './physics/gpu-plasticity-webgpu';
-import { sampleCoolWarmInto } from './geometry/vertex-coloring';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
 import { exportSliceSVG } from './measure/svg-slice-exporter';
@@ -96,6 +57,37 @@ import {
   MATERIAL_LABEL,
   initTipToggle,
 } from './ui-helpers';
+
+// 重物理 / 导出桶按需加载：首屏只留重建与统计必需，按钮/导出时再取 chunk。
+// 首次加载给一行 toast，避免「点了没反应」的网络等待体感。
+function lazy<T>(loader: () => Promise<T>, label: string): () => Promise<T> {
+  let pending: Promise<T> | null = null;
+  return () => {
+    if (!pending) {
+      flashToast(`${label}加载中…`);
+      pending = loader().catch((err) => {
+        pending = null;
+        throw err;
+      });
+    }
+    return pending;
+  };
+}
+const loadExport = lazy(() => import('./export'), '导出模块');
+const loadExperimentalFit = lazy(() => import('./physics/experimental-fit'), '试验反演');
+const loadHomogenization = lazy(() => import('./physics/homogenization'), '均质化');
+const loadEquationParser = lazy(() => import('./core/equation-parser'), '公式解析');
+const loadDigitalTwin = lazy(() => import('./physics/digital-twin-compression'), '数字孪生');
+const loadLpbf = lazy(() => import('./physics/lpbf-thermo-mechanical'), 'LPBF 热力');
+const loadYieldSurface = lazy(() => import('./physics/yield-surface'), '屈服包络');
+const loadYieldViewer = lazy(() => import('./viewers/yield-viewer'), '屈服预览');
+const loadPhononic = lazy(() => import('./physics/phononic-bandgap'), '声子能带');
+const loadTissue = lazy(() => import('./physics/tissue-growth'), '组织长入');
+const loadLevelSet = lazy(() => import('./core/levelset-optimizer'), '水平集');
+const loadNeuralField = lazy(() => import('./core/neural-implicit-field'), '神经场');
+const loadPlasticityColor = lazy(() => import('./physics/gpu-plasticity-webgpu'), '塑性着色');
+const loadCtRecon = lazy(() => import('./geometry/ct-reconstruction'), 'CT 重构');
+const loadGcode = lazy(() => import('./export/gcode-slicer'), 'G-code');
 
 // ── 全局变量 ─────────────────────────────────────────────
 let ctx: ThreeContext;
@@ -124,12 +116,13 @@ const materialCache = new Map<string, MeshPhysicalMaterial>();
 let hierStatsTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── 神经拓扑状态行（v7.0 Stage I）：最近锚点 + 混合熵 ──
-function updateNeuralStatus(): void {
+async function updateNeuralStatus(): Promise<void> {
   const el = document.getElementById('neural-status');
   if (!el) return;
   const s = getState();
   if (!s.neural.enabled) { el.textContent = ''; return; }
   try {
+    const { sanitizeLatent, mixtureWeights, nearestExpertIndex, expertName, expertCount } = await loadNeuralField();
     const z = sanitizeLatent(s.neural.z);
     const mix = mixtureWeights(z);
     const near = nearestExpertIndex(z);
@@ -451,7 +444,7 @@ function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
   return { solid, pruned };
 }
 
-function drawPlasticityCurve(res: ReturnType<typeof runCompressionDigitalTwin>): void {
+function drawPlasticityCurve(res: { curve: { strain: number; reaction: number }[] }): void {
   const cv = document.getElementById('plas-curve') as HTMLCanvasElement | null;
   if (!cv) return;
   cv.style.display = 'block';
@@ -497,8 +490,10 @@ function runPlasticityDemo(): boolean {
   if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=8 · 8 载荷步 · 主线程同步求解，期间视图无响应）'; }
   flashToast('弹塑性压溃：主线程同步求解（R=8·8 步），期间视图暂不响应');
   // 让 toast 先绘制
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
+      const { runCompressionDigitalTwin } = await loadDigitalTwin();
+      const { mapElementFieldToVertexColors } = await loadPlasticityColor();
       const st0 = getState();
       // R=6（216 体素）实测：75% 孔隙率剪除孤岛后骨架不跨上下承载面，首步即发散
       // （坍塌 @ε=null、PEEQ 0、DT/GA 全空读数）——R=8（512 体素）为默认档可解分辨率
@@ -607,12 +602,13 @@ function bindExperimentalFit(): void {
   const out = document.getElementById('expfit-result') as HTMLElement | null;
   if (!fileInput || !canvas || !out) return;
 
-  const run = (text: string): void => {
+  const run = async (text: string): Promise<void> => {
     try {
       const st = getState();
       const isDf = (document.getElementById('expfit-df') as HTMLInputElement | null)?.checked ?? false;
       const l0 = Number((document.getElementById('expfit-l0') as HTMLInputElement | null)?.value ?? 12);
       const a0 = Number((document.getElementById('expfit-area') as HTMLInputElement | null)?.value ?? 100);
+      const { fitExperimentalCurve } = await loadExperimentalFit();
       const r = fitExperimentalCurve({
         text,
         inputType: isDf ? 'displacement-force' : 'strain-stress',
@@ -827,12 +823,20 @@ function bindSlicePreview(): void {
   const slider = document.getElementById('slicepv-z') as HTMLInputElement | null;
   const status = document.getElementById('slicepv-status') as HTMLElement | null;
   if (!gen || !slider || !status) return;
-  gen.addEventListener('click', () => {
+  gen.addEventListener('click', async () => {
     const s = getState();
-    if (s.structureMode !== 'solid_network') { flashToast('直接层切预览仅支持 solid_network（与 CLI slice 同语义）'); return; }
+    // 守卫必须在动态 import 之前：shell 点击不应触发 chunk 加载，也不应残留上一轮「就绪」
+    if (s.structureMode !== 'solid_network') {
+      flashToast('直接层切预览仅支持 solid_network（与 CLI slice 同语义）');
+      status.textContent = '仅 solid_network 模式可层切（当前 ' + s.structureMode + '）';
+      slicePrev = null;
+      slider.disabled = true;
+      return;
+    }
+    const { buildVoxelModel, directSlice } = await loadExport();
     status.textContent = '⏳ 层切计算中（隐式场扫描线区间法）…';
     // 异步一拍：让状态行先渲染（计算为百 ms 级同步，避免视觉冻结感）
-    setTimeout(() => {
+    void (async () => {
       try {
         const R = 64;
         const useMesh = meshCont !== null;
@@ -856,7 +860,7 @@ function bindSlicePreview(): void {
         slider.disabled = true;
         status.textContent = '✗ ' + (e instanceof Error ? e.message : String(e));
       }
-    }, 30);
+    })();
   });
   slider.addEventListener('input', renderSlicePreview);
 }
@@ -1008,11 +1012,11 @@ function bindRadialGradCard(): void {
       }
     }, 30);
   });
-  exp.addEventListener('click', () => {
+  exp.addEventListener('click', async () => {
     if (!guard()) return;
     const s = getState();
     status.textContent = '⏳ HD MT 提取中（R=96，可能数秒）…';
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const res = runRadialGradPipeline(Number(kS.value), Number(taS.value), Number(tbS.value), s.cellSize, 96);
         const audit = auditRadialMeshInline(res.indices);
@@ -1020,6 +1024,7 @@ function bindRadialGradCard(): void {
           status.textContent = `✗ 水密审计拒绝（open=${audit.open} nm=${audit.nm}）——STL 不导出，与 CLI 水密门同标准`; 
           return;
         }
+        const { exportBinarySTL } = await loadExport();
         exportBinarySTL(res.positions, res.indices, `tpms-radial-grad-K${kS.value}-ta${taS.value}-tb${Number(tbS.value).toFixed(3)}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
         status.textContent = `✓ STL 已导出（HD R=96 · ${res.triCount.toLocaleString()} 三角 · 孔隙率 ${(res.porosity * 100).toFixed(1)}% · 直径 ${s.cellSize}mm）`;
       } catch (e) {
@@ -1146,11 +1151,11 @@ function bindRegionCard(): void {
       }
     }, 30);
   });
-  exp.addEventListener('click', () => {
+  exp.addEventListener('click', async () => {
     if (!guard()) return;
     const s = getState();
     status.textContent = '⏳ HD MT 提取中（R=96，可能数秒）…';
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const res = runRegionPipeline(s.type, innerSel.value, Number(rS.value), Number(bS.value), s.cellSize, 96);
         const audit = auditRadialMeshInline(res.indices);
@@ -1158,6 +1163,7 @@ function bindRegionCard(): void {
           status.textContent = `✗ 水密审计拒绝（open=${audit.open} nm=${audit.nm}）——STL 不导出，与 CLI 水密门同标准`;
           return;
         }
+        const { exportBinarySTL } = await loadExport();
         exportBinarySTL(res.positions, res.indices, `tpms-region-${s.type}-${innerSel.value}-r${Number(rS.value).toFixed(2)}-b${Number(bS.value).toFixed(2)}-c${s.cellSize}.stl`, res.scaleMm, res.normals);
         status.textContent = `✓ STL 已导出（HD R=96 · ${res.triCount.toLocaleString()} 三角 · 孔隙率 ${(res.porosity * 100).toFixed(1)}% · 边长 ${s.cellSize}mm）`;
       } catch (e) {
@@ -1177,7 +1183,8 @@ function nlAppend(text: string): void {
   if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; }
 }
 
-function nlDoExport(fmt: 'stl' | '3mf'): void {
+async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
+  const { exportBinarySTL, export3MF } = await loadExport();
   const sNow = getState();
   const base = `tpms-${sNow.type}-p${sNow.porosity}`;
   if (!baseGeo) throw new Error('几何尚未就绪');
@@ -1194,7 +1201,7 @@ function runPendingNLExport(): void {
   if (!nlPendingExport) return;
   const fmt = nlPendingExport;
   nlPendingExport = null;
-  try { nlDoExport(fmt); } catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
+  try { void nlDoExport(fmt); } catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
 }
 
 function applyNLIntent(intent: NLIntent): void {
@@ -1245,7 +1252,7 @@ function applyNLIntent(intent: NLIntent): void {
         nlPendingExport = a === 'export-stl' ? 'stl' : '3mf';
         nlAppend('助手：参数已应用，几何重建完成后自动导出 ' + (a === 'export-stl' ? 'STL' : '3MF') + '…');
       } else {
-        try { nlDoExport(a === 'export-stl' ? 'stl' : '3mf'); }
+        try { void nlDoExport(a === 'export-stl' ? 'stl' : '3mf'); }
         catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
       }
     } else if (a === 'run-simulation') {
@@ -1374,7 +1381,8 @@ document.getElementById('jump-engview')?.addEventListener('click', (e) => {
   document.querySelector<HTMLElement>('.sgroup-h[data-target="grp-view"]')?.click();
 });
 
-document.getElementById('btn-lpbf')?.addEventListener('click', () => {
+document.getElementById('btn-lpbf')?.addEventListener('click', async () => {
+  const { simulateLPBF } = await loadLpbf();
   const out = document.getElementById('lpbf-result');
   const power = Number((document.getElementById('lpbf-power') as HTMLInputElement)?.value ?? 200);
   const speed = Number((document.getElementById('lpbf-speed') as HTMLInputElement)?.value ?? 0.8);
@@ -1394,14 +1402,16 @@ document.getElementById('btn-lpbf')?.addEventListener('click', () => {
 
 // ── 【v7.0 Stage II】多轴屈服包络面：参数推导 + 3D 预览 + 安全系数 ──
 let yieldViewer: YieldViewer | null = null;
-document.getElementById('btn-yield')?.addEventListener('click', () => {
+document.getElementById('btn-yield')?.addEventListener('click', async () => {
+  const ys = await loadYieldSurface();
+  const { createYieldViewer } = await loadYieldViewer();
   const out = document.getElementById('yield-result');
   const canvas = document.getElementById('yield-canvas') as HTMLCanvasElement | null;
   try {
     const s = getState();
     const rho = lastMeshSolidFraction ?? (1 - s.porosity / 100);
     const matKey = s.material === 'auto' ? 'tc4' : s.material;
-    const d = deriveScaffoldYieldConfigs(rho, s.type, s.porosity / 100, matKey);
+    const d = ys.deriveScaffoldYieldConfigs(rho, s.type, s.porosity / 100, matKey);
     const kind = (document.getElementById('yield-criterion') as HTMLSelectElement).value as YieldCriterionKind;
     const cfg = kind === 'hill48' ? d.hill : kind === 'tsaiwu' ? d.tsaiwu : kind === 'gurson' ? d.gurson : d.dp;
     const sigma0: [number, number, number] = [
@@ -1409,9 +1419,9 @@ document.getElementById('btn-yield')?.addEventListener('click', () => {
       Number((document.getElementById('yield-s2') as HTMLInputElement).value) || 0,
       Number((document.getElementById('yield-s3') as HTMLInputElement).value) || 0,
     ];
-    const mesh = buildEnvelopeMesh(kind, cfg);
-    const sfRes = safetyFactor(kind, cfg, sigma0);
-    const crit = criticalMode([
+    const mesh = ys.buildEnvelopeMesh(kind, cfg);
+    const sfRes = ys.safetyFactor(kind, cfg, sigma0);
+    const crit = ys.criticalMode([
       { kind: 'hill48', config: d.hill },
       { kind: 'tsaiwu', config: d.tsaiwu },
       { kind: 'gurson', config: d.gurson },
@@ -1426,8 +1436,8 @@ document.getElementById('btn-yield')?.addEventListener('click', () => {
     if (out) {
       out.style.display = 'block';
       const sfTxt = sfRes.sf >= 100 ? '≥100' : sfRes.sf.toFixed(2);
-      const critTxt = crit ? `${YIELD_CRITERIA_LABEL[crit.kind]}（SF ${crit.result.sf >= 100 ? '≥100' : crit.result.sf.toFixed(2)}）` : '—';
-      out.textContent = `${YIELD_CRITERIA_LABEL[kind]}：包络半径带 ${mesh.rMin.toFixed(2)}~${mesh.rMax.toFixed(2)} MPa · `
+      const critTxt = crit ? `${ys.YIELD_CRITERIA_LABEL[crit.kind]}（SF ${crit.result.sf >= 100 ? '≥100' : crit.result.sf.toFixed(2)}）` : '—';
+      out.textContent = `${ys.YIELD_CRITERIA_LABEL[kind]}：包络半径带 ${mesh.rMin.toFixed(2)}~${mesh.rMax.toFixed(2)} MPa · `
         + `安全系数 SF=${sfTxt}（应力模长 ${sfRes.stressNorm.toFixed(2)} MPa）· 临界失效模式：${critTxt}`;
       const sfVal = crit ? crit.result.sf : sfRes.sf;
       out.textContent += sfVal < 1 ? ' ⚠ 应力状态已在包络外（失效）' : sfVal < 1.5 ? ' ⚠ 裕度偏低' : '';
@@ -1439,7 +1449,8 @@ document.getElementById('btn-yield')?.addEventListener('click', () => {
 });
 
 // ── 【v7.0 Stage III】声子能带色散图 + 禁带识别 ──
-document.getElementById('btn-phonon')?.addEventListener('click', () => {
+document.getElementById('btn-phonon')?.addEventListener('click', async () => {
+  const { solvePhononicBands } = await loadPhononic();
   const out = document.getElementById('phonon-result');
   const canvas = document.getElementById('phonon-canvas') as HTMLCanvasElement | null;
   const s = getState();
@@ -1531,12 +1542,13 @@ document.getElementById('btn-phonon')?.addEventListener('click', () => {
 let tissueResult: TissueResult | null = null;
 let tissueDayIdx = 0;
 
+let plasticityColorMod: typeof import('./physics/gpu-plasticity-webgpu') | null = null;
 function tissueApplyFrame(): void {
-  if (!tissueResult || !baseGeo) return;
+  if (!tissueResult || !baseGeo || !plasticityColorMod) return;
   const fr = Math.min(tissueDayIdx, tissueResult.o2Frames.length - 1);
   const field = tissueResult.o2Frames[fr];
   const pos = baseGeo.attributes.position.array as Float32Array;
-  const colored = mapElementFieldToVertexColors(pos, tissueResult.R, field, 0, 1, sampleCoolWarmInto);
+  const colored = plasticityColorMod.mapElementFieldToVertexColors(pos, tissueResult.R, field, 0, 1, sampleCoolWarmInto);
   baseGeo.setAttribute('color', new THREE.BufferAttribute(colored, 3));
   const mat = getMaterial(getState().material, getState().model);
   mat.vertexColors = true;
@@ -1555,7 +1567,9 @@ function tissueShowStat(): void {
   }
 }
 
-document.getElementById('btn-tissue')?.addEventListener('click', () => {
+document.getElementById('btn-tissue')?.addEventListener('click', async () => {
+  const { simulateTissueGrowth } = await loadTissue();
+  plasticityColorMod = await loadPlasticityColor();
   const out = document.getElementById('tissue-result');
   const s = getState();
   const unsupported = s.type === 'custom' || s.type === 'lidinoid' || s.type === 'splitp' || s.type === 'octo' || s.type === 'karcher' || s.type === 'fks' || s.type === 'fky' || s.type === 'gprime' || s.type === 'fcks' || s.type === 'dprime' || s.type === 'dp' || s.type === 'dd' || s.type === 'dg' || s.type === 'fcky' || s.type === 'cdd' || s.type === 'slotp' || s.type === 'fs' || s.type === 'qstar' || s.type === 'ws' || s.hybrid.enabled || s.isoGrad.enabled;
@@ -1646,7 +1660,8 @@ let lsIso = 0;
 let lsAccumSteps = 0;
 /** 水平集初始场对应的几何状态；防止改参后把旧 phi 当成新设计应用。 */
 let lsSourceStateKey: string | null = null;
-document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
+document.getElementById('btn-ls-evolve')?.addEventListener('click', async () => {
+  const { evolveLevelSet } = await loadLevelSet();
   const out = document.getElementById('ls-result');
   const btnApply = document.getElementById('btn-ls-apply');
   const s = getState();
@@ -1699,7 +1714,7 @@ document.getElementById('btn-ls-evolve')?.addEventListener('click', () => {
     if (out) { out.style.display = 'block'; out.textContent = `水平集演化失败：${err instanceof Error ? err.message : String(err)}`; }
   }
 });
-document.getElementById('btn-ls-apply')?.addEventListener('click', () => {
+document.getElementById('btn-ls-apply')?.addEventListener('click', async () => {
   if (!lsPhi) return;
   try {
     const s = getState();
@@ -1722,6 +1737,7 @@ document.getElementById('btn-ls-apply')?.addEventListener('click', () => {
     activeBuild = null;
     buildGeneration++;
     gpuSeq++;
+    const { phiToVField } = await loadLevelSet();
     const vField = phiToVField(lsPhi, lsR, lsIso);
     // 经 gpuVField 注入既有 Surface Nets 管线（水密提取，分辨率 = lsR）
     const params: BuildParams = {
@@ -2645,7 +2661,7 @@ export function bindUIEvents(): void {
   bindInverseCtHierStress();
   bindNeuralManifold();
   bindIsoGrad();
-  bindHybridCustom();
+  void bindHybridCustom();
   bindKeyboardUndo();
 }
 
@@ -3043,8 +3059,9 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     if (pV > 0) t.porosityTarget = pV / 100;
     return t;
   };
-  document.getElementById('inv-preset')?.addEventListener('change', (e) => {
+  document.getElementById('inv-preset')?.addEventListener('change', async (e) => {
     const key = (e.target as HTMLSelectElement).value;
+    const { INVERSE_PRESETS } = await import('./physics/inverse-design');
     const preset = INVERSE_PRESETS.find((ps) => ps.key === key);
     if (!preset) return;
     const set = (id: string, v: number) => {
@@ -3068,7 +3085,8 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
       if (sel) sel.value = 'custom';
     });
   }
-  document.getElementById('btn-inv-solve')?.addEventListener('click', () => {
+  document.getElementById('btn-inv-solve')?.addEventListener('click', async () => {
+    const { solveInverse } = await import('./physics/inverse-design');
     const targets = invTargets();
     if (!targets.ETarget && !targets.kappaTarget && !targets.porosityTarget) {
       flashToast('请至少设置一个目标指标（E*/κ/P）');
@@ -3108,7 +3126,8 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
   });
 
   // 【v4.0 阶段 V】CT 重构与制造偏差
-  document.getElementById('btn-ct-demo')?.addEventListener('click', () => {
+  document.getElementById('btn-ct-demo')?.addEventListener('click', async () => {
+    const { generateDemoCT, sampleDeviation, deviationColors } = await loadCtRecon();
     const s = getState();
     if (!baseGeo || s.model === 'strut') { flashToast('请先生成有效曲面（线框模式无偏差语义）'); return; }
     try {
@@ -3205,9 +3224,10 @@ function bindNeuralManifold(): void { // 神经场锚点与流形映射
     scheduleRebuild(false);
   });
   document.querySelectorAll('[data-neural-anchor]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const idx = Number(btn.getAttribute('data-neural-anchor'));
       try {
+        const { neuralAnchor, expertName, expertCount } = await loadNeuralField();
         setState({ neural: { enabled: true, z: neuralAnchor(idx) } });
         flashToast(`神经拓扑锚点：${expertName(idx)}（潜在空间 ${expertCount()} 专家流形）`);
       } catch { /* 锚点越界不可能触达 */ }
@@ -3359,7 +3379,7 @@ function bindIsoGrad(): void { // C1 渐变等值场（三平台 + 过渡带）
   bindSlider('ig-band', 'ig-band-value', 'band', (v) => v.toFixed(2));
 }
 
-function bindHybridCustom(): void { // 多相混合与自定义公式
+async function bindHybridCustom(): Promise<void> { // 多相混合与自定义公式
 
   // 过渡中心 / 宽度滑块（拖动 preview，松手 HD）
   const centerEl = document.getElementById('hybrid-center') as HTMLInputElement;
@@ -3425,7 +3445,8 @@ function bindHybridCustom(): void { // 多相混合与自定义公式
   // ── 各向异性模量曲面（RVE 均质化，τ-调制方向张量 → E(n) 球面热力图）──
   const rveBtn = document.getElementById('btn-rve');
   if (rveBtn) {
-    rveBtn.addEventListener('click', () => {
+    rveBtn.addEventListener('click', async () => {
+      const { orthotropicCompliance, sampleDirectionalGrid, directionalModulus } = await loadHomogenization();
       const st = getState();
       const canvas = document.getElementById('rve-canvas') as HTMLCanvasElement | null;
       const readout = document.getElementById('rve-readout');
@@ -3470,10 +3491,27 @@ function bindHybridCustom(): void { // 多相混合与自定义公式
   const customStatus = document.getElementById('custom-formula-status');
   if (customFormula) {
     /** 校验当前输入并刷新状态条；返回是否可重建（空/非法 → false） */
+    let validateEquation: ((raw: string) => ReturnType<typeof import('./core/equation-parser').validateEquation>) | null = null;
+    const ensureEq = async () => {
+      if (!validateEquation) {
+        const m = await loadEquationParser();
+        validateEquation = m.validateEquation;
+        return m;
+      }
+      return loadEquationParser();
+    };
     const updateCustomStatus = (): boolean => {
       if (!customStatus) return true;
       const raw = customFormula.value.trim();
       if (!raw) { customStatus.hidden = true; customStatus.className = 'custom-status'; return false; }
+      if (!validateEquation) {
+        // 首次输入前 chunk 可能未就绪：先标待校验，异步补校验
+        customStatus.hidden = false;
+        customStatus.className = 'custom-status';
+        customStatus.textContent = '… 校验器加载中';
+        void ensureEq().then(() => updateCustomStatus());
+        return true;
+      }
       const res = validateEquation(raw);
       customStatus.hidden = false;
       if (res.ok) {
@@ -3491,6 +3529,7 @@ function bindHybridCustom(): void { // 多相混合与自定义公式
       return false;
     };
     customFormula.addEventListener('input', () => {
+      void ensureEq();
       const valid = updateCustomStatus();
       setState({ customFormula: customFormula.value.trim() });
       // 非法/空公式不触发重建（保留旧模型 + 错误提示），与启用开关的 hasFormula 守卫一致
@@ -3502,6 +3541,7 @@ function bindHybridCustom(): void { // 多相混合与自定义公式
     // 预设样例芯片（点击回填 → 校验 → 重建）
     const presetRow = document.getElementById('custom-presets');
     if (presetRow) {
+      const { EQUATION_PRESETS } = await ensureEq();
       for (const p of EQUATION_PRESETS) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -4201,7 +4241,7 @@ async function enterFigureMode(): Promise<void> {
     wm.classList.add('show');
   }
 
-  setTimeout(() => {
+  setTimeout(async () => {
     ctx.composer.render();
     // 导出 PNG
     const a = document.createElement('a');
@@ -4212,7 +4252,8 @@ async function enterFigureMode(): Promise<void> {
     // 导出 JSON sidecar
     const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
     const meshHash = pos ? hashArray(pos) : 'nogeo';
-    const json = generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed });
+    const expFig = await loadExport();
+    const json = expFig.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed });
     const ja = document.createElement('a');
     ja.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     ja.download = `tpms-figure-${s.type}-p${s.porosity}-${Date.now()}.json`;
@@ -4240,33 +4281,39 @@ async function enterFigureMode(): Promise<void> {
 /** 统一导出分发：根据格式调用对应导出器 */
 async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
+  return handleExportInner(fmt);
+}
+
+async function handleExportInner(fmt: string): Promise<void> {
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
   const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode';
   // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
   if (needGeo && !(await ensureExportGradeGeometry(s))) return;
+  const exp = await loadExport();
+  const gcodeMod = await loadGcode();
   try {
     switch (fmt) {
       case 'stl': {
         // 与 btn-stl 工具栏入口共用同一 mm 缩放（wc 域 ±π → cellSize mm），两入口产物必须一致
         const stlNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), stlNormals);
+        exp.exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), stlNormals);
         break;
       }
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), vtkNormals);
+        exp.exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), vtkNormals);
         break;
       }
       case 'glb': {
         // 彩色 GLB：携带当前顶点色（着色模式开启时）+ mm 缩放，COLOR_0 Float32
         const glbColors = (baseGeo!.getAttribute('color')?.array as Float32Array | undefined) ?? null;
-        exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
+        exp.exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
         break;
       }
       case '3mf': {
         // 工业格式：mm 尺度 + 端板/构型元数据（切片机可读自定义 metadata）
-        export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), {
+        exp.export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), {
           configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
         });
         break;
@@ -4299,8 +4346,8 @@ async function handleExport(fmt: string | null): Promise<void> {
           bedTempC: gNum('gcode-bed', 60, 0, 120),
           feedrateMmMin: 1800,
         };
-        const sliced = sliceMesh(mm, gIdx, (gIdx.length / 3) | 0, gOpts);
-        const g = compileGcode(sliced.layers, sliced.modelVolumeMm3, gOpts);
+        const sliced = gcodeMod.sliceMesh(mm, gIdx, (gIdx.length / 3) | 0, gOpts);
+        const g = gcodeMod.compileGcode(sliced.layers, sliced.modelVolumeMm3, gOpts);
         downloadText(g.gcode, `${base}.gcode`, 'text/plain');
         flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}%（单壁固有 10–20%）· L${gOpts.layerHeightMm} · ${gOpts.printerPreset}`);
         break;
@@ -4309,7 +4356,7 @@ async function handleExport(fmt: string | null): Promise<void> {
         // CFD Multi-Patch：与 binary 同一缠绕定向约定 + mm 缩放，OpenFOAM 分块边界
         // （成功提示由函数末尾的通用 toast 统一给出，此处不再叠加）
         const cfdNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), cfdNormals);
+        exp.exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), cfdNormals);
         break;
       }
       case 'rvestl': {
@@ -4332,7 +4379,7 @@ async function handleExport(fmt: string | null): Promise<void> {
           return;
         }
         const scaleRve = wcToMmFactor(s.cellSize);
-        exportBinarySTL(rveRes.positions!, rveRes.indices!, `${base}-pbc-rve.stl`, scaleRve, rveRes.normals);
+        exp.exportBinarySTL(rveRes.positions!, rveRes.indices!, `${base}-pbc-rve.stl`, scaleRve, rveRes.normals);
         const sidecar = {
           format: 'tpms-pbc-rve/1.0',
           unit: 'millimeter',
@@ -4358,7 +4405,7 @@ async function handleExport(fmt: string | null): Promise<void> {
           return;
         }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
-        const vox = buildVoxelModel({
+        const vox = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
           thickness: s.thickness, targetPorosity: s.porosity / 100,
@@ -4369,26 +4416,26 @@ async function handleExport(fmt: string | null): Promise<void> {
         if (fmt === 'inp') {
           const eGPa = BASE_MODULUS[s.material] ?? BASE_MODULUS.tc4;
           const nu = s.material === 'polymer' ? 0.35 : s.material === 'thermal' ? 0.22 : 0.34;
-          exportAbaqusInp(vox, {
+          exp.exportAbaqusInp(vox, {
             youngModulusMPa: eGPa * 1000, poisson: nu,
             nominalStrain: 0.05, specimenSizeMm: specimen,
           }, `${base}-voxel.inp`);
           flashToast(`Abaqus INP 导出：${vox.solidCount} 个 C3D8 单元（体素 h≈${(specimen / caeR).toFixed(3)} mm）`);
         } else {
-          exportOpenfoamPolyMesh(vox, specimen, `${base}-polymesh.zip`, downloadBlob);
+          exp.exportOpenfoamPolyMesh(vox, specimen, `${base}-polymesh.zip`, downloadBlob);
           flashToast('OpenFOAM polyMesh 导出：解压到 case 的 constant/polyMesh/ 即可求解');
         }
         break;
       }
       case 'caesuite': {
         // 【v4.0 阶段 III】CAE 验证脚本包：Abaqus/OpenFOAM 自动化求解脚本 + 壳 + 对比模板
-        const voxV = buildVoxelModel({
+        const voxV = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
           thickness: s.thickness, targetPorosity: s.porosity / 100,
           iso: baseIso(s), customFormula: s.customFormula, stress: s.stress,
         }, 40);
-        exportVerificationSuite(
+        exp.exportVerificationSuite(
           { type: s.type, solidCount: voxV.solidCount, voidCount: 40 ** 3 - voxV.solidCount },
           `${base}-cae-verification.zip`,
           downloadBlob,
@@ -4402,7 +4449,7 @@ async function handleExport(fmt: string | null): Promise<void> {
         }
         const { field, dims } = buildVtiField(s);
         // FieldData 携带 re-contour 所需 iso 与 mm 单位（solid 用 isoUsed，shell 类用 0）
-        exportVTI(field, dims, `${base}.vti`, {
+        exp.exportVTI(field, dims, `${base}.vti`, {
           cellSizeMm: s.cellSize,
           isoUsed: lastIsoUsed,
           type: s.type,
@@ -4421,19 +4468,19 @@ async function handleExport(fmt: string | null): Promise<void> {
             return;
           }
         }
-        if (fmt === 'py') exportPythonScript(s, `${base}.py`);
-        else exportMatlabScript(s, `${base}.m`);
+        if (fmt === 'py') exp.exportPythonScript(s, `${base}.py`);
+        else exp.exportMatlabScript(s, `${base}.m`);
         break;
       case 'bibtex': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(generateBibTeX(s, lastPhysicsMetrics, meshHash), `${base}.bib`, 'text/plain');
+        downloadText(exp.generateBibTeX(s, lastPhysicsMetrics, meshHash), `${base}.bib`, 'text/plain');
         break;
       }
       case 'json': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }), `${base}.json`, 'application/json');
+        downloadText(exp.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }), `${base}.json`, 'application/json');
         break;
       }
       default:
