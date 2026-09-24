@@ -84,5 +84,8 @@ tpms/agent/.iso-cache.json.tmp
 audit_ubuntu/
 specimens/
 
-# ºì¶Ó×Ó´úÀíÁÙÊ±Êä³ö
+# ï¿½ï¿½ï¿½ï¿½Ó´ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½
 .rt_*.txt
+
+tpms/.verify/_schema_tmp_*
+tpms/.verify/tpms_selftest_scn_*
