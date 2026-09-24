@@ -163,6 +163,15 @@ console.log('\n[C2] 调色预设结构');
   const fit = read('tpms/agent/fit-batch.mjs');
   fit.includes('fit-report.mock.md') && fit.includes('ISO')
     ? ok('fit-batch mock 隔离+诚实标注') : bad('fit-batch 假 ISO/mock 覆盖');
+  // WORKFLOW 阶段标签须带「原型期」
+  const wf = read('docs/WORKFLOW_GUIDE.md');
+  /🆕 v[0-9]/.test(wf)
+    ? bad('WORKFLOW 裸阶段版本号', '应 🆕 原型期 vN')
+    : ok('WORKFLOW 阶段标签统一');
+  const spec2 = read('tpms/agent/export-specimens.mjs');
+  spec2.includes('outAbs') && spec2.includes('TIMEOUT_MS') && spec2.includes("type: 'fcky'")
+    ? ok('export-specimens 路径钳制+超时+fcky')
+    : bad('export-specimens 未硬化');
   // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
   const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
   /失败: /.test(uiSrc)

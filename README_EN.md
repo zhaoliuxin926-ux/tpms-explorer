@@ -84,12 +84,20 @@ node ../agent/tpms.mjs mesh --type gyroid --porosity 0.65 --out scaffold.stl
 node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ```
 
+## Quick links
+
+- [QUICKSTART](docs/QUICKSTART.md) — 5-minute first STL
+- [CONTRIBUTING.md](CONTRIBUTING.md) — gates & PR checklist
+- [HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md) — declared limits
+- [LAB_ONE_PAGER.md](docs/LAB_ONE_PAGER.md) — print & test card
+- [regression-matrix.md](docs/regression-matrix.md) — interceptor coverage matrix
+
 ## Verification
 
 ```bash
 # Fast checks (seconds — pre-commit / pre-interview)
-node tpms/agent/schema_check.mjs --fast           # contract/static/reject, 65 assertions
-node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 65 assertions
+node tpms/agent/schema_check.mjs --fast           # contract/static/reject, 67 assertions
+node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 67 assertions
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
