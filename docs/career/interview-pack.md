@@ -43,7 +43,7 @@ Built an LLM-agent safety layer for a research-grade geometry platform (per-slot
 
 ### Q3 "性能优化做过什么？"（三个有数字的）
 
-1. 自写静态服务器无 gzip：公网首屏 5–7s，静态资源 gzip 后体积显著下降（当前构建实测约 353KB gzip 量级，历史优化记录 624KB→约 160KB 为更早构建口径，面试引用请以现测为准），首屏回到 1s 内。
+1. 自写静态服务器无 gzip：公网首屏 5–7s，静态资源 gzip 后体积显著下降（当前构建实测约 353KB gzip 量级，历史优化记录 （历史构建值已过期，面试只讲现测）），首屏回到 1s 内。
 2. （跨项目迁移，非本仓数字，不主动讲）瓦片预烘焙：Canvas `drawImage` 每帧约 400 次→启动烘焙约 25 次/帧。若被追问命令，如实说明出处在其他项目；本项目请讲 GPU 三段实测。
 3. Boids 类项目沉淀的 SoA+counting-sort 思路迁移：2000 个体 5.6ms/步（若被问泛化能力）。
 
@@ -92,11 +92,11 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ```bash
 # 以下均在仓库根执行
-node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收 48 断言（跳过几何探针）
+node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收（GUARD 40）（跳过几何探针）
 node tpms/agent/selftest.mjs              # 49 断言
 node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
 node tpms/agent/tpms.mjs list --json      # 24 族
-node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 41+（秒级）
+node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 80（秒级）
 
 # 完整几何对拍（含 R48–R128 探针，约 5–10 min）——展示/归档用，不必临场
 node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）

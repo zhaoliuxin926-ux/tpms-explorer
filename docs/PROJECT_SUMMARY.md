@@ -1,7 +1,7 @@
 # TPMS Explorer 项目全貌总结（v1.0.3）
 
 > 生成：2026-08-29 ｜ 最近刷新：2026-09-15（v9.1：直接层切三部曲 + 可打印性审计 + CFD 交付链（可运行 case+cfd-post K_int）+ radial-grad 径向梯度构型 + Marching Tetrahedra 双提取器 + 模型线四档验收）｜ **45 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
-> 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。
+> 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4–v9.2 + v1.0.x.md（×7）。
 
 ---
 
@@ -23,8 +23,8 @@
 │   ├── index.html             ← 落地页（特性卡片 + 应用场景 + 展示图）
 │   ├── app.html               ← 单文件教学版（双击即开，8 经典族，无构建）
 │   ├── platform/              ← 工程版构建产物（Vite dist 同步，Pages 部署目标）
-│   ├── WORKFLOW_GUIDE.md      ← 实战指南（35 章）
-│   ├── RELEASE_NOTES_v2.4~v8.0.md ×7 ← 双语版本发布说明
+│   ├── WORKFLOW_GUIDE.md      ← 实战指南（36 章（TOC））
+│   ├── RELEASE_NOTES_v2.4–v9.2 + v1.0.x.md ×7 ← 双语版本发布说明
 │   ├── paper/                 ← SoftwareX 投稿包（main.tex + PDF + 导览 + Cover Letter + 清单）
 │   ├── PROJECT_SUMMARY.md     ← 本文件
 │   └── shots/ + vendor/       ← 展示截图 / Three.js 本地包
@@ -101,12 +101,12 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 
 | 组件 | 职责 |
 |---|---|
-| tpms.mjs | 六子命令 list/estimate/mesh/verify/solve/scenario（JSON 输出；exact 孔隙率求解器 0.26pp@R96） |
+| tpms.mjs | 九子命令 list/estimate/mesh/verify/solve/scenario/slice/overhang/cfd-post（JSON 输出；exact 孔隙率求解器 0.26pp@R96） |
 | tools.schema.json | **五工具**注册面（+tpms_design_verify 闭环入口），枚举/数值域/路径狱与 CLI 逐项对拍 |
 | llm-provider.mjs | 三 Provider（Ollama / OpenAI 兼容端点 / Mock）+ validateToolCalls 拦截器（逐槽位钳制） |
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
-| 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 37/37 一次全绿=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
+| 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 37/37（单轮 n=1，复测 36/37）=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
 | 自检（CI 纳管） | agent_selftest 49 + schema_check 98 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
@@ -130,7 +130,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 - **寿极对抗审查 v3**（4 红队 0C+10M+20m 全修：UI 互斥守卫/tb 量化/GPU 对拍漏列/披露漂移 13+/论文 bibitem ×2）
 - **bugs.md 清欠零挂账**（七件套真修 + 13 条定案披露，历史 368 行归档）
 
-## 五、门禁体系（44 项，run_ci_suite.mjs 调度，三平台矩阵）
+## 五、门禁体系（45 项，run_ci_suite.mjs 调度，三平台矩阵）
 
 入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 39 道行为审计（含 experimental_fit 实验曲线反演 + conformal_fill 保形填充，v9.0 门 43/44）
 （rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（10 套 UI 回归，含 slicepv/radialgrad/region/card_smoke 冒烟）+
@@ -142,8 +142,8 @@ schema_check 98（含 README 门数防漂移守卫）；gcode 32（直接层切 
 ## 六、文档体系
 
 - **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（45 门徽章 1000+）+ LEARNING_PATH 入口
-- **WORKFLOW_GUIDE.md**：35 章实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
-- **RELEASE_NOTES_v2.4~v8.0**：七份双语发布说明
+- **WORKFLOW_GUIDE.md**：36 章（TOC）实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
+- **RELEASE_NOTES_v2.4–v9.2 + v1.0.x**：七份双语发布说明
 - **BENCHMARKS.md**：24 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
 - **paper/**：SoftwareX 投稿包（已对齐 v8.0；pdflatex 0 错误）
 - **agent_memory/**：context / progress / bugs 三件套 + archive

@@ -10,7 +10,7 @@ npm run test:all          # 45 门本地全量（约 6–10 min）
 node ../agent/schema_check.mjs --fast   # 30s 契约快检
 ```
 
-改动后 **必跑**（秒级）：
+改动后 **必跑**（秒级；命令均在**仓库根**执行）：
 
 ```bash
 node tpms/.verify/docs_consistency_check.mjs

@@ -91,6 +91,19 @@ for (let round = 1; round <= ROUNDS; round++) {
   summary.push(`R${round}: ${pass}/${CASES.length}`);
 }
 
+if (LIVE) {
+  const lr = spawnSync(process.execPath, [join(HERE, 'llm_regression.mjs')], {
+    encoding: 'utf8',
+    timeout: 30 * 60_000,
+  });
+  console.log(lr.stdout || '');
+  if (lr.status !== 0) {
+    console.error('LIVE llm_regression exit', lr.status);
+    process.exit(lr.status || 1);
+  }
+  console.log('LIVE llm_regression OK — 矩阵仍以注入 toolCalls 为准');
+}
+
 const stamp = new Date().toISOString().slice(0, 10);
 const md = [
   `# 回归矩阵（${stamp}）`,

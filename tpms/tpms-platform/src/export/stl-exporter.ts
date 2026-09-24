@@ -30,7 +30,7 @@ export function buildBinarySTL(
   const dv = new DataView(buf);
 
   // header：写入单位与参数提示（C 样式截断到 80 字节）
-  const header = 'TPMS Explorer binary STL; units=mm; 1 period = 1 mm';
+  const header = 'TPMS Explorer binary STL; units=mm; scale=uniform (cellSize or normalized)';
   for (let i = 0; i < header.length && i < headerSize; i++) dv.setUint8(i, header.charCodeAt(i));
   dv.setUint32(headerSize, triCount, true);
 

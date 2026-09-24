@@ -4236,12 +4236,12 @@ async function handleExport(fmt: string | null): Promise<void> {
       case 'glb': {
         // 彩色 GLB：携带当前顶点色（着色模式开启时）+ mm 缩放，COLOR_0 Float32
         const glbColors = (baseGeo!.getAttribute('color')?.array as Float32Array | undefined) ?? null;
-        exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
+        exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
         break;
       }
       case '3mf': {
         // 工业格式：mm 尺度 + 端板/构型元数据（切片机可读自定义 metadata）
-        export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, wcToMmFactor(getState().cellSize), {
+        export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), {
           configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
         });
         break;
@@ -4277,14 +4277,14 @@ async function handleExport(fmt: string | null): Promise<void> {
         const sliced = sliceMesh(mm, gIdx, (gIdx.length / 3) | 0, gOpts);
         const g = compileGcode(sliced.layers, sliced.modelVolumeMm3, gOpts);
         downloadText(g.gcode, `${base}.gcode`, 'text/plain');
-        flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}% · L${gOpts.layerHeightMm} · ${gOpts.printerPreset}`);
+        flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}%（单壁固有 10–20%）· L${gOpts.layerHeightMm} · ${gOpts.printerPreset}`);
         break;
       }
       case 'cfdstl': {
         // CFD Multi-Patch：与 binary 同一缠绕定向约定 + mm 缩放，OpenFOAM 分块边界
         // （成功提示由函数末尾的通用 toast 统一给出，此处不再叠加）
         const cfdNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, wcToMmFactor(getState().cellSize), cfdNormals);
+        exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), cfdNormals);
         break;
       }
       case 'rvestl': {

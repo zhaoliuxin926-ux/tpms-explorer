@@ -506,7 +506,7 @@
         </div>
         <div class="video-card" data-bvid="BV1rm4y147z3">
           <div class="vc-head"><span class="vc-title">③ 它真的能造东西：Gyroid 热交换器</span><span style="display:flex;gap:10px;align-items:center"><button class="vc-play">▶ 播放</button><a class="vc-src" href="https://www.bilibili.com/video/BV1rm4y147z3/" target="_blank" rel="noopener">去 B 站看</a></span></div>
-          <p class="vc-desc">从数学到产品：同一套 gyroid 几何，调一调孔隙率就能做轻量化结构、骨支架、热交换器。视频里的设计流程，本工具用浏览器就能走完（参数→网格→验证→导出打印/仿真文件）。</p>
+          <p class="vc-desc">从数学到产品：同一套 gyroid 几何，调一调孔隙率就能做轻量化结构、骨支架、热交换器。视频里的设计流程，本工具用浏览器就能走完（参数→网格→验证→导出打印用 STL）。</p>
           <div class="vc-frame"></div>
         </div>
         <p class="vc-offline">离线/无法加载播放器时：三张卡的文字讲义即完整概念链；接入网络后点“播放”即可。</p>
@@ -2647,7 +2647,7 @@ rebuild();
     {title:'截面扫描：切开看内部', body:'想知道内部孔道长什么样？拖动<b>截面滑块</b>，像切蛋糕一样沿 Z 轴逐层剖开曲面，看清内部连通的通道网络。', demo:{label:'演示 · 剖到中部', run:demoSlice}, target:function(){return document.getElementById('slice').closest('.field')}},
     {title:'一键进入真实应用', body:'最后试试这些<b>应用场景预设</b>：仿生骨支架、轻量化零件、散热结构——它们把“看懂结构”和“真实用途”直接连起来。', demo:null, target:function(){return document.querySelector('.scenes')}},
     // 【优化 U3】补全"参数探索 → 复用"闭环：教用户导出/分享/截图，避免引导真空区
-    {title:'把结果带走：导出与分享', body:'配好参数后，右下角工具栏提供 <b>截图 PNG</b>（论文配图）、<b>STL 导出</b>（3D 打印 / 仿真）、<b>复制分享链接</b>（含全部参数，扫码即可复现）。<br><br>点击试试 ↓', demo:{label:'演示 · 复制分享链接', run:function(){ document.getElementById('btn-share').click(); }}, target:function(){return document.querySelector('.v-tools')}}
+    {title:'把结果带走：导出与分享', body:'配好参数后，右下角工具栏提供 <b>截图 PNG</b>（论文配图）、<b>STL 导出</b>（3D 打印；仿真格式见工程版）、<b>复制分享链接</b>（含全部参数，扫码即可复现）。<br><br>点击试试 ↓', demo:{label:'演示 · 复制分享链接', run:function(){ document.getElementById('btn-share').click(); }}, target:function(){return document.querySelector('.v-tools')}}
   ];
   function positionSpot(el){
     if(!el){ spot.classList.remove('show'); return; }

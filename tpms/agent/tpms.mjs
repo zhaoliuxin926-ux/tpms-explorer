@@ -188,6 +188,11 @@ function parseArgs(argv) {
   return a;
 }
 
+function SAFE_OUT_BASENAME(p) {
+  if (typeof p !== 'string' || !p) return p;
+  const base = p.replace(/\\/g, '/').split('/').pop();
+  return base === p ? p : (base || p);
+}
 function die(msg, usage = '') {
   console.error('✗ ' + msg);
   if (usage) console.error(usage);
@@ -996,7 +1001,7 @@ function cmdVerify(core, a, json) {
     boundary: 'verify = 跨门禁闭环：参数/构建水密/孔隙率偏差/物理合理性四道检查，失败按有限策略自动修复（割线校正、升分辨率），不可修复项结构化报告',
   };
   if (verdict === 'pass') {
-    const outFile = design.out ?? `tpms-${type}-verified.stl`;
+    const outFile = SAFE_OUT_BASENAME(design.out) ?? `tpms-${type}-verified.stl`;
     const stl = core.buildBinarySTL(res.positions, res.indices, core.wcToMmFactor(periods), res.normals);
     try {
       writeFileSync(outFile, Buffer.from(stl));
@@ -1276,7 +1281,7 @@ function cmdScenario(a, json) {
   if (!Number.isFinite(nominalStrain) || nominalStrain <= 0 || nominalStrain > 0.2) paramErrors.push('nominalStrain 须为 0 < ε ≤ 0.2（小应变压缩口径）');
   const specimenSizeMm = design.specimenSizeMm === undefined ? periods : Number(design.specimenSizeMm);
   if (!Number.isFinite(specimenSizeMm) || specimenSizeMm <= 0 || specimenSizeMm > 1000) paramErrors.push('specimenSizeMm 须为 0 < L ≤ 1000');
-  const outPrefix = String(design.out ?? `scenario-${type}`);
+  const outPrefix = String(SAFE_OUT_BASENAME(design.out) ?? `scenario-${type}`);
   if (paramErrors.length) {
     const out = { command: 'scenario', stage: 'parameter', paramErrors, designPath };
     if (json) { console.log(JSON.stringify(out, null, 2)); process.exit(3); }

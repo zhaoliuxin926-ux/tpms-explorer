@@ -7,7 +7,7 @@
  */
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, relative, isAbsolute, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -54,7 +54,13 @@ if (MOCK) {
     rows.push({ id: `mock_S${i}`, ...m });
   }
 } else {
-  const dir = join(ROOT, DIR);
+  const dirAbs = resolve(ROOT, DIR);
+  const relDir = relative(ROOT, dirAbs);
+  if (isAbsolute(relDir) || relDir.startsWith('..' + sep) || relDir === '..') {
+    console.error('FAIL --dir 必须位于仓库根内');
+    process.exit(1);
+  }
+  const dir = dirAbs;
   if (!existsSync(dir)) {
     console.error('无 CSV 目录', dir, '—— 用 --mock 自测，或放入试验机 CSV');
     process.exit(1);
@@ -85,4 +91,8 @@ const md = [
 
 const out = join(ROOT, MOCK ? 'docs/fit-report.mock.md' : 'docs/fit-report.md');
 writeFileSync(out, md, 'utf8');
-console.log('WROTE', out, 'rows', rows.length);
+if (!rows.length) {
+    console.error('FAIL 无有效曲线（0 行）');
+    process.exit(1);
+  }
+  console.log('WROTE', out, 'rows', rows.length);

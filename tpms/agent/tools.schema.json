@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "TPMS Agent Tools (M2)",
-  "description": "TPMS Explorer 确定性工具层。铁律：LLM 只产出本 schema 定义的参数槽位，一切数值由 CLI 确定性代码生成或校验；越界值 100% 被钳制或拒绝（见各参数 description），无静默回退。",
+  "description": "TPMS Explorer 确定性工具层。铁律：LLM 只产出本 schema 定义的参数槽位；agent 通道 validateToolCalls 逐槽位拦截（越界拒绝）；CLI 信任本地调用方，数值由确定性代码生成。",
   "tools": [
     {
       "name": "tpms_list",
