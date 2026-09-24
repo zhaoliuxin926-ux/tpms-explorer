@@ -318,13 +318,20 @@ for (const [label, args] of [
     if (!rt) bad('REPAIR_TOOL.patches 静态提取失败');
     else {
       const rp = rt[0];
-      // patches.type 可为内联枚举或 enum: TYPES 常量引用（后者已被上方 TYPES 哨兵覆盖）
-      const rpType = /enum: TYPES\b/.test(rp)
-        ? { 1: TYPES.join(',') } // 常量引用形态：等价对拍（TYPES 已 ≡ enum）
-        : rp.match(/type: \{[^}]*enum: \[([^\]]*)\]/);
-      const rpTypes = rpType ? rpType[1].split(',').map((x) => x.trim().replace(/'/g, '')) : [];
-      JSON.stringify(rpTypes) === JSON.stringify(dvP.type.enum)
-        ? ok('REPAIR_TOOL.patches.type ≡ schema type enum') : bad('REPAIR_TOOL type 漂移');
+      // 去注释后再解析（防「// enum: TYPES」注释假绿）；TYPES 引用解析真实数组
+      const rpCode = rp.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+      let rpTypes = [];
+      const inline = rpCode.match(/type:\s*\{[^}]*enum:\s*\[([^\]]*)\]/);
+      if (inline) {
+        rpTypes = inline[1].split(',').map((x) => x.trim().replace(/'/g, ''));
+      } else if (/enum:\s*TYPES\b/.test(rpCode)) {
+        const drvTypesM = drvSrc2.match(/const TYPES = \[([^\]]+)\]/);
+        rpTypes = drvTypesM
+          ? drvTypesM[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+          : [];
+      }
+      JSON.stringify(rpTypes) === JSON.stringify(dvP.type.enum) && rpTypes.length > 0
+        ? ok('REPAIR_TOOL.patches.type ≡ schema type enum') : bad('REPAIR_TOOL type 漂移', `n=${rpTypes.length}`);
       /mode:\s*\{[\s\S]{0,80}gradient_shell/.test(rp)
         ? ok('REPAIR_TOOL.patches.mode 含 gradient_shell（与初始槽位同域）') : bad('REPAIR_TOOL mode 缺 gradient_shell');
       /material: \{/.test(rp)
@@ -341,7 +348,7 @@ for (const [label, args] of [
     ? ok('design_verify mode enum ⊆ mesh（修复域不越初始声明域）') : bad('design_verify mode enum 越域');
   // llm-agent 桥接分支注册哨兵（工具名 ↔ runDesignVerify 分支共存）
   const agentSrc = readFileSync(join(HERE, 'llm-agent.mjs'), 'utf8');
-  agentSrc.includes("'tpms_design_verify'") && agentSrc.includes('runDesignVerify') && agentSrc.includes('tpms-driver.mjs')
+  /'tpms_design_verify'/.test(agentSrc.replace(/\/\/[^\n]*/g, '')) && /runDesignVerify/.test(agentSrc) && /tpms-driver\.mjs/.test(agentSrc)
     ? ok('llm-agent 桥接分支注册（tpms_design_verify → tpms-driver）') : bad('llm-agent 桥接分支缺失');
 
   // 端到端（离线闭环回归：mock 槽位 + TPMS_ALLOW_MOCK_EXEC 逃生门 + 真实 verify 执行）—— 几何探针，--fast 跳过
@@ -392,7 +399,10 @@ for (const [label, args] of [
 }
 
 function existsBridgeDesign(work) {
-  try { return readFileSync(join(work, 'tpms-design-gyroid.json'), 'utf8').includes('"gyroid"'); } catch { return false; }
+  try {
+    const j = JSON.parse(readFileSync(join(work, 'tpms-design-gyroid.json'), 'utf8'));
+    return j.type === 'gyroid' || j.design?.type === 'gyroid';
+  } catch { return false; }
 }
 
 // ── 4. nl-agent 语义覆盖映射完整性 ──
