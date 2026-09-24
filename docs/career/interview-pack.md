@@ -96,7 +96,7 @@ node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒�
 node tpms/agent/selftest.mjs              # 49 断言
 node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
 node tpms/agent/tpms.mjs list --json      # 24 族
-node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 81（秒级）
+node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 82（秒级）
 
 # 完整几何对拍（含 R48–R128 探针，约 5–10 min）——展示/归档用，不必临场
 node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）

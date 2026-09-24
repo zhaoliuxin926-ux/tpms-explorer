@@ -34,6 +34,7 @@ node tpms/agent/llm-agent.mjs --provider mock --dry-run --json "孔隙率 75% �
 node tpms/agent/schema_check.mjs --fast
 node tpms/agent/regression_matrix.mjs --rounds 3
 node tpms/agent/gen-boundary-table.mjs --check
+node tpms/agent/lit-band-card.mjs
 node tpms/.verify/docs_consistency_check.mjs
 node tpms/agent/sync-publish.mjs --check
 ```

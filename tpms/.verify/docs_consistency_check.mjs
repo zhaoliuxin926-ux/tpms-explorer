@@ -174,6 +174,14 @@ console.log('\n[C2] 调色预设结构');
   spec2.includes('outAbs') && spec2.includes('TIMEOUT_MS') && spec2.includes("type: 'fcky'")
     ? ok('export-specimens 路径钳制+超时+fcky')
     : bad('export-specimens 未硬化');
+  // 文献带偏差卡可复跑且默认带内
+  try {
+    execSync('node tpms/agent/lit-band-card.mjs', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe', timeout: 15_000 });
+    ok('lit-band-card 默认带内');
+  } catch (e) {
+    bad('lit-band-card 失败', String(e.stdout || e.message).slice(0, 80));
+  }
+
   // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
   const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
   /失败: /.test(uiSrc)
