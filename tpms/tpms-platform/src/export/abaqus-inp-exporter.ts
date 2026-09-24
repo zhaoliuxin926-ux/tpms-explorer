@@ -64,7 +64,7 @@ export function buildAbaqusInp(model: VoxelModel, opts: AbaqusExportOptions): {
   const push = (s: string) => lines.push(s);
 
   push('*HEADING');
-  push('TPMS lattice volumetric mesh (C3D8 voxel) - TPMS Explorer v3.0');
+  push('TPMS lattice volumetric mesh (C3D8 voxel) - TPMS Explorer v1.0.3');
   push(`** solid voxels: voxels classified by implicit field (solid fraction ${(model.solidCount / (R * R * R)).toFixed(4)})`);
   push(`** units: mm, N, MPa; specimen size ${opts.specimenSizeMm.toFixed(3)} mm; voxel h = ${h.toExponential(4)} mm`);
   push('**');

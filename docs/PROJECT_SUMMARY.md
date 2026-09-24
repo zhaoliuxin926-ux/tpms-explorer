@@ -1,4 +1,4 @@
-# TPMS Explorer 项目全貌总结（v9.2.0-24families-hardened）
+# TPMS Explorer 项目全貌总结（v1.0.3）
 
 > 生成：2026-08-29 ｜ 最近刷新：2026-09-15（v9.1：直接层切三部曲 + 可打印性审计 + CFD 交付链（可运行 case+cfd-post K_int）+ radial-grad 径向梯度构型 + Marching Tetrahedra 双提取器 + 模型线四档验收）｜ **45 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4~v8.0.md（×7）。

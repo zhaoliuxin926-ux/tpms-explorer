@@ -17,7 +17,7 @@
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十六章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
-| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.0.0.md](docs/RELEASE_NOTES_v1.0.0.md)（当前·含版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
+| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.0.3.md](docs/RELEASE_NOTES_v1.0.3.md)（当前）｜[v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
@@ -50,7 +50,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v1.0.0-stable-epoch）
+### 科研与增材制造特性矩阵（v1.0.3 · 稳定序列）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
@@ -105,7 +105,7 @@
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 45/45（口径：39 道行为审计 + `ui_jump_check` 快检 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门）。
-- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收 53 断言）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 53 断言）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
+- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收 57 断言）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 57 断言）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 
 ---
 

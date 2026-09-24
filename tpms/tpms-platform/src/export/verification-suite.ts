@@ -16,7 +16,7 @@
 import { buildStoredZip } from './openfoam-polymesh-exporter';
 
 export const ABAQUS_RUNNER = String.raw`# -*- coding: utf-8 -*-
-"""Abaqus no-GUI 准静态压缩求解与后处理（TPMS Explorer v4.0 验证包）
+"""Abaqus no-GUI 准静态压缩求解与后处理（TPMS Explorer v1.0.3 验证包）
 
 用法（Abaqus 命令行环境）:
     abaqus cae noGUI=abaqus_auto_runner.py -- --inp tpms-gyroid-voxel.inp --out result.csv
@@ -100,7 +100,7 @@ print('TPMS verification: E_FEM=%.4f MPa, sigma_peak=%.4f, sigma_pl=%.4f -> %s'
 `;
 
 export const OPENFOAM_RUNNER = String.raw`# -*- coding: utf-8 -*-
-"""OpenFOAM 达西渗流自动化求解与后处理（TPMS Explorer v4.0 验证包）
+"""OpenFOAM 达西渗流自动化求解与后处理（TPMS Explorer v1.0.3 验证包）
 
 用法（OpenFOAM 环境，python3）:
     python3 openfoam_auto_runner.py --case tpms-polymesh-case --out permeability.csv
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 `;
 
 export const RUN_ABAQUS_SH = `#!/bin/bash
-# TPMS Explorer v4.0 —— Abaqus 验证一键脚本
+# TPMS Explorer v1.0.3 —— Abaqus 验证一键脚本
 # 用法: ./run_abaqus.sh tpms-gyroid-voxel.inp 1.0
 set -e
 INP=\${1:-tpms-voxel.inp}
@@ -252,7 +252,7 @@ echo "完成: abaqus_result.csv（E_FEM / sigma_peak / sigma_pl）"
 `;
 
 export const RUN_OPENFOAM_SH = `#!/bin/bash
-# TPMS Explorer v4.0 —— OpenFOAM 达西渗流一键脚本
+# TPMS Explorer v1.0.3 —— OpenFOAM 达西渗流一键脚本
 # 用法: ./run_openfoam.sh tpms-polymesh-case
 set -e
 CASE=\${1:-tpms-polymesh-case}
@@ -280,7 +280,7 @@ export function buildVerificationSuite(modelInfo: { type: string; solidCount: nu
   files['run_abaqus.sh'] = RUN_ABAQUS_SH;
   files['run_openfoam.sh'] = RUN_OPENFOAM_SH;
   files['comparison_template.csv'] = COMPARISON_TEMPLATE;
-  files['README.md'] = `# TPMS Explorer v4.0 CAE 验证脚本包
+  files['README.md'] = `# TPMS Explorer v1.0.3 CAE 验证脚本包
 
 目标模型：${modelInfo.type}（固相体素 ${modelInfo.solidCount} / 流体体素 ${modelInfo.voidCount}）
 

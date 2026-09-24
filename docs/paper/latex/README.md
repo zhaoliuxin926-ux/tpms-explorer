@@ -1,6 +1,6 @@
 # LaTeX 手稿包（SoftwareX / JOSS 投稿口径）
 
-TPMS Explorer v7.0.0-generative-biophysics 学术投稿资产。
+TPMS Explorer v1.0.3 学术投稿资产（稳定序列；原型期阶段见 RELEASE_NOTES 档案）。
 
 ## 文件
 

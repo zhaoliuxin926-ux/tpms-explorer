@@ -802,7 +802,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Cu7IVbXY.js"></script>
+  <script type="module" crossorigin src="./assets/index-CnKACa6R.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -1166,7 +1166,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">隐式神经拓扑 (Generative INR) <span class="sect-tag">v7.0</span></summary>
+        <summary class="sect-h">隐式神经拓扑 (Generative INR) <span class="sect-tag">原型期 v7.0</span></summary>
         <div class="field">
           <div class="opt-row" style="grid-template-columns:1fr 1fr">
             <button class="opt" id="neural-enabled">启用神经场<span class="o-sub">SIREN</span></button>
@@ -1200,7 +1200,7 @@ window.addEventListener('error', function(e) {
       <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">9</span></div>
 
       <details class="sect">
-        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">v6.0</span></summary>
+        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">原型期 v6.0</span></summary>
         <div class="field">
           <div class="field-note">全拉格朗日 StVK + J2 径向返回体素 FEM：位移加载压至 4% 应变，视口播放 von Mises 演化（蓝→红），并绘制工程 σ–ε 曲线。门禁 27 守能量漂移 ≤0.5%。</div>
           <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
@@ -1210,7 +1210,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">试验曲线反演 <span class="sect-tag">v9.0</span></summary>
+        <summary class="sect-h">试验曲线反演 <span class="sect-tag">原型期 v9.0</span></summary>
         <div class="field">
           <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
           <input type="file" id="expfit-file" accept=".csv,.txt,.tsv" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
@@ -1225,7 +1225,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">LPBF 打印工艺与残余应力 <span class="sect-tag">v6.0</span></summary>
+        <summary class="sect-h">LPBF 打印工艺与残余应力 <span class="sect-tag">原型期 v6.0</span></summary>
         <div class="field">
           <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
           <div class="opt-row two" style="gap:6px">
@@ -1238,7 +1238,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">多轴屈服包络面 (v7.0)</summary>
+        <summary class="sect-h">多轴屈服包络面（原型期 v7.0）</summary>
         <div class="field">
           <div class="field-note">主应力空间 (σ₁,σ₂,σ₃) 封闭凸失效包络：Hill-48 各向异性 / Tsai-Wu 拉压不对称 / Gurson 多孔压溃（q=孔隙率）/ Drucker-Prager 圆锥。强度参数由当前结构（相对密度+材料+方向模量）自动推导。</div>
           <select id="yield-criterion" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
@@ -1260,7 +1260,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">声子能带与振动禁带 (v7.0)</summary>
+        <summary class="sect-h">声子能带与振动禁带（原型期 v7.0）</summary>
         <div class="field">
           <div class="field-note">Bloch-Floquet 点阵动力学：单胞体素质点 + 26 邻域弹簧（κ 由长波动力矩阵精确标定），沿 Γ-X-M-R-Γ 求解能带色散，识别路径禁带与相对禁带宽度 BG%。</div>
           <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
@@ -1270,7 +1270,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">组织长入 0~28 天 (v7.0)</summary>
+        <summary class="sect-h">组织长入 0~28 天（原型期 v7.0）</summary>
         <div class="field">
           <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
           <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
@@ -1328,7 +1328,7 @@ window.addEventListener('error', function(e) {
       <section class="sgroup" id="grp-optimize"><div class="sgroup-h" data-target="grp-optimize" title="跳转到该组"><span class="t">主动优化</span><span class="n">1</span></div>
 
       <details class="sect">
-        <summary class="sect-h">水平集主动拓扑优化 (v7.0)</summary>
+        <summary class="sect-h">水平集主动拓扑优化（原型期 v7.0）</summary>
         <div class="field">
           <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
           <div class="opt-row two" style="gap:6px">
