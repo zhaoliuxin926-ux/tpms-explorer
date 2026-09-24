@@ -8,6 +8,9 @@ export function flashToast(msg: string): void {
     el = document.createElement('div');
     el.id = 'toast';
     el.className = 'toast';
+    // 失败/警告提示对读屏可见（与教学版 app.html 的 aria-live 口径对齐）
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
     document.body.appendChild(el);
   }
   el.textContent = msg;

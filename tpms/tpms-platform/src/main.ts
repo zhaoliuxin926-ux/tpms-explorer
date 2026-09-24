@@ -2171,12 +2171,14 @@ function onWorkerResult(res: WorkerResponse): void {
   applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
   runPendingNLExport();
 
-  // 缓存结果
+  // 缓存结果：Worker 已 transfer 独占，直接存引用（不再 new 拷一份）。
+  // applyGeometry 对恒等映射零拷贝挂 BufferAttribute；非恒等映射先 slice 再 warp，
+  // 不会原地改规范几何。导出/测量路径只读 position/normal/index。
   const cKey = cacheKey(current, res.resolution);
   geoCache.set(cKey, {
-    positions: new Float32Array(res.positions!),
-    normals: new Float32Array(res.normals!),
-    indices: new Uint32Array(res.indices!),
+    positions: res.positions!,
+    normals: res.normals!,
+    indices: res.indices!,
     vertCount: res.vertCount,
     faceCount: res.triCount,
     porosityEstimate: res.porosityEstimate,
@@ -3001,7 +3003,7 @@ document.getElementById('btn-export')?.addEventListener('click', (e) => {
       iso: lastIsoUsed,
     });
     if (!svg) {
-      alert('当前截面无可视交线，请调整 Slice 滑块后再试。');
+      flashToast('当前截面无可视交线，请调整 Slice 滑块后再试');
       return;
     }
     const blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -4139,9 +4141,9 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
 
     geoCache.set(cacheKey(s, hdR), {
-      positions: new Float32Array(res.positions),
-      normals: new Float32Array(res.normals),
-      indices: new Uint32Array(res.indices),
+      positions: res.positions,
+      normals: res.normals,
+      indices: res.indices,
       vertCount: res.vertCount,
       faceCount: res.triCount,
       porosityEstimate: res.porosityEstimate,

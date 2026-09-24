@@ -96,7 +96,7 @@ export class WorkerBridge {
    */
   build(params: BuildParams): number {
     const id = this.beginRequest();
-    this.worker.postMessage({ id, type: 'build', params });
+    this.worker.postMessage({ id, type: 'build', params }, collectTransferables(params));
     return id;
   }
 
@@ -134,7 +134,7 @@ export class WorkerBridge {
       }, deadline);
       this.pending.set(id, { resolve, reject, timer });
       try {
-        this.worker.postMessage({ id, type: 'build', params });
+        this.worker.postMessage({ id, type: 'build', params }, collectTransferables(params));
       } catch (err) {
         this.settleReject(id, asError(err));
       }
@@ -265,6 +265,18 @@ export class WorkerBridge {
       error: message,
     });
   }
+}
+
+/**
+ * 收集可零拷贝 transfer 的大数组。
+ * gpuVField 是 WebGPU 一次性结果，transfer 后主线程不再读——省一次 structuredClone。
+ * containerMeshSdf 来自 meshCont 缓存、跨重建复用，必须 clone 不能 transfer。
+ */
+function collectTransferables(params: BuildParams): Transferable[] {
+  const list: Transferable[] = [];
+  const gpu = params.gpuVField;
+  if (gpu && gpu.buffer instanceof ArrayBuffer) list.push(gpu.buffer);
+  return list;
 }
 
 function asError(value: unknown): Error {
