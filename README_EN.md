@@ -91,6 +91,7 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 - [HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md) — declared limits
 - [LAB_ONE_PAGER.md](docs/LAB_ONE_PAGER.md) — print & test card
 - [regression-matrix.md](docs/regression-matrix.md) — interceptor coverage matrix
+- [LIT_BAND_CARD.md](docs/LIT_BAND_CARD.md) — literature band deviation card
 
 ## Verification
 
