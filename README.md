@@ -64,7 +64,7 @@
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **45 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 45/45 |
 | 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Ollama + Mock 三 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 37/37 推荐，四档画像在案）+ llm_provider_selftest 33 断言 |
-| 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 67 断言 |
+| 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 68 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
 | 🔥 LPBF 热-力耦合 | 高斯体热源瞬态场 + 冷却速率 G×R + 残余应力/翘曲 + 工艺窗口（v6.0） | lpbf_thermo_mechanical_audit 18 断言 |
@@ -81,7 +81,7 @@
 | 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 19 断言（合成曲线解析真值恢复 ≤2%） |
 | ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 119 断言（万点对拍 0.00e+0） |
 | 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
-| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 67 断言 |
+| 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 68 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |
 | 🌿 多级分形 TPMS | F=F_macro+λ·F_micro(Nx) 双重孔隙，coarea 比表面积分离 + 微孔连通率 100% | hierarchical_audit 18 断言 |
 | 🎯 逆向设计引擎 | 目标 E*/κ/P 反解最优构型（Nelder-Mead+LM，8 型枚举，κ 下限约束） | inverse_design_audit 27 断言（逆向犯罪 ≤3% + UI 钳制口径哨兵） |
@@ -100,13 +100,13 @@
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
-> ⚡ **5 分钟出件**：[QUICKSTART](docs/QUICKSTART.md) ｜ 🤝 [CONTRIBUTING](CONTRIBUTING.md) ｜ [上机操作卡](docs/LAB_ONE_PAGER.md) ｜ [诚实边界](docs/HONESTY_BOUNDARIES.md) ｜ [回归矩阵](docs/regression-matrix.md)
+> ⚡ **5 分钟出件**：[QUICKSTART](docs/QUICKSTART.md) ｜ 🤝 [CONTRIBUTING](CONTRIBUTING.md) ｜ [上机操作卡](docs/LAB_ONE_PAGER.md) ｜ [诚实边界](docs/HONESTY_BOUNDARIES.md) ｜ [回归矩阵](docs/regression-matrix.md) ｜ [**项目总览**](docs/PROJECT_INVENTORY.md)
 
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 45/45（口径：39 道行为审计 + `ui_jump_check` 快检 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门）。
-- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收 67 断言）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 67 断言）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
+- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收 68 断言）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 68 断言）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 
 ---
 
