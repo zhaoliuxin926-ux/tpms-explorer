@@ -70,7 +70,10 @@ function sweepPorts(ports) {
 // 最重单门=run_all（10 套件，含 card_smoke 重卡）；默认 60min——run54 实证 runner 高峰期
 // 系统性变慢（重门 306-569s 可膨胀至 1200s+）；2026-09-20 card_smoke 入列后 windows 跑者
 // 实测 run_all 超 30min 被误杀（ubuntu/macos <30min 绿），上限放宽至 60min
-const STEP_TIMEOUT_MS = Number(process.env.STEP_TIMEOUT_MS) || 3_600_000;
+const STEP_TIMEOUT_MS = (() => {
+  const n = Number(process.env.STEP_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : 3_600_000;
+})();
 
 function runStep(name, script) {
   return new Promise((resolve) => {

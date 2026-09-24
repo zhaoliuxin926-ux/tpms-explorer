@@ -325,7 +325,7 @@ for (const [label, args] of [
       const rpTypes = rpType ? rpType[1].split(',').map((x) => x.trim().replace(/'/g, '')) : [];
       JSON.stringify(rpTypes) === JSON.stringify(dvP.type.enum)
         ? ok('REPAIR_TOOL.patches.type ≡ schema type enum') : bad('REPAIR_TOOL type 漂移');
-      /gradient_shell/.test(rp)
+      /mode:\s*\{[\s\S]{0,80}gradient_shell/.test(rp)
         ? ok('REPAIR_TOOL.patches.mode 含 gradient_shell（与初始槽位同域）') : bad('REPAIR_TOOL mode 缺 gradient_shell');
       /material: \{/.test(rp)
         ? ok('REPAIR_TOOL.patches.material 槽位在位') : bad('REPAIR_TOOL material 缺位');

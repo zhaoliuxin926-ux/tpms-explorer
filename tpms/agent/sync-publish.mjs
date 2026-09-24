@@ -72,4 +72,8 @@ for (const name of listFormal()) {
 
 const mode = CHECK ? 'CHECK' : 'SYNC';
 console.log(`\nSYNC-PUBLISH ${mode} ${changed} changed / ${skipped} ok / ${checked + changed} total`);
+if (!listFormal().length) {
+  console.error('FAIL 正式版博客目录为空');
+  process.exit(1);
+}
 if (CHECK && process.exitCode) console.log('粘贴版落后于正式版，跑 node tpms/agent/sync-publish.mjs 同步');

@@ -13,7 +13,7 @@ import { downloadBlob } from './download';
  * 法线行始终写归一化几何法线（与缠绕严格自洽，Abaqus/COMSOL 重建实体依赖此约定）。
  *
  * @param scale wc → mm 缩放因子（core/units 的 wcToMmFactor），
- *              使导出模型总宽 = cellSize mm（1 period = 1 mm）。默认 1 保持旧行为。
+ *              使导出模型总宽 = cellSize mm（meshCont 时用其归一化 scale）。默认 1。
  * @param normals 已废弃（保留签名兼容）：定向改由 orientConsistently 全局传播保证
  */
 export function buildBinarySTL(
@@ -77,7 +77,7 @@ export function buildBinarySTL(
 
 /**
  * @param scale wc → mm 缩放因子（core/units 的 wcToMmFactor），
- *              使导出模型总宽 = cellSize mm（1 period = 1 mm）。默认 1 保持旧行为。
+ *              使导出模型总宽 = cellSize mm（meshCont 时用其归一化 scale）。默认 1。
  * @param normals 可选顶点法线，用于缠绕定向（见 buildBinarySTL）
  */
 export function exportBinarySTL(
