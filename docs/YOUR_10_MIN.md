@@ -10,10 +10,13 @@
 2. ISO 13314 压缩 → CSV 放 `specimens/csv/`
 3. `node tpms/agent/fit-batch.mjs` → 示意报告；**正式 ISO 以工程版「试验曲线反演」复核为准**
 
-## 3 · 模型回归（有 API key 时）
+## 3 · 模型回归（有有效 API key 时）
 ```bash
-TPMS_LLM_API_KEY=... TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \
+TPMS_LLM_API_KEY=... TPMS_LLM_BASE_URL=https://api.deepseek.com/v1 \
   node tpms/agent/regression_matrix.mjs --live --rounds 3
 ```
 
-> 仓内命令、门禁、试样、文档已齐；这三步都需要你侧输入，AI 无法替代。
+**实测记录（2026-09-24）**：本机 `DEEPSEEK_API_KEY` 对 api.deepseek.com 返回 **HTTP 401 invalid**（已打码 ****446a）；`TPMS_LLM_API_KEY` 未配置。换有效 key 后上述一条命令即可跑真实 37 条。
+
+> 仓内命令、门禁、18 件试样、文档已齐；这三步都需要你侧输入，AI 无法替代。
+> 虚拟标定闭环（合成曲线，**非实机**）：`node tpms/agent/virtual-calibration.mjs` → `docs/VIRTUAL_CALIBRATION.md`
