@@ -150,7 +150,7 @@ console.log('\n[C2] 调色预设结构');
     : ok('学习路径/总纲/工作流自称 v1.0.x');
 
   // 三主线交付物在位
-  for (const rel of ['docs/QUICKSTART.md', 'CONTRIBUTING.md', 'docs/HONESTY_BOUNDARIES.md', 'docs/regression-matrix.md', 'docs/LAB_ONE_PAGER.md', 'docs/PROJECT_INVENTORY.md', 'docs/LIT_BAND_CARD.md']) {
+  for (const rel of ['docs/QUICKSTART.md', 'CONTRIBUTING.md', 'docs/HONESTY_BOUNDARIES.md', 'docs/regression-matrix.md', 'docs/LAB_ONE_PAGER.md', 'docs/PROJECT_INVENTORY.md', 'docs/LIT_BAND_CARD.md', 'docs/YOUR_10_MIN.md']) {
     existsSync(path.join(ROOT, rel)) ? ok('交付物 ' + rel) : bad('缺交付物 ' + rel);
   }
 
