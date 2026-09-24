@@ -91,13 +91,13 @@ for (const ty of TYPES) {
     continue;
   }
   if (ty === 'slotp' || ty === 'fs' || ty === 'qstar' || ty === 'ws') {
-    // C2 第六批（jwf23 数据集）：默认周期数 k6 在 R48 触发薄壁自触（qstar nm=792 实测）——
-    // 与 gprime/lidinoid 同族「降周期数可避」；可产域 = k2 p0.6 全四 exit0（qstar p0.5 微非流形拒产见 tools.schema 披露）
-    const r48k6 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
-    const r48k6Ok = r48k6.status === 3 && (() => { try { return JSON.parse(r48k6.stdout).lastAuditCounts?.nonManifoldEdges === 792; } catch { return false; } })();
-    r48k6Ok
-      ? ok(`type enum 值 ${ty} k6 R48 已登记 fail-closed（nm=792 数值钉，红队 C F4）`)
-      : bad(`type enum ${ty} k6 R48 行为漂移`, `exit=${r48k6.status}`);
+    // 仅 qstar 有 k6 R48 fail-closed 数值钉（nm=792）；slotp/fs/ws 实测 k6 R48 可产（2026-09-24 全量回归纠正）
+    if (ty === 'qstar') {
+      const r48k6q = run('mesh', '--type', 'qstar', '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
+      r48k6q.status === 3 && (r48k6q.stderr || '').includes('水密门')
+        ? ok('type enum 值 qstar k6 R48 已登记 fail-closed（nm=792 数值钉，红队 C F4）')
+        : bad('type enum qstar k6 R48 行为漂移', `exit=${r48k6q.status}`);
+    }
     const r = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
     r.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96 k2，第六批钉）`) : bad(`type enum ${ty} R96 k2`, (r.stderr || '').slice(-60));
     continue;

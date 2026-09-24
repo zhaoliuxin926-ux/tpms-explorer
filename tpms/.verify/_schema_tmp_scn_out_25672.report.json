@@ -1,0 +1,79 @@
+{
+  "command": "scenario",
+  "scenario": "bone-scaffold-template (M5)",
+  "design": {
+    "type": "gyroid",
+    "porosity": 0.65,
+    "material": "tc4",
+    "materialLabel": "Ti-6Al-4V",
+    "resolution": 48,
+    "periods": 4,
+    "container": "cube",
+    "mode": "solid_network",
+    "tolerance": 0.01,
+    "nominalStrain": 0.05,
+    "specimenSizeMm": 4
+  },
+  "geometry": {
+    "isoUsed": -0.378373,
+    "rounds": 2,
+    "porosityTrace": [
+      {
+        "iso": -0.4691467323340476,
+        "est": 0.669176000029193
+      },
+      {
+        "iso": -0.3783727676988154,
+        "est": 0.6344815522289666
+      }
+    ],
+    "meshPorosity": 0.634482,
+    "meshPorosityDeviation": 0.015518,
+    "voxelPorosity": 0.652778,
+    "voxelSolidCount": 38400,
+    "voxelInsideCount": 110592,
+    "watertight": {
+      "openEdges": 0,
+      "nonManifoldEdges": 0,
+      "degenTris": 0
+    },
+    "vertCount": 45904,
+    "triCount": 92448
+  },
+  "mechanics": {
+    "method": "Gibson-Ashby 解析工程口径（非 FEA）",
+    "relativeDensity": 0.35,
+    "youngsModulusGPa": 5.1205,
+    "literatureBandGPa": [
+      4.7162,
+      5.929
+    ],
+    "inLiteratureBand": true,
+    "yieldStrengthMPa": 54.66,
+    "sigmaNote": "平台 C2=0.3·ρ̄^1.5（网格泡沫折中上界）；经典开孔泡沫 0.23·ρ̄^1.5 为带下界",
+    "inpElastic": {
+      "youngModulusMPa": 110000,
+      "poisson": 0.34,
+      "nominalStrain": 0.05,
+      "specimenSizeMm": 4
+    }
+  },
+  "files": [
+    {
+      "path": "_schema_tmp_scn_out_25672.stl",
+      "bytes": 4622484,
+      "sha256_16": "0f340b76f5f5d441",
+      "role": "水密网格（mm，打印/CFD）"
+    },
+    {
+      "path": "_schema_tmp_scn_out_25672.inp",
+      "bytes": 5919822,
+      "sha256_16": "bb38f60c20a86d6b",
+      "role": "Abaqus 体素压缩模型（C3D8+PBC）",
+      "nodeCount": 62084,
+      "elemCount": 38400
+    }
+  ],
+  "boundary": "报告口径：孔隙率双口径（网格实测[容器散度体积分母]/体素分位[容器内体素分母]）随分辨率收敛；INP 体素模型不含端板（多孔芯层口径，端板属增材工艺层）；力学预测为解析估算非仿真结果；INP 压缩结果以 Abaqus 实跑为准",
+  "elapsedMs": 1670
+}
