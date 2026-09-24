@@ -2891,7 +2891,30 @@ function bindViewerExtras(): void { // 查看器扩展工具（对比快照/卡�
     document.getElementById(id)?.addEventListener('input', gcodeSyncInfo);
     document.getElementById(id)?.addEventListener('change', gcodeSyncInfo);
   }
+  const GCODE_KEY = 'tpms-gcode-process';
+  try {
+    const saved = JSON.parse(localStorage.getItem(GCODE_KEY) || 'null');
+    if (saved && typeof saved === 'object') {
+      for (const id of ['gcode-layer', 'gcode-line', 'gcode-nozzle', 'gcode-bed', 'gcode-preset']) {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+        if (el && saved[id] !== undefined) el.value = String(saved[id]);
+      }
+    }
+  } catch { /* ignore */ }
+  const gcodePersist = () => {
+    try {
+      const o: Record<string, string> = {};
+      for (const id of ['gcode-layer', 'gcode-line', 'gcode-nozzle', 'gcode-bed', 'gcode-preset']) {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+        if (el) o[id] = el.value;
+      }
+      localStorage.setItem(GCODE_KEY, JSON.stringify(o));
+    } catch { /* ignore */ }
+  };
   gcodeSyncInfo();
+  for (const id of ['gcode-layer', 'gcode-line', 'gcode-nozzle', 'gcode-bed', 'gcode-preset']) {
+    document.getElementById(id)?.addEventListener('change', gcodePersist);
+  }
 
 document.getElementById('btn-export')?.addEventListener('click', (e) => {
     e.stopPropagation();
