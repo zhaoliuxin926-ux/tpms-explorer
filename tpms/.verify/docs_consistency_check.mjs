@@ -127,6 +127,26 @@ console.log('\n[C2] 调色预设结构');
   appHtml.includes('flashToast') && appHtml.includes('.toast')
     ? ok('教学版 toast 契约在位') : bad('教学版 toast 缺失');
 
+  // 版本纪元：产品自称 v1.0.x；用户可见功能标签须带「原型期」
+  const expHeaders = [
+    'tpms/tpms-platform/src/main.ts',
+    'tpms/tpms-platform/src/export/bibtex-sidecar.ts',
+    'tpms/tpms-platform/src/export/gcode-slicer.ts',
+    'tpms/tpms-platform/src/export/abaqus-inp-exporter.ts',
+    'tpms/tpms-platform/src/export/verification-suite.ts',
+  ].map((f) => read(f)).join('\n');
+  /Explorer v(?:0|2|3|4|5|6|7|8|9)\./.test(expHeaders)
+    ? bad('导出物仍自称 v0/v2–v9', '应 v1.0.3')
+    : ok('导出物产品号 v1.0.3');
+  /Explorer v1\.0\./.test(expHeaders) ? ok('导出物含 v1.0.x') : bad('导出物缺 v1.0.x');
+  const landing = read('docs/index.html');
+  /style="color:#[0-9a-f]+">v[0-9]+\.[0-9]</.test(landing)
+    ? bad('落地页裸版本 chip', '须带「原型期」')
+    : ok('落地页版本 chip 均带原型期');
+  /v7\.0\.0|v9\.2\.0-24families/.test(read('docs/LEARNING_PATH.md') + read('docs/PROJECT_SUMMARY.md') + read('docs/WORKFLOW_GUIDE.md'))
+    ? bad('文档自称旧产品版本', '应 v1.0.x')
+    : ok('学习路径/总纲/工作流自称 v1.0.x');
+
   // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
   const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
   /失败: /.test(uiSrc)

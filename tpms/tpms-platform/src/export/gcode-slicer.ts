@@ -110,7 +110,7 @@ export function compileGcode(
   const filamentArea = Math.PI * Math.pow(opts.filamentDiameterMm / 2, 2);
   const extrusionPerMm = (opts.lineWidthMm * opts.layerHeightMm) / filamentArea;
 
-  lines.push('; TPMS Explorer v5.0 native slicer');
+  lines.push('; TPMS Explorer v1.0.3 native slicer');
   if (opts.printerPreset === 'bambu') {
     lines.push('M73 P0', 'G90', 'M83', 'G28', 'G1 Z5 F600');
   } else {
