@@ -5,7 +5,7 @@
  *  A. 卡片存在且内嵌构型组（sect 计数不因本卡变化——ui_jump 已钉分组数，此处只验元素在构型组内）
  *  B. 生成按钮点击 → 120 层就绪状态 + 滑块启用 + canvas 非空白（像素统计）
  *  C. 滑块拖动 → 层位读数变化 + canvas 像素变化（渲染响应）
- *  D. shell 模式守卫 toast（切到 shell 再点生成 → 无层切就绪）
+ *  D. shell 模式守卫 toast（切到 shell 再点生成 → 无层切就绪；含模式激活断言）
  *  E. C5 容器联动冒烟（可选重资产，跳过——由 tsc+barrel 同源保证，登记为未测项）
  */
 import { spawn } from 'node:child_process';
@@ -58,13 +58,17 @@ try {
   await page.evaluate(() => { const el = document.getElementById('slicepv-z'); if (el) { el.value = '5'; el.dispatchEvent(new Event('input', { bubbles: true })); } });
   const info2 = await page.evaluate(() => document.getElementById('slicepv-z-value')?.textContent || '');
   info1 !== info2 && info2.includes('第 6/') ? ok('C 层位滑块响应（' + info2.trim() + '）') : bad('C 滑块', info1 + ' → ' + info2);
-  // D. shell 守卫
-  await page.evaluate(() => { (document.querySelector('[data-mode="shell"]'))?.click(); });
+  // D. shell 守卫（选择器必须是 data-structure，不是 data-mode——历史假绿：data-mode 不存在时
+  // 点击空操作 + 第二次生成若 400ms 内未写回「就绪」会被误判为守卫生效）
+  await page.evaluate(() => { (document.querySelector('[data-structure="shell"]'))?.click(); });
   await page.waitForTimeout(300);
+  const modeAfter = await page.evaluate(() => document.querySelector('[data-structure="shell"]')?.classList.contains('active') ?? false);
+  modeAfter ? ok('D shell 模式已激活') : bad('D shell 模式未激活');
   await page.evaluate(() => document.getElementById('slicepv-gen')?.click());
   await page.waitForTimeout(400);
   const stillReady = await page.evaluate(() => (document.getElementById('slicepv-status')?.textContent || '').includes('就绪'));
-  !stillReady ? ok('D shell 模式点击不产层切（守卫生效）') : bad('D shell 守卫失效');
+  const shellBlocked = await page.evaluate(() => (document.getElementById('slicepv-status')?.textContent || '').includes('solid_network'));
+  !stillReady && shellBlocked ? ok('D shell 模式点击不产层切（守卫生效）') : bad('D shell 守卫失效', `ready=${stillReady} blocked=${shellBlocked}`);
 } catch (e) {
   bad('浏览器流程异常', e instanceof Error ? e.message.slice(0, 120) : String(e));
 } finally {
@@ -73,5 +77,5 @@ try {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 5) { console.error(`GUARD FAIL: ${pass} < 5`); process.exit(1); }
+if (pass < 6) { console.error(`GUARD FAIL: ${pass} < 6`); process.exit(1); }
 process.exit(fail ? 1 : 0);
