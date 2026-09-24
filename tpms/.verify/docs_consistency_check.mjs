@@ -115,6 +115,9 @@ console.log('\n[C2] 调色预设结构');
   html.includes('data-export="gcode"') && srcMain.includes("case 'gcode'") && srcMain.includes('compileGcode')
     ? ok('G-code 导出入口接线（menu + handleExport）')
     : bad('G-code 导出入口缺失', 'menu 或 main.ts case 未接');
+  html.includes('id="gcode-preset"') && srcMain.includes('gcode-layer') && srcMain.includes('gOpts.layerHeightMm')
+    ? ok('G-code 工艺参数可调（preset/层高/线宽/温度）')
+    : bad('G-code 工艺参数未接线');
 
   // 教学版禁止原生 alert（toast 对齐工程版）
   const appHtml = read('docs/app.html');

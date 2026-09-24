@@ -802,7 +802,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Dq_foaTm.js"></script>
+  <script type="module" crossorigin src="./assets/index-Cu7IVbXY.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
 <body>
@@ -1362,6 +1362,25 @@ window.addEventListener('error', function(e) {
           <input type="range" id="slicepv-z" min="0" max="119" value="60" step="1" disabled>
           <canvas id="slicepv-canvas" width="256" height="256" style="width:100%;aspect-ratio:1;margin-top:6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14)"></canvas>
           <div class="field-note" id="slicepv-status">【战役三】扫描线直接层切：跳过三角网格在隐式场上直出增材扫描路径（灰色=固相填充带，深色=扫描向量）。容器跟随构型（cube/cylinder/外部 STL）；体积口径经门禁对拍（vs 网格发散 ≤0.4%）。仅 solid_network。</div>
+        </div>
+        <div class="field">
+          <div class="lbl"><span>G-code 工艺（原生切片）</span><span class="val" id="gcode-info">0.2mm · RepRap</span></div>
+          <div class="lbl" style="margin-top:6px"><span>打印机预设</span></div>
+          <select id="gcode-preset" style="width:100%;margin-top:4px">
+            <option value="reprap">RepRap / Marlin</option>
+            <option value="klipper">Klipper</option>
+            <option value="bambu">Bambu</option>
+          </select>
+          <div class="lbl" style="margin-top:6px"><span>层高 (mm)</span><span class="val" id="gcode-layer-value">0.20</span></div>
+          <input type="range" id="gcode-layer" min="0.08" max="0.32" step="0.04" value="0.2">
+          <div class="lbl" style="margin-top:6px"><span>线宽 (mm)</span><span class="val" id="gcode-line-value">0.40</span></div>
+          <input type="range" id="gcode-line" min="0.2" max="0.8" step="0.05" value="0.4">
+          <div class="lbl" style="margin-top:6px"><span>喷嘴 / 热床 (°C)</span><span class="val" id="gcode-temp-value">210 / 60</span></div>
+          <div class="opt-row two">
+            <input type="number" id="gcode-nozzle" min="160" max="300" step="5" value="210" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
+            <input type="number" id="gcode-bed" min="0" max="120" step="5" value="60" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
+          </div>
+          <div class="field-note">导出中心「G-code 原生切片」使用本组参数。诚实边界：单壁轮廓 + 扫描线填充，无多墙/支撑/桥接——生产件请用 PrusaSlicer / Bambu Studio。</div>
         </div>
         <div class="field">
           <div class="lbl"><span>径向梯度构型 M(r) (radial-grad)</span><span class="val" id="rg-info">K=1.5</span></div>

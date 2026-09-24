@@ -2871,7 +2871,29 @@ function bindViewerExtras(): void { // 查看器扩展工具（对比快照/卡�
 
   // 导出中心：VTK / VTI / Python / MATLAB / BibTeX / JSON 统一入口
   const exportMenu = document.getElementById('export-menu');
-  document.getElementById('btn-export')?.addEventListener('click', (e) => {
+    // G-code 工艺读数
+  const gcodeSyncInfo = () => {
+    const layer = (document.getElementById('gcode-layer') as HTMLInputElement | null)?.value ?? '0.2';
+    const line = (document.getElementById('gcode-line') as HTMLInputElement | null)?.value ?? '0.4';
+    const nozzle = (document.getElementById('gcode-nozzle') as HTMLInputElement | null)?.value ?? '210';
+    const bed = (document.getElementById('gcode-bed') as HTMLInputElement | null)?.value ?? '60';
+    const preset = (document.getElementById('gcode-preset') as HTMLSelectElement | null)?.value ?? 'reprap';
+    const lv = document.getElementById('gcode-layer-value');
+    const linev = document.getElementById('gcode-line-value');
+    const tv = document.getElementById('gcode-temp-value');
+    const info = document.getElementById('gcode-info');
+    if (lv) lv.textContent = Number(layer).toFixed(2);
+    if (linev) linev.textContent = Number(line).toFixed(2);
+    if (tv) tv.textContent = nozzle + ' / ' + bed;
+    if (info) info.textContent = Number(layer).toFixed(2) + 'mm · ' + preset.toUpperCase();
+  };
+  for (const id of ['gcode-layer', 'gcode-line', 'gcode-nozzle', 'gcode-bed', 'gcode-preset']) {
+    document.getElementById(id)?.addEventListener('input', gcodeSyncInfo);
+    document.getElementById(id)?.addEventListener('change', gcodeSyncInfo);
+  }
+  gcodeSyncInfo();
+
+document.getElementById('btn-export')?.addEventListener('click', (e) => {
     e.stopPropagation();
     exportMenu?.classList.toggle('show');
   });
@@ -4237,15 +4259,25 @@ async function handleExport(fmt: string | null): Promise<void> {
           if (z < zMin) zMin = z;
           if (z > zMax) zMax = z;
         }
+        const gNum = (id: string, def: number, lo: number, hi: number) => {
+          const v = Number((document.getElementById(id) as HTMLInputElement | null)?.value ?? def);
+          return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
+        };
+        const gPresetRaw = (document.getElementById('gcode-preset') as HTMLSelectElement | null)?.value ?? 'reprap';
         const gOpts = {
-          layerHeightMm: 0.2, lineWidthMm: 0.4, zMinMm: zMin, zMaxMm: zMax,
-          filamentDiameterMm: 1.75, printerPreset: 'reprap' as const,
-          nozzleTempC: 210, bedTempC: 60, feedrateMmMin: 1800,
+          layerHeightMm: gNum('gcode-layer', 0.2, 0.08, 0.32),
+          lineWidthMm: gNum('gcode-line', 0.4, 0.2, 0.8),
+          zMinMm: zMin, zMaxMm: zMax,
+          filamentDiameterMm: 1.75,
+          printerPreset: (gPresetRaw === 'bambu' || gPresetRaw === 'klipper' ? gPresetRaw : 'reprap') as 'bambu' | 'klipper' | 'reprap',
+          nozzleTempC: gNum('gcode-nozzle', 210, 160, 300),
+          bedTempC: gNum('gcode-bed', 60, 0, 120),
+          feedrateMmMin: 1800,
         };
         const sliced = sliceMesh(mm, gIdx, (gIdx.length / 3) | 0, gOpts);
         const g = compileGcode(sliced.layers, sliced.modelVolumeMm3, gOpts);
         downloadText(g.gcode, `${base}.gcode`, 'text/plain');
-        flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}%（单壁+扫描填充）`);
+        flashToast(`G-code ${g.layerCount} 层 · 体积偏差 ${(g.volumeError * 100).toFixed(1)}% · L${gOpts.layerHeightMm} · ${gOpts.printerPreset}`);
         break;
       }
       case 'cfdstl': {
