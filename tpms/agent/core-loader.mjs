@@ -3,7 +3,11 @@
 // 与 .verify/evaluator_check.mjs 同款 rolldown 临时 bundle 模式：
 // TS 源码是无扩展名相对导入，Node 原生 type-stripping 无法解析，
 // 须经 rolldown 打包成单文件 ESM 后动态 import。
-import { writeFileSync, rmSync } from 'node:fs';
+//
+// 【2026-09-25】源码 mtime 指纹缓存：CLI 短命令冷启动不再每次全量 rolldown
+// （此前每条命令都付秒级打包税）。源码或导出清单变更时指纹变化自动重建。
+import { writeFileSync, rmSync, existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -33,9 +37,47 @@ const CORE_EXPORTS = [
   `export { buildAbaqusInp } from ${JSON.stringify(join(PLATFORM, 'src/export/abaqus-inp-exporter.ts'))};`,
 ].join('\n');
 
+/** 递归收集 src 下 .ts 文件的 path:mtimeMs:size，供指纹计算 */
+function collectSrcFingerprints(dir, out = []) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      collectSrcFingerprints(p, out);
+    } else if (e.isFile() && e.name.endsWith('.ts')) {
+      const st = statSync(p);
+      out.push(`${p}:${st.mtimeMs}:${st.size}`);
+    }
+  }
+  out.sort();
+  return out;
+}
+
+/** 源码 + 导出清单指纹；变更即失效缓存 */
+function sourceFingerprint() {
+  const h = createHash('sha1');
+  h.update(CORE_EXPORTS);
+  for (const line of collectSrcFingerprints(join(PLATFORM, 'src'))) h.update(line);
+  // package.json 依赖变更（如 rolldown 版本）也应触发重建
+  try {
+    h.update(readFileSync(join(PLATFORM, 'package.json')));
+  } catch { /* 忽略 */ }
+  return h.digest('hex').slice(0, 16);
+}
+
 export async function loadCore() {
-  const BUNDLE = tmpdir() + `/tpms_agent_core_${process.pid}.mjs`;
-  const entry = tmpdir() + `/tpms_agent_core_entry_${process.pid}.ts`;
+  const fp = sourceFingerprint();
+  const BUNDLE = join(tmpdir(), `tpms_agent_core_${fp}.mjs`);
+  if (existsSync(BUNDLE)) {
+    return import(pathToFileURL(BUNDLE));
+  }
+
+  const entry = join(tmpdir(), `tpms_agent_core_entry_${fp}.ts`);
   writeFileSync(entry, CORE_EXPORTS);
   // rolldown 是 vite 8 的传递依赖（npm 提升至 tpms-platform/node_modules/.bin）；
   // Windows 下是 .cmd shim，其余平台是无扩展名可执行 shim
@@ -43,6 +85,7 @@ export async function loadCore() {
   const r = spawnSync(`"${bin}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   try { rmSync(entry, { force: true }); } catch { /* 忽略 */ }
   if (r.status !== 0) {
+    try { rmSync(BUNDLE, { force: true }); } catch { /* 忽略 */ }
     throw new Error(
       'rolldown 打包失败（先确认已执行: cd tpms/tpms-platform && npm install）:\n' + (r.stdout || '') + (r.stderr || '')
     );

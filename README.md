@@ -103,7 +103,7 @@
 > ⚡ **5 分钟出件**：[QUICKSTART](docs/QUICKSTART.md) ｜ [**你的 10 分钟**](docs/YOUR_10_MIN.md) ｜ 🤝 [CONTRIBUTING](CONTRIBUTING.md) ｜ [上机操作卡](docs/LAB_ONE_PAGER.md) ｜ [诚实边界](docs/HONESTY_BOUNDARIES.md) ｜ [回归矩阵](docs/regression-matrix.md) ｜ [**项目总览**](docs/PROJECT_INVENTORY.md) ｜ [文献带偏差卡](docs/LIT_BAND_CARD.md)
 
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
-- 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js CDN，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
+- 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 45/45（口径：39 道行为审计 + `ui_jump_check` 快检 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门）。
 - 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 84 断言）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。

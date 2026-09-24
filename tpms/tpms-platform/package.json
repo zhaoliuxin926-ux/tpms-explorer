@@ -10,11 +10,11 @@
     "test:all": "node ../.verify/run_ci_suite.mjs"
   },
   "devDependencies": {
+    "@types/three": "^0.185.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   },
   "dependencies": {
-    "@types/three": "^0.185.1",
     "three": "^0.185.1"
   }
 }
