@@ -32,24 +32,24 @@ node ../agent/schema_check.mjs --fast                 # 30s 契约快检
 10. [非欧度规空间映射](#十非欧度规空间映射-) 🆕
 11. [RVE 均质化与方向模量](#十一rve-均质化与方向模量-) 🆕
 12. [红队极端工况矩阵](#十二红队极端工况矩阵-) 🆕
-13. [Abaqus 有限元单胞均质化与 PBC 施加教程](#十三abaqus-有限元单胞均质化与-pbc-施加教程--v30) 🆕 v3.0
-14. [OpenFOAM polyMesh 流体秒级灌注仿真实战](#十四openfoam-polymesh-流体秒级灌注仿真实战--v30) 🆕 v3.0
-15. [主应力迹线仿生多孔骨支架参数设计原则](#十五主应力迹线仿生多孔骨支架参数设计原则--v30) 🆕 v3.0
-16. [多级分形 TPMS 换热器与生物支架多尺度应用](#十六多级分形-tpms-换热器与生物支架多尺度应用--v30) 🆕 v3.0
-17. [逆向力学与传质多目标优化设计实战](#十七逆向力学与传质多目标优化设计实战--v40) 🆕 v4.0
-18. [庞加莱非欧双曲多孔骨套筒建模范式](#十八庞加莱非欧双曲多孔骨套筒建模范式--v40) 🆕 v4.0
-19. [Abaqus / OpenFOAM 自动化求解与验证后处理](#十九abaqus--openfoam-自动化求解与验证后处理--v40) 🆕 v4.0
-20. [工业 Micro-CT 制造偏差表征与精度补偿](#二十工业-micro-ct-制造偏差表征与精度补偿--v40) 🆕 v4.0
-21. [原生 Web Worker 有限元均质化与 LBM 流体求解实战](#二十一原生-web-worker-有限元均质化与-lbm-流体求解实战--v50) 🆕 v5.0
-22. [三维交互式 CAE 边界条件拾取与载荷工况定义](#二十二三维交互式-cae-边界条件拾取与载荷工况定义--v50) 🆕 v5.0
-23. [临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读](#二十三临床-micro-ct-dicomtiff-导入与骨形态计量学参数解读--v50) 🆕 v5.0
-24. [网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南](#二十四网页端直接生成-3d-打印-g-code-与拓竹klipper-上机指南--v50) 🆕 v5.0
-25. [神经网络多物理场代理模型与 Pareto 逆向设计前沿](#二十五神经网络多物理场代理模型与-pareto-逆向设计前沿--v50) 🆕 v5.0
-26. [WebGPU 非线性超弹性与弹塑性大变形力学求解](#二十六webgpu-非线性超弹性与弹塑性大变形力学求解--v60) 🆕 v6.0
-27. [单轴准静态压溃数字孪生与断裂失效预测](#二十七单轴准静态压溃数字孪生与断裂失效预测--v60) 🆕 v6.0
-28. [微流体 Navier-Stokes 流固耦合高精度仿真](#二十八微流体-navier-stokes-流固耦合高精度仿真--v60) 🆕 v6.0
-29. [激光粉末床熔融（LPBF）热-力残余应力与翘曲预测](#二十九激光粉末床熔融lpbf热-力残余应力与翘曲预测--v60) 🆕 v6.0
-30. [自然语言驱动的智能 CAD/CAM 增材制造代理](#三十自然语言驱动的智能-cadcam-增材制造代理--v60) 🆕 v6.0
+13. [Abaqus 有限元单胞均质化与 PBC 施加教程](#十三abaqus-有限元单胞均质化与-pbc-施加教程--v30) 🆕 原型期 v3.0
+14. [OpenFOAM polyMesh 流体秒级灌注仿真实战](#十四openfoam-polymesh-流体秒级灌注仿真实战--v30) 🆕 原型期 v3.0
+15. [主应力迹线仿生多孔骨支架参数设计原则](#十五主应力迹线仿生多孔骨支架参数设计原则--v30) 🆕 原型期 v3.0
+16. [多级分形 TPMS 换热器与生物支架多尺度应用](#十六多级分形-tpms-换热器与生物支架多尺度应用--v30) 🆕 原型期 v3.0
+17. [逆向力学与传质多目标优化设计实战](#十七逆向力学与传质多目标优化设计实战--v40) 🆕 原型期 v4.0
+18. [庞加莱非欧双曲多孔骨套筒建模范式](#十八庞加莱非欧双曲多孔骨套筒建模范式--v40) 🆕 原型期 v4.0
+19. [Abaqus / OpenFOAM 自动化求解与验证后处理](#十九abaqus--openfoam-自动化求解与验证后处理--v40) 🆕 原型期 v4.0
+20. [工业 Micro-CT 制造偏差表征与精度补偿](#二十工业-micro-ct-制造偏差表征与精度补偿--v40) 🆕 原型期 v4.0
+21. [原生 Web Worker 有限元均质化与 LBM 流体求解实战](#二十一原生-web-worker-有限元均质化与-lbm-流体求解实战--v50) 🆕 原型期 v5.0
+22. [三维交互式 CAE 边界条件拾取与载荷工况定义](#二十二三维交互式-cae-边界条件拾取与载荷工况定义--v50) 🆕 原型期 v5.0
+23. [临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读](#二十三临床-micro-ct-dicomtiff-导入与骨形态计量学参数解读--v50) 🆕 原型期 v5.0
+24. [网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南](#二十四网页端直接生成-3d-打印-g-code-与拓竹klipper-上机指南--v50) 🆕 原型期 v5.0
+25. [神经网络多物理场代理模型与 Pareto 逆向设计前沿](#二十五神经网络多物理场代理模型与-pareto-逆向设计前沿--v50) 🆕 原型期 v5.0
+26. [WebGPU 非线性超弹性与弹塑性大变形力学求解](#二十六webgpu-非线性超弹性与弹塑性大变形力学求解--v60) 🆕 原型期 v6.0
+27. [单轴准静态压溃数字孪生与断裂失效预测](#二十七单轴准静态压溃数字孪生与断裂失效预测--v60) 🆕 原型期 v6.0
+28. [微流体 Navier-Stokes 流固耦合高精度仿真](#二十八微流体-navier-stokes-流固耦合高精度仿真--v60) 🆕 原型期 v6.0
+29. [激光粉末床熔融（LPBF）热-力残余应力与翘曲预测](#二十九激光粉末床熔融lpbf热-力残余应力与翘曲预测--v60) 🆕 原型期 v6.0
+30. [自然语言驱动的智能 CAD/CAM 增材制造代理](#三十自然语言驱动的智能-cadcam-增材制造代理--v60) 🆕 原型期 v6.0
 31. [隐式神经场（SIREN）潜在拓扑流形探索](#三十一隐式神经场siren潜在拓扑流形探索--v70) 🆕 原型期 v7.0
 32. [三维多轴各向异性屈服面与多孔破坏裕度分析](#三十二三维多轴各向异性屈服面与多孔破坏裕度分析--v70) 🆕 原型期 v7.0
 33. [声子晶体能带色散与超材料宽频振动隔离设计](#三十三声子晶体能带色散与超材料宽频振动隔离设计--v70) 🆕 原型期 v7.0
@@ -530,7 +530,7 @@ redteam_matrix_audit（100+ 案例）：孔隙率极端 {1%, 99%} × 8 曲面 ×
 **v4.0 新增四门**：inverse_design_audit（27 断言：10 组逆向犯罪测试 100% 收敛且前向误差 ≤3%、κ 下限约束语义、确定性、LM 不劣性、UI 应用钳制口径哨兵）；poincare_metric_audit（12 断言：det(J)>0 全域 9000 采样、径向单射含延拓段、水密拓扑继承、有向边配对、py 静态同源）；cae_verification_audit（25 断言：runner 语法 ast/内容完备、脚本↔导出器节点集/patch 交叉核对、FoamFile 规范、ZIP 完整性）；impact_modal_audit（11 断言：SEA∈[5,60] J/g 物理带、ε_d 解析、正交简并对、√ρ̄ 标度）+ ct_reconstruction_audit（11 断言：Otsu 谷区、EDT 暴力逐体素一致、bias 注入恢复 ≤0.1mm）。合计 **21 门 · 780+ 断言**。
 
 
-## 十三、Abaqus 有限元单胞均质化与 PBC 施加教程 🆕 v3.0
+## 十三、Abaqus 有限元单胞均质化与 PBC 施加教程 🆕 原型期 v3.0
 
 导出中心 →【Abaqus 体网格 (C3D8 INP)】：体素级六面体网格（默认 40³/轴），含 `*NODE`、`*ELEMENT, TYPE=C3D8, ELSET=ESOLID`、节点集 `NSET_BOTTOM/TOP` 与三对面集 `NSET_PBC_X0/X1, Y0/Y1, Z0/Z1`（仅含固相引用节点）、材料（mm-N-MPa 单位制，E 取材质基体模量）与单轴压缩载荷步模板（底部 U3=0，顶部 U3=−0.05L）。
 
@@ -542,7 +542,7 @@ redteam_matrix_audit（100+ 案例）：孔隙率极端 {1%, 99%} × 8 曲面 ×
 
 **Jacobian 与质量**：体素六面体为轴对齐正立方体，Jacobian = h³ > 0（ratio 1.0，cae_mesh_audit 门禁守护）。诚实边界：表面呈阶梯状（非贴体），适用于均质化预研与筛选；发表级贴体网格建议以 PBC 表面网格为界重建六面体/四面体混合网格。
 
-## 十四、OpenFOAM polyMesh 流体秒级灌注仿真实战 🆕 v3.0
+## 十四、OpenFOAM polyMesh 流体秒级灌注仿真实战 🆕 原型期 v3.0
 
 导出中心 →【OpenFOAM polyMesh (CFD)】：ZIP 内含 `constant/polyMesh/` 五件套（points/faces/owner/neighbour/boundary），解压到 case 目录即成完整网格——**跳过 snappyHexMesh**，无布尔剖分失败面。
 
@@ -557,7 +557,7 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - cell-face 关联守恒 Σ(2·内部+边界) = 6·cells 精确成立；体素级阶梯界面建议配合 `snappyHexMeshDict` 的 layer 添加或直接以体素尺度解释结果（粘性损失偏高，属保守估计）；
 - 网格尺度：模型总宽 = cellSize mm，体素 h ≈ cellSize/40；Run 目录需自备 `0/` 场与 `system/controlDict`（本包只承载几何）。
 
-## 十五、主应力迹线仿生多孔骨支架参数设计原则 🆕 v3.0
+## 十五、主应力迹线仿生多孔骨支架参数设计原则 🆕 原型期 v3.0
 
 「应力场引导 (Stress-Driven)」面板：Wolff 定律的几何化——骨小梁沿主应力迹线排列、高应力区致密化。
 
@@ -567,7 +567,7 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - **可视化**：着色模式 →「应力云图 (von Mises)」；β 过大（≈1）时高应力区趋于全实心属物理极限（无等值面）；
 - **汇报表述**：这是「力学启发的几何自适应」而非力学求解——σ(x) 为解析预设场，非 FEA 结果。
 
-## 十六、多级分形 TPMS 换热器与生物支架多尺度应用 🆕 v3.0
+## 十六、多级分形 TPMS 换热器与生物支架多尺度应用 🆕 原型期 v3.0
 
 「多级分形 TPMS (Hierarchical)」面板：F = F_macro + λ·F_micro(N·x)。
 
@@ -577,7 +577,7 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - **组合**：可与应力场引导叠加（先主轴拉伸再分级调制）；与 Hybrid 互斥（同为场级组合层）；
 - **打印校验**：λ 过小（<0.1）微织构低于打印分辨率（SLM ~80 µm）将被熔池抹平；导出 STL 前先核对切片预览。
 
-## 十七、逆向力学与传质多目标优化设计实战 🆕 v4.0
+## 十七、逆向力学与传质多目标优化设计实战 🆕 原型期 v4.0
 
 「逆向性能求解器 (Inverse Designer)」面板：从「参数调结构」到「性能定结构」。
 
@@ -587,7 +587,7 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - **可行域**：P ∈ [2%, 98%]、cellSize ∈ [1, 5] mm、α ∈ [0.5, 2.5]（<1 为方向软化——三处 clamp 必须同域，NM 自由演化/LM 钳制/解报告的域不一致会让 LM 从 NM 终点跳变边界，成本 4e-13→1.2e-1，门禁 17 红测抓获）。
 - **审计口径**：门禁 17 的 10 组「逆向犯罪测试」由已知参数生成目标再反解，断言 100% 收敛且前向误差 ≤3%；解剖预设（皮质骨/松质骨/散热沉）断言可解子集命中。
 
-## 十八、庞加莱非欧双曲多孔骨套筒建模范式 🆕 v4.0
+## 十八、庞加莱非欧双曲多孔骨套筒建模范式 🆕 原型期 v4.0
 
 「空间映射 → 庞加莱双曲度规」：r' = 2R₀²·r/(R₀²−r²)，自中心向外围非线性拉伸加密——骨套筒外密内疏的解剖学梯度。
 
@@ -596,7 +596,7 @@ simpleFoam         # 直接求解（或 interFoam 两相灌注）
 - **URL/脚本**：`?mfd=poincare&mfr=12`；Python 导出脚本含逐式向量翻译（rad = mm·2π/cellSize 换算后 warp），MATLAB 含径向族（poincare/hyperbolic）。
 - **参数选择**：R₀ 取 10~20（弧度域）；R₀ 过小时域角（r_max = π√3·k ≈ 5.44k）远超截断点，外围全为线性延拓段（双曲特征弱化）。
 
-## 十九、Abaqus / OpenFOAM 自动化求解与验证后处理 🆕 v4.0
+## 十九、Abaqus / OpenFOAM 自动化求解与验证后处理 🆕 原型期 v4.0
 
 导出中心 →【CAE 验证脚本包】：`abaqus_auto_runner.py` + `openfoam_auto_runner.py` + 壳脚本 + 对比矩阵模板。
 
@@ -614,7 +614,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 **对比矩阵**：`comparison_template.csv` 七项指标（E_FEM/σ_peak/σ_pl/κ/WSS/SEA/f1），理论列来自平台物理面板（Gibson-Ashby/Kozeny-Carman/impact-energy 模块），`rel_error ≤ 15%` 为解析代理口径 PASS。cae_verification_audit 断言 runner 期望的节点集/patch 名与导出器输出 100% 交叉匹配 + FoamFile class/object 声明规范 + ZIP 完整性。
 
-## 二十、工业 Micro-CT 制造偏差表征与精度补偿 🆕 v4.0
+## 二十、工业 Micro-CT 制造偏差表征与精度补偿 🆕 原型期 v4.0
 
 「CT 重构与制造偏差」面板：设计 → 打印 → CT 扫描 → 精度对比的科研闭环。
 
@@ -623,7 +623,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **分辨率纪律**：偏差表征的可分辨下限 = CT 体素尺寸（宽/R）；亚体素偏置（如 0.08mm @ 0.21mm 体素）不可恢复——先核对体素尺寸再设计补偿量。
 - **补偿回路**：正偏差（过充）区域 → 下调平台壁厚/孔隙率参数重新导出 → 二次打印 → 二次 CT 比对，收敛到 ±1 体素精度。
 
-## 二十一、原生 Web Worker 有限元均质化与 LBM 流体求解实战 🆕 v5.0
+## 二十一、原生 Web Worker 有限元均质化与 LBM 流体求解实战 🆕 原型期 v5.0
 
 「原生 CAE 快速求解」面板：无需外部求解器，浏览器内直接解算等效刚度与渗透率。
 
@@ -632,7 +632,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **口径声明**：微观 FEA 剪切波动场 b=0 为结构性未解（bugs.md v5.0 条目），C44–C66 行为 Voigt 上界口径；FD-Darcy 为标量压力近似（未解析 Stokes 速度场）。
 - **分辨率**：FEA 建议 20³（秒级），LBM/Darcy 建议 12~16³（亚秒）。
 
-## 二十二、三维交互式 CAE 边界条件拾取与载荷工况定义 🆕 v5.0
+## 二十二、三维交互式 CAE 边界条件拾取与载荷工况定义 🆕 原型期 v5.0
 
 「CAE 边界拾取」模式：Raycaster 点击 → 法向角区域生长（≤25°）→ 面集高亮。
 
@@ -640,7 +640,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **导出注入**：INP 追加 `*NSET, NSET=BC_xxx` + `*BOUNDARY` 或 `*DSLOAD`；FOAM boundary 字典追加 patch 条目；
 - **映射守恒**：面集→节点集由构造保证（facesToNodes 去重排序），boundary_picker_audit 门禁校验。
 
-## 二十三、临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读 🆕 v5.0
+## 二十三、临床 Micro-CT DICOM/TIFF 导入与骨形态计量学参数解读 🆕 原型期 v5.0
 
 「CT 重构」面板扩展：支持拖入 .dcm 序列或 .tif 堆栈。
 
@@ -648,7 +648,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **骨形态计量**：BV/TV（体积分数）、Tb.Th（2×EDT 均值，mm）、Tb.Sp（2×孔隙 EDT 均值）、Tb.N（BV/TV/Tb.Th, mm⁻¹）、SMI（网格法面积加权法向偏差）。gyroid 壳 SMI < 1.5（板状），HA/β-TCP 烧结支架 SMI ~ 0–1。
 - **临床口径**：BV/TV 与 µCT/QCT 一致；Tb.Th 为 EDT 近似（非距离脊），≥64³ 采样时误差 ~5%。
 
-## 二十四、网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南 🆕 v5.0
+## 二十四、网页端直接生成 3D 打印 G-code 与拓竹/Klipper 上机指南 🆕 原型期 v5.0
 
 切片引擎与验证门禁（门禁 25：层数/体积/回抽/预设）已就绪；**UI 导出入口已开放**（导出中心「G-code 原生切片」；诚实边界：单壁轮廓+扫描填充，非工业全特征切片器——生产件请用 PrusaSlicer/Bambu Studio 再切）。
 
@@ -657,14 +657,14 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **上机**：Bambu 拷入 SD 卡 → P1S 局域网工作室导入；Klipper Mainsail/Fluidd 上传。
 - **诚实边界**：单壁轮廓无壁厚偏移环路；桥接/悬垂未处理；体积偏差 ~10–20%（量化+重叠），精确校准需打印标定塔。
 
-## 二十五、神经网络多物理场代理模型与 Pareto 逆向设计前沿 🆕 v5.0
+## 二十五、神经网络多物理场代理模型与 Pareto 逆向设计前沿 🆕 原型期 v5.0
 
 「ML 代理」模块：自研前馈 MLP（ReLU 隐层 + 线性输出，零依赖 Float64 矩阵运算），SGD 在线训练。
 
 - **教师信号**：解析代理（Gibson-Ashby E*/Kozeny-Carman κ/SEA 平台理想化）；
 - **Pareto 前沿**：非支配排序（E 最大化 + κ 最大化 + SEA 最大化）→ 前沿点过滤；
 - **演示口径**：MLP 训练 MSE 收敛 ≥10×；Pareto 非支配性由 ml_pareto_audit 校验。生产精度需外部数据蒸馏（论文 future work）。
-## 二十六、WebGPU 非线性超弹性与弹塑性大变形力学求解 🆕 v6.0
+## 二十六、WebGPU 非线性超弹性与弹塑性大变形力学求解 🆕 原型期 v6.0
 
 「弹塑性压溃仿真」面板（侧栏）+ 门禁 27 `gpu_plasticity_audit`（42 断言）。
 
@@ -678,7 +678,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **单元生死**：onStep 回调改写 active 掩码（Stage II 失效判据挂点）；死亡后 Jacobi 重算 + 限幅保护；
 - **诚实边界**：J2 取在 PK2 空间（中等应变工程近似）；一致弹塑性切线（秩一修正）与几何刚度切线已实现（`tangent: 'consistent'`）但默认关闭——压缩软化段失去 SPD 性会导致 CG 崩坏；底面横向全固支带来的边界约束使单轴反力高于理想单轴（单单元实测 1.098·Eε，物理正确）。
 
-## 二十七、单轴准静态压溃数字孪生与断裂失效预测 🆕 v6.0
+## 二十七、单轴准静态压溃数字孪生与断裂失效预测 🆕 原型期 v6.0
 
 「数字孪生压溃」= Stage I 求解器 + 失效判据 + 坍塌检测（`digital-twin-compression.ts`）+ 门禁 28（21 断言）。
 
@@ -689,7 +689,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **诚实边界（标定比披露）**：全积分六面体体素 FEM 对平台应力系统性偏刚，DT/GA 实测 ≈1.68（R=6）/2.04（R=8）——门禁守标定比的跨工况稳定性（≤10%）与披露带 [1.2, 3.0]，而非假装裸 ±10% 一致；GA 数字是文献口径估计，不是本模型输出；
 - **韧性代理**：塑性耗散 W_pl = Σσ̄y·Δε̄p（单位参考体积）。
 
-## 二十八、微流体 Navier-Stokes 流固耦合高精度仿真 🆕 v6.0
+## 二十八、微流体 Navier-Stokes 流固耦合高精度仿真 🆕 原型期 v6.0
 
 `navier-stokes-solver.ts` + 门禁 29 `wasm_navier_stokes_audit`（15 断言）。
 
@@ -700,7 +700,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **WASM 加速档（诚实降级披露）**：手写 WAT 内核 + 手工二进制汇编器（`gen_ns_wasm.mjs`，零 wabt 依赖）已实现并保留为实验件，但 wabt.js 与 V8 对同一 WAT 的编码/校验分歧（往返复现、逐字对拍无法收敛）导致暂停接入——运行时与门禁均走 TS 热循环（同功能同数值），与 v5.0 LBM→FD-Darcy 降级同口径；
 - **API**：`solveNavierStokes({nx,ny,nz,fluid,mode,nu,bodyForce,dt,beta,maxIter,tol})` → {u, p, umean, permeability, converged}。
 
-## 二十九、激光粉末床熔融（LPBF）热-力残余应力与翘曲预测 🆕 v6.0
+## 二十九、激光粉末床熔融（LPBF）热-力残余应力与翘曲预测 🆕 原型期 v6.0
 
 `lpbf-thermo-mechanical.ts` + 侧栏「LPBF 打印工艺与残余应力」卡片 + 门禁 30（18 断言）。
 
@@ -712,7 +712,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **门禁守恒**：能量台账平衡 0.0000%（≤0.5% 断言），跨网格（N=20/32）稳定；
 - **诚实边界**：热-力解耦估算（固有应变法），非增量热-弹塑性 FEM；熔池对流/辐射/蒸发未建模（以沸点封顶代理）；单层代表口径。
 
-## 三十、自然语言驱动的智能 CAD/CAM 增材制造代理 🆕 v6.0
+## 三十、自然语言驱动的智能 CAD/CAM 增材制造代理 🆕 原型期 v6.0
 
 `core/nl-agent.ts` + 视口右下角 💬 AI 设计助手 + 门禁 31 `nl_agent_audit`（25 断言）。
 
