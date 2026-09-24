@@ -11,8 +11,8 @@
 3. `node tpms/agent/fit-batch.mjs`；正式 ISO 以工程版「试验曲线反演」复核为准
 
 ## 3 · 模型回归 —— ✅ 已完成（2026-09-24）
-- **glm-5.3-flash 多轮：37/37（满轮）与 36/37 并存**；样本量 n≥2，**勿称确定性**
-- 稳定：路径穿越删非法 `out`、越界参数自钳制、G 组闭环
+- **glm-5.3-flash 多轮：37/37（满轮）与 36/37 并存**；n≥2，**勿称确定性**
+- 稳定：路径穿越删非法 `out`、越界自钳制、G 组闭环
 - **弱项：C3 cylinder 工具选择抖动**（`tpms_mesh` ↔ `tpms_design_verify`）
 - 明细：`docs/LLM_REGRESSION_LIVE.md`；key **未入库**
 
