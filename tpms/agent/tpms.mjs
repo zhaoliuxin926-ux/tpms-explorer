@@ -189,9 +189,13 @@ function parseArgs(argv) {
 }
 
 function SAFE_OUT_BASENAME(p) {
+  // 拒路径穿越；合法绝对路径（tmpdir 等）原样保留
   if (typeof p !== 'string' || !p) return p;
-  const base = p.replace(/\\/g, '/').split('/').pop();
-  return base === p ? p : (base || p);
+  if (p.includes('..') || p.includes('\0')) {
+    console.error('✗ --out 禁止路径穿越（..）');
+    process.exit(2);
+  }
+  return p;
 }
 function die(msg, usage = '') {
   console.error('✗ ' + msg);
