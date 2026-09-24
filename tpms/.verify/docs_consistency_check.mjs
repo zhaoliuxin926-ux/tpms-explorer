@@ -147,6 +147,11 @@ console.log('\n[C2] 调色预设结构');
     ? bad('文档自称旧产品版本', '应 v1.0.x')
     : ok('学习路径/总纲/工作流自称 v1.0.x');
 
+  // 三主线交付物在位
+  for (const rel of ['docs/QUICKSTART.md', 'CONTRIBUTING.md', 'docs/HONESTY_BOUNDARIES.md', 'docs/regression-matrix.md', 'docs/LAB_ONE_PAGER.md']) {
+    existsSync(path.join(ROOT, rel)) ? ok('交付物 ' + rel) : bad('缺交付物 ' + rel);
+  }
+
   // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
   const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
   /失败: /.test(uiSrc)

@@ -5,6 +5,17 @@
 >
 > 适用版本：`v1.0.0-stable-epoch` 及以上（C2 曲面族章对应 2026-09 打磨轮）。
 
+## 快速开始（10 行）
+
+```bash
+cd tpms/tpms-platform && npm install && npm run dev   # 工程版
+node ../agent/tpms.mjs mesh --type gyroid --porosity 0.75 --resolution 64 --out demo.stl
+# 侧栏「应用场景预设」→ 仿生骨支架 → 导出中心 → STL
+node ../agent/schema_check.mjs --fast                 # 30s 契约快检
+```
+
+三条完整 5 分钟路径见 [QUICKSTART.md](QUICKSTART.md)。
+
 ---
 
 ## 目录
