@@ -24,8 +24,8 @@ const MATRIX = [
   { id: 'S2_G75', type: 'gyroid', porosity: 0.75 },
   { id: 'S3_D60', type: 'diamond', porosity: 0.6 },
   { id: 'S4_D75', type: 'diamond', porosity: 0.75 },
-  { id: 'S5_FK60', type: 'fks', porosity: 0.6 },
-  { id: 'S6_FK75', type: 'fks', porosity: 0.75 },
+  { id: 'S5_FK60', type: 'fcky', porosity: 0.6 },
+  { id: 'S6_FK75', type: 'fcky', porosity: 0.75 },
 ];
 const REPS = ONCE ? [1] : [1, 2, 3];
 

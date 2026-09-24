@@ -72,17 +72,17 @@ if (MOCK) {
 }
 
 const md = [
-  '# ISO 13314 批量对标报告',
+  '# 曲线批量示意报告（**非** ISO 13314 正式拟合）',
   '',
   `> 模式：${MOCK ? '**mock 自测曲线**（非试验数据）' : '试验 CSV'} · ${new Date().toISOString().slice(0, 10)}`,
-  '> 正式报告须换真实 CSV 并经 `experimental-fit` 平台路径复核。',
+  '> **诚实边界**：本脚本仅为批处理示意（简化 mockIso，Rp0.2 非偏移线）。正式 ISO 13314 特征唯一真源是平台 `experimental-fit.ts`；真实 CSV 也必须在工程版「试验曲线反演」复核后再引用。',
   '',
-  '| 试样 | E* (MPa) | Rp0.2 (MPa) | 峰值 (MPa) | 平台 (MPa) |',
+  '| 试样 | E* 示意 (MPa) | 峰值×0.8 示意 (MPa) | 峰值 (MPa) | 平台示意 (MPa) |',
   '|---|---|---|---|---|',
   ...rows.map((r) => `| ${r.id} | ${r.E_MPa.toFixed(1)} | ${r.Rp02_MPa.toFixed(1)} | ${r.peak_MPa.toFixed(1)} | ${r.plateau_MPa.toFixed(1)} |`),
   '',
 ].join('\n');
 
-const out = join(ROOT, 'docs/fit-report.md');
+const out = join(ROOT, MOCK ? 'docs/fit-report.mock.md' : 'docs/fit-report.md');
 writeFileSync(out, md, 'utf8');
 console.log('WROTE', out, 'rows', rows.length);

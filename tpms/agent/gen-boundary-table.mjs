@@ -17,15 +17,19 @@ function resolve(a, b) { return join(a, b); }
 
 const bugs = readFileSync(join(ROOT, 'tpms/agent_memory/bugs.md'), 'utf8');
 const start = bugs.indexOf('## 一、已定案边界');
-const end = bugs.indexOf('## 二、');
+const end = bugs.search(/^## 二、/m);
 if (start < 0 || end < 0) {
   console.error('bugs.md 未找到「已定案边界」节');
   process.exit(1);
 }
 const section = bugs.slice(start, end);
 const items = [];
-for (const m of section.matchAll(/^(\d+)\. \*\*(.+?)\*\*[：:]\s*(.+)$/gm)) {
-  items.push({ n: m[1], title: m[2], body: m[3].replace(/\s+/g, ' ').trim() });
+for (const m of section.matchAll(/^(\d+)\. \*\*(.+?)\*\*[：:]\s*([\s\S]*?)(?=\n\d+\. \*\*|\n*$)/gm)) {
+  const title = m[2];
+  const body = m[3].replace(/\s+/g, ' ').trim();
+  // 已修复/移除出清单的定案不得留在边界表（红队 MED）
+  if (/已修复|从边界清单移除|此条从边界/.test(title + body.slice(0, 80))) continue;
+  items.push({ n: m[1], title, body });
 }
 
 const md = [
@@ -50,8 +54,13 @@ if (CHECK) {
   }
   const cur = readFileSync(outPath, 'utf8');
   const curN = (cur.match(/^\| \d+ \|/gm) || []).length;
-  if (curN !== items.length || !cur.includes(`共 **${items.length}** 条`)) {
-    console.error(`BOUNDARY DRIFT: 文件 ${curN} 条 vs 定案 ${items.length} 条`);
+  const expect = items.map((it) => `${it.n} | ${it.title}`).join('\n');
+  const got = items.map((it) => {
+    const row = cur.split('\n').find((l) => l.startsWith(`| ${it.n} |`));
+    return row ? `${it.n} | ${row.split('|')[2]?.trim() || ''}` : `${it.n} | MISSING`;
+  }).join('\n');
+  if (curN !== items.length || !cur.includes(`共 **${items.length}** 条`) || expect !== got) {
+    console.error(`BOUNDARY DRIFT: 文件 ${curN} 条 vs 定案 ${items.length} 条（或标题不一致）`);
     process.exit(1);
   }
   console.log(`BOUNDARY-TABLE CHECK OK ${items.length}`);

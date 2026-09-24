@@ -152,6 +152,17 @@ console.log('\n[C2] 调色预设结构');
     existsSync(path.join(ROOT, rel)) ? ok('交付物 ' + rel) : bad('缺交付物 ' + rel);
   }
 
+  // 红队修复哨兵
+  const qs = read('docs/QUICKSTART.md');
+  qs.includes('--provider zhipu')
+    ? bad('QUICKSTART 仍写 --provider zhipu')
+    : ok('QUICKSTART provider 口径');
+  const spec = read('tpms/agent/export-specimens.mjs');
+  spec.includes("type: 'fcky'") && !spec.includes("type: 'fks'")
+    ? ok('试样 S5/S6 = fcky') : bad('试样族 fcky 不一致');
+  const fit = read('tpms/agent/fit-batch.mjs');
+  fit.includes('fit-report.mock.md') && fit.includes('ISO')
+    ? ok('fit-batch mock 隔离+诚实标注') : bad('fit-batch 假 ISO/mock 覆盖');
   // 空态/错误文案标点：失败后半角冒号 / 用户可见 "..." 省略号
   const uiSrc = read('tpms/tpms-platform/src/main.ts') + appHtml;
   /失败: /.test(uiSrc)
