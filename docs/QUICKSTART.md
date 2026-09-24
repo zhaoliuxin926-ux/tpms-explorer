@@ -25,10 +25,10 @@ node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.75 --resolution 64 --pe
 
 ```bash
 node tpms/agent/llm-agent.mjs --provider mock --dry-run --json "孔隙率 75% 的 Gyroid 骨支架"
-# 真实模型：--provider zhipu --model glm-5.3-flash（BASE_URL/KEY 见 tpms/README）
+# 真实模型（智谱走 OpenAI 兼容）：--provider openai --model glm-5.3-flash（TPMS_LLM_* 见 tpms/README）
 ```
 
-## 验收自检（约 30 秒）
+## 验收自检（约 1 分钟）
 
 ```bash
 node tpms/agent/schema_check.mjs --fast

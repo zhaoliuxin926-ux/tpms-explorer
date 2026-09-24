@@ -28,5 +28,6 @@ m 总质量（0.001 g）→ protocol §五 公式（端板修正）→ 记入 CS
 ## 回传
 
 1. CSV 放入 `specimens/csv/`
-2. `node tpms/agent/fit-batch.mjs` → `docs/fit-report.md`
-3. 与平台数字孪生/Gibson-Ashby 预测对标（protocol §六）
+2. `node tpms/agent/fit-batch.mjs` → 示意 `docs/fit-report.md`（**非 ISO 正式拟合**）
+3. **必须**在工程版「试验曲线反演」跑 `experimental-fit` 复核后再写报告
+4. 与平台数字孪生/Gibson-Ashby 预测对标（protocol §六）

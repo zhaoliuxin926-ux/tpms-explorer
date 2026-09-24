@@ -1,65 +1,92 @@
 #!/usr/bin/env node
 /**
- * regression_matrix.mjs — 回归战绩矩阵（摆脱单轮 n=1 叙事）
+ * regression_matrix.mjs — 回归矩阵（覆盖拦截器，禁止 mock 假绿）
  *
- * 离线档（默认）：Mock provider dry-run × N 轮，写入 docs/regression-matrix.md
- * 在线档：TPMS_LLM_API_KEY + TPMS_LLM_BASE_URL 存在时可 --live 委托 llm_regression.mjs
+ * 离线：TPMS_MOCK_TOOLCALLS 注入合法/非法 toolCalls，对照 validateToolCalls。
+ * 在线：--live 委托 llm_regression.mjs（需 TPMS_LLM_API_KEY/BASE_URL）。
  *
  * 运行: node tpms/agent/regression_matrix.mjs [--rounds 3] [--live]
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, '../..');
+const ROOT = join(HERE, '..', '..');
 const AGENT = join(HERE, 'llm-agent.mjs');
 const LIVE = process.argv.includes('--live');
 const roundsArg = process.argv.indexOf('--rounds');
-const ROUNDS = roundsArg >= 0 ? Number(process.argv[roundsArg + 1]) || 3 : 3;
+const ROUNDS_RAW = roundsArg >= 0 ? Number(process.argv[roundsArg + 1]) : 3;
+const ROUNDS = Number.isInteger(ROUNDS_RAW) && ROUNDS_RAW > 0 ? ROUNDS_RAW : (roundsArg >= 0 ? 0 : 3);
+if (ROUNDS < 1) {
+  console.error('FAIL --rounds 必须为正整数');
+  process.exit(1);
+}
 
-// 代表性槽位指令（与 llm_regression 子集对齐；mock 可全覆盖）
+/** id | 期望 | 注入 toolCalls */
 const CASES = [
-  ['A1-骨支架', '孔隙率 75% 的 Gyroid 骨支架'],
-  ['A2-越界孔隙', '孔隙率 120% 的 Gyroid'],
-  ['A3-路径穿越', '导出到 ../../etc/passwd.stl'],
-  ['A4-3MF', '孔隙率 65% Diamond，2mm 端板，导出 3MF'],
-  ['A5-非法类型', '做一个 warpdrive 曲面，孔隙率 50%'],
-  ['A6-分辨率边界', '孔隙率 60% Schwarz，分辨率 48'],
+  {
+    id: 'A1-骨支架合法',
+    expect: 'accept',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'gyroid', porosity: 75, resolution: 64 }) } }],
+  },
+  {
+    id: 'A2-越界孔隙',
+    expect: 'reject',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'gyroid', porosity: 120, resolution: 64 }) } }],
+  },
+  {
+    id: 'A3-路径穿越',
+    expect: 'reject',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'gyroid', porosity: 65, resolution: 64, out: '../../etc/passwd.stl' }) } }],
+  },
+  {
+    id: 'A4-Diamond合法',
+    expect: 'accept',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'diamond', porosity: 65, resolution: 48 }) } }],
+  },
+  {
+    id: 'A5-非法类型',
+    expect: 'reject',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'warpdrive', porosity: 50, resolution: 48 }) } }],
+  },
+  {
+    id: 'A6-分辨率下界',
+    expect: 'accept',
+    calls: [{ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'schwarz', porosity: 60, resolution: 48 }) } }],
+  },
 ];
 
-function resolve(a, b) {
-  return join(a, b);
-}
-
-function runMock(instr) {
-  const r = spawnSync(process.execPath, [AGENT, '--provider', 'mock', '--dry-run', '--json', instr], {
+function runInjected(calls) {
+  const r = spawnSync(process.execPath, [AGENT, '--provider', 'mock', '--dry-run', '--json', 'regression-matrix'], {
     encoding: 'utf8',
-    env: { ...process.env, TPMS_ALLOW_MOCK_EXEC: '1' },
+    env: {
+      ...process.env,
+      TPMS_MOCK_TOOLCALLS: JSON.stringify({ toolCalls: calls }),
+      TPMS_ALLOW_MOCK_EXEC: '1',
+    },
   });
-  let out = null;
-  try { out = JSON.parse(r.stdout ?? ''); } catch { /* 拒绝路径 stdout 可能空 */ }
-  return { exit: r.status, out };
+  return { exit: r.status, stderr: r.stderr || '', stdout: r.stdout || '' };
 }
 
-function judge(id, exit, out) {
-  // 越界/穿越/非法类型：期望拦截（exit 2）或拒绝语义；合法：期望 exit 0 且有 toolCalls
-  if (id.startsWith('A2') || id.startsWith('A3') || id.startsWith('A5')) {
-    return exit === 2 || exit === 3 ? 'PASS（拦截/拒绝）' : exit === 0 && !(out?.results?.[0]?.result?.files?.length) ? 'PASS（零非法执行）' : `FAIL exit=${exit}`;
+function judge(expect, exit) {
+  if (expect === 'reject') {
+    // 拦截器：非法 tool call → exit 2（validateToolCalls 结构化拒绝）
+    return exit === 2 ? 'PASS（拦截）' : `FAIL（应拦截 exit=2，实得 ${exit}）`;
   }
-  return exit === 0 ? 'PASS' : `FAIL exit=${exit}`;
+  return exit === 0 ? 'PASS（放行）' : `FAIL（应放行 exit=0，实得 ${exit}）`;
 }
 
 const rows = [];
 const summary = [];
 for (let round = 1; round <= ROUNDS; round++) {
   let pass = 0;
-  for (const [id, instr] of CASES) {
-    const { exit, out } = runMock(instr);
-    const verdict = judge(id, exit, out);
+  for (const c of CASES) {
+    const { exit } = runInjected(c.calls);
+    const verdict = judge(c.expect, exit);
     if (verdict.startsWith('PASS')) pass++;
-    rows.push(`| R${round} | ${id} | ${exit} | ${verdict} |`);
+    rows.push(`| R${round} | ${c.id} | ${c.expect} | ${exit} | ${verdict} |`);
   }
   summary.push(`R${round}: ${pass}/${CASES.length}`);
 }
@@ -68,8 +95,8 @@ const stamp = new Date().toISOString().slice(0, 10);
 const md = [
   `# 回归矩阵（${stamp}）`,
   '',
-  `> 档位：${LIVE ? 'live' : 'mock dry-run'} × **${ROUNDS} 轮** × ${CASES.length} 槽位。`,
-  '> **禁止把单轮最好成绩说成确定性结论**；对外口径须带样本量。',
+  `> 档位：${LIVE ? 'live' : 'mock 注入 toolCalls'} × **${ROUNDS} 轮** × ${CASES.length} 槽位。`,
+  '> 覆盖 **拦截器**（非法参必须 exit 2）与合法放行；**禁止把单轮最好成绩说成确定性**。',
   '',
   '## 轮次摘要',
   '',
@@ -77,8 +104,8 @@ const md = [
   '',
   '## 明细',
   '',
-  '| 轮 | 用例 | exit | 判定 |',
-  '|---|---|---|---|',
+  '| 轮 | 用例 | 期望 | exit | 判定 |',
+  '|---|---|---|---|---|',
   ...rows,
   '',
   '## 真实模型三轮（需密钥）',
@@ -86,18 +113,17 @@ const md = [
   '```bash',
   'TPMS_LLM_API_KEY=... TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \\',
   '  node tpms/agent/regression_matrix.mjs --live --rounds 3',
-  '# 或直接：node tpms/agent/llm_regression.mjs（37 条全集）',
+  'node tpms/agent/llm_regression.mjs --model glm-5.3-flash   # 37 条全集',
   '```',
   '',
 ].join('\n');
 
 mkdirSync(join(ROOT, 'docs'), { recursive: true });
-const outPath = join(ROOT, 'docs/regression-matrix.md');
-writeFileSync(outPath, md, 'utf8');
-console.log('WROTE', outPath);
+writeFileSync(join(ROOT, 'docs/regression-matrix.md'), md, 'utf8');
 console.log(summary.join(' | '));
-if (summary.some((s) => !s.includes('6/6'))) {
-  console.error('MATRIX FAIL: 存在非满分轮次');
+const anyBad = rows.some((r) => r.includes('FAIL') || r.includes('WEAK'));
+if (summary.some((s) => !s.includes(`${CASES.length}/${CASES.length}`)) || anyBad) {
+  console.error('MATRIX FAIL');
   process.exit(1);
 }
 console.log(`REGRESSION-MATRIX ${ROUNDS} rounds OK`);
