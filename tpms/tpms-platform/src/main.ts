@@ -97,6 +97,9 @@ let baseGeo: THREE.BufferGeometry | null = null;
 let meshFill: THREE.Mesh | null = null;
 let meshStrut: THREE.LineSegments | null = null;
 let lastPorosityEstimate = 0;
+/** exact 路径一次性网格割线：解析 iso* 后若网格实测偏差大，用斜率再调一档（防环：forceExactIso 只消费一次） */
+let pendingExactFix: { target: number; slope: number; iso: number } | null = null;
+let forceExactIso: number | null = null;
 let lastMeshSolidFraction: number | null = null;
 let nmWarned = false;   // 采样定理警示防刷屏：占比回落后才允许再次提示
 let lastPhysicsMetrics: PhysicsMetrics | null = null;
@@ -1896,12 +1899,21 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     && !meshCont;
   let isoOut = iso;
   let targetPorosity: number | undefined = s.isoGrad.enabled ? undefined : s.porosity / 100;
+  pendingExactFix = null;
   if (exactCapable && !preview) {
     try {
       const fExact = getTpmsFunction(s.type, s.customFormula || undefined);
-      const { iso: isoStar } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
-      isoOut = isoStar;
-      targetPorosity = undefined;
+      if (forceExactIso != null) {
+        // 割线校正二次构建：沿用校正 iso，不再重算解析根
+        isoOut = forceExactIso;
+        forceExactIso = null;
+        targetPorosity = undefined;
+      } else {
+        const { iso: isoStar, slope } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
+        isoOut = isoStar;
+        targetPorosity = undefined;
+        pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar };
+      }
     } catch {
       // 解析求根失败回退体素二分（保持可构建）
     }
@@ -2180,6 +2192,25 @@ function onWorkerResult(res: WorkerResponse): void {
       isoUsed: res.isoUsed,
       buildTimeMs: res.buildTimeMs,
     });
+  }
+
+  // exact 一次性割线校正（CLI solveExactPorosity 同策略）：网格实测偏离目标时
+  // 用斜率调 iso 再建一档；变差或已够准则不重入（forceExactIso 单次消费）。
+  if (pendingExactFix) {
+    const fix = pendingExactFix;
+    pendingExactFix = null;
+    const err = res.porosityEstimate - fix.target;
+    if (Math.abs(err) > 0.005 && Number.isFinite(fix.slope) && Math.abs(fix.slope) > 1e-6) {
+      let next = fix.iso + (fix.target - res.porosityEstimate) / fix.slope;
+      next = Math.max(-1.6, Math.min(1.6, next - fix.iso > 0.35 ? fix.iso + 0.35 : next < fix.iso - 0.35 ? fix.iso - 0.35 : next));
+      if (Math.abs(next - fix.iso) > 1e-4) {
+        // 失效未校正缓存，防二次 rebuild 命中旧 iso 帧
+        geoCache.delete(cacheKey(current, res.resolution));
+        forceExactIso = next;
+        // 先落当前帧再校正，避免空白；校正完成后 scheduleRebuild 覆盖
+        queueMicrotask(() => scheduleRebuild(false, true));
+      }
+    }
   }
 
   lastPorosityEstimate = res.porosityEstimate;
