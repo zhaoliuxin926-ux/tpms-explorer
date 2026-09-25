@@ -723,8 +723,13 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     // 去重（保持周边序）：两两相同则收缩
     if (v0 === v1 || v0 === v2 || v0 === v3 || v1 === v2 || v1 === v3 || v2 === v3) {
       const list = [v0, v1, v2, v3];
+      // 4 元去重：includes O(n²) 在热路径（每退化 quad）上可测——改小数组扫描
       const uniq: number[] = [];
-      for (const x of list) if (!uniq.includes(x)) uniq.push(x);
+      for (const x of list) {
+        let seen = false;
+        for (let u = 0; u < uniq.length; u++) if (uniq[u] === x) { seen = true; break; }
+        if (!seen) uniq.push(x);
+      }
       if (uniq.length === 3) { v0 = uniq[0]; v1 = uniq[1]; v2 = uniq[2]; v3 = -1; }
       else if (uniq.length < 3) return;
       else { v0 = uniq[0]; v1 = uniq[1]; v2 = uniq[2]; v3 = uniq[3]; }
