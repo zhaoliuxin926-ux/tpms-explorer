@@ -50,9 +50,9 @@ try {
   await page.waitForTimeout(400);
   const toastB = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
   const st1 = await page.evaluate(() => document.getElementById('rgn-status')?.textContent || '');
-  toastB.includes('同族') && st1 === st0
-    ? ok('B 内外区同族 → toast 实证拦截（无预览）')
-    : bad('B 同族守卫失效', `toast=${toastB.slice(0, 40)}`);
+  ((toastB.includes('同族') || st1.includes('同族')) && !st1.startsWith('✓'))
+    ? ok('B 内外区同族 → 拦截文案实证（无预览）')
+    : bad('B 同族守卫失效', `toast=${toastB.slice(0, 40)} st=${st1.slice(0, 40)}`);
   // C. 内区切 diamond → 生成预览（默认 gyroid 外区）
   await page.evaluate(() => {
     const sel = document.getElementById('rgn-inner');

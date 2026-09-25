@@ -240,7 +240,9 @@ try {
     });
     (/WebGPU V 场 [\d.]+ ms · \d+³/.test(gpu))
       ? ok('M GPU 状态行实报毫秒（' + gpu + '）')
-      : (/不可用|回退/.test(gpu) ? ok('M GPU 不可用环境跳过（' + gpu.slice(0, 20) + '）') : bad('M GPU 状态行', gpu.slice(0, 60)));
+      : (/不可用|回退/.test(gpu)
+        ? (console.log('SKIP M GPU 不可用环境（' + gpu.slice(0, 24) + '）——不计入 pass/GUARD'), 0)
+        : bad('M GPU 状态行', gpu.slice(0, 60)));
   }
 
   // N yield-viewer 静态哨兵（模块 0 运行时单测缺口；dispose/RAF 释放源断言，2026-09-22 P1-12）
@@ -293,5 +295,5 @@ try {
   try { server.kill(); } catch {}
 }
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 18) { console.error(`GUARD FAIL: ${pass} < 18（14 + yield-viewer 2 + 调色 2，2026-09-23）`); process.exit(1); }
+if (pass < 17) { console.error(`GUARD FAIL: ${pass} < 17（恒定断言；M GPU 条件断言不计 pass，2026-09-25）`); process.exit(1); }
 process.exit(fail > 0 ? 1 : 0);

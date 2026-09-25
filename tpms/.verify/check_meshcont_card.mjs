@@ -59,13 +59,19 @@ const handle = await page.evaluateHandle(([bytes]) => {
   input.files = dt.files;
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }, [stlBytes]);
-await page.waitForTimeout(20000);
+// 轮询等待 SDF 终态（上传路径「已启用」会被后续 R 档 meshSdfEnsure 覆盖为「就绪」）
+let statusText0 = '';
+for (let i = 0; i < 60; i++) {
+  await page.waitForTimeout(1000);
+  statusText0 = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
+  if (/已启用|就绪|✗/.test(statusText0)) break;
+}
 
 const statusText = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
 let pass = 0, fail = 0;
 const ok = (n, c, d = '') => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL'), n, d); };
-ok('加载状态文本（三角数+已启用）', /已启用|启用/.test(statusText) && /\d/.test(statusText), statusText.slice(0, 80));
-ok('水密自检通过（无 ✗ fail-closed 报错）', !statusText.includes('✗'));
+ok('加载状态文本（三角数+已启用/就绪）', /已启用|就绪/.test(statusText) && /\d/.test(statusText), statusText.slice(0, 80));
+ok('水密自检通过（✓ 且无 ✗）', statusText.includes('✓') && !statusText.includes('✗') && /就绪|已启用|三角/.test(statusText), statusText.slice(0, 80));
 ok('0 pageerror/console.error', errors.length === 0, errors.slice(0, 2).join(' | '));
 
 // blend 滑块触发重建无错
