@@ -19,6 +19,7 @@ const PLATFORM = join(HERE, '../tpms-platform');
 // 按需导出的核心符号清单（M0：纯数学层；M1：几何管线；M5：体素 INP 交付）
 const CORE_EXPORTS = [
   `export { getTpmsFunction } from ${JSON.stringify(join(PLATFORM, 'src/core/tpms-functions.ts'))};`,
+  `export { porAnalytic, solveIsoAnalytic, secantCorrectPorosity, resetPorosityRng } from ${JSON.stringify(join(PLATFORM, 'src/core/porosity-solver.ts'))};`,
   `export { gibsonAshby, getAnisotropy, BASE_MODULUS, BASE_YIELD_STRENGTH } from ${JSON.stringify(join(PLATFORM, 'src/physics/gibson-ashby.ts'))};`,
   `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
   `export { globalBufferPool } from ${JSON.stringify(join(PLATFORM, 'src/geometry/buffer-pool.ts'))};`,

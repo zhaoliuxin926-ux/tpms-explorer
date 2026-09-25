@@ -20,30 +20,10 @@ let _lcg = 0x9e3779b9;
 function _rnd() { _lcg = (_lcg * 1664525 + 1013904223) >>> 0; return _lcg / 4294967296; }
 
 function porAnalytic(core, type, iso, W, N = 200000, isoGrad = null) {
+  // 数学单一来源：core.porAnalytic（platform/src/core/porosity-solver.ts），
+  // 避免 CLI/UI 两套 MC 积分漂移。core 由 loadCore() 注入。
   const f = core.getTpmsFunction(type);
-  // C1 渐变等值场：bias 基准沿 z 分段线性偏移（与 surface-nets biasAt 同语义，形状固定求根 biasBase）
-  let biasAt = () => iso;
-  if (isoGrad) {
-    const stops = isoGrad.stops; // [z, off] 折线（与 surface-nets biasAt 同源结构）
-    biasAt = (px, py, pz) => {
-      let off;
-      if (pz <= stops[0][0]) off = stops[0][1];
-      else if (pz >= stops[stops.length - 1][0]) off = stops[stops.length - 1][1];
-      else {
-        let i = 0;
-        while (i < stops.length - 2 && pz > stops[i + 1][0]) i++;
-        const [x0, y0] = stops[i], [x1, y1] = stops[i + 1];
-        off = y0 + (y1 - y0) * ((pz - x0) / (x1 - x0));
-      }
-      return iso + off;
-    };
-  }
-  let solid = 0;
-  for (let i = 0; i < N; i++) {
-    const px = (_rnd() * 2 - 1) * Math.PI, py = (_rnd() * 2 - 1) * Math.PI, pz = (_rnd() * 2 - 1) * Math.PI;
-    if (f(px, py, pz, W) < biasAt(px / Math.PI, py / Math.PI, pz / Math.PI)) solid++;
-  }
-  return 1 - solid / N;
+  return core.porAnalytic(f, iso, W, N, isoGrad);
 }
 
 /** C1 三区平台折线：values → [z, off] stops（n 平台等距中心 + 过渡带 half=band/2 线性过渡，z 域 [-1,1]）。
