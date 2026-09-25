@@ -82,6 +82,8 @@ tpms/*.stl
 tpms/agent/.iso-cache.json
 tpms/agent/.iso-cache.json.tmp
 audit_ubuntu/
+# 物理试样 STL（上机打印用）——仅本机保留，不入库
+# 根/agent/.verify 下 *-verified/*.solved.stl 为 CLI 默认落盘名，可 tpms.mjs mesh 重生成
 specimens/
 
 # ����Ӵ�����ʱ���
