@@ -25,6 +25,7 @@ import { analyzeSection, analyzeIslands3D, isSolidAt, analyticFieldValue, type S
 import { mapGeometry } from './core/manifold-mapping';
 import type { PhysicsMetrics } from './types';
 import { getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
+import { solveIsoAnalytic } from './core/porosity-solver';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
 import { downloadBlob, downloadText } from './export/download';
@@ -1882,12 +1883,36 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     return { fromCache: false };
   }
 
+  // A2 exact 求解器（与 CLI 默认同源）：纯 solid_network + 无修饰时用解析 iso*，
+  // 避免 UI 导出与 CLI mesh 同参数 iso 不一致。shell/hybrid/neural/… 仍走体素二分。
+  const exactCapable =
+    s.structureMode === 'solid_network'
+    && !s.isoGrad.enabled
+    && !s.hybrid.enabled
+    && !s.neural.enabled
+    && !s.hierarchical.enabled
+    && (s.stress?.preset === undefined || s.stress.preset === 'none')
+    && s.type !== 'custom'
+    && !meshCont;
+  let isoOut = iso;
+  let targetPorosity: number | undefined = s.isoGrad.enabled ? undefined : s.porosity / 100;
+  if (exactCapable && !preview) {
+    try {
+      const fExact = getTpmsFunction(s.type, s.customFormula || undefined);
+      const { iso: isoStar } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
+      isoOut = isoStar;
+      targetPorosity = undefined;
+    } catch {
+      // 解析求根失败回退体素二分（保持可构建）
+    }
+  }
+
   const params: BuildParams = {
     type: s.type,
-    iso,
+    iso: isoOut,
     periods: s.cellSize,
     resolution: R,
-    targetPorosity: s.isoGrad.enabled ? (undefined as unknown as number) : s.porosity / 100,
+    targetPorosity: targetPorosity as number,
     weights: s.weights,
     structureMode: s.structureMode,
     containerShape: s.containerShape,

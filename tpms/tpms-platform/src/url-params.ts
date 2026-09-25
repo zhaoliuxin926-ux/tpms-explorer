@@ -40,6 +40,7 @@ export function parseURLParams(search: string): Partial<AppState> {
     state.containerShape = q.get('container') as ContainerShape;
   }
   if (q.has('porosity')) {
+    // UI 产品域 [60,90]：与反演「应用最优解」钳制同口径；CLI mesh 可 5–99%，属脚本域
     state.porosity = clamp(q.get('porosity'), 60, 90, 75);
   }
   if (q.has('cellSize')) {
