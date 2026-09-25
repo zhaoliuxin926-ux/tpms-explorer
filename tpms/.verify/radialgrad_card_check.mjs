@@ -43,9 +43,10 @@ try {
   await page.waitForTimeout(400);
   const toastB = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
   const st1 = await page.evaluate(() => document.getElementById('rg-status')?.textContent || '');
-  toastB.includes('须 Schwarz P') && st1 === st0
-    ? ok('B 非 Schwarz P 点生成 → toast 实证拦截（无预览）')
-    : bad('B 守卫失效', `toast=${toastB.slice(0, 40)} st=${st1.slice(0, 30)}`);
+  // 拦截实证 = toast 或 status 含「须 Schwarz P」；且 status 不得是成功预览 ✓
+  ((toastB.includes('须 Schwarz P') || st1.includes('须 Schwarz P')) && !st1.startsWith('✓'))
+    ? ok('B 非 Schwarz P 点生成 → 拦截文案实证（无预览）')
+    : bad('B 守卫失效', `toast=${toastB.slice(0, 40)} st=${st1.slice(0, 40)}`);
   // B2. 红队 B MAJOR-1 回归：isoGrad 开启时点生成 → 互斥守卫 toast（此前曾静默放行）。
   // 时序根治（2026-09-20 macOS/windows CI 实锤）：前置类型切换用 synthetic Event('click')
   // 偶发不落地 → 守卫走「须 Schwarz P」分支（无「互斥」字样）且 toast 被 1.85s TTL 清空
@@ -68,9 +69,13 @@ try {
   }
   await page.waitForTimeout(2500);
   const b2 = await page.evaluate(() => ({ status: document.getElementById('rg-status')?.textContent || '', isoVal: document.getElementById('iso-grad-value')?.textContent }));
-  (toastB2.includes('互斥') || (b2.status === st0 && b2.isoVal === '渐变中'))
-    ? ok('B2 isoGrad 开启时生成被拦截（toast 或 无预览语义）')
-    : bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" dbg=${JSON.stringify(b2)}`);
+  // 只认正向证据：互斥 toast 或 status 写入拦截文案。禁止「status 没变」或分支——
+  // 点击空操作时 status 保持默认态同样满足，属假绿。
+  // 只认「互斥」正向证据（status 持久 / toast）。禁止 status 未变或分支。
+  const b2Blocked = b2.status.includes('互斥') || toastB2.includes('互斥');
+  b2Blocked
+    ? ok('B2 isoGrad 开启时生成被拦截（互斥文案实证）')
+    : bad('B2 isoGrad 互斥守卫失效', `toast="${toastB2.slice(0, 40)}" status="${b2.status.slice(0, 50)}"`);
   await page.evaluate(() => document.getElementById('iso-grad-toggle')?.click());  // 关回
   await page.waitForFunction(() => (document.getElementById('iso-grad-value')?.textContent || '') === '关闭', null, { timeout: 5000, polling: 200 }).catch(() => {});
   // C. 切 schwarz → 生成预览

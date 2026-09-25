@@ -20,6 +20,9 @@ const browser = await chromium.launch({
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 const page = await ctx.newPage();
 page.setDefaultTimeout(45000);
+const errors = [];
+page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.evaluate(() => { localStorage.setItem('tpms_onboard_v1', '1'); localStorage.setItem('tpms-theme-platform', 'dark'); });
 await page.reload({ waitUntil: 'domcontentloaded' });
@@ -54,7 +57,7 @@ for (let t = 0; t < 12; t++) {
 ok('sheet 内点击仿真滚动生效', scrolled > 50, `scrollTop=${scrolled}`);
 
 await page.screenshot({ path: SCREENSHOT });
-ok('0 异常', true);
+ok('0 异常', errors.length === 0, errors.slice(0, 3).join(' | '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
 await browser.close();
 server.kill();

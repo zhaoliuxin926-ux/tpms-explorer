@@ -212,10 +212,17 @@ cpOff ? ok('B5 caliper 关') : bad('B5 caliper 关', 'class 仍 on');
 {
   let dialogMsg = '';
   page.once('dialog', (d) => { dialogMsg = d.message(); d.accept().catch(() => {}); });
+  const dlPromise = page.waitForEvent('download', { timeout: 2500 }).catch(() => null);
   await domClick('#btn-slice-svg');
-  await page.waitForTimeout(500);
-  // 有交线则静默下载（无 dialog），空截面则 alert——两种合法路径都不该 pageerror（末尾统一断言）
-  ok('B5 slice-svg 点击路径执行' + (dialogMsg ? '（空截面 alert）' : '（导出或无交线静默）'));
+  const dl = await dlPromise;
+  const toastMsg = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  // 合法路径三选一实证：空截面 toast（已从 alert 改为 flashToast）/ 旧 alert dialog / 真实 download
+  const sawToast = /交线|Slice|截面/.test(toastMsg);
+  const sawDialog = /交线|Slice|截面/.test(dialogMsg);
+  const sawDl = !!dl && /slice|svg/i.test(dl.suggestedFilename?.() ?? '');
+  (sawToast || sawDialog || sawDl)
+    ? ok('B5 slice-svg 点击路径执行' + (sawDl ? `（下载 ${dl?.suggestedFilename() ?? ''}）` : '（空截面 toast/alert）'))
+    : bad('B5 slice-svg 点击路径执行', `toast="${toastMsg}" dialog="${dialogMsg}" dl=${dl ? dl.suggestedFilename() : 'null'}`);
 }
 
 // ── 汇总 ──

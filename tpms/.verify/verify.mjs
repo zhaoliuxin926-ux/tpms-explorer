@@ -108,7 +108,8 @@ async function reloadRetry(page, opts = {}) {
   await page.locator('#ob-demo').click();
   await page.waitForTimeout(400);
   const sliceVal = await page.locator('#slice').inputValue();
-  log('演示·截面剖到中部', +sliceVal < 90, `actual=${sliceVal}`);
+  // 引导第 4 步 demo 固定写入 slice=20（ui-helpers onboard demo）；钉死目标值防「没驱动也算过」
+  log('演示·截面剖到中部', sliceVal === '20' || Number(sliceVal) === 20, `actual=${sliceVal}`);
 
   await ctx.close();
 }

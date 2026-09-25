@@ -264,7 +264,13 @@ for (const r of results) {
     && r.nonManifoldEdges <= nmTol
     && r.misorientedEdges <= misTol
     && (r.zeroNormals ?? 0) / (r.triCount || 1) <= zeroNTol
-    && (r.volRelErr === undefined || Number.isNaN(r.volRelErr) || Math.abs(r.volRelErr) < volTol2);
+    && (() => {
+      // 体积项：仅 hybrid / expectedSolid=0 允许跳过（拓扑-only 设计）；
+      // 其它 NaN/undefined 一律不过——防「算不出体积也绿」
+      const volSkip = !!r.hybrid?.enabled || !(r.expectedSolid > 0);
+      if (volSkip) return true;
+      return Number.isFinite(r.volRelErr) && Math.abs(r.volRelErr) < volTol2;
+    })();
   if (!ok) pass = false;
   if (!ok && r.tolAlias) console.log('  [debug]', JSON.stringify({ open: r.openEdges, nm: r.nonManifoldEdges, nmTol, mis: r.misorientedEdges, misTol, zeroN: r.zeroNormals, vol: r.volRelErr, volTol: volTol2, degen: r.degenTris, isHybrid, preview: r.preview, tol2k: r.tol2k, tolGrad: r.tolGrad }));
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${r.name}`);

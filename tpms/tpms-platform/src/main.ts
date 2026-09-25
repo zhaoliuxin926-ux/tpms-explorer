@@ -299,7 +299,7 @@ window.addEventListener('load', () => {
   ctx = initThree(container);
 
   // 3) Worker 通信桥
-  bridge = new WorkerBridge(new TpmsWorker());
+  bridge = new WorkerBridge(() => new TpmsWorker());
   bridge.setCallbacks(onWorkerResult, onWorkerError);
 
   // 4) UI 事件绑定
@@ -695,7 +695,7 @@ function meshSdfEnsure(R: number): Promise<void> {
       sdfEnsureJobs.delete(n);
       reject(new Error('SDF Worker 加载失败：' + e.message));
     };
-    w.postMessage({ ab, n, id });
+    w.postMessage({ ab, n, id }, [ab]); // ab 是 slice 副本，可 transfer；meshCont.ab 保留
   });
   sdfEnsureJobs.set(n, job);
   return job;
@@ -757,7 +757,10 @@ function bindMeshContainer(): void {
         if (getState().endplateMm > 0) { setState({ endplateMm: 0 }); flashToast('STL 容器与端板互斥：端板已禁用'); }
         scheduleRebuild(false);
       };
-      meshcontW.onerror = (e) => { status.textContent = '✗ Worker 失败：' + (e.message ?? '未知'); };
+      meshcontW.onerror = (e) => {
+        meshcontW?.terminate(); meshcontW = null;
+        status.textContent = '✗ Worker 失败：' + (e.message ?? '未知');
+      };
       const abForW = ab.slice(0); // 单一副本：消息体与 transfer 列表必须同对象（曾用两次 slice 生成不同副本——transfer 失效且多拷贝）
       meshcontW.postMessage({ ab: abForW, n: R0 + 1, id: myId }, [abForW]);
     };
@@ -975,16 +978,18 @@ function bindRadialGradCard(): void {
   syncLabels();
   const guard = (): boolean => {
     const s = getState();
-    if (s.type !== 'schwarz') { flashToast('radial-grad 须 Schwarz P 曲面（论文口径，与 CLI 同守卫）'); return false; }
-    if (s.structureMode !== 'solid_network') { flashToast('radial-grad 须 solid_network 模式'); return false; }
-    if (s.containerShape !== 'cube') { flashToast('radial-grad 须 cube 容器（立方采样域 + 场内圆柱裁剪）'); return false; }
-    if (meshCont) { flashToast('radial-grad 与外部 STL 容器互斥（归一化域即映射域）'); return false; }
+    // 拦截时同时写 status（toast 有 TTL，慢跑者上不可靠；status 持久可作测试实证）
+    const block = (msg: string): false => { flashToast(msg); status.textContent = '✗ ' + msg; return false; };
+    if (s.type !== 'schwarz') return block('radial-grad 须 Schwarz P 曲面（论文口径，与 CLI 同守卫）');
+    if (s.structureMode !== 'solid_network') return block('radial-grad 须 solid_network 模式');
+    if (s.containerShape !== 'cube') return block('radial-grad 须 cube 容器（立方采样域 + 场内圆柱裁剪）');
+    if (meshCont) return block('radial-grad 与外部 STL 容器互斥（归一化域即映射域）');
     // 红队 B MAJOR-1 补连：CLI 互斥守卫全集（tpms.mjs 同语义）——开启时静默放行
     // 会产出与主视图状态语义矛盾的 MT 几何（「无静默回退」铁律）
-    if (s.isoGrad.enabled) { flashToast('radial-grad 与渐变等值场互斥（径向阈值场已由 C(r) 承担）'); return false; }
-    if (s.hybrid.enabled) { flashToast('radial-grad 与混合场互斥'); return false; }
+    if (s.isoGrad.enabled) return block('radial-grad 与渐变等值场互斥（径向阈值场已由 C(r) 承担）');
+    if (s.hybrid.enabled) return block('radial-grad 与混合场互斥');
     // 红队 B MINOR-3：manifold warp 开启时预览会被 warp 而导出走独立管线不会——所见≠所导，拒绝
-    if (s.manifold.kind !== 'identity') { flashToast('radial-grad 与非欧映射互斥（预览会被 warp 而导出不会）'); return false; }
+    if (s.manifold.kind !== 'identity') return block('radial-grad 与非欧映射互斥（预览会被 warp 而导出不会）');
     return true;
   };
   gen.addEventListener('click', () => {
@@ -1120,13 +1125,14 @@ function bindRegionCard(): void {
   syncLabels();
   const guard = (): boolean => {
     const s = getState();
-    if (innerSel.value === s.type) { flashToast(`内区族（${innerSel.value}）与外区族同族，无分区语义`); return false; }
-    if (s.structureMode !== 'solid_network') { flashToast('分区构型须 solid_network 模式'); return false; }
-    if (s.containerShape !== 'cube') { flashToast('分区构型须 cube 容器（分区半径按归一化圆柱半径 r1 定义）'); return false; }
-    if (meshCont) { flashToast('分区构型与外部 STL 容器互斥'); return false; }
-    if (s.isoGrad.enabled) { flashToast('分区构型与渐变等值场互斥'); return false; }
-    if (s.hybrid.enabled) { flashToast('分区构型与混合场互斥'); return false; }
-    if (s.manifold.kind !== 'identity') { flashToast('分区构型与非欧映射互斥（预览会被 warp 而导出不会）'); return false; }
+    const block = (msg: string): false => { flashToast(msg); status.textContent = '✗ ' + msg; return false; };
+    if (innerSel.value === s.type) return block(`内区族（${innerSel.value}）与外区族同族，无分区语义`);
+    if (s.structureMode !== 'solid_network') return block('分区构型须 solid_network 模式');
+    if (s.containerShape !== 'cube') return block('分区构型须 cube 容器（分区半径按归一化圆柱半径 r1 定义）');
+    if (meshCont) return block('分区构型与外部 STL 容器互斥');
+    if (s.isoGrad.enabled) return block('分区构型与渐变等值场互斥');
+    if (s.hybrid.enabled) return block('分区构型与混合场互斥');
+    if (s.manifold.kind !== 'identity') return block('分区构型与非欧映射互斥（预览会被 warp 而导出不会）');
     return true;
   };
   gen.addEventListener('click', () => {
@@ -1201,7 +1207,7 @@ function runPendingNLExport(): void {
   if (!nlPendingExport) return;
   const fmt = nlPendingExport;
   nlPendingExport = null;
-  try { void nlDoExport(fmt); } catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
+  nlDoExport(fmt).catch((err) => nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`));
 }
 
 function applyNLIntent(intent: NLIntent): void {
@@ -1252,8 +1258,8 @@ function applyNLIntent(intent: NLIntent): void {
         nlPendingExport = a === 'export-stl' ? 'stl' : '3mf';
         nlAppend('助手：参数已应用，几何重建完成后自动导出 ' + (a === 'export-stl' ? 'STL' : '3MF') + '…');
       } else {
-        try { void nlDoExport(a === 'export-stl' ? 'stl' : '3mf'); }
-        catch (err) { nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`); }
+        nlDoExport(a === 'export-stl' ? 'stl' : '3mf')
+          .catch((err) => nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`));
       }
     } else if (a === 'run-simulation') {
       const started = runPlasticityDemo();
@@ -2907,9 +2913,21 @@ function bindViewerExtras(): void { // 查看器扩展工具（对比快照/卡�
   try {
     const saved = JSON.parse(localStorage.getItem(GCODE_KEY) || 'null');
     if (saved && typeof saved === 'object') {
-      for (const id of ['gcode-layer', 'gcode-line', 'gcode-nozzle', 'gcode-bed', 'gcode-preset']) {
-        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-        if (el && saved[id] !== undefined) el.value = String(saved[id]);
+      // 恢复即夹取：UI 显示值必须等于生效值
+      const clampNum = (id: string, lo: number, hi: number) => {
+        const el = document.getElementById(id) as HTMLInputElement | null;
+        if (!el || saved[id] === undefined) return;
+        const v = Number(saved[id]);
+        el.value = Number.isFinite(v) ? String(Math.min(hi, Math.max(lo, v))) : el.value;
+      };
+      clampNum('gcode-layer', 0.05, 0.6);
+      clampNum('gcode-line', 0.2, 1.2);
+      clampNum('gcode-nozzle', 160, 320);
+      clampNum('gcode-bed', 0, 150);
+      const preset = document.getElementById('gcode-preset') as HTMLSelectElement | null;
+      if (preset && saved['gcode-preset'] !== undefined) {
+        const raw = String(saved['gcode-preset']);
+        preset.value = [...preset.options].some((o) => o.value === raw) ? raw : (preset.options[0]?.value ?? '');
       }
     }
   } catch { /* ignore */ }
@@ -3016,13 +3034,7 @@ document.getElementById('btn-export')?.addEventListener('click', (e) => {
       flashToast('当前截面无可视交线，请调整 Slice 滑块后再试');
       return;
     }
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `TPMS_${s.type}_slice_${s.slice}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `TPMS_${s.type}_slice_${s.slice}.svg`);
   });
 
   // 统计面板切换（CSS 依据 .stat-overlay.open 显示 .stat-full）
@@ -4041,22 +4053,14 @@ async function runSweep(): Promise<void> {
     }
 
     // 全部帧参数合并为单个 JSON
-    const configBlob = new Blob([JSON.stringify(configs, null, 2)], { type: 'application/json' });
-    const configA = document.createElement('a');
-    configA.href = URL.createObjectURL(configBlob);
-    configA.download = 'tpms_sweep_configs.json';
-    configA.click();
+    downloadBlob(new Blob([JSON.stringify(configs, null, 2)], { type: 'application/json' }), 'tpms_sweep_configs.json');
 
     // 导出汇总 CSV
     let csv = 'frame,porosity,type,cellSize,thickness,structureMode,container,material\n';
     for (const row of frameRows) {
       csv += `${row.frame},${row.porosity},${row.type},${row.cellSize},${row.thickness},${row.structureMode},${row.containerShape},${row.material}\n`;
     }
-    const csvBlob = new Blob([csv], { type: 'text/csv' });
-    const csvA = document.createElement('a');
-    csvA.href = URL.createObjectURL(csvBlob);
-    csvA.download = 'tpms_sweep_summary.csv';
-    csvA.click();
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), 'tpms_sweep_summary.csv');
 
     status.textContent = `已完成！共 ${frames.length} 帧`;
     setTimeout(() => { overlay.style.display = 'none'; }, 2000);
@@ -4244,10 +4248,7 @@ async function enterFigureMode(): Promise<void> {
     const meshHash = pos ? hashArray(pos) : 'nogeo';
     const expFig = await loadExport();
     const json = expFig.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed });
-    const ja = document.createElement('a');
-    ja.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-    ja.download = `tpms-figure-${s.type}-p${s.porosity}-${Date.now()}.json`;
-    ja.click();
+    downloadBlob(new Blob([json], { type: 'application/json' }), `tpms-figure-${s.type}-p${s.porosity}-${Date.now()}.json`);
 
     // 恢复
     setTimeout(() => {

@@ -41,6 +41,7 @@ interface PendingRequest {
 
 export class WorkerBridge {
   private worker: Worker;
+  private readonly createWorker: () => Worker;
   private currentId = 0;
   private onResult?: (res: WorkerResponse) => void;
   private onError?: (err: string) => void;
@@ -50,8 +51,14 @@ export class WorkerBridge {
   /** Prevent duplicate error/messageerror delivery for one failed worker request. */
   private runtimeFailureActive = false;
 
-  constructor(worker: Worker) {
-    this.worker = worker;
+  constructor(workerOrFactory: Worker | (() => Worker)) {
+    this.createWorker = typeof workerOrFactory === 'function' ? workerOrFactory : () => workerOrFactory;
+    this.worker = this.createWorker();
+    this.attach();
+  }
+
+  /** 绑定当前 worker 的事件（超时重建后复用） */
+  private attach(): void {
     this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
       const res = e.data;
       // 过期帧丢弃：只接受最近一次请求的回复（最新帧判定）。
@@ -120,6 +127,9 @@ export class WorkerBridge {
           this.currentId++;
           this.runtimeFailureActive = true;
         }
+        // 同步 Surface Nets 无法中途打断：超时必须杀线程并换新 worker，
+        // 否则卡住的构建仍占线程，后续请求全部排队。
+        this.respawn();
         this.notifyResultListeners({
           id,
           type: 'cancelled',
@@ -199,6 +209,13 @@ export class WorkerBridge {
     return id;
   }
 
+  /** 杀掉卡死 worker 并换新实例（timeout / runtime failure 用） */
+  private respawn(): void {
+    try { this.worker.terminate(); } catch { /* ignore */ }
+    this.worker = this.createWorker();
+    this.attach();
+  }
+
   private settleResolve(id: number, response: WorkerResponse): void {
     const pending = this.pending.get(id);
     if (!pending) return;
@@ -252,6 +269,7 @@ export class WorkerBridge {
     for (const id of this.pending.keys()) this.settleReject(id, error);
     // Invalidate any late response emitted after the runtime failure.
     this.currentId++;
+    this.respawn();
     this.onError?.(message);
     this.notifyResultListeners({
       id: failedId,
