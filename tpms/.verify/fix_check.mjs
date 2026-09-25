@@ -33,7 +33,7 @@ let ob = await page.evaluate(() => ({
   title: document.querySelector('#ob-card h4')?.textContent,
   cardEl: !!document.getElementById('ob-card'),
   canvas: !!document.querySelector('canvas'),
-  bootErr: !!document.querySelector('#boot-error,[data-boot-error]'),
+  bootErr: !!document.querySelector('.boot-error,[data-boot-error]'),
   ready: document.readyState,
 }));
 ob.show && /第 1 步 \/ 共 6/.test(ob.step1 || '') && /欢迎/.test(ob.title || '')
