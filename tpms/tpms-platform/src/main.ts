@@ -30,7 +30,7 @@ import { computeCrush, computeModal } from './physics/impact-energy';
 import { downloadBlob, downloadText } from './export/download';
 import { baseIso, buildVtiField } from './export/vti-field';
 import { hashArray } from './utils/hash-array';
-import { geoCache, MAX_GEO_CACHE, cacheKey } from './geometry/geo-cache';
+import { geoCache, geoCacheSet, geoCacheTouch, cacheKey } from './geometry/geo-cache';
 import { initTheme } from './ui/theme';
 import { flashToast } from './ui/toast';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
@@ -1837,8 +1837,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     // 缓存命中：瞬间恢复（注意：此路径不派发 worker 结果——调用方若在等待结果需以此返回值区分）
     // 颜色不入缓存：由 applyGeometry 内部按当前着色状态现场补算
     // 命中后移动到队尾，避免“LRU”退化成 FIFO。
-    geoCache.delete(key);
-    geoCache.set(key, cached);
+    geoCacheTouch(key);
     // Restore all result metadata together with the canonical arrays. Without
     // this, a material-only change (which intentionally reuses geometry) keeps
     // the previous material's modulus/yield values and stale micro-physics.
@@ -2191,7 +2190,7 @@ function onWorkerResult(res: WorkerResponse): void {
   // applyGeometry 对恒等映射零拷贝挂 BufferAttribute；非恒等映射先 slice 再 warp，
   // 不会原地改规范几何。导出/测量路径只读 position/normal/index。
   const cKey = cacheKey(current, res.resolution);
-  geoCache.set(cKey, {
+  geoCacheSet(cKey, {
     positions: res.positions!,
     normals: res.normals!,
     indices: res.indices!,
@@ -2203,11 +2202,6 @@ function onWorkerResult(res: WorkerResponse): void {
     surfaceArea: res.surfaceArea,
     envelopeVolume: res.envelopeVolume,
   });
-  // LRU 淘汰
-  if (geoCache.size > MAX_GEO_CACHE) {
-    const oldest = geoCache.keys().next().value;
-    if (oldest) geoCache.delete(oldest);
-  }
 
   // 同步公式、提示栏
   const st = current;
@@ -4180,7 +4174,7 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
     updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
 
-    geoCache.set(cacheKey(s, hdR), {
+    geoCacheSet(cacheKey(s, hdR), {
       positions: res.positions,
       normals: res.normals,
       indices: res.indices,
@@ -4192,10 +4186,6 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
       surfaceArea: res.surfaceArea,
       envelopeVolume: res.envelopeVolume,
     });
-    if (geoCache.size > MAX_GEO_CACHE) {
-      const oldest = geoCache.keys().next().value;
-      if (oldest) geoCache.delete(oldest);
-    }
     requestRender();
   }
   return true;
