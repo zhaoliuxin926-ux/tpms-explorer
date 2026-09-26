@@ -4325,6 +4325,27 @@ async function enterFigureMode(): Promise<void> {
 }
 
 // ── 导出中心 ─────────────────────────────────────────────
+/** 导出侧孔隙率口径与主重建 exact 路径对齐（INP/RVE 体素 vs STL 网格同参数一致） */
+function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: number | undefined } {
+  const exactCapable =
+    s.structureMode === 'solid_network'
+    && !s.isoGrad.enabled
+    && !s.hybrid.enabled
+    && !s.neural.enabled
+    && !s.hierarchical.enabled
+    && (s.stress?.preset === undefined || s.stress.preset === 'none')
+    && s.type !== 'custom'
+    && !meshCont;
+  if (exactCapable) {
+    try {
+      const f = getTpmsFunction(s.type, s.customFormula || undefined);
+      const { iso } = solveIsoAnalytic(f as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
+      return { iso, targetPorosity: undefined };
+    } catch { /* fall through */ }
+  }
+  return { iso: baseIso(s), targetPorosity: s.porosity / 100 };
+}
+
 /** 统一导出分发：根据格式调用对应导出器 */
 async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
@@ -4414,9 +4435,10 @@ async function handleExportInner(fmt: string): Promise<void> {
           return;
         }
         const rveR = 48;
+        const rvePoro = resolveExportPorosity(s);
         const rveRes = buildSurface({
-          type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: rveR,
-          targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+          type: s.type, iso: rvePoro.iso, periods: s.cellSize, resolution: rveR,
+          targetPorosity: rvePoro.targetPorosity as number, weights: s.weights, structureMode: s.structureMode,
           containerShape: 'cube', thickness: s.thickness, gradientDir: s.gradientDir,
           hybrid: { ...s.hybrid, enabled: false }, customFormula: s.customFormula,
           preview: false, periodicRve: true,
@@ -4452,11 +4474,12 @@ async function handleExportInner(fmt: string): Promise<void> {
           return;
         }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
+        const caePoro = resolveExportPorosity(s);
         const vox = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
-          thickness: s.thickness, targetPorosity: s.porosity / 100,
-          iso: baseIso(s), customFormula: s.customFormula,
+          thickness: s.thickness, targetPorosity: caePoro.targetPorosity as number,
+          iso: caePoro.iso, customFormula: s.customFormula,
           stress: s.stress,
         }, caeR);
         const specimen = s.cellSize;   // 总宽 = cellSize mm（1 period = 1 mm 约定）
@@ -4476,11 +4499,12 @@ async function handleExportInner(fmt: string): Promise<void> {
       }
       case 'caesuite': {
         // 【v4.0 阶段 III】CAE 验证脚本包：Abaqus/OpenFOAM 自动化求解脚本 + 壳 + 对比模板
+        const suitePoro = resolveExportPorosity(s);
         const voxV = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
-          thickness: s.thickness, targetPorosity: s.porosity / 100,
-          iso: baseIso(s), customFormula: s.customFormula, stress: s.stress,
+          thickness: s.thickness, targetPorosity: suitePoro.targetPorosity as number,
+          iso: suitePoro.iso, customFormula: s.customFormula, stress: s.stress,
         }, 40);
         exp.exportVerificationSuite(
           { type: s.type, solidCount: voxV.solidCount, voidCount: 40 ** 3 - voxV.solidCount },
