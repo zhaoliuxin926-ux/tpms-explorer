@@ -674,6 +674,13 @@ function meshSdfEnsure(R: number): Promise<void> {
     const id = ++meshSdfSeq;
     const status = meshSdfStatus();
     if (status) { status.style.display = 'block'; status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 0%'; }
+    // 看门狗：worker 卡死时 Promise 永不 settle 且 sdfEnsureJobs 占位——后续同档全挂
+    const watchdog = setTimeout(() => {
+      w.terminate();
+      sdfEnsureJobs.delete(n);
+      if (status) status.textContent = '✗ 容器 SDF R' + R + ' 档计算超时（已终止 Worker）';
+      reject(new Error(`容器 SDF R${R} 档计算超时`));
+    }, 180_000);
     w.onmessage = (ev: MessageEvent) => {
       const d = ev.data as { ok?: boolean; id?: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; volumePhys?: number; error?: string };
       if (d.id !== id) return;
@@ -681,6 +688,7 @@ function meshSdfEnsure(R: number): Promise<void> {
         if (status) status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 ' + Math.round(d.progress * 100) + '%';
         return;
       }
+      clearTimeout(watchdog);
       w.terminate();
       sdfEnsureJobs.delete(n);
       if (!d.ok || !d.sdf || !d.domain) {
@@ -695,6 +703,7 @@ function meshSdfEnsure(R: number): Promise<void> {
       resolve();
     };
     w.onerror = (e) => {
+      clearTimeout(watchdog);
       w.terminate();
       sdfEnsureJobs.delete(n);
       reject(new Error('SDF Worker 加载失败：' + e.message));
@@ -732,9 +741,13 @@ function bindMeshContainer(): void {
   // 成功后 Transferable 回传零拷贝入缓存并触发重建；非水密等 fail-closed 经 worker 协议结构化回传。
   let meshcontW: Worker | null = null;
   let meshcontWId = 0;
+  // 快速连续选文件：FileReader 完成序 ≠ 选择序——用 seq 保证「后选的赢」
+  let meshcontLoadSeq = 0;
   const load = (f: File): void => {
+    const myLoad = ++meshcontLoadSeq;
     const rd = new FileReader();
     rd.onload = () => {
+      if (myLoad !== meshcontLoadSeq) return; // 已被更新的上传取代
       const ab = rd.result as ArrayBuffer;
       const s0 = getState();
       const R0 = hdResolution(s0.type, s0.structureMode, s0.gradientDir, s0.cellSize);
@@ -743,6 +756,11 @@ function bindMeshContainer(): void {
       if (meshcontW) meshcontW.terminate();
       meshcontW = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
       const myId = ++meshcontWId;
+      const upWatchdog = setTimeout(() => {
+        if (myLoad !== meshcontLoadSeq) return;
+        meshcontW?.terminate(); meshcontW = null;
+        status.textContent = '✗ ' + f.name + ' SDF 计算超时（已终止 Worker）';
+      }, 180_000);
       meshcontW.onmessage = (ev: MessageEvent) => {
         const d = ev.data as { ok: boolean; id: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; volumePhys?: number; error?: string };
         if (d.id !== myId) return;
@@ -751,6 +769,7 @@ function bindMeshContainer(): void {
           status.textContent = '⏳ ' + f.name + ' SDF 计算中 ' + Math.round(d.progress * 100) + '%（Worker，' + (R0 + 1) + '³ 网格）';
           return;
         }
+        clearTimeout(upWatchdog);
         meshcontW?.terminate(); meshcontW = null;
         if (!d.ok || !d.sdf || !d.domain) {
           status.textContent = '✗ ' + (d.error ?? 'SDF 计算失败');
@@ -762,6 +781,7 @@ function bindMeshContainer(): void {
         scheduleRebuild(false);
       };
       meshcontW.onerror = (e) => {
+        clearTimeout(upWatchdog);
         meshcontW?.terminate(); meshcontW = null;
         status.textContent = '✗ Worker 失败：' + (e.message ?? '未知');
       };
