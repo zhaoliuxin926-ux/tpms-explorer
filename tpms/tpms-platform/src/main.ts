@@ -4201,9 +4201,12 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     gpuSeq++;
     let res: WorkerResponse;
     try {
+      // 与主重建/导出中心同一 exact 口径——HD 同步重建若走 legacy 二分，
+      // 导出 STL 会与屏幕 exact 帧 iso 不一致
+      const expPoro = resolveExportPorosity(s);
       res = buildSurface({
-        type: s.type, iso: baseIso(s), periods: s.cellSize, resolution: hdR,
-        targetPorosity: s.porosity / 100, weights: s.weights, structureMode: s.structureMode,
+        type: s.type, iso: expPoro.iso, periods: s.cellSize, resolution: hdR,
+        targetPorosity: expPoro.targetPorosity as number, weights: s.weights, structureMode: s.structureMode,
         containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
         hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
         endplateMm: meshCont ? 0 : s.endplateMm,
