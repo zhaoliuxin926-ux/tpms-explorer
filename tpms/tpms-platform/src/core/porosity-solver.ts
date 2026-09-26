@@ -67,13 +67,22 @@ export function porAnalytic(
   return 1 - solid / N;
 }
 
+/** 进程内 iso* 记忆化：同 (target,W,grad) 在 UI 反复重建/导出时不再重跑 2M 次 MC */
+const isoMemo = new Map<string, { iso: number; slope: number }>();
+const ISO_MEMO_MAX = 64;
+
 /** 解析求根 iso* + 数值斜率 d(por)/d(iso)（供网格割线校正）。 */
 export function solveIsoAnalytic(
   f: TpmsFn,
   target: number,
   W: number[] | readonly number[] = [1, 1, 1, 1],
   isoGrad?: IsoGradStops | null,
+  cacheTag = '',
 ): { iso: number; slope: number } {
+  // cacheTag 必须区分曲面/公式（f 引用不可稳定序列化）——否则跨族串 iso
+  const key = `${cacheTag}|${target.toFixed(8)}|${[...W].join(',')}|${isoGrad ? JSON.stringify(isoGrad.stops) : ''}`;
+  const hit = isoMemo.get(key);
+  if (hit) return hit;
   resetPorosityRng();
   const MC_BISECT_N = 60_000;
   let lo = -1.6;
@@ -87,7 +96,13 @@ export function solveIsoAnalytic(
   const d = 0.02;
   const slope =
     (porAnalytic(f, iso + d, W, 40_000, isoGrad) - porAnalytic(f, iso - d, W, 40_000, isoGrad)) / (2 * d);
-  return { iso, slope };
+  const result = { iso, slope };
+  if (isoMemo.size >= ISO_MEMO_MAX) {
+    const oldest = isoMemo.keys().next().value;
+    if (oldest !== undefined) isoMemo.delete(oldest);
+  }
+  isoMemo.set(key, result);
+  return result;
 }
 
 /**

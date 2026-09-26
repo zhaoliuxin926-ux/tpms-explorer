@@ -1929,7 +1929,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
         forceExactIso = null;
         targetPorosity = undefined;
       } else {
-        const { iso: isoStar, slope } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
+        const { iso: isoStar, slope } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
         isoOut = isoStar;
         targetPorosity = undefined;
         pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar };
@@ -4359,7 +4359,7 @@ function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: numb
   if (exactCapable) {
     try {
       const f = getTpmsFunction(s.type, s.customFormula || undefined);
-      const { iso } = solveIsoAnalytic(f as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights);
+      const { iso } = solveIsoAnalytic(f as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
       return { iso, targetPorosity: undefined };
     } catch { /* fall through */ }
   }
