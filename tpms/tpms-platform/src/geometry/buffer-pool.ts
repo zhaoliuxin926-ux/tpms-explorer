@@ -38,17 +38,18 @@ export class BufferPool {
   lastUsed = { field: 0, boundArr: 0, insideV: 0, cellVert: 0, positions: 0, indices: 0, smoothA: 0, smoothB: 0 };
 
   constructor() {
-    // 顶点/索引池仍预分配最大档（pushTri 路径持有局部引用，中途扩容不安全）；
-    // 场缓冲按需扩容——R48 只需 ~12 万采样点，不再一上来吃满 40MB+。
-    this.positions = new Float32Array(MAX_VERTICES * 3);
-    this.normals = new Float32Array(MAX_VERTICES * 3);
-    this.indices = new Uint32Array(MAX_INDICES);
+    // 全部按需扩容：R48 预览不必预吃 顶点池 72MB + 场缓冲 40MB。
+    // 提取开始前 ensureVerts/ensureFields/ensureIndices 一次到位，
+    // 之后 pushTri 等持有局部引用不再中途扩容。
+    this.positions = new Float32Array(0);
+    this.normals = new Float32Array(0);
+    this.indices = new Uint32Array(0);
     this.field = new Float32Array(0);
     this.boundArr = new Float32Array(0);
     this.insideV = new Float32Array(0);
     this.cellVert = new Int32Array(0);
-    this.smoothA = new Float32Array(MAX_VERTICES * 3);
-    this.smoothB = new Float32Array(MAX_VERTICES * 3);
+    this.smoothA = new Float32Array(0);
+    this.smoothB = new Float32Array(0);
   }
 
   /** 场类缓冲按需扩容到至少 n 采样点（幂等；仅 buildSurface 开头调用） */
@@ -59,6 +60,23 @@ export class BufferPool {
     this.boundArr = new Float32Array(cap);
     this.insideV = new Float32Array(cap);
     this.cellVert = new Int32Array(cap);
+  }
+
+  /** 顶点类缓冲扩容到至少 n 顶点（positions/normals/smoothA/B 同步） */
+  ensureVerts(n: number): void {
+    if (this.positions.length >= n * 3) return;
+    const cap = Math.min(MAX_VERTICES, Math.max(n, 1 << 12));
+    this.positions = new Float32Array(cap * 3);
+    this.normals = new Float32Array(cap * 3);
+    this.smoothA = new Float32Array(cap * 3);
+    this.smoothB = new Float32Array(cap * 3);
+  }
+
+  /** 索引池扩容到至少 n 索引 */
+  ensureIndices(n: number): void {
+    if (this.indices.length >= n) return;
+    const cap = Math.min(MAX_INDICES, Math.max(n, 1 << 14));
+    this.indices = new Uint32Array(cap);
   }
 
   /**
