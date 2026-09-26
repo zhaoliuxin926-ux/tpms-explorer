@@ -107,7 +107,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
 | 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 37/37（单轮 n=1，复测 36/37）=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 49 + schema_check 98 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
+| 自检（CI 纳管） | agent_selftest 50 + schema_check 98 + llm_provider_selftest 33；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
