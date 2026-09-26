@@ -100,6 +100,8 @@ let lastPorosityEstimate = 0;
 /** exact 路径一次性网格割线：解析 iso* 后若网格实测偏差大，用斜率再调一档（防环：forceExactIso 只消费一次） */
 let pendingExactFix: { target: number; slope: number; iso: number } | null = null;
 let forceExactIso: { iso: number; stateKey: string } | null = null;
+/** 同状态最后一次 exact 完成帧 iso（含割线）——导出侧复用，避免只拿解析根与屏幕不一致 */
+let lastExactIso: { iso: number; stateSig: string } | null = null;
 let lastMeshSolidFraction: number | null = null;
 let nmWarned = false;   // 采样定理警示防刷屏：占比回落后才允许再次提示
 let lastPhysicsMetrics: PhysicsMetrics | null = null;
@@ -2235,6 +2237,9 @@ function onWorkerResult(res: WorkerResponse): void {
     }
   }
 
+  if (res.isoUsed != null && Number.isFinite(res.isoUsed)) {
+    lastExactIso = { iso: res.isoUsed, stateSig: geometryStateKey(current) };
+  }
   lastPorosityEstimate = res.porosityEstimate;
   lastMeshSolidFraction = res.meshSolidFraction ?? null;
   // 红队 V-3a：混叠公式（如 sin(x*40)…）的非流形边占比可达 7%——采样定理警示
@@ -4232,6 +4237,9 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     lastBuildResolution = hdR;
     lastIsoUsed = res.isoUsed ?? lastIsoUsed;
     lastAppliedGeometryKey = expectedHdKey;
+    if (res.isoUsed != null && Number.isFinite(res.isoUsed)) {
+      lastExactIso = { iso: res.isoUsed, stateSig: geometryStateKey(s) };
+    }
     levelsetOverrideStateKey = null;
     lastPorosityEstimate = res.porosityEstimate;
     lastMeshSolidFraction = res.meshSolidFraction ?? null;
@@ -4362,6 +4370,11 @@ function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: numb
     && s.type !== 'custom'
     && !meshCont;
   if (exactCapable) {
+    // 优先复用同状态最后一次 exact 完成 iso（含割线）——与屏幕一致
+    const sig = geometryStateKey(s);
+    if (lastExactIso && lastExactIso.stateSig === sig) {
+      return { iso: lastExactIso.iso, targetPorosity: undefined };
+    }
     try {
       const f = getTpmsFunction(s.type, s.customFormula || undefined);
       const { iso } = solveIsoAnalytic(f as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
