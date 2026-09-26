@@ -99,7 +99,7 @@ let meshStrut: THREE.LineSegments | null = null;
 let lastPorosityEstimate = 0;
 /** exact 路径一次性网格割线：解析 iso* 后若网格实测偏差大，用斜率再调一档（防环：forceExactIso 只消费一次） */
 let pendingExactFix: { target: number; slope: number; iso: number } | null = null;
-let forceExactIso: number | null = null;
+let forceExactIso: { iso: number; stateKey: string } | null = null;
 let lastMeshSolidFraction: number | null = null;
 let nmWarned = false;   // 采样定理警示防刷屏：占比回落后才允许再次提示
 let lastPhysicsMetrics: PhysicsMetrics | null = null;
@@ -1923,12 +1923,14 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
   if (exactCapable && !preview) {
     try {
       const fExact = getTpmsFunction(s.type, s.customFormula || undefined);
-      if (forceExactIso != null) {
-        // 割线校正二次构建：沿用校正 iso，不再重算解析根
-        isoOut = forceExactIso;
+      // 仅当状态指纹未变时才消费割线 iso——用户改参后残留的 forceExactIso 必须作废
+      const wantKey = buildRequestKey(s, R);
+      if (forceExactIso && forceExactIso.stateKey === wantKey) {
+        isoOut = forceExactIso.iso;
         forceExactIso = null;
         targetPorosity = undefined;
       } else {
+        forceExactIso = null;
         const { iso: isoStar, slope } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
         isoOut = isoStar;
         targetPorosity = undefined;
@@ -2226,7 +2228,7 @@ function onWorkerResult(res: WorkerResponse): void {
       if (Math.abs(next - fix.iso) > 1e-4) {
         // 失效未校正缓存，防二次 rebuild 命中旧 iso 帧
         geoCache.delete(cacheKey(current, res.resolution));
-        forceExactIso = next;
+        forceExactIso = { iso: next, stateKey: buildRequestKey(current, res.resolution) };
         // 先落当前帧再校正，避免空白；校正完成后 scheduleRebuild 覆盖
         queueMicrotask(() => scheduleRebuild(false, true));
       }
