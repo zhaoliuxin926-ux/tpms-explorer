@@ -123,6 +123,24 @@ try {
 } catch { /* assertion below */ }
 check('超时后新请求仍可正常 resolve', afterTimeoutResolved);
 
+// build() fire-and-forget 超时看门狗：无 Promise 也必须 onError+cancelled+respawn
+{
+  const spawned = [];
+  const b2 = new WorkerBridge(() => {
+    const w = new FakeWorker();
+    spawned.push(w);
+    return w;
+  });
+  let errLogged = '';
+  let cancelled = false;
+  b2.setCallbacks(() => {}, (e) => { errLogged = e; });
+  b2.addResultListener((r) => { if (r.type === 'cancelled') cancelled = true; });
+  b2.build(params, 15);
+  await new Promise((r) => setTimeout(r, 60));
+  check('build() 超时 onError+cancelled', errLogged.includes('timed out') && cancelled, errLogged);
+  check('build() 超时 respawn 新 worker', spawned.length === 2 && spawned[0].terminated && !spawned[1].terminated, `spawned=${spawned.length}`);
+}
+
 let cancelledNotified = false;
 bridge.addResultListener((response) => { cancelledNotified = response.type === 'cancelled'; });
 bridge.invalidate();

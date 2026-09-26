@@ -48,6 +48,8 @@ export class WorkerBridge {
   private resultListeners: ((res: WorkerResponse) => void)[] = [];
   /** Promise consumers keyed by request id. Latest-frame semantics allow at most one live entry. */
   private pending = new Map<number, PendingRequest>();
+  /** fire-and-forget build() 超时看门狗（无 Promise 也必须能杀卡死 worker） */
+  private buildTimers = new Map<number, ReturnType<typeof setTimeout>>();
   /** Prevent duplicate error/messageerror delivery for one failed worker request. */
   private runtimeFailureActive = false;
 
@@ -101,10 +103,48 @@ export class WorkerBridge {
    * 提交计算请求。自动使之前所有 pending 请求过期（只保留最新帧）。
    * 返回本次请求 id，便于调用方在需要时做关联。
    */
-  build(params: BuildParams): number {
+  build(params: BuildParams, timeoutMs = 120_000): number {
     const id = this.beginRequest();
-    this.worker.postMessage({ id, type: 'build', params }, collectTransferables(params));
+    const deadline = Number.isFinite(timeoutMs) ? Math.max(1, Math.floor(timeoutMs)) : 120_000;
+    const timer = setTimeout(() => this.handleFireAndForgetIdle(id, deadline), deadline);
+    this.buildTimers.set(id, timer);
+    try {
+      this.worker.postMessage({ id, type: 'build', params }, collectTransferables(params));
+    } catch (err) {
+      clearTimeout(timer);
+      this.buildTimers.delete(id);
+      this.onError?.(err instanceof Error ? err.message : String(err));
+    }
     return id;
+  }
+
+  /** build() 无 Promise：超时也要 respawn，否则同步构建卡死会占线程到永远 */
+  private handleFireAndForgetIdle(id: number, deadlineMs: number): void {
+    this.buildTimers.delete(id);
+    if (id !== this.currentId) return;
+    this.currentId++;
+    this.runtimeFailureActive = true;
+    this.respawn();
+    this.onError?.(`Worker build timed out after ${deadlineMs} ms（已重建 worker）`);
+    this.notifyResultListeners({
+      id,
+      type: 'cancelled',
+      vertCount: 0,
+      triCount: 0,
+      porosityEstimate: 0,
+      isoUsed: 0,
+      resolution: 0,
+      buildTimeMs: 0,
+      error: `Worker build timed out after ${deadlineMs} ms`,
+    });
+  }
+
+  private clearBuildTimer(id: number): void {
+    const t = this.buildTimers.get(id);
+    if (t !== undefined) {
+      clearTimeout(t);
+      this.buildTimers.delete(id);
+    }
   }
 
   /**
@@ -191,6 +231,7 @@ export class WorkerBridge {
 
   terminate(): void {
     this.runtimeFailureActive = true;
+    for (const tId of [...this.buildTimers.keys()]) this.clearBuildTimer(tId);
     const terminatedId = this.currentId;
     this.currentId++;
     const error = new WorkerRequestCancelledError('Worker terminated');
@@ -204,6 +245,7 @@ export class WorkerBridge {
     this.runtimeFailureActive = false;
     const id = ++this.currentId;
     const superseded = new WorkerRequestSupersededError();
+    for (const tId of [...this.buildTimers.keys()]) this.clearBuildTimer(tId);
     for (const pendingId of this.pending.keys()) this.settleReject(pendingId, superseded);
     this.notifyCancelledListeners(id - 1, superseded.message);
     return id;
@@ -217,6 +259,7 @@ export class WorkerBridge {
   }
 
   private settleResolve(id: number, response: WorkerResponse): void {
+    this.clearBuildTimer(id);
     const pending = this.pending.get(id);
     if (!pending) return;
     this.pending.delete(id);
@@ -225,6 +268,7 @@ export class WorkerBridge {
   }
 
   private settleReject(id: number, error: Error): void {
+    this.clearBuildTimer(id);
     const pending = this.pending.get(id);
     if (!pending) return;
     this.pending.delete(id);
