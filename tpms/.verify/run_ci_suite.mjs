@@ -161,7 +161,7 @@ const SCHEDULE = [
   ['run_all UI 回归（10 套件——+slicepv/radialgrad/region/card_smoke 冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
-  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，49断言）', 'CLI 自检', '../agent/selftest.mjs'],
+  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
   ['schema_check 契约与可用域（106 断言实测/98 基线，2026-09-13 +README 防漂移守卫）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 钳制/路径狱/畸形拒绝）离线自检，无外部依赖
   ['llm_provider_selftest M3 拦截器自检（33 断言，离线）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],

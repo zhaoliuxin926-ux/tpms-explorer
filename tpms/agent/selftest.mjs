@@ -258,7 +258,22 @@ rmSync(stlPath, { force: true });
     for (const suf of ['.stl', '.inp', '.report.md', '.report.json']) unlinkSync(prefix + suf);
   } catch { /* 忽略 */ }
 }
+// ── exact 求解确定性：同参数两次 mesh --json 的 isoUsed/轨迹必须逐位一致 ──
+{
+  const m1 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--periods', '3', '--json');
+  const m2 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--periods', '3', '--json');
+  let a = null, b = null;
+  try { a = JSON.parse(m1.stdout); b = JSON.parse(m2.stdout); } catch { /* fallthrough */ }
+  const isoA = a?.isoUsed ?? a?.porTrace?.at?.(-1)?.iso;
+  const isoB = b?.isoUsed ?? b?.porTrace?.at?.(-1)?.iso;
+  const trA = JSON.stringify(a?.porosityTrace ?? a?.porTrace ?? null);
+  const trB = JSON.stringify(b?.porosityTrace ?? b?.porTrace ?? null);
+  (a && b && Number.isFinite(isoA) && isoA === isoB && trA === trB)
+    ? ok('exact 求解确定性（isoUsed/轨迹两次逐位一致）')
+    : bad('exact 确定性', `isoA=${isoA} isoB=${isoB}`);
+}
+
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；实测 49 留 2 余量）
-if (pass < 49) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 49`); process.exit(1); }
+if (pass < 50) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 50`); process.exit(1); }
 process.exit(fail ? 1 : 0);
