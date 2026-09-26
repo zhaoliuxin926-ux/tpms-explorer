@@ -102,6 +102,8 @@ let pendingExactFix: { target: number; slope: number; iso: number } | null = nul
 let forceExactIso: { iso: number; stateKey: string } | null = null;
 /** 同状态最后一次 exact 完成帧 iso（含割线）——导出侧复用，避免只拿解析根与屏幕不一致 */
 let lastExactIso: { iso: number; stateSig: string } | null = null;
+/** 当前 in-flight 构建是否走 exact（preview/legacy 二分不得写入 lastExactIso） */
+let lastBuildUsedExact = false;
 let lastMeshSolidFraction: number | null = null;
 let nmWarned = false;   // 采样定理警示防刷屏：占比回落后才允许再次提示
 let lastPhysicsMetrics: PhysicsMetrics | null = null;
@@ -1922,7 +1924,9 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
   let isoOut = iso;
   let targetPorosity: number | undefined = s.isoGrad.enabled ? undefined : s.porosity / 100;
   pendingExactFix = null;
+  lastBuildUsedExact = false;
   if (exactCapable && !preview) {
+    lastBuildUsedExact = true;
     try {
       const fExact = getTpmsFunction(s.type, s.customFormula || undefined);
       // 仅当状态指纹未变时才消费割线 iso——用户改参后残留的 forceExactIso 必须作废
@@ -2237,7 +2241,7 @@ function onWorkerResult(res: WorkerResponse): void {
     }
   }
 
-  if (res.isoUsed != null && Number.isFinite(res.isoUsed)) {
+  if (lastBuildUsedExact && res.isoUsed != null && Number.isFinite(res.isoUsed)) {
     lastExactIso = { iso: res.isoUsed, stateSig: geometryStateKey(current) };
   }
   lastPorosityEstimate = res.porosityEstimate;
@@ -4205,10 +4209,10 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     buildGeneration++;
     gpuSeq++;
     let res: WorkerResponse;
+    // 与主重建/导出中心同一 exact 口径——HD 同步重建若走 legacy 二分，
+    // 导出 STL 会与屏幕 exact 帧 iso 不一致
+    const expPoro = resolveExportPorosity(s);
     try {
-      // 与主重建/导出中心同一 exact 口径——HD 同步重建若走 legacy 二分，
-      // 导出 STL 会与屏幕 exact 帧 iso 不一致
-      const expPoro = resolveExportPorosity(s);
       res = buildSurface({
         type: s.type, iso: expPoro.iso, periods: s.cellSize, resolution: hdR,
         targetPorosity: expPoro.targetPorosity as number, weights: s.weights, structureMode: s.structureMode,
@@ -4237,7 +4241,7 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     lastBuildResolution = hdR;
     lastIsoUsed = res.isoUsed ?? lastIsoUsed;
     lastAppliedGeometryKey = expectedHdKey;
-    if (res.isoUsed != null && Number.isFinite(res.isoUsed)) {
+    if (expPoro.targetPorosity === undefined && res.isoUsed != null && Number.isFinite(res.isoUsed)) {
       lastExactIso = { iso: res.isoUsed, stateSig: geometryStateKey(s) };
     }
     levelsetOverrideStateKey = null;
