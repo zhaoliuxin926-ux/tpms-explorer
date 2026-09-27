@@ -29,7 +29,7 @@
 
 ### 📚 内容资产（随纪元首发收录）
 - **演示视频 v3**（`docs/screenshots/demo-tour.webm`，104.4s）：开场引导浮窗自动关闭修复（旧版全程遮挡画面左上）+ 每幕 SCENE 时间戳实测对齐；**SRT 字幕 13 条**（`demo-tour.srt`，时间戳取自实测标记，B 站可直接挂载）；分镜脚本 v3
-- **第二篇技术博客**《从一句话到水密 STL：LLM Agent 的安全架构实录》（`docs/blog/2026-09-17-agent-architecture.md`）：五层信任边界 / 拦截器红队六洞 / 四模型回归的三层验收语义；断言数字当轮实测（schema_check 106 / selftest 49 / llm_provider_selftest 33）
+- **第二篇技术博客**《从一句话到水密 STL：LLM Agent 的安全架构实录》（`docs/blog/2026-09-17-agent-architecture.md`）：六阶段信任边界 / 拦截器红队六洞 / 四模型回归的三层验收语义；断言数字当轮实测（schema_check 106 / selftest 49 / llm_provider_selftest 33）
 - **求职素材包**（`docs/career/interview-pack.md`）：简历项目描述（中英两档）+ 面试深挖七问（附证据锚点）+ 口述脚本
 
 ## 🔧 修复

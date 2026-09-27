@@ -274,8 +274,8 @@ slices.save('tpms_sections.vtp')
 ```
 
 MATLAB 脚本同构：`isosurface(X, Y, Z, F, 0)` + `patch` 渲染，`stlwrite` 导出。
-两语言与平台源码的数值一致性由 CI 门禁 `parity_math.mjs`（74 断言，
-含 iso_bias 逐位一致、STL 字节包围盒、脚本语义对齐）强制保证。
+两语言与平台源码的数值一致性由 CI 门禁 `parity_math.mjs`（332 断言，
+含 iso_bias 容差一致 1e-9~1e-12、STL 字节包围盒、脚本语义对齐）强制保证。
 
 ### 3.3 同源契约速查
 
@@ -666,7 +666,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 - **演示口径**：MLP 训练 MSE 收敛 ≥10×；Pareto 非支配性由 ml_pareto_audit 校验。生产精度需外部数据蒸馏（论文 future work）。
 ## 二十六、WebGPU 非线性超弹性与弹塑性大变形力学求解 🆕 原型期 v6.0
 
-「弹塑性压溃仿真」面板（侧栏）+ 门禁 27 `gpu_plasticity_audit`（42 断言）。
+「弹塑性压溃仿真」面板（侧栏）+ 门禁 27 `gpu_plasticity_audit`（55+ 断言，GUARD 55）。
 
 - **几何非线性**：全拉格朗日（Total Lagrangian）体素 FEM，8 节点六面体 C3D8、2×2×2 Gauss；Green-Lagrange 应变 E = ½(FᵀF − I)，F = I + Σu_a⊗∇N_a；
 - **材料非线性**：Saint-Venant-Kirchhoff（PK2 = C:(E−Ep)）+ J2 各向同性线性硬化塑性，径向返回映射在【张量空间】执行（流向 m = (3/2)·dev/σv，Prandtl-Reuss；单轴校验 εp11 = ε̄p）；
@@ -691,7 +691,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 ## 二十八、微流体 Navier-Stokes 流固耦合高精度仿真 🆕 原型期 v6.0
 
-`navier-stokes-solver.ts` + 门禁 29 `wasm_navier_stokes_audit`（15 断言）。
+`navier-stokes-solver.ts` + 门禁 29 `wasm_navier_stokes_audit`（17 断言）。
 
 - **方法**：融合显式松弛到稳态（低雷诺数 Stokes 占优）——u' = u + dt(f − ∇p + ν∇²u)（流体格；固体格 u=0 = Brinkman 无滑移口径），p' = p − β∇·u（Uzawa 压力修正）；中心差分六邻居；
 - **两种模式**：`channel`（x/z 周期 + y 墙 + 体力 → Poiseuille 解析锚点）与 `periodic`（全周期 + 体力 → TPMS 多孔渗流 κ 测量的标准口径）；
@@ -714,7 +714,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 ## 三十、自然语言驱动的智能 CAD/CAM 增材制造代理 🆕 原型期 v6.0
 
-`core/nl-agent.ts` + 视口右下角 💬 AI 设计助手 + 门禁 31 `nl_agent_audit`（25 断言）。
+`core/nl-agent.ts` + 视口右下角 💬 AI 设计助手 + 门禁 31 `nl_agent_audit`（45 断言）。
 
 - **零依赖规则/关键词意图解析**（中英双语）：曲面类型（Gyroid/Diamond/…）、孔隙率、材料（Ti64/PLA/散热）、端板、单元尺寸、壁厚、容器形状、结构模式；
 - **动作意图**：导出 STL/3MF、运行压溃仿真、重置默认、骨支架预设（Ti64+实体网络）；

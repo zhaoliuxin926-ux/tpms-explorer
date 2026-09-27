@@ -58,7 +58,7 @@ tpms-explorer/
 
 | 域 | 能力 | 状态 |
 |---|---|---|
-| 几何 | 24 族 level-set；水密 Surface Nets + MT 双提取器；exact 孔隙率 | 完整 |
+| 几何 | 24 族 level-set；水密 Surface Nets + MT 双提取器；exact 孔隙率（solid_network；shell 为体素二分近似） | 完整 |
 | 构型 | hybrid / isoGrad / region / radial-grad / C5 保形容器 | 完整（互斥硬拒） |
 | 导出 | STL/GLB/3MF/VTK/VTI/CFD STL/RVE/INP/OpenFOAM/CAE 包/脚本/BibTeX/JSON/**G-code** | 完整（G-code 单壁+扫描填充） |
 | 力学 | Gibson-Ashby、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
@@ -76,7 +76,7 @@ tpms-explorer/
 | 层 | 内容 | 当前值 |
 |---|---|---|
 | 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****45 门**（main 现态；**tag v1.0.3 时为 44**，docs_consistency 于 tag 后入列） |
-| 断言示例 | parity 332 / schema 106 / webgpu 119 / docs_consistency **68** | GUARD 锁下限 |
+| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **130**（GUARD 120） | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |

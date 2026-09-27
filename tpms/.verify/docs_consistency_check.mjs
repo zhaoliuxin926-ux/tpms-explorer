@@ -56,15 +56,23 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     'docs/blog/publish/2026-09-16-44-gates.md',
     'docs/blog/publish/2026-09-17-agent-architecture.md',
     'docs/career/interview-pack.md',
+    'docs/WORKFLOW_GUIDE.md',
+    'docs/PROJECT_INVENTORY.md',
+    'tpms/README.md',
   ];
+  // job_narrative 在 gitignored 记忆区，存在则一并扫（面试材料不许漂）
+  const optional = ['tpms/agent_memory/job_narrative.md'];
   const banned = [
-    [/位级一致/, '「位级一致」夸大（实为容差对拍）'],
+    [/位级一致|逐位一致/, '「位级/逐位一致」夸大（实为容差对拍）'],
     [/56[^\n]{0,40}3\.4×/, '56→15ms 误写 3.4×（应为 ≈3.7×）'],
-    [/Diamond R96 偏差 0\.26/, 'Diamond R96 0.26pp（实测 0.13pp）'],
-    [/五层架构|链路分五层/, '五层 vs M0–M5 六项矛盾'],
+    [/Diamond R96 偏差 0\.26|0\.26\s*pp\s*@\s*R96|0\.26pp@R96|R96 0\.26pp/, 'Diamond R96 0.26pp（实测 0.13pp）'],
+    [/五层架构|链路分五层|五层信任/, '五层 vs M0–M5 六项矛盾'],
     [/打穿六次/, '「六次」应为「两轮六例」'],
+    [/selftest\.mjs[^\n]{0,40}49\s*断言|#\s*CLI 自检：49\s*断言|106\/49\/33/, 'selftest 断言数 49（GUARD 已钉 50）'],
+    [/~3(?:50|53)KB\s*gzip|首屏[^\n]{0,10}35\dKB/, '首屏 35xKB gzip（分包后 ~283KB：three 182+主包 101）'],
   ];
-  for (const rel of targets) {
+  const scanList = targets.concat(optional.filter((rel) => existsSync(path.join(ROOT, rel))));
+  for (const rel of scanList) {
     if (!existsSync(path.join(ROOT, rel))) { bad('文件存在 ' + rel); continue; }
     const src = read(rel);
     for (const [re, why] of banned) {
@@ -72,12 +80,13 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     }
   }
   // 37/37 必须带 n=1 或 single/best-of 限定（防统计→确定）
-  for (const rel of targets) {
+  for (const rel of scanList) {
     const src = read(rel);
     const hits = src.match(/37\/37/g) || [];
     if (hits.length === 0) { ok(rel + ' 无裸 37/37'); continue; }
-    const scoped = /37\/37[^\n]{0,40}(n=1|单轮|single|best[- ]of|一次全绿)/i.test(src)
-      || /n=1[^\n]{0,40}37\/37|单轮[^\n]{0,20}37\/37/i.test(src);
+    // 样本量限定：n=1/单轮 或 多轮 n≥2 均可（2026-09-27：LIVE 已是多轮 37/37，勿称确定性）
+    const scoped = /37\/37[^\n]{0,48}(n=1|n≥2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i.test(src)
+      || /n=1[^\n]{0,40}37\/37|单轮[^\n]{0,20}37\/37|多轮[^\n]{0,20}37\/37|n≥2[^\n]{0,40}37\/37/i.test(src);
     scoped ? ok(rel + ' 37/37 带样本量限定') : bad(rel + ' 37/37 无 n=1/单轮限定');
   }
 }
@@ -219,6 +228,8 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 }
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
+// pass 下限守卫（2026-09-27 对抗审查批：禁句/targets 扩面后钉 120，防断言集体跳过；实测 130）
+if (pass < 120) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 120`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

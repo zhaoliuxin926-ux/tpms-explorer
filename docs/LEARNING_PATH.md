@@ -88,7 +88,7 @@ F(x, y, z) = sin x·cos z + sin y·cos x + sin z·cos y
 cd tpms/tpms-platform && npm install && npm run dev   # http://localhost:5173
 ```
 
-1. **3D 打印**：导出 STL——网格管线构造性水密（28 案例审计，开放边 = 0），切片软件直接吃；
+1. **3D 打印**：导出 STL——网格管线构造性水密（34 案例审计，几何案例开放边 = 0），切片软件直接吃；
 2. **仿真**：导出 Abaqus INP（C3D8 体网格 + 载荷步）或 OpenFOAM polyMesh——免 snappyHexMesh 建模；
 3. **科研复现**：导出 Python(PyVista)/MATLAB 脚本，审稿人可逐点复现你的几何。
 

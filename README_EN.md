@@ -5,7 +5,7 @@
 An interactive, browser-based explorer for **Triply Periodic Minimal Surfaces (TPMS)** — the lattice geometries behind bone scaffolds, lightweight parts, heat exchangers and catalyst supports.
 Personal, independently maintained open-source project.
 
-**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **45 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 34 audit cases).
+**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **45 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 29 geometry cases (34 audit cases incl. reject sentinels)).
 
 ---
 
@@ -40,7 +40,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 | Acceptance | Result |
 |---|---|
-| 37 bilingual instructions | **glm-5.3-flash 37/37** (single run n=1; retest 36/37) (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
+| 37 bilingual instructions | **glm-5.3-flash multi-round 37/37** (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic) (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
 | The interceptor itself | 33 offline deterministic assertions (incl. live `../x.stl` traversal block) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
@@ -52,7 +52,7 @@ Reproduce: `TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider 
 ## Highlights
 
 - **24 TPMS families** (engineering): 8 canonical + C2 extensions (O,C-TO, Karcher, Fischer-Koch S/Y/C(S)/C(Y), G′, D′, Double P/D/G, Complementary D, Slotted P/F/Q*/W from the jwf23 equation dataset) with four-way formula parity and a public [BENCHMARKS](BENCHMARKS.md) usable-domain matrix. Teaching edition keeps the 8 canonical families for focus. **The teaching edition is feature-frozen** (since v9.2): it receives consistency/security fixes only, while all new capabilities land in the engineering edition.
-- **Exact porosity solver** (CLI): analytic-integration root finding + mesh-measured secant validation. Measured deviation **0.26 pp @ R96** (diamond, 65 % target).
+- **Exact porosity solver** (CLI): analytic-integration root finding + mesh-measured secant validation. Measured deviation **0.13 pp @ R96** (diamond, 60 % target).
 - **Watertight meshing pipeline**: edge-crossing Surface Nets with global orientation propagation — open edges, non-manifold and degenerate triangles are hard-failed before any STL is written.
 - **Physics suite**: Gibson-Ashby stiffness/yield, permeability, tortuosity, homogenization (Voigt–Reuss bounds), phononic band gaps (Bloch–Floquet), tissue ingrowth (reaction–diffusion), LPBF thermo-mechanical, topology optimization, ML surrogate Pareto.
 - **CAE direct-pass**: Abaqus INP (C3D8 + load steps + RF/U history output) and **runnable OpenFOAM cases** (SIMPLE steady dict set, embedded dP/WSS probes) straight from the browser — no snappyHexMesh. `cfd-post` turns two flow-rate runs into a Forchheimer separation: intrinsic permeability K_int = 2.34×10⁻⁹ m² (measured, in the bone-scaffold literature band) with a wall-shear mineralization-window check.
@@ -98,7 +98,7 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ```bash
 # Fast checks (seconds — pre-commit / pre-interview)
 node tpms/agent/schema_check.mjs --fast           # contract/static/reject (GUARD 40)
-node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 84 assertions
+node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 130 assertions (guard 120)
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
