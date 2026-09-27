@@ -111,7 +111,7 @@ try {
   miso === 0 ? ok('STL 全局定向一致：misoriented = 0（字节级有向配对）') : bad('STL misoriented', String(miso));
 } catch (e) { bad('STL 读回复核异常', String(e)); }
 // 9c. A2 精确求解器：解析积分求根 + 一轮割线（确定性种子）
-// R96 验收 ≤1pp（实测最差 0.26pp）；solver 默认 exact
+// R96 验收 ≤1pp（diamond 实测 0.13pp）；solver 默认 exact
 const m1bPath = join(tmpdir(), `tpms_selftest_m1b_${process.pid}.stl`);
 const rm2 = run('mesh', '--type', 'diamond', '--porosity', '0.65', '--resolution', '96', '--out', m1bPath, '--json');
 const j2 = JSON.parse(rm2.stdout || '{}');

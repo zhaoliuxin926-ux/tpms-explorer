@@ -954,7 +954,7 @@ function cmdVerify(core, a, json) {
     attempt.checks.porosity_deviation = { pass: dev <= Math.max(tol, 0.03), deviation: +dev.toFixed(4) };
     attempts.push(attempt);
     if (dev > Math.max(tol, 0.03)) {
-      // 修复策略（A2 实测口径）：升分辨率优先（R96 割线后 0.26pp）；已达 96 才用割线微调
+      // 修复策略（A2 实测口径）：升分辨率优先（R96 割线后 Diamond 0.13pp）；已达 96 才用割线微调
       const nextR = nextLadder(R);
       if (nextR) { R = nextR; continue; }
       if (Number.isFinite(slopeAnalytic) && Math.abs(slopeAnalytic) > 1e-6) {

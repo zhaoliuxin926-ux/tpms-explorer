@@ -1,7 +1,7 @@
 /**
  * llm-agent.mjs — M3 Agent 循环：自然语言 → LLM tool calling → CLI 执行
  *
- * 铁律：LLM 只填意图槽位；数值由 validateToolCalls 过 schema 钳制后交 CLI 确定性执行。
+ * 铁律：LLM 只填意图槽位；数值由 validateToolCalls 过 schema 校验（越界拒绝）后交 CLI 确定性执行。
  *
  * 用法：
  *   node llm-agent.mjs "设计一个孔隙率 75% 的 Gyroid 骨支架并导出 STL"
@@ -64,7 +64,7 @@ function runCli(toolName, args, cliOpts = {}) {
   return { status: r.status ?? 1, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 }
 
-/** M3→M4 桥接：已钳制槽位 → 确定性 design JSON（文件名由白名单 type 派生，单段安全）→ tpms-driver 闭环。
+/** M3→M4 桥接：已校验槽位 → 确定性 design JSON（文件名由白名单 type 派生，单段安全）→ tpms-driver 闭环。
  *  provider 选项转发给 driver（首轮 verify 失败后由同一 LLM 选修复）；TPMS_DRIVER_MOCK_DECISIONS
  *  经 env 自然透传（离线回归：mock 槽位 + mock 修复决策 + 真实 verify 执行）。
  *  design JSON 与 driver 工作副本（.driver.json）、收敛 STL 全部落当前目录（与 CLI 相对路径语义一致）。 */
@@ -164,7 +164,7 @@ async function main() {
     process.exitCode = 2; return;
   }
 
-  // 铁律：schema 拦截器逐槽位钳制
+  // 铁律：schema 拦截器逐槽位校验（越界拒绝）
   const verdict = validateToolCalls(llmOut.toolCalls, schema);
   if (!verdict.ok) {
     console.error('✗ LLM 产出被 schema 拦截器拒绝:');
