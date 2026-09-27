@@ -1,5 +1,7 @@
 # TPMS Explorer v6.0.0-digital-twin-hpc Release Notes（双语）
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 > 发布日期：2026-08-28 ｜ 前置版本：v5.0.0-fullstack-cae-ecosystem（@623aa53）
 > 里程碑：**31 道 CI 门禁 · 1000+ 断言**（26 门基础上新增 5 门，全绿）
 

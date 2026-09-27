@@ -1,5 +1,7 @@
 # Release Notes v9.2.0 — 24 Family Equations & Hardened Loops
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 **版本代号**：`v9.2.0-24families-hardened`（自 v9.1.0-dual-extractor-manufacturing-loop，6 commits）
 
 本版本把曲面库扩展到 **24 族**（Slotted P / F / Q\* / W 落地，出自 jwf23 方程数据集 CC BY 4.0）、把 radial-grad 从 CLI-only 升级为 **UI 一键预览/导出**，并用一轮 4 路红队对抗审查（0 CRITICAL + 10 MAJOR + 20 MINOR 全修）加固了 UI 与 CLI 的同源承诺。

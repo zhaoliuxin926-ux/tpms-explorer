@@ -1,5 +1,7 @@
 # Release Notes v1.0.0 — Version Epoch Reset & Bimodal Region
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 **版本代号**：`v1.0.0-stable-epoch`（自 v9.2.0-24families-hardened）
 
 ---

@@ -1,5 +1,7 @@
 # TPMS Explorer v2.4.0-ultimate-engine
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 十二道 CI 门禁全绿 · 三平台（Ubuntu/Windows/macOS）CI 矩阵 · 六阶段全系统加固
 
 ## 六阶段交付（中英双语 Release Notes）
