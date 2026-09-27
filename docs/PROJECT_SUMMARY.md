@@ -60,12 +60,13 @@
 | levelset-optimizer.ts | 🆕v7.0 水平集拓扑优化（H-J Godunov + 双目标敏感度 + exact EDT 再初始化） |
 | nl-agent.ts | 自然语言 CAD 代理（中英双语意图解析 + 钳制 + 结构化日志） |
 | units.ts | cellSize↔mm 比例尺单一来源 |
+| porosity-solver.ts | A2 exact 孔隙率（解析 MC 求根 + 记忆化）——UI/CLI/导出同源 |
 
 ### geometry/ —— 重建与场
 | 文件 | 职责 |
 |---|---|
 | mesh-container.ts | 🆕v9.0 C5 任意流形 STL 容器（解析+焊接+加权穿越扫描线+桶最近点 SDF） |
-| surface-nets.ts | 构造性水密网格（边穿越键提取 + Taubin + 解析 Newton 投影 + 孔隙率二分；**hybridFn 创建点应力包装 2026-09-12**） |
+| surface-nets.ts | 构造性水密网格（边穿越键提取 + Taubin + 解析 Newton 投影 + 孔隙率二分/exact；**hybridFn 创建点应力包装 2026-09-12**） |
 | webgpu-evaluator.ts + shaders/ | GPU 场求值（指令 IR 双后端），CPU 无感回退（应力开启强制 CPU） |
 | periodic-surface.ts | 周期单胞提取 + PBC 配对（3×3×3 拼接水密） |
 | ct-reconstruction.ts / dicom-tiff-parser.ts | Micro-CT DICOM/TIFF 导入 + Otsu + 精确 3D EDT 偏差热力图 |
