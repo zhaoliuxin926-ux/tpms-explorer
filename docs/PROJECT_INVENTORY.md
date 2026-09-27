@@ -76,7 +76,7 @@ tpms-explorer/
 | 层 | 内容 | 当前值 |
 |---|---|---|
 | 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****45 门**（main 现态；**tag v1.0.3 时为 44**，docs_consistency 于 tag 后入列） |
-| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **130**（GUARD 120） | GUARD 锁下限 |
+| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **168**（GUARD 150） | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |
@@ -92,7 +92,7 @@ tpms-explorer/
 - Provider：`openai`（含智谱兼容）/ `ollama` / `mock`
 - 拦截：`validateToolCalls` 逐槽位 schema；非法 exit 2
 - 回归：`llm_regression.mjs`（37 条，需密钥）；`regression_matrix.mjs`（离线拦截矩阵）
-- 历史战绩口径：**须带样本量**（如 glm-5.3-flash 单轮 37/37，n=1；复测 36/37）
+- 历史战绩口径：**须带样本量**（如 glm-5.3-flash 多轮 37/37，C3 缓解后 n≥2；勿称确定性）
 
 ---
 

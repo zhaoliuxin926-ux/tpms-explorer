@@ -48,7 +48,7 @@ separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architect
    closed-loop verification layer in which the LLM only fills schema-bounded slots under a
    deterministic validating interceptor (reject on violation) and selects repairs only from a bounded menu, while patch
    application, execution, and acceptance remain deterministic — validated by a 37-instruction
-   bilingual production-LLM regression (37/37 on glm-5.3-flash, with failure-slot rotation across
+   bilingual production-LLM regression (multi-round 37/37 on glm-5.3-flash, C3 mitigated n≥2, not deterministic; failure-slot rotation across
    four model tiers ruling out pipeline defects), an offline mock-driven closed-loop self-test, and
    a 106-assertion schema↔CLI cross-check gate.
 4. **Honest-boundary engineering.** Known limitations (Voigt upper-bound shear estimates,

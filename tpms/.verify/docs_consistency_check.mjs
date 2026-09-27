@@ -59,13 +59,17 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     'docs/WORKFLOW_GUIDE.md',
     'docs/PROJECT_INVENTORY.md',
     'tpms/README.md',
+    'docs/paper/MANUSCRIPT.md',
+    'docs/paper/COVER_LETTER.md',
+    'docs/paper/latex/main.tex',
   ];
   // job_narrative 在 gitignored 记忆区，存在则一并扫（面试材料不许漂）
   const optional = ['tpms/agent_memory/job_narrative.md'];
   const banned = [
     [/位级一致|逐位一致/, '「位级/逐位一致」夸大（实为容差对拍）'],
     [/56[^\n]{0,40}3\.4×/, '56→15ms 误写 3.4×（应为 ≈3.7×）'],
-    [/Diamond R96 偏差 0\.26|0\.26\s*pp\s*@\s*R96|0\.26pp@R96|R96 0\.26pp/, 'Diamond R96 0.26pp（实测 0.13pp）'],
+    [/Diamond R96 偏差 0\.26|0\.26\s*pp\s*@\s*R96|0\.26pp@R96|R96 0\.26pp|reaching 0\.26\s*pp|0\.26\s*pp\s*\(Diamond/, 'Diamond R96 0.26pp（实测 0.13pp）'],
+    [/Diamond[^\n]{0,30}65\s*%?\s*target|65\s*%?\s*target[^\n]{0,20}Diamond/, 'Diamond 目标孔隙率 65%（BENCHMARKS 口径 60%）'],
     [/五层架构|链路分五层|五层信任/, '五层 vs M0–M5 六项矛盾'],
     [/打穿六次/, '「六次」应为「两轮六例」'],
     [/selftest\.mjs[^\n]{0,40}49\s*断言|#\s*CLI 自检：49\s*断言|106\/49\/33/, 'selftest 断言数 49（GUARD 已钉 50）'],
@@ -228,8 +232,8 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 }
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
-// pass 下限守卫（2026-09-27 对抗审查批：禁句/targets 扩面后钉 120，防断言集体跳过；实测 130）
-if (pass < 120) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 120`); process.exit(1); }
+// pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句扩面后钉 150，防断言集体跳过；实测 168）
+if (pass < 150) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 150`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

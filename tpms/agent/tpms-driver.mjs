@@ -2,7 +2,7 @@
  * tpms-driver.mjs — M4 闭环驱动器：propose → 执行 → 读门禁结构化输出 → LLM 选修复策略 → 重跑
  *
  * 铁律（沿用 M3）：LLM 只在**有界策略菜单**里选修复动作并填有界槽位；
- * 修复的应用、执行与验收全部由确定性代码完成（validateToolCalls 同源拦截器钳制）。
+ * 修复的应用、执行与验收全部由确定性代码完成（validateToolCalls 同源拦截器校验，越界拒绝）。
  *
  * 与 verify 内建修复梯（分辨率升档/割线校正）的关系：梯内修复由 verify 确定性完成；
  * 本驱动器接管**梯外修复**——换曲面族 / 降周期数 / 换容器 / 改模式 / 参数层修正，
@@ -24,7 +24,7 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TPMS = join(HERE, 'tpms.mjs');
 
-// ── 修复动作 schema（有界策略菜单；validateToolCalls 同源钳制）──
+// ── 修复动作 schema（有界策略菜单；validateToolCalls 同源校验）──
 const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
 const REPAIR_TOOL = {
   name: 'apply_repair',
@@ -153,7 +153,7 @@ async function main() {
     };
     history.push({ round: diag.round, finalStage: diag.finalStage, design: { ...design } });
 
-    // LLM 选修复（有界菜单，M3 同源拦截器钳制）
+    // LLM 选修复（有界菜单，M3 同源拦截器校验）
     let llmOut;
     try {
       llmOut = await provider.complete([
