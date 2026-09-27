@@ -10,7 +10,7 @@
 
 ### 🧬 曲面库 20 → 24 族（C2 第六批）
 - **Slotted P**（2× 混合积谐波）、**F**（余弦积）、**Q\***（差角 + √3 非对称族）、**W**（2× 积反对称对）——公式逐字转录自 [jwf23/Equation-Based-Lattice-Structure-Dataset](https://github.com/jwf23/Equation-Based-Lattice-Structure-Dataset)（CC BY 4.0，27 曲面 Fourier 拟合，配套论文 [Data in Brief, DOI 10.1016/j.dib.2023.109612](https://doi.org/10.1016/j.dib.2023.109612)）
-- 四方同源：TypeScript 权威库 / Python 导出 / MATLAB 导出 / GPU WGSL IR 万点对拍位级一致（parity_math 314 断言 + webgpu_parity 119 断言）
+- 四方同源：TypeScript 权威库 / Python 导出 / MATLAB 导出 / GPU WGSL IR 万点对拍容差一致（GPU IR 自比 0.00e+0；四方 parity 为容差 1e-9~1e-12，非位级）（parity_math 314 断言 + webgpu_parity 119 断言）
 - 可用域公开于 BENCHMARKS.md（R48/R96 全矩阵；qstar p0.5 微非流形拒产如实披露，k6 默认档四族均拒产——降周期数可避）
 - lidinoid 原始文献 DOI 补录（10.1039/FT9908600769，Lidin & Larsson 1990）
 

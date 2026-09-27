@@ -18,7 +18,7 @@ minimal surface (TPMS) architected materials. It couples a watertight Surface Ne
 pipeline with an exact analytic porosity solver, multifunctional physics estimators (mechanical,
 permeability, acoustic, thermal), CAE hand-off (Abaqus/OpenFOAM/G-code), v7.0 research-grade
 modules for generative implicit fields, yield envelopes, phononic bandgaps, and tissue-ingrowth
-dynamics, a v8.0 agentic verification layer (schema-clamped LLM tool calling plus a
+dynamics, a v8.0 agentic verification layer (schema-validated LLM tool calling plus a
 closed-loop design-verify driver with bounded repair menus and structured unreachability
 declarations), and a v9.x manufacturing loop: conformal filling of anatomical geometries,
 ISO 13314 experimental-curve inversion, direct implicit slicing with industrial CLI output,
@@ -46,7 +46,7 @@ separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architect
    Nets Newton projection — the dominant source of systematic solid-volume loss (up to 9–11 pp),
    documented with before/after evidence (IWP R48 solid fraction +21.5 pp); (iii) an agentic
    closed-loop verification layer in which the LLM only fills schema-bounded slots under a
-   deterministic clamping interceptor and selects repairs only from a bounded menu, while patch
+   deterministic validating interceptor (reject on violation) and selects repairs only from a bounded menu, while patch
    application, execution, and acceptance remain deterministic — validated by a 37-instruction
    bilingual production-LLM regression (37/37 on glm-5.3-flash, with failure-slot rotation across
    four model tiers ruling out pipeline defects), an offline mock-driven closed-loop self-test, and

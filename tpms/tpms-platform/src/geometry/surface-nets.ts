@@ -715,7 +715,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
    *
    * 【B1 最短对角线】对角线不再硬编码 v0-v2：比较 |v0−v2| 与 |v1−v3| 取短者，
    * 抑制固定取向造成的各向异性斜纹与细长面。同一顶点集重新剖分，拓扑不变量
-   * （开放边/非流形边/体积）不受影响，由 mesh_audit/mesh_audit 29 案例守门。
+   * （开放边/非流形边/体积）不受影响，由 mesh_audit/mesh_audit 34 案例守门。
    * 镜像钳位会让相邻角共享同一 cell 顶点：4 顶点去重后按剩余顶点发射
    * 定向三角形（3 个）或跳过（<3 个，纯退化）。
    */

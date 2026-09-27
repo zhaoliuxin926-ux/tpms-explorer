@@ -274,6 +274,6 @@ rmSync(stlPath, { force: true });
 }
 
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
-// pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；实测 49 留 2 余量）
+// pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；2026-09-26 exact 确定性入账 49→50）
 if (pass < 50) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 50`); process.exit(1); }
 process.exit(fail ? 1 : 0);

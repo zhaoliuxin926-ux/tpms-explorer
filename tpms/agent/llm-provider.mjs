@@ -3,12 +3,12 @@
  *
  * 铁律（ROADMAP M3）：
  *   LLM 只产出 tools.schema.json 定义的参数槽位，一切数值由 CLI 确定性代码生成或校验；
- *   越界值 100% 被钳制或拒绝，无静默回退。
+ *   越界值 100% 被拒绝（validateValue 不钳制），无静默回退。
  *
  * 设计：
  *   - Provider 接口：complete(messages, tools) → { toolCalls, raw }
  *   - OllamaProvider：POST /api/chat（支持 tools/function-calling）
- *   - 输出拦截器：validateToolCalls() 逐槽位过 schema 钳制，非法值 → 结构化拒绝
+ *   - 输出拦截器：validateToolCalls() 逐槽位过 schema 校验（越界拒绝），非法值 → 结构化拒绝
  *
  * 用法：
  *   node llm-agent.mjs --provider ollama --model qwen2.5:7b "设计一个孔隙率 75% 的 Gyroid 骨支架"
@@ -24,7 +24,7 @@ export function loadToolsSchema() {
   return JSON.parse(readFileSync(join(HERE, 'tools.schema.json'), 'utf8'));
 }
 
-// ── 输出拦截器：LLM 产出 → schema 钳制 ──────────────────────────
+// ── 输出拦截器：LLM 产出 → schema 校验（越界拒绝）──────────────────────────
 // 【红队 C C-1 修复】排除整串 ./..（首字符允许 . 曾放行 '..' 穿越——verify 端 EISDIR 崩溃被吞成结构化不可达）
 const SAFE_PATH_RE = /^(?!.{1,2}$)[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$/;
 
@@ -122,16 +122,16 @@ export function validateToolCalls(toolCalls, schema) {
       if (!Object.hasOwn(args, k)) errors.push(`tool ${name}: 缺必填 "${k}"`);
     }
 
-    // 逐属性递归钳制
-    const clamped = {};
+    // 逐属性递归校验
+    const validated = {};
     for (const [k, spec] of Object.entries(props)) {
       if (!Object.hasOwn(args, k)) continue;
       const v = validateValue(name, k, spec, args[k], errors);
-      if (errors.length === errBefore) clamped[k] = v;
+      if (errors.length === errBefore) validated[k] = v;
     }
 
     // 逐调用错误归属：本调用无新错误才放行执行
-    if (errors.length === errBefore) cleaned.push({ name, arguments: clamped });
+    if (errors.length === errBefore) cleaned.push({ name, arguments: validated });
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned };

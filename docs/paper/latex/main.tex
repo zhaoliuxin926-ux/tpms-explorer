@@ -52,7 +52,7 @@ deviation at resolution 96 --- and (vii) constructive global orientation propaga
 misoriented STL edges to zero by construction, replacing a per-triangle normal-voting scheme that
 degraded winding consistency five-fold. Version 8.0 adds (viii) an agentic verification layer:
 a five-operation deterministic tool schema consumed through LLM function calling under a per-slot
-clamping interceptor (enumeration, range, unknown-property, and path-traversal rejection), and a
+validating interceptor (enumeration, range, unknown-property, and path-traversal rejection), and a
 closed-loop design-verification driver in which the LLM selects repairs only from a bounded
 strategy menu while patch application, execution, and acceptance remain deterministic --- including
 structured unreachability declarations for representation-limited parameter combinations.
@@ -95,7 +95,7 @@ modules extend the platform from ``geometry plus linear physics surrogates'' to 
 structural-failure envelopes, wave dynamics, biophysical growth, and closed-loop shape optimization
 --- each guarded by an audit gate that executes the same code paths the user sees
 (Table~\ref{tab:gates}). Version 8.0 completes the loop on the automation side: an agentic
-verification layer turns natural-language design intents into schema-clamped tool calls and drives
+verification layer turns natural-language design intents into schema-validated tool calls and drives
 verification--repair cycles to convergence, with every acceptance decision still taken by
 deterministic code (Section~\ref{sec:agentic}). Versions 9.0--9.1 extend the loop to the
 physical side: anatomical conformal filling, experimental-curve inversion, direct implicit
@@ -126,7 +126,7 @@ V & Level-set optimization & unit-load compliance $\propto 1/\text{reaction}$ mo
 tolerance; volume Lagrange constraint $\pm$10\%; permeability gain $\times1.50$; water-tight
 extraction (open edges $=0$); reinitialization $|\nabla\Phi|\approx1$ & 8 \\
 VI & Agentic verification (v8.0) & schema$\leftrightarrow$CLI cross-check (enum/range/path parity,
-incl.\ static sentinel vs.\ driver repair menu); interceptor clamping incl.\ adversarial and
+incl.\ static sentinel vs.\ driver repair menu); interceptor validation incl.\ adversarial and
 malformed calls; mock-driven closed-loop convergence on injected defects with the original design
 file bit-identical & 126 \\
 VII & Manufacturing loop (v9.0--9.1) & conformal-fill SDF vs.\ analytic anchors and divergence-volume
@@ -257,7 +257,7 @@ divergence-volume sign flip) yields zero misoriented edges by construction.}
 \subsection{Agentic closed-loop verification (v8.0)}
 \label{sec:agentic}
 The agent layer follows one iron rule: the LLM only fills schema-bounded slots, and every numeric
-value that reaches the geometry pipeline is clamped or rejected by a deterministic interceptor ---
+value that reaches the geometry pipeline is validated (reject-on-violation) by a deterministic interceptor ---
 enumeration membership, numeric ranges, unknown-property rejection, and single-segment path
 patterns (anti path-traversal) are enforced per slot, so adversarial or malformed model output can
 neither inject code nor escape the parameter domain regardless of model behavior. Five operations
@@ -278,7 +278,7 @@ correction) remain deterministic; the driver handles ladder-external repairs, an
 representation-limited combinations (e.g.\ the cylinder\,$+$\,diamond deep-water region identified
 by the benchmark matrix) it emits a structured \emph{unreachability declaration} instead of
 looping. Acceptance rests on three layers: a 37-instruction bilingual regression against a
-production LLM (glm-5.3-flash 37/37 in a single run; all adversarial samples rejected or
+production LLM (glm-5.3-flash multi-round 37/37 (C3 mitigated, n≥2; not deterministic); all adversarial samples rejected or
 self-clamped; a four-tier model profile documents server-side variance as the residual failure
 mode, never the pipeline); an offline mock-driven
 closed-loop self-test covering parameter-fix convergence, out-of-ladder resolution repair, period
@@ -302,7 +302,7 @@ closed-loop state machine.
     % Top row: NL pipeline
     \node[box, text width=2.3cm] (input) {Natural-language\\design intent};
     \node[box, text width=2.9cm, right=0.55cm of input] (llm) {LLM provider\\(Ollama / OpenAI-compat / Mock)};
-    \node[guard, text width=3.0cm, right=0.55cm of llm] (interceptor) {\textbf{tools.schema interceptor}\\per-slot clamping\\(enum / bounds / path jail)};
+    \node[guard, text width=3.0cm, right=0.55cm of llm] (interceptor) {\textbf{tools.schema interceptor}\\per-slot validation\\(enum / bounds / path jail)};
     \node[action, text width=2.9cm, right=0.55cm of interceptor] (cli) {Deterministic CLI\\(mesh / scenario / \texttt{design-verify})};
     \node[font=\scriptsize, text=red!60!black, below=0.1cm of interceptor] (reject) {violation $\to$ reject (exit 2)};
 
@@ -315,16 +315,16 @@ closed-loop state machine.
     % Arrows
     \draw[arrow] (input) -- (llm);
     \draw[arrow] (llm) -- node[above, font=\scriptsize] {raw calls} (interceptor);
-    \draw[arrow] (interceptor) -- node[above, font=\scriptsize] {clamped args} (cli);
+    \draw[arrow] (interceptor) -- node[above, font=\scriptsize] {validated args} (cli);
     \draw[arrow] (cli) -- (verify);
     \draw[arrow] (verify.170) -- node[above, font=\scriptsize] {FAIL} (driver.10);
-    \draw[arrow] (driver.350) -- node[below, font=\scriptsize, align=center] {repair\\(re-clamped)} (verify.190);
+    \draw[arrow] (driver.350) -- node[below, font=\scriptsize, align=center] {repair\\(re-validated)} (verify.190);
     \draw[arrow] (verify) -- node[above, font=\scriptsize] {PASS} (output);
     \draw[arrow] (driver) -- node[right, font=\scriptsize, align=left] {menu exhausted /\\representation-limited} (unreach);
 \end{tikzpicture}
 \caption{The agentic closed loop (v8.0). The LLM is confined to proposing schema slots: a
-deterministic interceptor clamps or rejects every call before execution, the verification ladder
-is purely deterministic, and repair decisions are re-clamped from a bounded strategy menu ---
+deterministic interceptor validates every call (reject on violation) before execution, the verification ladder
+is purely deterministic, and repair decisions are re-validated from a bounded strategy menu ---
 yielding either a verified watertight artifact or a structured unreachability declaration, never
 a silently degraded mesh.}
 \label{fig:agentic_pipeline}
