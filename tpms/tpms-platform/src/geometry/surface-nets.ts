@@ -1227,6 +1227,22 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   if (vertCount > 0 && !isPreview) {
     const BTOL = 0.04;
 
+    // 数值梯度循环不变量外提：c2New/needNumericGrad/solidFn/rawAt 此前在每顶点重算，
+    // shell×lookup 族甚至每顶点 getTpmsFunction（真热点）。数值语义不变。
+    const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky' || type === 'cdd' || type === 'slotp' || type === 'fs' || type === 'qstar' || type === 'ws';
+    const needNumericGrad = radialOn || hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
+    let numRawAt: ((a: number, b2: number, c2: number) => number) | null = null;
+    if (needNumericGrad) {
+      const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
+      const invKPi = 1 / (k * Math.PI);
+      const solidNetNoRadial = mode === 'solid_network' && !radialOn;
+      numRawAt = (a: number, b2: number, c2: number): number => {
+        const p2x = a * invKPi, p2y = b2 * invKPi, p2z = c2 * invKPi;
+        const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : solidFn!(a, b2, c2, w);
+        return solidNetNoRadial ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
+      };
+    }
+
     for (const encoded of activeCells) {
       const self = cellVert[encoded];
 
@@ -1264,18 +1280,8 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
         // 【阶段 IV】stress 变换是逐点非线性 warp，解析查表法线不感知 ⇒ 强制数值梯度
         // 【v7.0 Stage I】neural 场同理：解析查表法线与神经场无关 ⇒ 强制数值梯度
         // 【C2 扩展】新 5 族无解析梯度分支——不加守卫会静默落链尾 diamond 公式（v1 审计历史 bug 同款形态）
-        const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky' || type === 'cdd' || type === 'slotp' || type === 'fs' || type === 'qstar' || type === 'ws';
-        const needNumericGrad = radialOn || hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
-        if (needNumericGrad) {
-          // 非 hybrid 时才需要底层 V 场函数（hybrid 用 hybridFn，类型签名不同故分开持有）
-          const solidFn = hybridFn ? null : (tpmFn ?? getTpmsFunction(type, customFormula, eqDyn));
-          // px = mx/(k·π)（px = ix/R·2-1 与 mx = kπ·px 的线性关系），差分时物理坐标须随弧度坐标联动
-          const rawAt = (a: number, b2: number, c2: number): number => {
-            const p2x = a / (k * Math.PI), p2y = b2 / (k * Math.PI), p2z = c2 / (k * Math.PI);
-            const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : solidFn!(a, b2, c2, w);
-            // solid 模式外法线 = +∇V（固相在 V 小的一侧）；shell 类直接对模式场差分（内外壁方向自动正确）
-            return mode === 'solid_network' && !radialOn ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
-          };
+        if (numRawAt) {
+          const rawAt = numRawAt;
           const mx = vx * k, my = vy * k, mz = vz * k;
           const h = 1e-4;
           gx = (rawAt(mx + h, my, mz) - rawAt(mx - h, my, mz)) / (2 * h);
