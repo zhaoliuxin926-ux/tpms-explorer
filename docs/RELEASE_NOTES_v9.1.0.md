@@ -1,5 +1,7 @@
 # Release Notes — v9.1.0 · dual-extractor-manufacturing-loop
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 > 2026-09-15 ｜ 中文版在前，[English below](#english)。前版：[v9.0.0](RELEASE_NOTES_v9.0.0.md)（fullstack-cae-ecosystem）。
 > CI 44 门三平台全绿（1,000+ 断言）。本版为 v9.0 封板后的功能演进合集（2026-09-13~15）。
 

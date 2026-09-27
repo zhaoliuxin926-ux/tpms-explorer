@@ -142,6 +142,19 @@ console.log('\n[C2] 调色预设结构');
   appHtml.includes('flashToast') && appHtml.includes('.toast')
     ? ok('教学版 toast 契约在位') : bad('教学版 toast 缺失');
 
+  // 索引池上界须为 18·R³ 算法硬上界（2026-09-27 红队矩阵五连溢出实锤；防回退 6×N³ 经验值）
+  const snSrc = read('tpms/tpms-platform/src/geometry/surface-nets.ts');
+  /ensureIndices\(\s*Math\.min\(\s*9_000_000\s*,\s*R \* R \* R \* 18\s*\)/.test(snSrc)
+    ? ok('索引池上界 18·R³（算法硬上界）')
+    : bad('索引池上界回退', '期望 ensureIndices(min(9M, R*R*R*18))');
+
+  // RELEASE_NOTES 一律带「发布时点快照」边界（防当轮门禁数被读成现态）
+  const rnFiles = readdirSync(path.join(ROOT, 'docs')).filter((f) => f.startsWith('RELEASE_NOTES'));
+  const rnMissing = rnFiles.filter((f) => !read('docs/' + f).includes('发布时点快照'));
+  rnMissing.length === 0
+    ? ok(`RELEASE_NOTES 快照边界全覆盖（${rnFiles.length} 份）`)
+    : bad('RELEASE_NOTES 缺快照边界', rnMissing.join(','));
+
   // 版本纪元：产品自称 v1.0.x；用户可见功能标签须带「原型期」
   const expHeaders = [
     'tpms/tpms-platform/src/main.ts',
@@ -232,8 +245,8 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 }
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
-// pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句扩面后钉 150，防断言集体跳过；实测 168）
-if (pass < 150) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 150`); process.exit(1); }
+// pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 160，防断言集体跳过；实测 170）
+if (pass < 160) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 160`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

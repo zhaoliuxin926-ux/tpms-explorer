@@ -1,5 +1,7 @@
 # TPMS Explorer v4.0.0-multiphysics-inverse-design Release Notes（双语）
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 > 发布日期：2026-08-28 ｜ 上一版本：v3.0.0-nextgen-cae ｜ **21 道 CI 门禁 · 780+ 断言全绿**
 
 ---

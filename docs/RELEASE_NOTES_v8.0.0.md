@@ -1,5 +1,7 @@
 # TPMS Explorer v8.0.0-agentic-loop Release Notes（双语）
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 > 发布日期：2026-09-12 ｜ 前置版本：v7.0.0-generative-biophysics
 > 里程碑：**42 道 CI 门禁 · 1000+ 断言（三平台矩阵，全绿）** ｜ 曲面族 **20** ｜ **Agent 路线 M0-M5 全线打通**
 

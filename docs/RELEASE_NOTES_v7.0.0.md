@@ -1,5 +1,7 @@
 # TPMS Explorer v7.0.0-generative-biophysics Release Notes（双语）
 
+> 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
+
 > 发布日期：2026-08-29 ｜ 前置版本：v6.0.0-digital-twin-hpc（@9804c5d，审查轮 @15292d3）
 > 里程碑：**36 道 CI 门禁 · 1000+ 断言（审计门 897 + UI 回归 108，严格口径）**（31 门基础上新增 5 门，全绿）
 

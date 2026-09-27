@@ -76,7 +76,7 @@ tpms-explorer/
 | 层 | 内容 | 当前值 |
 |---|---|---|
 | 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****45 门**（main 现态；**tag v1.0.3 时为 44**，docs_consistency 于 tag 后入列） |
-| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **168**（GUARD 150） | GUARD 锁下限 |
+| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **170**（GUARD 160） | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |
