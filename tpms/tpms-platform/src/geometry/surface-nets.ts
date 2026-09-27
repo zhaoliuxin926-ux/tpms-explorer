@@ -596,10 +596,11 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // ──────────────────────────────────────────────────────────────
   // 7. Surface Nets 顶点生成
   // ──────────────────────────────────────────────────────────────
-  // 顶点池/索引池按 N³ 上界一次到位（活跃 cell ≤ R³，quad 索引 ≲6×vert）；
-  // 之后局部 const 持有引用，提取中途不再扩容。
+  // 顶点池/索引池一次到位（活跃 cell ≤ R³）。索引硬上界 = 3 向边 × 每 quad 2 tri × 3 idx
+  // = 18·R³（aspect/k10 实测需求可超 6×N³ 经验值，曾 3 次踩满池）。之后局部 const
+  // 持有引用，提取中途不再扩容。
   pool.ensureVerts(Math.min(1_500_000, N * N * N));
-  pool.ensureIndices(Math.min(9_000_000, N * N * N * 6));
+  pool.ensureIndices(Math.min(9_000_000, R * R * R * 18));
   const wcTable = new Float32Array(N);
   for (let i = 0; i < N; i++) wcTable[i] = -half + (i / R) * span;
   const cellVert = pool.cellVert.subarray(0, R * R * R);
