@@ -25,8 +25,6 @@ export function loadToolsSchema() {
 }
 
 // ── 输出拦截器：LLM 产出 → schema 校验（越界拒绝）──────────────────────────
-// 【红队 C C-1 修复】排除整串 ./..（首字符允许 . 曾放行 '..' 穿越——verify 端 EISDIR 崩溃被吞成结构化不可达）
-const SAFE_PATH_RE = /^(?!.{1,2}$)[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$/;
 
 /** 递归校验单值：number/integer 严格类型，string 支持 enum/pattern（路径狱），object/array 递归子 schema */
 function validateValue(toolName, key, spec, v, errors) {
@@ -43,7 +41,10 @@ function validateValue(toolName, key, spec, v, errors) {
   if (spec.type === 'string') {
     if (typeof v !== 'string') { errors.push(`tool ${toolName}.${key}: 须为 string（收到 ${v === null ? 'null' : typeof v}）`); return; }
     if (spec.enum && !spec.enum.includes(v)) { errors.push(`tool ${toolName}.${key}: "${v}" 不在 enum [${spec.enum.join(',')}]`); return; }
-    if (spec.pattern && !SAFE_PATH_RE.test(v)) { errors.push(`tool ${toolName}.${key}: 路径须为单段安全文件名（^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$，禁分隔符/..）`); return; }
+    if (spec.pattern && !new RegExp(spec.pattern).test(v)) {
+      errors.push(`tool ${toolName}.${key}: 不满足 schema pattern ${spec.pattern}（out 类槽位：单段安全文件名 + 强制 .stl 后缀 + 拒 Win 设备名；design 读路径：单段禁分隔符/..）`);
+      return;
+    }
     return v;
   }
   if (spec.type === 'boolean') {
@@ -80,11 +81,18 @@ function validateValue(toolName, key, spec, v, errors) {
  */
 export function validateToolCalls(toolCalls, schema) {
   const errors = [];
-  const toolsByName = Object.fromEntries(schema.tools.map((t) => [t.name, t]));
+  // 注册面用 Map：普通对象会被 __proto__/constructor/hasOwnProperty 等原型链键
+  // 穿透「不在注册面」truthy 检查（红队 D H-1 实证 ACCEPTED），Map.get 无此面
+  const toolsByName = new Map(schema.tools.map((t) => [t.name, t]));
   const cleaned = [];
 
   for (const call of toolCalls ?? []) {
     const name = call.function?.name ?? call.name;
+    // 工具名形状校验：注册面全是 snake_case，畸形/原型链键名直接结构化拒绝
+    if (typeof name !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(name)) {
+      errors.push(`tool ${name}: 非法工具名形状（须 snake_case）`);
+      continue;
+    }
     let args;
     try {
       args = typeof call.function?.arguments === 'string'
@@ -100,7 +108,7 @@ export function validateToolCalls(toolCalls, schema) {
       continue;
     }
 
-    const tool = toolsByName[name];
+    const tool = toolsByName.get(name);
     if (!tool) {
       errors.push(`tool ${name}: 不在 tools.schema.json 注册面`);
       continue;

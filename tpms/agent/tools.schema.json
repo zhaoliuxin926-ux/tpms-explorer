@@ -175,8 +175,8 @@
           },
           "out": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$",
-            "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl。agent 通道安全约束：仅单段安全文件名（^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$，禁路径分隔符/..——防 LLM 可控路径穿越，红队 A-1）。"
+            "pattern": "^(?!(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\\.|$))[A-Za-z0-9][A-Za-z0-9._-]{0,123}\\.stl$",
+            "description": "STL 输出路径，默认 tpms-<type>-p<porosity%>.stl。agent 通道安全约束：单段安全文件名且强制 .stl 后缀、拒 Win 设备名（con/nul 等）——防穿越（红队 A-1）+ 防同目录覆盖与设备名写（红队 D M-2）。"
           },
           "hybrid": {
             "type": "string",
@@ -324,8 +324,8 @@
           },
           "out": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9._][A-Za-z0-9._-]{0,127}$",
-            "description": "STL 输出路径（收敛后落盘），默认 tpms-<type>-verified.stl。单段安全文件名（路径狱约束同 tpms_mesh.out）"
+            "pattern": "^(?!(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\\.|$))[A-Za-z0-9][A-Za-z0-9._-]{0,123}\\.stl$",
+            "description": "STL 输出路径（收敛后落盘），默认 tpms-<type>-verified.stl。单段安全文件名 + 强制 .stl 后缀 + 拒 Win 设备名（约束同 tpms_mesh.out，红队 D M-2）。"
           }
         }
       }

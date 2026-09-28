@@ -42,9 +42,9 @@ function parseArgs(argv) {
 function runCli(toolName, args, cliOpts = {}) {
   // M3→M4 桥接：tpms_design_verify 不走 tpms.mjs 子命令，直连 tpms-driver 闭环
   if (toolName === 'tpms_design_verify') return runDesignVerify(args, cliOpts);
-  // tools.schema 工具名 → CLI 子命令映射
-  const cmdMap = { tpms_list: 'list', tpms_estimate: 'estimate', tpms_mesh: 'mesh', tpms_scenario: 'scenario' };
-  const cmd = cmdMap[toolName];
+  // tools.schema 工具名 → CLI 子命令映射（Map 防原型链键穿透，红队 D H-1 同源）
+  const cmdMap = new Map([['tpms_list', 'list'], ['tpms_estimate', 'estimate'], ['tpms_mesh', 'mesh'], ['tpms_scenario', 'scenario']]);
+  const cmd = cmdMap.get(toolName);
   if (!cmd) return { status: 2, stdout: '', stderr: `未知工具 ${toolName}` };
   const cliArgs = [TPMS, cmd];
   for (const [k, v] of Object.entries(args)) {
