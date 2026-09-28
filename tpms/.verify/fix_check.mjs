@@ -131,18 +131,17 @@ w1.n === 3 && w1.show && ['fw-a', 'fw-b', 'fw-c'].every(id => w1.ids.includes(id
   ? ok('B1 gyroid 3 滑块且默认 1.0') : bad('B1 gyroid', JSON.stringify(w1));
 
 // B1-2 拖 fw-a → 数值/公式系数/高亮联动（空选择器优雅失败，不再抛未捕获异常中断全链）
-{
-  const has = await page.evaluate(() => !!document.getElementById('fw-a'));
-  if (!has) {
-    bad('B1 拖动联动', '#fw-a 不存在（滑块行未渲染）');
-  } else {
-    await page.evaluate(() => {
-      const el = document.getElementById('fw-a');
-      el.value = '1.5';
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }
+// 顺序敏感：input（拖动中高亮）→ 断言高亮 → change（松手重建权重行，会擦掉拖动态高亮）
+// ——change 不可提前到断言前，否则 tagOn/termHl 被重建清零假红（run_all 实录 27/28）
+const fwAOk = await page.evaluate(() => !!document.getElementById('fw-a'));
+if (!fwAOk) {
+  bad('B1 拖动联动', '#fw-a 不存在（滑块行未渲染）');
+} else {
+  await page.evaluate(() => {
+    const el = document.getElementById('fw-a');
+    el.value = '1.5';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 }
 let hl = await page.evaluate(() => ({
   val: document.getElementById('fw-a-val')?.textContent,
@@ -150,6 +149,13 @@ let hl = await page.evaluate(() => ({
   termHl: document.querySelector('#formula-display .term[data-w="a"]')?.classList.contains('term-hl'),
 }));
 hl.val === '1.5' && hl.tagOn && hl.termHl ? ok('B1 拖动实时值+高亮联动') : bad('B1 拖动联动', JSON.stringify(hl));
+// 松手（change）：仅在元素存在时派发；触发权重重建后公式系数走 worker 更新
+if (fwAOk) {
+  await page.evaluate(() => {
+    const el = document.getElementById('fw-a');
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
 // 等 worker 回来后公式显示系数 1.5·
 await page.waitForFunction(() => document.querySelector('#formula-display .wcoef')?.textContent?.includes('1.5'), null, { timeout: 20000 }).catch(() => {});
 const coef = await page.evaluate(() => document.querySelector('#formula-display .wcoef')?.textContent || '');
