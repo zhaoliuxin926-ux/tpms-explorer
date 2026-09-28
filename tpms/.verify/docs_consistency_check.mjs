@@ -89,8 +89,9 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     const hits = src.match(/37\/37/g) || [];
     if (hits.length === 0) { ok(rel + ' 无裸 37/37'); continue; }
     // 样本量限定：n=1/单轮 或 多轮 n≥2 均可（2026-09-27：LIVE 已是多轮 37/37，勿称确定性）
-    const scoped = /37\/37[^\n]{0,48}(n=1|n≥2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i.test(src)
-      || /n=1[^\n]{0,40}37\/37|单轮[^\n]{0,20}37\/37|多轮[^\n]{0,20}37\/37|n≥2[^\n]{0,40}37\/37/i.test(src);
+    // geq 变体：论文 LaTeX 写 n$\geq$2（pdflatex 不收 Unicode ≥）
+    const scoped = /37\/37[^\n]{0,48}(n=1|n≥2|n\$\\geq\$?2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i.test(src)
+      || /n=1[^\n]{0,40}37\/37|单轮[^\n]{0,20}37\/37|多轮[^\n]{0,20}37\/37|n≥2[^\n]{0,40}37\/37|\\geq\$?2[^\n]{0,60}37\/37/i.test(src);
     scoped ? ok(rel + ' 37/37 带样本量限定') : bad(rel + ' 37/37 无 n=1/单轮限定');
   }
 }
