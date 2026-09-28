@@ -112,6 +112,18 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   ok('design 路径穿越被拒', v.ok === false && v.errors.some((e) => e.includes('design')), JSON.stringify(v.errors));
 }
 {
+  // 红队 I P1-1：裸点串（无分隔符形态）曾随 SAFE_PATH_RE 迁移丢失而放行
+  const v1 = validateToolCalls(mkCall('tpms_scenario', { design: '..' }), schema);
+  const v2 = validateToolCalls(mkCall('tpms_scenario', { design: '.' }), schema);
+  ok('design 裸 .. / . 被拒', v1.ok === false && v2.ok === false && v1.errors.some((e) => e.includes('design')) && v2.errors.some((e) => e.includes('design')), JSON.stringify(v1.errors));
+}
+{
+  // 红队 I P1-2：Win 设备名不区分大小写（CON.stl 大写变体曾 ACCEPT）
+  const v1 = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 0.6, out: 'CON.stl' }), schema);
+  const v2 = validateToolCalls(mkCall('tpms_scenario', { design: 'CON' }), schema);
+  ok('Win 设备名大小写变体被拒', v1.ok === false && v1.errors.some((e) => e.includes('out')) && v2.ok === false && v2.errors.some((e) => e.includes('design')), JSON.stringify(v1.errors));
+}
+{
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 0.6, out: 'scaffold.stl' }), schema);
   ok('out 合法单段文件名通过', v.ok === true, JSON.stringify(v.errors));
 }
