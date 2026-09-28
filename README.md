@@ -43,6 +43,7 @@
 （仓库根）
 ├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开；**功能冻结教学版**——仅随一致性/安全修复维护，全部新特性落工程版）
 │   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM/CFD/脚本/AST 沙箱/空间映射/RVE/红队矩阵）
+│   ├── ROADMAP.md          🗺️ 路线图（已定案方向 + 明确不做）
 │   └── platform/           工程版在线部署
 └── tpms/
     ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
@@ -100,7 +101,7 @@
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
-> ⚡ **5 分钟出件**：[QUICKSTART](docs/QUICKSTART.md) ｜ [**你的 10 分钟**](docs/YOUR_10_MIN.md) ｜ 🤝 [CONTRIBUTING](CONTRIBUTING.md) ｜ [上机操作卡](docs/LAB_ONE_PAGER.md) ｜ [诚实边界](docs/HONESTY_BOUNDARIES.md) ｜ [回归矩阵](docs/regression-matrix.md) ｜ [**项目总览**](docs/PROJECT_INVENTORY.md) ｜ [文献带偏差卡](docs/LIT_BAND_CARD.md)
+> ⚡ **5 分钟出件**：[QUICKSTART](docs/QUICKSTART.md) ｜ [**你的 10 分钟**](docs/YOUR_10_MIN.md) ｜ 🤝 [CONTRIBUTING](CONTRIBUTING.md) ｜ [上机操作卡](docs/LAB_ONE_PAGER.md) ｜ [诚实边界](docs/HONESTY_BOUNDARIES.md) ｜ [回归矩阵](docs/regression-matrix.md) ｜ [**项目总览**](docs/PROJECT_INVENTORY.md) ｜ [文献带偏差卡](docs/LIT_BAND_CARD.md) ｜ [路线图](docs/ROADMAP.md) ｜ 🛡️ [SECURITY](SECURITY.md)
 
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。

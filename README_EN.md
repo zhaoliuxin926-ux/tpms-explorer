@@ -88,6 +88,8 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 
 - [QUICKSTART](docs/QUICKSTART.md) — 5-minute first STL
 - [CONTRIBUTING.md](CONTRIBUTING.md) — gates & PR checklist
+- [ROADMAP](docs/ROADMAP.md) — decided directions & explicit non-goals
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
 - [HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md) — declared limits
 - [LAB_ONE_PAGER.md](docs/LAB_ONE_PAGER.md) — print & test card
 - [regression-matrix.md](docs/regression-matrix.md) — interceptor coverage matrix
