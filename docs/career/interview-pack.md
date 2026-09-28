@@ -32,9 +32,9 @@ Built an LLM-agent safety layer for a research-grade geometry platform (per-slot
 
 ### Q1 "LLM 应用怎么保证不乱来？"（必问，主线故事）
 
-要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 校验（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层；越界是拒绝不是钳制）→ schema 与 CLI 实际校验由 106 断言门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、37 条 dry-run 槽位回归保证"好的能通过"（统计性，glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2，勿称确定性））、对抗指令四模型零**非法执行**（三形态：平台拒绝/模型拒绝/模型改发合法值；拦截器动作由离线 33 断言单独计量，不把模型自觉算进护栏战果）。
+要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 校验（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层；越界是拒绝不是钳制）→ schema 与 CLI 实际校验由 106 断言门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、37 条 dry-run 槽位回归保证"好的能通过"（统计性，glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2，勿称确定性））、对抗指令四模型零**非法执行**（三形态：平台拒绝/模型拒绝/模型改发合法值；拦截器动作由离线 35 断言单独计量，不把模型自觉算进护栏战果）。
 杀手锏补充：**Agent 面红队两轮（实录 2H+7M+5L），下为六个代表性打穿**——路径穿越正则首字符放行整串 `..`；崩溃被错误处理包装成"结构化拒绝"（语义污染）；校验函数存在但不在执行路径（校验死代码）；同一槽位两份 schema 口径分裂致链路中断；`in` 原型链键误判（应 `Object.hasOwn`）；JSON 解析失败分支曾 exit 0。**没有一条是 LLM 骗过了系统，全是确定性代码自己的缝**——LLM 只是高频模糊测试器。
-证据：`node tpms/agent/llm_provider_selftest.mjs`（33 断言离线可跑）+ 博客二。
+证据：`node tpms/agent/llm_provider_selftest.mjs`（35 断言离线可跑）+ 博客二。
 
 ### Q2 "最难的 bug 是什么？"（讲这个：SDF 顶点区距离反转）
 
@@ -94,9 +94,9 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 # 以下均在仓库根执行
 node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收（GUARD 40）（跳过几何探针）
 node tpms/agent/selftest.mjs              # 50 断言
-node tpms/agent/llm_provider_selftest.mjs # 33 断言（离线）
+node tpms/agent/llm_provider_selftest.mjs # 35 断言（离线，GUARD 33）
 node tpms/agent/tpms.mjs list --json      # 24 族
-node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 170（秒级，GUARD 160）
+node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 197（秒级，GUARD 180）
 
 # 完整几何对拍（含 R48–R128 探针，约 5–10 min）——展示/归档用，不必临场
 node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）

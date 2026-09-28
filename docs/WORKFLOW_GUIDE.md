@@ -459,8 +459,8 @@ computed via shortest fluid path on a 64³ voxelization"*；引用文献
 
 ## 八、质量与审计基准
 
-以下数字由 `tpms/tpms-platform && npm run test:all` 一键复现
-（5 道门禁、全部数字为 2026-08-28 版本实测记录）：
+以下数字由 `cd tpms/tpms-platform && npm run test:all` 一键复现
+（8 道门禁、全部数字为 2026-08-28 版本实测记录——现态断言数以 SCHEDULE/GUARD 为准）：
 
 | 门禁 | 内容 | 基准 |
 |---|---|---|
@@ -680,7 +680,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 ## 二十七、单轴准静态压溃数字孪生与断裂失效预测 🆕 原型期 v6.0
 
-「数字孪生压溃」= Stage I 求解器 + 失效判据 + 坍塌检测（`digital-twin-compression.ts`）+ 门禁 28（21 断言）。
+「数字孪生压溃」= Stage I 求解器 + 失效判据 + 坍塌检测（`digital-twin-compression.ts`）+ 门禁 28（24 断言，GUARD 24）。
 
 - **宏观曲线**：位移步进 Δu，工程应变 ε = Δu/L0，反力 F_total = 顶面节点内力合力，σ = F/A0；
 - **失效判据**：单元平均 Green-Lagrange 应变主值（Cardano 解析特征值）超限时「单元生死」；仅拉断判据（最大主应变，Ti6Al4V 延伸率口径）；每步杀死上限 15% + 活性下限 40% 双守卫（防全灭→K 奇异）；
@@ -817,7 +817,7 @@ MiniSurf（Hsieh & Valdevit 2020, Software Impacts）官方 MATLAB 源码展示�
 
 1. 科研交付优先 **Gyroid / Diamond / Schwarz P**（可用域最宽、文献数据最多）
 2. 需要高比表面积可试 **FK 系 / Neovius**，务必用 `mesh` 或 `solve` 验证水密后再导出
-3. 谐波 3× 族（fcks/cdd）请直接用 R96–R128，或降周期数；不要在 R48 上硬啃
+3. 谐波 3× 族可用域分族论：cdd 用 R96–R128；fcks 仅 R120 k6 ∪ R128 k2（k6 R48/R96/R128 拒产）；不要在 R48 上硬啃
 4. 混合（hybrid）与渐变（isoGrad）对全部 24 族开放；脚本导出同步支持
 
 ---
