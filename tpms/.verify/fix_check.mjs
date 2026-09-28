@@ -35,6 +35,7 @@ try {
     bad('页面身份（须为工程版 docs/platform）',
       `BASE=${BASE} 缺 #gcode-preset —— 正确跑法：run_all.mjs 注入 BASE=http://localhost:4814/，或 node fix_check.mjs 前自起 static-server 4811→docs/platform`);
     console.log(`\nFIX-CHECK ${pass} PASS / ${fail} FAIL`);
+    await browser.close().catch(() => {});
     process.exit(1);
   }
 }
@@ -139,6 +140,7 @@ w1.n === 3 && w1.show && ['fw-a', 'fw-b', 'fw-c'].every(id => w1.ids.includes(id
       const el = document.getElementById('fw-a');
       el.value = '1.5';
       el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
     });
   }
 }
@@ -148,10 +150,6 @@ let hl = await page.evaluate(() => ({
   termHl: document.querySelector('#formula-display .term[data-w="a"]')?.classList.contains('term-hl'),
 }));
 hl.val === '1.5' && hl.tagOn && hl.termHl ? ok('B1 拖动实时值+高亮联动') : bad('B1 拖动联动', JSON.stringify(hl));
-await page.evaluate(() => {
-  const el = document.getElementById('fw-a');
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-});
 // 等 worker 回来后公式显示系数 1.5·
 await page.waitForFunction(() => document.querySelector('#formula-display .wcoef')?.textContent?.includes('1.5'), null, { timeout: 20000 }).catch(() => {});
 const coef = await page.evaluate(() => document.querySelector('#formula-display .wcoef')?.textContent || '');

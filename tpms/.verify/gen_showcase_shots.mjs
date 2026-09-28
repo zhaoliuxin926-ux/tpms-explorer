@@ -50,16 +50,36 @@ try {
   {
     const page = await browser.newPage({ viewport: { width: 1360, height: 850 }, deviceScaleFactor: 1 });
     await page.goto(`http://localhost:${PORT_PLAT}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // 工程版 onboard 键为下划线 tpms_onboard_v1（教学版是连字符 tpms-onboarded，两键勿混）；
+    // 未压制时引导卡会弹进画面并拦截后续 click（2026-09-28 红队 F 实锤存量污染）
+    await page.evaluate(() => localStorage.setItem('tpms_onboard_v1', '1'));
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#rg-gen', { state: 'attached', timeout: 20000 });
     await page.evaluate(() => {
-      document.querySelector('#grp-view .sgroup-h')?.dispatchEvent(new Event('click', { bubbles: true }));
+      // 组头是 toggle：盲点会「开着变关」——先读状态确保只做展开（红队 F：构图失真实录）
+      const h = document.querySelector('#grp-view .sgroup-h');
+      const grp = document.getElementById('grp-view');
+      const closed = grp ? (grp.classList.contains('closed') || grp.getComputedStyle ? false : false) : false;
+      if (h && !grp?.classList.contains('open') && !grp?.classList.contains('show')) h.dispatchEvent(new Event('click', { bubbles: true }));
       document.querySelector('[data-type="schwarz"]')?.dispatchEvent(new Event('click', { bubbles: true }));
+    });
+    // 展开祖先折叠区（radialgrad_card_check 同语义）：否则生成在隐藏态跑完，截图无卡
+    await page.evaluate(() => {
+      const el = document.getElementById('rg-gen');
+      let d = el?.closest('details');
+      while (d) { d.open = true; d = d.parentElement?.closest('details'); }
     });
     await page.waitForTimeout(800);
     await page.evaluate(() => document.getElementById('rg-gen')?.click());
     await page.waitForFunction(() => (document.getElementById('rg-status')?.textContent || '').includes('实测孔隙率'), { timeout: 90000 });
     await page.waitForTimeout(400);
-    await page.evaluate(() => document.getElementById('rg-gen')?.scrollIntoView({ block: 'center' }));
+    // 截图前：再展开祖先折叠区 + rg 卡滚入视口中央（保证构图兑现「radial-grad 卡 + MT 几何」）
+    await page.evaluate(() => {
+      const el = document.getElementById('rg-gen');
+      let d = el?.closest('details');
+      while (d) { d.open = true; d = d.parentElement?.closest('details'); }
+      el?.scrollIntoView({ block: 'center' });
+    });
     await page.waitForTimeout(200);
     // swiftshader 重载合成器可能不产帧（verify.mjs 同款坑）：禁动画+加长超时+重试
     let shotOk = false;
@@ -151,11 +171,11 @@ try {
         <p class="sub">浏览器里的三周期极小曲面：设计 → 验证 → 3D 打印文件，零后端</p>
         <div class="stats">
           <div class="stat"><b>24</b><span>曲面族</span></div>
-          <div class="stat"><b>44 × 3</b><span>CI 门禁 × 平台</span></div>
+          <div class="stat"><b>45 × 3</b><span>CI 门禁 × 平台</span></div>
           <div class="stat"><b>1000+</b><span>断言（带防中和守卫）</span></div>
           <div class="stat"><b>M0-M5</b><span>LLM Agent 闭环</span></div>
         </div>
-        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v9.2.0</div>
+        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v1.0.x</div>
       </div>
     </body></html>`;
     const tmp = path.join(OUT, '_social_tmp.html');

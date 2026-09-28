@@ -34,26 +34,28 @@ const browser = await chromium.launch({
   executablePath: process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : undefined,
   args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
-const ctx = await browser.newContext({ viewport: { width: 1480, height: 920 }, deviceScaleFactor: 1 });
-const page = await ctx.newPage();
+try {
+  const ctx = await browser.newContext({ viewport: { width: 1480, height: 920 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
 
-// 先落一次教学版写 onboard 标记（键名 tpms-onboarded，见 app.html 引导 IIFE），防 ob-card 弹进画面
-await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-await page.evaluate(() => localStorage.setItem('tpms-onboarded', '1'));
+  // 先落一次教学版写 onboard 标记（键名 tpms-onboarded，见 app.html 引导 IIFE），防 ob-card 弹进画面
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => localStorage.setItem('tpms-onboarded', '1'));
 
-for (const s of SHOTS) {
-  await page.goto(BASE + s.q, { waitUntil: 'domcontentloaded' });
-  // 等首次重建出画：canvas 非空且 loading 覆盖层退场，再留旋前静止帧
-  await page.waitForFunction(() => {
-    const c = document.querySelector('canvas');
-    const ld = document.getElementById('loading');
-    return !!c && c.width > 100 && (!ld || ld.style.display === 'none' || !ld.offsetParent);
-  }, null, { timeout: 60000 }).catch(() => {});
-  await page.waitForTimeout(2500);
-  await page.screenshot({ path: path.join(OUT, s.file) });
-  console.log('✓', s.file);
+  for (const s of SHOTS) {
+    await page.goto(BASE + s.q, { waitUntil: 'domcontentloaded' });
+    // 等首次重建出画：canvas 非空且 loading 覆盖层退场，再留旋前静止帧
+    await page.waitForFunction(() => {
+      const c = document.querySelector('canvas');
+      const ld = document.getElementById('loading');
+      return !!c && c.width > 100 && (!ld || ld.style.display === 'none' || !ld.offsetParent);
+    }, null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: path.join(OUT, s.file) });
+    console.log('✓', s.file);
+  }
+} finally {
+  await browser.close().catch(() => {});
+  server.kill();
 }
-
-await browser.close();
-server.kill();
 console.log('DONE → docs/shots/');
