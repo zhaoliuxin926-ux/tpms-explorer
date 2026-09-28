@@ -96,11 +96,18 @@ jobs:
         working-directory: tpms/.verify
         run: node diag_server_windows.mjs ../../docs/platform
 
+      # 弃用 `| tee`：GH bash 自带 -e -o pipefail，长输出下 tee 偶发 EPIPE 会让全绿套件
+      # 被判 exit 1（2026-09-24~28 连续四天随机平台假红实录，macOS #216 日志 45/45 全绿
+      # 但步骤 exit 1 实锤）。输出直落文件 + 完整日志进 artifact + 尾部内联展示。
       - name: Run 45-gate suite
         working-directory: tpms/tpms-platform
         run: |
-          npm run test:all 2>&1 | tee ci_gates_${{ matrix.os }}.log
-          exit ${PIPESTATUS[0]}
+          set +e
+          npm run test:all > "ci_gates_${{ matrix.os }}.log" 2>&1
+          code=$?
+          set -e
+          tail -n 60 "ci_gates_${{ matrix.os }}.log"
+          exit $code
 
       - name: Upload audit artifacts
         if: always()
