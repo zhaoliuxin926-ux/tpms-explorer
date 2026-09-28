@@ -116,6 +116,21 @@ console.log('\n[A] 语法容错与安全面');
   posOk >= invalid.length - 2
     ? ok(`出错位置捕获 ${posOk}/${invalid.length}（≥${invalid.length - 2}）`)
     : bad('出错位置捕获不足', `${posOk}/${invalid.length}`);
+  // 求值成本上限（红队 D M-1 / 红队 I P3-15）：超长表达式与超限 token 数必须被结构化拒绝——
+  // 分享链接 ?formula= 直达 state，无此上限则右结合幂链 460× 求值放大冻结浏览器
+  {
+    const longExpr = 'x+'.repeat(2100) + '1'; // >2000 token
+    let threw = null;
+    try { compileEquation(longExpr); } catch (e) { threw = e; }
+    threw && threw.name === 'EquationParseError' && /2000|超/.test(threw.message)
+      ? ok('token 数超限结构化拒绝（成本上限在位）')
+      : bad('token 上限失效', threw ? `错误类型 ${threw.name}: ${threw.message.slice(0, 60)}` : '未抛错');
+    let threwLen = null;
+    try { compileEquation('x+'.repeat(2200) + '1'); } catch (e) { threwLen = e; }
+    threwLen && threwLen.name === 'EquationParseError' && /超长|4000/.test(threwLen.message)
+      ? ok('长度超限结构化拒绝（>4000 字符）')
+      : bad('长度上限失效', threwLen ? `错误类型 ${threwLen.name}: ${threwLen.message.slice(0, 60)}` : '未抛错');
+  }
   // 白名单 Still-there：合法标识符不被误伤
   for (const expr of ['r + theta + phi', 'k*t*iso', 'PI*E + pi*e']) {
     try { compileEquation(expr); ok(`放行合法标识 [${expr}]`); }
