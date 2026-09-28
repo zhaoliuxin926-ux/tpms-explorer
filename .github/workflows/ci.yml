@@ -5,11 +5,23 @@ on:
     branches: [main]
     paths:
       - 'tpms/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'README_EN.md'
+      - 'BENCHMARKS.md'
+      - 'SECURITY.md'
+      - 'CONTRIBUTING.md'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tpms/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'README_EN.md'
+      - 'BENCHMARKS.md'
+      - 'SECURITY.md'
+      - 'CONTRIBUTING.md'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
