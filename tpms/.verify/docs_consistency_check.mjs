@@ -58,6 +58,9 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     'docs/career/interview-pack.md',
     'docs/WORKFLOW_GUIDE.md',
     'docs/PROJECT_INVENTORY.md',
+    'docs/PROJECT_SUMMARY.md',
+    'docs/LEARNING_PATH.md',
+    'BENCHMARKS.md',
     'tpms/README.md',
     'docs/paper/MANUSCRIPT.md',
     'docs/paper/COVER_LETTER.md',
@@ -246,8 +249,8 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 }
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
-// pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 160，防断言集体跳过；实测 170）
-if (pass < 160) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 160`); process.exit(1); }
+// pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 180，防断言集体跳过；实测 197）
+if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 160`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
