@@ -22,8 +22,10 @@ const FAST = process.argv.includes('--fast');
 let pass = 0, fail = 0;
 const ok = (n) => { pass++; console.log('PASS', n); };
 const bad = (n, i = '') => { fail++; console.log('FAIL', n, i); };
-// 超时 120s：防 spawnSync 无界长挂（bugs.md；残留 _schema_tmp_ / 脏环境曾卡本地）
-const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: 120_000 });
+// 超时 300s：防 spawnSync 无界长挂（bugs.md；残留 _schema_tmp_ / 脏环境曾卡本地）。
+// 2026-09-28 红队 F 后实测 CI Windows 2 核极慢（conformal 1522s/水平集 1071s），
+// 120s 对重探针（fcks R120 等）过紧——超时表现恰为「stderr 空 + 状态非零」假因不明。
+const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: 300_000 });
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
@@ -87,7 +89,7 @@ for (const ty of TYPES) {
       ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触 nm=18252 数值钉住，红队 B F3）`)
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
-    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : badT(`type enum ${ty} R96`, r96);
     continue;
   }
   if (ty === 'slotp' || ty === 'fs' || ty === 'qstar' || ty === 'ws') {
@@ -99,7 +101,7 @@ for (const ty of TYPES) {
         : bad('type enum qstar k6 R48 行为漂移', `exit=${r48k6q.status}`);
     }
     const r = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '96', '--out', join(tmpOut()), '--json');
-    r.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96 k2，第六批钉）`) : bad(`type enum ${ty} R96 k2`, (r.stderr || '').slice(-60));
+    r.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96 k2，第六批钉）`) : badT(`type enum ${ty} R96 k2`, r);
     continue;
   }
   if (ty === 'fcky') {
@@ -126,7 +128,7 @@ for (const ty of TYPES) {
     // 红队 B F3：tools.schema 宣称「R120 p0.5/0.6/0.7 均 nm=0」——补 p0.5/p0.7 两端钉（p0.6 上行已钉）
     for (const pEdge of ['0.5', '0.7']) {
       const rE = run('mesh', '--type', ty, '--porosity', pEdge, '--resolution', '120', '--out', join(tmpOut()), '--json');
-      rE.status === 0 ? ok(`type enum 值 ${ty} R120 p${pEdge} 可构建（宣称带端点钉，红队 B F3）`) : bad(`type enum ${ty} R120 p${pEdge}`, (rE.stderr || '').slice(-60));
+      rE.status === 0 ? ok(`type enum 值 ${ty} R120 p${pEdge} 可构建（宣称带端点钉，红队 B F3）`) : badT(`type enum ${ty} R120 p${pEdge}`, rE);
     }
     const r128k2 = run('mesh', '--type', ty, '--porosity', '0.6', '--periods', '2', '--resolution', '128', '--out', join(tmpOut()), '--json');
     r128k2.status === 0 ? ok(`type enum 值 ${ty} R128 k2 可构建（降周期数避坑锚点，2026-09-11）`) : bad(`type enum ${ty} R128 k2`, (r128k2.stderr || '').slice(-60));
@@ -142,7 +144,7 @@ for (const ty of TYPES) {
       ? ok(`type enum 值 ${ty} R48 已登记 fail-closed（薄壁自触，C2 扩展实测）`)
       : bad(`type enum ${ty} R48 行为漂移`, `exit=${r48.status}`);
     const r96 = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '96', '--out', join(tmpOut()), '--json');
-    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : bad(`type enum ${ty} R96`, (r96.stderr || '').slice(-60));
+    r96.status === 0 ? ok(`type enum 值 ${ty} 可构建（R96）`) : badT(`type enum ${ty} R96`, r96);
     continue;
   }
   if (ty === 'frd') {
@@ -192,7 +194,7 @@ for (const ty of TYPES) {
     continue;
   }
   const r = run('mesh', '--type', ty, '--porosity', '0.6', '--resolution', '48', '--out', join(tmpOut()), '--json');
-  r.status === 0 ? ok(`type enum 值 ${ty} 可构建`) : bad(`type enum ${ty}`, (r.stderr || '').slice(-60));
+  r.status === 0 ? ok(`type enum 值 ${ty} 可构建`) : badT(`type enum ${ty}`, r);
 }
 } // end !FAST 几何探针
 
