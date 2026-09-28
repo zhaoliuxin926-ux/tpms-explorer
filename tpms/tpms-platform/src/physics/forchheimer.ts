@@ -14,7 +14,10 @@
 
 export interface ForchheimerInputs {
   q1: number; dp1: number; q2: number; dp2: number;
-  /** 动力黏度 Pa·s（默认 1.45e-3 = DMEM+10%FBS @37°C，论文 [Chao 2021] 口径） */
+  /** 动力黏度 Pa·s（默认 1.45e-3 ≈ 20–25 °C 水系介质。注意：K_int 是几何量——
+   *  ΔP∝μ 与公式分子 μ 同源自消，换 μ 不改 K_int；但 WSS 绝对值随 μ 线性，
+   *  按 37 °C 培养液（≈0.85e-3）解读时 WSS 须 ×0.59（红队 H，2026-09-29）。
+   *  原「DMEM+10%FBS @37°C [Chao 2021]」注释不可溯，已删。 */
   mu?: number;
   /** 试样轴向长度 m（渗透率换算特征长） */
   length: number;

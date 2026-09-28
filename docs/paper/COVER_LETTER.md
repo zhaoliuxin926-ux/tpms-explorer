@@ -15,7 +15,7 @@ Software Publication.
 **What the software does.** TPMS Explorer is a browser-based, zero-backend ecosystem for
 parametric design, physics simulation, and additive-manufacturing preparation of triply periodic
 minimal surface (TPMS) architected materials. It couples a watertight Surface Nets meshing
-pipeline with an exact analytic porosity solver, multifunctional physics estimators (mechanical,
+pipeline with an exact porosity solver (deterministic Monte-Carlo integration of the analytic surface), multifunctional physics estimators (mechanical,
 permeability, acoustic, thermal), CAE hand-off (Abaqus/OpenFOAM/G-code), v7.0 research-grade
 modules for generative implicit fields, yield envelopes, phononic bandgaps, and tissue-ingrowth
 dynamics, a v8.0 agentic verification layer (schema-validated LLM tool calling plus a

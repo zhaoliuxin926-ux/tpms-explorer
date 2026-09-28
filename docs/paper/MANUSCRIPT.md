@@ -10,7 +10,7 @@ TPMS Explorer is an open-source, browser-based platform for parametric design, a
 ## Key Features
 
 1. **Watertight meshing**: Edge-crossing key extraction + tangential Taubin smoothing + analytic Newton projection; STL watertight 100% (30-case audit); **global orientation propagation** — misoriented edges = 0 by construction (byte-level verified, 823,500 edges @R96).
-2. **Exact porosity solver** (agent CLI): analytic-integration root finding (deterministic LCG Monte-Carlo) + mesh-measured secant validation; measured deviation **0.13 pp @ R96** (Diamond, 60% target). Methodology对标 RegionTPMS (SoftwareX 2021).
+2. **Exact porosity solver** (agent CLI): root finding via deterministic seeded LCG Monte-Carlo integration of the analytic surface + mesh-measured secant validation; measured deviation **0.13 pp @ R96** (Diamond, 60% target). Methodology对标 RegionTPMS (SoftwareX 2021).
 3. **24 surface families**: four-way formula parity (TS / Python / MATLAB / GPU IR) + public BENCHMARKS matrix with fail-closed usable-domain table.
 4. **Native CAE solvers**: Browser-based voxel FEA homogenization (J-PCG) and FD-Darcy permeability; solid-block patch test analytic-exact.
 5. **Inverse design**: Multi-objective (E*, κ, P) inverse solving with Nelder-Mead + Levenberg-Marquardt; κ lower-bound constraint semantics; 10 inverse-crime cases converge ≤3%.

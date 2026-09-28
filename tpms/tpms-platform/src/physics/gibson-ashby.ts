@@ -32,8 +32,9 @@ const C1_MAP: Record<string, number> = {
   custom: 0.38,  // default to gyroid value
 };
 
-// Gibson & Ashby (1997) 开孔泡沫塑性坍塌：σ*/σs ≈ 0.23·ρ^1.5（弯曲主导）。
-// TPMS 网格略强于随机开孔泡沫，取 0.3 作为折中上界；原值 1.5 高估 ~6.5×，无文献出处。
+// Gibson & Ashby (1997) 开孔泡沫塑性坍塌：σ*/σs ≈ 0.3·ρ^1.5（弯曲主导经典值，原书
+// "C5 ∼ 0.3 from data"）。【2026-09-29 勘误】旧注释「0.23 经典下界、0.3 折中上界」
+// 的叙事无文献出处，已删——0.3 就是经典值本身（红队 H M5）。
 const C2 = 0.3;
 
 /**
@@ -99,8 +100,11 @@ export const BASE_YIELD_STRENGTH: Record<string, number> = {
  * σ* / σs ≈ C2·(ρ* / ρs)^(3/2)
  *
  * C1 取值参考文献：
- * - Gyroid: Abueidda et al. (2017), doi:10.1016/j.ijsolstr.2017.02.015
- * - Diamond: Maskery et al. (2018), doi:10.1016/j.actbio.2018.04.011
+ * - Gyroid: Abueidda et al. (2017), Int J Solids Struct（DOI 勘误 2026-09-29：原引
+ *   10.1016/j.ijsolstr.2017.02.015 解析为 Kubair & Ghosh 无关论文，正确 DOI 待核对原文）
+ * - Diamond: Maskery et al. (2018), Polymer 152:62-71,
+ *   doi:10.1016/j.polymer.2017.11.049（2026-09-29 勘误：原引 10.1016/j.actbio.2018.04.011
+ *   解析为 Gerges et al. 无关论文；BENCHMARKS.md 的 PII 链接一直是对的）
  * - Schwarz P: Berger et al. (2017)
  *
  * 注意：此模型为各向同性近似，实际 TPMS 结构存在各向异性。
