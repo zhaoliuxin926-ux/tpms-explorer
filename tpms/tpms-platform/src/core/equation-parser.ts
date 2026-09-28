@@ -804,8 +804,13 @@ export function compileEquation(expr: string): CompiledEquation {
   const hit = compiledCache.get(key);
   if (hit) return hit;
   if (!key) throw new EquationParseError('表达式不能为空', 0);
+  // 成本上限（红队 D M-1）：分享链接 ?formula= 可直达 state 绕过 UI validate 门，
+  // 右结合幂链求值成本 ≈ 深度（2000 层实测 460×/样本、全场主线程冻结分钟级）。
+  // token 数是一阶上界：合法公式 <100 token，超限直接结构化拒绝。
+  if (key.length > 4000) throw new EquationParseError('表达式超长（>4000 字符，求值成本防护）', 0);
 
   const tokens = tokenize(key);
+  if (tokens.length > 2000) throw new EquationParseError(`token 数 ${tokens.length} 超上限 2000（防幂链/深嵌套求值成本放大，红队 D M-1）`, 0);
   const ast = new Parser(tokens).parse();
   const usage: EquationUsage = { coord: false, k: false, t: false, iso: false };
   scanUsage(ast, usage);
