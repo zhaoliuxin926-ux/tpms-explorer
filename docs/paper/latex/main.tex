@@ -47,7 +47,7 @@ quasi-steady oxygen transport, hypoxia-gated osteoblast proliferation, and miner
 a 28-day horizon; and (v) a level-set topology-optimization loop with Hamilton--Jacobi Godunov
 evolution driven by elastic and flow sensitivities under a volume constraint.
 Post-release hardening adds (vi) a deterministic exact-porosity
-solver --- analytic-integration root finding with mesh-measured secant validation, reaching 0.13 pp
+solver --- root finding with deterministic Monte-Carlo integration of the analytic surface, with mesh-measured secant validation, reaching 0.13 pp
 deviation at resolution 96 --- and (vii) constructive global orientation propagation that reduces
 misoriented STL edges to zero by construction, replacing a per-triangle normal-voting scheme that
 degraded winding consistency five-fold. Version 8.0 adds (viii) an agentic verification layer:
@@ -208,10 +208,10 @@ displacement control. Islands are removed by largest-component BFS, $\Phi$ is re
 exact 3D Euclidean distance transform, and the final field re-enters the platform's Surface Nets
 pipeline through the precomputed-field injection contract, guaranteeing water-tight extraction.
 
-\subsection{Exact porosity solver: analytic-integration root finding}
+\subsection{Exact porosity solver: Monte-Carlo integration root finding}
 The default porosity path couples the requested value to a voxel-rank bisection whose caliber
 differs from the delivered triangle mesh; measured deviations reached 24 pp for higher-harmonic
-families at coarse resolutions. Following the analytic-integration methodology of RegionTPMS
+families at coarse resolutions. Following the integration-methodology of RegionTPMS
 \cite{karakoc2021regiontpms}, the agent CLI now (i) locates $iso^{*}$ on the \emph{analytic} field by
 bisection over a deterministic Monte-Carlo integration of $P(F<iso)$ in the unit cell (LCG-seeded,
 bit-reproducible), then (ii) builds once with $iso^{*}$ (bypassing the internal bisection) and
