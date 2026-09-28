@@ -19,7 +19,25 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
 
 // ── 第一遍：干净首访（验 B3 引导 + B1 默认权重 UI）──
-await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+try {
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+} catch (e) {
+  bad('无法访问 BASE', `${BASE} — ${String(e.message).slice(0, 120)}；正确跑法：run_all.mjs 注入 BASE，或先起 node static-server.mjs <port> <dir>`);
+  console.log(`\nFIX-CHECK ${pass} PASS / ${fail} FAIL`);
+  await browser.close().catch(() => {});
+  process.exit(1);
+}
+// 页面身份哨兵：本套件只测工程版（gcode-preset 仅 platform 部署产物存在）。
+// BASE 误指落地页/教学版时如实失败并指路，不再产出整页空引用连环假红（2026-09-27 实录）
+{
+  const onPlatform = await page.evaluate(() => !!document.getElementById('gcode-preset')).catch(() => false);
+  if (!onPlatform) {
+    bad('页面身份（须为工程版 docs/platform）',
+      `BASE=${BASE} 缺 #gcode-preset —— 正确跑法：run_all.mjs 注入 BASE=http://localhost:4814/，或 node fix_check.mjs 前自起 static-server 4811→docs/platform`);
+    console.log(`\nFIX-CHECK ${pass} PASS / ${fail} FAIL`);
+    process.exit(1);
+  }
+}
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'domcontentloaded' });
 // 首屏重建 + 引导 750ms 延时：CI 2 核软件渲染下工程版 init（PMREM 环境）可远超本地耗时
@@ -111,12 +129,19 @@ let w1 = await page.evaluate(() => {
 w1.n === 3 && w1.show && ['fw-a', 'fw-b', 'fw-c'].every(id => w1.ids.includes(id)) && w1.vals.every(v => v === '1.0')
   ? ok('B1 gyroid 3 滑块且默认 1.0') : bad('B1 gyroid', JSON.stringify(w1));
 
-// B1-2 拖 fw-a → 数值/公式系数/高亮联动
-await page.evaluate(() => {
-  const el = document.getElementById('fw-a');
-  el.value = '1.5';
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-});
+// B1-2 拖 fw-a → 数值/公式系数/高亮联动（空选择器优雅失败，不再抛未捕获异常中断全链）
+{
+  const has = await page.evaluate(() => !!document.getElementById('fw-a'));
+  if (!has) {
+    bad('B1 拖动联动', '#fw-a 不存在（滑块行未渲染）');
+  } else {
+    await page.evaluate(() => {
+      const el = document.getElementById('fw-a');
+      el.value = '1.5';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+}
 let hl = await page.evaluate(() => ({
   val: document.getElementById('fw-a-val')?.textContent,
   tagOn: document.querySelector('.fw-tag[data-w="a"]')?.classList.contains('on'),
@@ -165,7 +190,7 @@ stat.open && stat.display !== 'none' ? ok('B2 统计面板展开') : bad('B2 展
 await domClick('#stat-toggle');
 let stat2 = await page.evaluate(() => ({
   open: document.getElementById('statbox')?.classList.contains('open'),
-  display: getComputedStyle(document.querySelector('.stat-full')).display,
+  display: document.querySelector('.stat-full') ? getComputedStyle(document.querySelector('.stat-full')).display : null,
 }));
 !stat2.open && stat2.display === 'none' ? ok('B2 统计面板收起') : bad('B2 收起', JSON.stringify(stat2));
 
