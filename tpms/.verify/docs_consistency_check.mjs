@@ -144,7 +144,7 @@ console.log('\n[C2] 调色预设结构');
 
   // 索引池上界须为 18·R³ 算法硬上界（2026-09-27 红队矩阵五连溢出实锤；防回退 6×N³ 经验值）
   const snSrc = read('tpms/tpms-platform/src/geometry/surface-nets.ts');
-  /ensureIndices\(\s*Math\.min\(\s*9_000_000\s*,\s*R \* R \* R \* 18\s*\)/.test(snSrc)
+  /ensureIndices\(\s*Math\.min\(\s*9_000_000\s*,\s*R\s*\*\s*R\s*\*\s*R\s*\*\s*18\s*\)/.test(snSrc)
     ? ok('索引池上界 18·R³（算法硬上界）')
     : bad('索引池上界回退', '期望 ensureIndices(min(9M, R*R*R*18))');
 
