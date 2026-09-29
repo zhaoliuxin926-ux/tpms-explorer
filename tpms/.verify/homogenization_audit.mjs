@@ -102,6 +102,31 @@ console.log('\n[B] 方向模量 E(n)');
   Math.abs(c1 - c2) < 1e-12 && Math.abs(c2 - c3) < 1e-12
     ? ok('立方等价方向 E 一致')
     : bad('立方方向一致');
+  // 离轴正交各向异性 vs 教科书逐项公式（红队 H M1 回归钉：剪切索引曾循环错位一格，
+  // [101] 方向 E 偏差 +9.4% 而主轴/[111]/各向同性极限全精确——门禁盲区实锤）
+  {
+    const E1 = 1.0, E2 = 1.2, E3 = 0.9, nu = 0.3;
+    const Sx = orthotropicCompliance(E1, E2, E3, nu);
+    const S44 = (1 + nu) * (1 / E2 + 1 / E3), S55 = (1 + nu) * (1 / E1 + 1 / E3), S66 = (1 + nu) * (1 / E1 + 1 / E2);
+    const textbook = (nx, ny, nz) => {
+      const a = nx * nx, b = ny * ny, c = nz * nz;
+      const inv = (a * a) / E1 + (b * b) / E2 + (c * c) / E3
+        + 2 * (-nu / E2) * a * b + 2 * (-nu / E3) * a * c + 2 * (-nu / E3) * b * c
+        + S44 * b * c + S55 * a * c + S66 * a * b;
+      return 1 / inv;
+    };
+    const dirs = [[1, 1, 1], [1, 2, 3], [2, 1, 1], [0, 1, 1], [3, 1, 2]];
+    let worst = 0;
+    for (const [x, y, z] of dirs) {
+      const n = Math.hypot(x, y, z);
+      const e = directionalModulus(Sx, x / n, y / n, z / n);
+      const ref = textbook(x / n, y / n, z / n);
+      worst = Math.max(worst, Math.abs(e - ref) / ref);
+    }
+    worst < 1e-12
+      ? ok('离轴正交各向异性 E(n) ≡ 教科书逐项公式（5 方向 ≤1e-12）', `maxRel=${worst.toExponential(1)}`)
+      : bad('离轴 E(n) 剪切索引错位', `maxRel=${worst.toExponential(2)}（预期 ≤1e-12）`);
+  }
 }
 
 // ────────────────────────────── C. 球面采样 ──────────────────────────────

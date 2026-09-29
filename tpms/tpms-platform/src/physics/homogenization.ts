@@ -17,7 +17,7 @@
 
 // ────────────────────────────── 基体常数 ──────────────────────────────
 
-/** 各向同性基体 6×6 刚度（工程剪变约定 [εxx,εyy,εzz,γxy,γyz,γzx]，E=1） */
+/** 各向同性基体 6×6 刚度（标准 Voigt 工程约定 [εxx,εyy,εzz,γyz,γzx,γxy]，E=1） */
 export function baseStiffness(nu: number): Float64Array {
   const E = 1;
   const lambda = (nu * E) / ((1 + nu) * (1 - 2 * nu));
@@ -106,15 +106,18 @@ export function vrhBounds(phi: number, nu: number): VrhBounds {
 
 /**
  * 方向杨氏模量 E(n) = 1/(nᵢnⱼnₖnℓ S_ijkl)。
- * Voigt 工程剪变展开（对称 6×6）：n⁴ 对角 + 2S_ij n_i²n_j²（法向耦合）
- * + S44/S55/S66 剪切项（γxy↔n1n2、γyz↔n2n3、γzx↔n1n3）。
+ * 标准 Voigt 展开：n⁴ 对角 + 2S_ij n_i²n_j²（法向耦合）
+ * + S44·n2²n3²（γyz）+ S55·n1²n3²（γzx）+ S66·n1²n2²（γxy）。
+ * 【2026-09-29 勘误（红队 H M1）】剪切索引曾按 xy 优先序取用（S21·n1n2 / S28·n2n3 /
+ * S35·n1n3），与存储的标准 Voigt 值（S44↔(E2,E3) 等）循环错位一格——各向同性极限
+ * 与主轴方向恰精确故门禁盲区，正交各向异性离轴 E(n) 偏差最大 +9.4%。已对齐。
  */
 export function directionalModulus(S: Float64Array, nx: number, ny: number, nz: number): number {
   const n1 = nx * nx, n2 = ny * ny, n3 = nz * nz;
   const compliance =
     S[0] * n1 * n1 + S[7] * n2 * n2 + S[14] * n3 * n3
     + 2 * S[1] * n1 * n2 + 2 * S[2] * n1 * n3 + 2 * S[8] * n2 * n3
-    + S[21] * n1 * n2 + S[28] * n2 * n3 + S[35] * n1 * n3;
+    + S[21] * n2 * n3 + S[28] * n1 * n3 + S[35] * n1 * n2;
   return compliance > 1e-300 ? 1 / compliance : 0;
 }
 

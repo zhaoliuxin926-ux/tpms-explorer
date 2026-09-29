@@ -60,7 +60,7 @@ Reproduce: `TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider 
 - **Dual mesh extractors** (v9.1): Surface Nets for smooth fields + **Marching Tetrahedra** for non-smooth fields — ships a **one-shot UI card** (MT preview at R48 + HD STL export at R96 behind a built-in watertight audit gate, bit-identical to the CLI) for the **radial-grad family** (center-dilated K / edge-1 metric remap with wall-thickness compensation, K∈[1,3], K=1.5 measured design density ≈54.7 % (192,784 tris, v9.2 bit-exact wording)) to ship watertight STL across K = 1…2 (sphere anchor 4π/3 deviation 0.13 %).
 - **Printability audit** (v9.1): overhang area statistics (α = arccos(−N·b) industrial convention) + deterministic Fibonacci-sphere build-orientation search. Measured: TPMS lattices are near-isotropic — orientation gain ≈ ±1 pp, a quantitative basis for leaving support control to the slicer.
 - **Direct implicit slicing** (v9.0+): scan-line interval method → SVG layer paths + **CLI Common-Layer-Interface** industrial format (hatch-volume fidelity ≤0.1 %), container clipping included.
-- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 37-case real-model regression (glm-5.3-flash 37/37 recommended; four-tier model profile on record).
+- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 37-case real-model regression (glm-5.3-flash multi-round 37/37 recommended; C3 mitigated n≥2, not deterministic; four-tier model profile on record).
 
 ## Quick start
 
@@ -108,7 +108,7 @@ node tpms/agent/schema_check.mjs                  # 106 assertions (guard baseli
 cd tpms/tpms-platform && npm run test:all   # 45/45 gates, ~6–10 min
 ```
 
-Every gate prints a `RESULT` line and carries a minimum-assertion guard, so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (36 chapters) for AM/CFD/CAE practice.
+Every gate carries a minimum guard (assertion count or case count, depending on the gate; summary-line formats vary), so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (36 chapters) for AM/CFD/CAE practice.
 
 ## Status & scope honesty
 

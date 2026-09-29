@@ -143,12 +143,12 @@ if (!fwAOk) {
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
-let hl = await page.evaluate(() => ({
+const hl = fwAOk ? await page.evaluate(() => ({
   val: document.getElementById('fw-a-val')?.textContent,
   tagOn: document.querySelector('.fw-tag[data-w="a"]')?.classList.contains('on'),
   termHl: document.querySelector('#formula-display .term[data-w="a"]')?.classList.contains('term-hl'),
-}));
-hl.val === '1.5' && hl.tagOn && hl.termHl ? ok('B1 拖动实时值+高亮联动') : bad('B1 拖动联动', JSON.stringify(hl));
+})) : { val: null, tagOn: false, termHl: false };
+if (fwAOk) { hl.val === '1.5' && hl.tagOn && hl.termHl ? ok('B1 拖动实时值+高亮联动') : bad('B1 拖动联动', JSON.stringify(hl)); }
 // 松手（change）：仅在元素存在时派发；触发权重重建后公式系数走 worker 更新
 if (fwAOk) {
   await page.evaluate(() => {
