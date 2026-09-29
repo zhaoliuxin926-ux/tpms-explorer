@@ -31,7 +31,7 @@
 ├── tpms/                      ← 工程工作区
 │   ├── tpms-platform/         ← 平台源码（TS + Vite + Three.js，零运行时依赖）
 │   │   └── src/{core,geometry,physics,export,measure,worker}/ + main.ts + index.html
-│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（10 套件）+ slicepv 冒烟
+│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（14 套件）+ slicepv 冒烟
 │   ├── agent/                 ← Agent CLI（六命令 + NL 工具调用 + 闭环驱动器 + 三 Provider + 五件自检）
 │   ├── agent_memory/          ← context / progress / bugs 三件套（AI 协作记忆，gitignored）
 │   └── prototypes/            ← MATLAB 原型（归档）
