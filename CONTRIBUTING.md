@@ -6,7 +6,7 @@
 
 ```bash
 cd tpms/tpms-platform && npm install
-npm run test:all          # 45 门本地全量（约 6–10 min）
+npm run test:all          # 46 门本地全量（约 6–10 min）
 node ../agent/schema_check.mjs --fast   # 30s 契约快检
 ```
 

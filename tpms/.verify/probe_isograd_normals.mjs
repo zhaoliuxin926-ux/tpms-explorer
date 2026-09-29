@@ -91,4 +91,5 @@ rNew - rOld > 0.02
   : console.log(`  ℹ A/B：新旧占比差 ${((rNew - rOld) * 100).toFixed(1)}pp（渐变带占全域比例小则为窄差，非缺陷信号）`);
 
 console.log(`\nRESULT: ${pass} PASS / ${fail} FAIL`);
+if (pass < 2) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 2（构建早退防护）`); process.exit(1); }
 process.exit(fail > 0 ? 1 : 0);
