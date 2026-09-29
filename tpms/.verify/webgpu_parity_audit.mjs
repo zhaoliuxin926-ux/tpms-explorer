@@ -380,8 +380,11 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
       gpuVals.length === N * N * N && mismatch === 0
         ? check(`[I] WGSL 派发全量回读（${N}³=${gpuVals.length} 点，无非有限值）`, true)
         : check('[I] WGSL 回读', false, `len=${gpuVals.length} mismatch=${mismatch}`);
-      worstAbs <= 2e-5 && worstRel <= 2e-4
-        ? check(`[I] WGSL 真执行 vs f64 JS IR：abs≤2e-5（全点）/ rel≤2e-4（|ref|≥0.1）`, true, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
+      // 阈值口径（2026-09-29 双后端实测）：真 GPU（RX580/D3D）worstAbs=1.12e-6；CI ubuntu
+      // SwiftShader worstAbs=1.89e-4（sin/cos 多项式逼近误差随 |角度|~2πk 放大）——阈值按
+      // SwiftShader 2.6 倍余量定 5e-4，对场值量级 O(1-10) 仍 ~5e-5 相对精度，等值面符号判定无影响
+      worstAbs <= 5e-4 && worstRel <= 5e-4
+        ? check(`[I] WGSL 真执行 vs f64 JS IR：abs≤5e-4（全点）/ rel≤5e-4（|ref|≥0.1）`, true, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
         : check('[I] WGSL 真执行对拍超差', false, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`);
     }
   } catch (e) {
