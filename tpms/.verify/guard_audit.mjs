@@ -82,21 +82,27 @@ console.log('\n[B] GUARD 基线：代码阈值 vs 文案数字 账实一致性')
   let guardGates = 0;
   for (const { rel, path } of files) {
     const src = readFileSync(path, 'utf8');
-    // GUARD 语句形状：if (passXXX < N) { console.error('...基线 M...') } —— N/M 应相等
-    const re = /<\s*(\d+)\s*\)[^{]*\{\s*console\.error\(\s*[`'"][^`'"]*?(\d+)[^`'"]*?[`'"]/g;
+    // GUARD 语句形状：if (passXXX < N) { console.error(...) }。消息分两类：
+    //   模板串 `${pass} < 17（...）` 与 拼接串 '执行数 ' + passCount + ' < 基线 14（...）'
+    // 【2026-09-29 红队自审修复】旧正则只看 console.error( 后第一个引号段——拼接串的
+    // '基线 14' 在第二段被静默跳过（实测 15+ 处 GUARD 仅匹配 12 处）。改为截取整个
+    // console.error(...) 调用文本，收集其中全部数字：任一数字 == 阈值即视为一致
+    //（消息可含日期/批次等无关数字），全不等才报分裂。
+    const stmtRe = /<\s*(\d+)\s*\)[^{]*\{\s*console\.error\(([^;]*?)\);\s*\}?/g;
     let m;
-    while ((m = re.exec(src))) {
-      guardGates++;
+    while ((m = stmtRe.exec(src))) {
       const codeN = Number(m[1]);
-      // 消息里可能有多个数字（日期、批次数）；取与阈值最接近的作对照（基线通常=阈值或略低）
-      const msgNum = Number(m[2]);
-      if (msgNum !== codeN) {
-        splits.push(`${rel}: 代码阈值 ${codeN} vs 消息数字 ${msgNum} → ${src.slice(m.index, m.index + 110).replace(/\s+/g, ' ')}`);
+      const nums = [...m[2].matchAll(/\d+/g)].map((x) => Number(x[0]));
+      // 消息无数字（如参数校验 '--rounds 必须为正整数'）＝无可对拍文案，跳过
+      if (nums.length === 0) continue;
+      guardGates++;
+      if (!nums.includes(codeN)) {
+        splits.push(`${rel}: 代码阈值 ${codeN} 未在消息数字 [${nums.join(',')}] 中出现 → ${src.slice(m.index, m.index + 110).replace(/\s+/g, ' ')}`);
       }
     }
   }
   splits.length === 0
-    ? ok(`GUARD 基线账实一致（检 ${guardGates} 处 GUARD 语句）`)
+    ? ok(`GUARD 基线账实一致（检 ${guardGates} 处 GUARD 语句，全引号段口径）`)
     : bad('GUARD 基线账实分裂', `${splits.length} 处:\n    ` + splits.join('\n    '));
 }
 
