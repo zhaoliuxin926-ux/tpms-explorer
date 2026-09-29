@@ -598,11 +598,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // ──────────────────────────────────────────────────────────────
   // 顶点池/索引池一次到位（活跃 cell ≤ R³）。提取索引的结构性上界 = 3 向边 ×
   // 每 quad 2 tri × 3 idx = 18·R(R−1)² < 18·R³（aspect/k10 实测曾 3 次踩满 6×N³
-  // 经验池）。实际容量 = min(9M, 18R³)：R≥78 由 MAX_INDICES=9M 硬帽接管
-  //（cdd k10 R116 实测需求 9,000,003 距帽仅 3 —— 超帽走 pushTri fail-closed，
-  // 这是既定行为而非回归）。提取中途不再扩容。
-  pool.ensureVerts(Math.min(1_500_000, N * N * N));
-  pool.ensureIndices(Math.min(9_000_000, R * R * R * 18));
+  // 经验池）。实际容量 = min(绝对帽, 18R³)：索引帽 18M（2026-09-29 提帽 9M→18M，
+  // cdd k10 R116 实测需求 9,000,003 曾距旧帽仅 3 走 fail-closed）；顶点帽 2.2M
+  // 覆盖 R128 N³=2.15M（R124 曾爆）。超帽仍走 pushTri/顶点守卫显式抛错
+  // （fail-closed 不变量不变）。提取中途不再扩容。
+  pool.ensureVerts(Math.min(2_200_000, N * N * N));
+  pool.ensureIndices(Math.min(18_000_000, R * R * R * 18));
   const wcTable = new Float32Array(N);
   for (let i = 0; i < N; i++) wcTable[i] = -half + (i / R) * span;
   const cellVert = pool.cellVert.subarray(0, R * R * R);
@@ -1249,7 +1250,10 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       numRawAt = (a: number, b2: number, c2: number): number => {
         const p2x = a * invKPi, p2y = b2 * invKPi, p2z = c2 * invKPi;
         const v = hybridFn ? hybridFn(a, b2, c2, p2x, p2y, p2z, w) : solidFn!(a, b2, c2, w);
-        return solidNetNoRadial ? v : tpmsAt(v, biasBase, tEffBase, p2x, p2y, p2z);
+        // 【2026-09-29 口径统一（红队 D 定案收口）】法线梯度与提取/投影同走 biasAt：
+        // 非 isoGrad 时 biasAt≡biasBase 逐位不变；isoGrad 陡峭 stops 下法线曾与
+        // 实际零面偏差 |∇V| 同量级（影响导出法线/着色，不影响拓扑/体积）
+        return solidNetNoRadial ? v : tpmsAt(v, biasAt(p2x, p2y, p2z), tEffBase, p2x, p2y, p2z);
       };
     }
 

@@ -241,10 +241,22 @@ cpOff ? ok('B5 caliper 关') : bad('B5 caliper 关', 'class 仍 on');
 {
   let dialogMsg = '';
   page.once('dialog', (d) => { dialogMsg = d.message(); d.accept().catch(() => {}); });
+  // 【2026-09-29 时序加固（macOS flaky 收口）】flashToast 有淡出生命周期，一次性快照在
+  // 慢 runner 上可能整窗错过出现-消失区间（CI 实测 toast=""）——点击前置 MutationObserver
+  // 记录 toast 历史文本，淡出后仍可断言
+  await page.evaluate(() => {
+    (window).__b5Toasts = [];
+    const t = document.getElementById('toast');
+    if (!t) return;
+    new MutationObserver(() => {
+      const txt = (t.textContent || '').trim();
+      if (txt && !(window).__b5Toasts.includes(txt)) (window).__b5Toasts.push(txt);
+    }).observe(t, { childList: true, characterData: true, subtree: true });
+  });
   const dlPromise = page.waitForEvent('download', { timeout: 2500 }).catch(() => null);
   await domClick('#btn-slice-svg');
   const dl = await dlPromise;
-  const toastMsg = await page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  const toastMsg = await page.evaluate(() => ((window).__b5Toasts || []).join(' / '));
   // 合法路径三选一实证：空截面 toast（已从 alert 改为 flashToast）/ 旧 alert dialog / 真实 download
   const sawToast = /交线|Slice|截面/.test(toastMsg);
   const sawDialog = /交线|Slice|截面/.test(dialogMsg);
