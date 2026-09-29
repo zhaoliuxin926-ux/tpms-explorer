@@ -130,7 +130,7 @@ const SCHEDULE = [
   ['homogenization_audit RVE 均质化+方向模量', '均质化审计', 'homogenization_audit.mjs'],
   ['manifold_audit 非欧度规空间映射（14断言）', '流形映射审计', 'manifold_audit.mjs'],
   ['redteam_matrix_audit 红队极端工况矩阵', '红队矩阵审计', 'redteam_matrix_audit.mjs'],
-  ['webgpu_parity_audit WebGPU 数学同源（门13，119断言）', 'WebGPU 同源审计', 'webgpu_parity_audit.mjs'],
+  ['webgpu_parity_audit WebGPU 数学同源（门13，119断言基线；真GPU环境+2=121——[I] WGSL真执行）', 'WebGPU 同源审计', 'webgpu_parity_audit.mjs'],
   ['periodic_rve_audit 周期性RVE/PBC（门14）', '周期RVE审计', 'periodic_rve_audit.mjs'],
   ['cae_mesh_audit Abaqus/OpenFOAM体网格（门15，67断言）', 'CAE体网格审计', 'cae_mesh_audit.mjs'],
   ['hierarchical_audit 多级分形+应力单调性（门16）', '分级TPMS审计', 'hierarchical_audit.mjs'],

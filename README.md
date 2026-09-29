@@ -80,7 +80,7 @@
 | 🧭 非欧度规空间映射 | 圆柱弯曲 / 环面闭合 / 双曲径向 / 应力线各向异性（顶点级保形 warp） | manifold_audit 14 断言 |
 | 🥊 红队极端工况矩阵 | 100+ 案例：孔隙率/容器/长宽比/高频/鞍点/极端权重三硬指标 | redteam_matrix_audit 100/100 |
 | 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 19 断言（合成曲线解析真值恢复 ≤2%） |
-| ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 119 断言（万点对拍 0.00e+0） |
+| ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 119 断言基线（+真 GPU 环境 WGSL 真执行 ×2；万点对拍 0.00e+0） |
 | 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
 | 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 67 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |

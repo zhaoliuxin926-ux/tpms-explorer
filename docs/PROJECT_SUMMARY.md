@@ -123,7 +123,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 
 ### v9.2.0 增量（2026-09-15~16 · bugs.md 清欠轮 + 寿极对抗审查 v3 ）
 
-- **曲面库 20→24 族**（C2 第六批：Slotted P/F/Q*/W，出自 jwf23 方程数据集 CC BY 4.0；四方同源 13 文件；parity 314/webgpu 119）
+- **曲面库 20→24 族**（C2 第六批：Slotted P/F/Q*/W，出自 jwf23 方程数据集 CC BY 4.0；四方同源 13 文件；parity 314/webgpu 119 基线）
 - **radial-grad UI 卡**（MT 预览 R48 + HD STL 导出 R96 内置水密门；守卫七连与 CLI 同义；与 CLI 逐位同源实证）
 - **figure 配图 HD 锁**（提取 ensureExportGradeGeometry 共享函数）
 - **MATLAB 真机验证**（R2025a 无头三支路 3/3；抓出并修复非欧分支 isonormals 必炸；buildMatlabScript 可测试化）
@@ -137,7 +137,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 （rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（10 套 UI 回归，含 slicepv/radialgrad/region/card_smoke 冒烟）+
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 332 · redteam_matrix 100 ·
-custom_equation 73 · periodic_rve 88 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119（万点对拍 0.00e+0）·
+custom_equation 73 · periodic_rve 88 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119 基线+真GPU ×2（万点对拍 0.00e+0）·
 schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（直接层切 F1-F6 + 可打印性审计 F7 十断言：球面积极分解析锚/方向语义钉/摆盘寻优）；conformal 30（C5 SDF+体积对拍+四 patch polyMesh）。全 45 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
 
 ## 六、文档体系
