@@ -118,7 +118,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 - **可打印性审计**：`overhang` 命令（悬垂角面积统计 + Fibonacci 球确定性摆盘寻优）；六试样实测 TPMS 近各向同性=摆盘收益仅 ±1pp
 - **CFD 交付链**：`--cfd-polyMesh` 直出可运行 OpenFOAM case（SIMPLE 字典 + dP/WSS 预埋 + mm 单位制自洽）+ `cfd-post`（Forchheimer 两点分离 K_int=2.34e-9 m² 实测落文献带 + WSS 促矿化窗口诊断）；WSL foamRun 真跑闭环五迭代定案（GAMG 六面体死锁→PCG 等）
 - **radial-grad 径向梯度构型**：度规逆映射（arctanh 径向+有理轴向+壁厚补偿阈值场）+ **Marching Tetrahedra 提取器**（不光滑场免疫；4-cut 环排序/corner 正则化/尺度无关退化判据三定案）——K∈[1,3] 五档全水密 STL 产出，平台进入双提取器格局（surface-nets 光滑场 + MT 不光滑场）
-- **模型线四档验收**：glm-5.3-flash 推荐（37/37）；provider 超时三处对称 170s+env；对抗指令四档零透传
+- **模型线四档验收**：glm-5.3-flash 推荐（多轮 37/37，n≥2 勿称确定性）；provider 超时三处对称 170s+env；对抗指令四档零透传
 - **诚实边界**：CFD 字典口径经真跑验证但几何为结构化六面体（绝对值须网格敏感性披露）；MT 管线退化判据=尺度无关口径（相切带等边微楔片为真实离散几何，manifold_audit 2026-09-11 先例）；radial-grad clip 边界半格内移（尺寸损 1/R）
 
 ### v9.2.0 增量（2026-09-15~16 · bugs.md 清欠轮 + 寿极对抗审查 v3 ）

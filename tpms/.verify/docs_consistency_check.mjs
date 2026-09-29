@@ -93,9 +93,14 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     if (hits.length === 0) { ok(rel + ' 无裸 37/37'); continue; }
     // 样本量限定：n=1/单轮 或 多轮 n≥2 均可（2026-09-27：LIVE 已是多轮 37/37，勿称确定性）
     // geq 变体：论文 LaTeX 写 n$\geq$2（pdflatex 不收 Unicode ≥）
-    const scoped = /37\/37[^\n]{0,48}(n=1|n≥2|n\$\\geq\$?2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i.test(src)
-      || /n=1[^\n]{0,40}37\/37|单轮[^\n]{0,20}37\/37|多轮[^\n]{0,20}37\/37|n≥2[^\n]{0,40}37\/37|\\geq\$?2[^\n]{0,60}37\/37/i.test(src);
-    scoped ? ok(rel + ' 37/37 带样本量限定') : bad(rel + ' 37/37 无 n=1/单轮限定');
+    // 逐出现点判定（红队 I P3-10：文件级放行会放过同文件其他裸 37/37）
+    const scopeOk = /(n=1|n≥2|n\$\\geq\$\s?2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i;
+    let allScoped = true;
+    for (const m of src.matchAll(/37\/37/g)) {
+      const ctx = src.slice(Math.max(0, m.index - 80), m.index + 90);
+      if (!scopeOk.test(ctx)) { allScoped = false; break; }
+    }
+    allScoped ? ok(rel + ' 37/37 带样本量限定（逐点）') : bad(rel + ' 37/37 无 n=1/单轮限定');
   }
 }
 

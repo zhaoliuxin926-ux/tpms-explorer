@@ -86,7 +86,12 @@ export function validateToolCalls(toolCalls, schema) {
   const toolsByName = new Map(schema.tools.map((t) => [t.name, t]));
   const cleaned = [];
 
-  for (const call of toolCalls ?? []) {
+  const calls = toolCalls ?? [];
+  if (calls.length > 64) {
+    errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
+    return { ok: false, errors };
+  }
+  for (const call of calls) {
     const name = call.function?.name ?? call.name;
     // 工具名形状校验：注册面全是 snake_case，畸形/原型链键名直接结构化拒绝
     if (typeof name !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(name)) {

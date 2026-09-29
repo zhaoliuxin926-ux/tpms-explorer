@@ -305,6 +305,83 @@ console.log('\n[H] 无 GPU 环境优雅降级');
   check('probeGpuAvailability 无 navigator.gpu 返回 false', ok === false);
 }
 
+// ── E. WGSL 真执行对拍（红队 G H1：A–D 全部为 JS IR 模拟，WGSL 文本此前从未被编译执行）
+// Chrome headless（--enable-unsafe-webgpu + SwiftShader/Dawn）真跑 gyroid 内核 vs f64 JS IR。
+// 无 WebGPU 设备的环境（部分 CI runner）→ 响亮 SKIP 且不计断言（GUARD 119 由 A–D 维持），
+// 有 GPU 的环境自动获得真执行覆盖。
+console.log('\n[E] WGSL 真执行（Chrome SwiftShader/WebGPU，gyroid R16 k2 = 17³ 格点）');
+{
+  let browser = null, skip = null;
+  try {
+    const { chromium } = await import('playwright');
+    browser = await chromium.launch({
+      channel: 'chrome',
+      executablePath: process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : undefined,
+      args: ['--use-gl=swiftshader', '--enable-unsafe-webgpu', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--headless=new'],
+    });
+    const page = await (await browser.newContext()).newPage();
+    await page.setContent('<!doctype html><html><body></body></html>');
+    const hasDevice = await page.evaluate(async () => {
+      try { return !!(await navigator.gpu?.requestAdapter()); } catch { return false; }
+    });
+    if (!hasDevice) {
+      skip = 'navigator.gpu.requestAdapter() 不可用（runner 无 WebGPU 后端）';
+    } else {
+      const K = compileFieldKernel(mkCfg('gyroid'));
+      const N = 17, R = 16, k = 2;
+      const gpuVals = await page.evaluate(async ({ wgsl, N, R, k }) => {
+        const adapter = await navigator.gpu.requestAdapter();
+        const device = await adapter.requestDevice();
+        const module = device.createShaderModule({ code: wgsl });
+        const pipeline = device.createComputePipeline({ layout: 'auto', compute: { module, entryPoint: 'main' } });
+        const ab = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        const dv = new DataView(new ArrayBuffer(16));
+        dv.setUint32(0, N, true); dv.setFloat32(4, R, true); dv.setFloat32(8, k, true);
+        device.queue.writeBuffer(ab, 0, dv.buffer);
+        const count = N * N * N;
+        const ob = device.createBuffer({ size: count * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+        const rb = device.createBuffer({ size: count * 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+        const enc = device.createCommandEncoder();
+        const pass = enc.beginComputePass();
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [
+          { binding: 0, resource: { buffer: ab } }, { binding: 1, resource: { buffer: ob } },
+        ] }));
+        pass.dispatchWorkgroups(Math.ceil(N / 4), Math.ceil(N / 4), Math.ceil(N / 4));
+        pass.end();
+        enc.copyBufferToBuffer(ob, 0, rb, 0, count * 4);
+        device.queue.submit([enc.finish()]);
+        await rb.mapAsync(GPUMapMode.READ);
+        return Array.from(new Float32Array(rb.getMappedRange()));
+      }, { wgsl: K.wgsl, N, R, k });
+      let worstAbs = 0, worstRel = 0, mismatch = 0;
+      for (let ix = 0; ix < N; ix++) for (let iy = 0; iy < N; iy++) for (let iz = 0; iz < N; iz++) {
+        const mx = (-Math.PI + ix / R * 2 * Math.PI) * k;
+        const my = (-Math.PI + iy / R * 2 * Math.PI) * k;
+        const mz = (-Math.PI + iz / R * 2 * Math.PI) * k;
+        const px = (ix / R) * 2 - 1, py = (iy / R) * 2 - 1, pz = (iz / R) * 2 - 1;
+        const ref = K.jsEval(mx, my, mz, px, py, pz);
+        const got = gpuVals[ix + iy * N + iz * N * N];
+        if (!Number.isFinite(got)) mismatch++;
+        const abs = Math.abs(got - ref);
+        worstAbs = Math.max(worstAbs, abs);
+        worstRel = Math.max(worstRel, abs / Math.max(Math.abs(ref), 1e-6));
+      }
+      gpuVals.length === N * N * N && mismatch === 0
+        ? ok(`[E] WGSL 派发全量回读（${N}³=${gpuVals.length} 点，无非有限值）`)
+        : bad('[E] WGSL 回读', `len=${gpuVals.length} mismatch=${mismatch}`);
+      worstAbs <= 2e-5 && worstRel <= 2e-4
+        ? ok(`[E] WGSL 真执行 vs f64 JS IR 对拍 ≤2e-5`, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
+        : bad('[E] WGSL 真执行对拍超差', `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`);
+    }
+  } catch (e) {
+    skip = String(e).slice(0, 140);
+  } finally {
+    await browser?.close().catch(() => {});
+  }
+  if (skip) console.log(`  ⚠ SKIP [E] WGSL 真执行：${skip}（不计断言；有 WebGPU 的环境自动获得本覆盖）`);
+}
+
 // ── 汇总 ──
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
   if (passCount < 119) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 119（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 红队 +22 WGSL neg 守卫 → 101；C2 第六批四曲面 +18 → 实测 119@2026-09-22）'); process.exit(1); }

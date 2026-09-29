@@ -23,10 +23,18 @@ const MIME = {
 const absRoot = path.resolve(root);
 
 createServer(async (req, res) => {
+  let rel;
   try {
     // 不用 new URL(req.url, base)：'//app.html' 会被当协议相对 URL 解析（app.html 变 host、
     // pathname 变 '/'）——恰是 run_all BASE 尾斜杠拼出的形状。手工取 path 并折叠多斜杠。
-    let rel = decodeURIComponent((req.url || '/').split('?')[0]);
+    // 畸形转义（/%zz）是客户端错误 → 400 而非 500（红队 D L-1：500 假信号污染门禁日志）
+    rel = decodeURIComponent((req.url || '/').split('?')[0]);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('400 bad request encoding');
+    return;
+  }
+  try {
     if (rel === '/' || rel === '') rel = '/index.html';
     rel = rel.replace(/\/{2,}/g, '/');
     // '.'+rel 防止 win32 上以 / 或 // 开头的路径重置盘符/UNC；随后大小写不敏感前缀守卫
