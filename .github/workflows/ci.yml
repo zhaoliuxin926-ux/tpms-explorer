@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   test:
-    name: ${{ matrix.os }} · 45 gates
+    name: ${{ matrix.os }} · 46 gates
     timeout-minutes: 90
     strategy:
       fail-fast: false
