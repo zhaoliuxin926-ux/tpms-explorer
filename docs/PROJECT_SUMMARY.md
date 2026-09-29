@@ -1,6 +1,6 @@
 # TPMS Explorer 项目全貌总结（v1.0.3）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **45 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **46 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4–v9.2 + v1.0.x.md（×7）。
 
 ---
@@ -31,7 +31,7 @@
 ├── tpms/                      ← 工程工作区
 │   ├── tpms-platform/         ← 平台源码（TS + Vite + Three.js，零运行时依赖）
 │   │   └── src/{core,geometry,physics,export,measure,worker}/ + main.ts + index.html
-│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（14 套件）+ slicepv 冒烟
+│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（15 套件）+ slicepv 冒烟
 │   ├── agent/                 ← Agent CLI（六命令 + NL 工具调用 + 闭环驱动器 + 三 Provider + 五件自检）
 │   ├── agent_memory/          ← context / progress / bugs 三件套（AI 协作记忆，gitignored）
 │   └── prototypes/            ← MATLAB 原型（归档）
@@ -108,7 +108,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
 | 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2；缓解前 36/37 与 37/37 并存，勿称确定性）=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 50 + schema_check 106（GUARD 98） + llm_provider_selftest 35（GUARD 33）；llm_driver_selftest 6（手动门） |
+| 自检（CI 纳管） | agent_selftest 50 + schema_check 105（GUARD 98） + llm_provider_selftest 37（GUARD 35）；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
@@ -134,7 +134,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 ## 五、门禁体系（45 项，run_ci_suite.mjs 调度，三平台矩阵）
 
 入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 39 道行为审计（含 experimental_fit 实验曲线反演 + conformal_fill 保形填充，v9.0 门 43/44）
-（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（14 套 UI 回归，含 slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector 冒烟）+
+（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（15 套 UI 回归，含 slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge 冒烟）+
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 332 · redteam_matrix 100 ·
 custom_equation 73 · periodic_rve 88 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119 基线+真GPU ×2（万点对拍 0.00e+0）·
@@ -142,7 +142,7 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 
 ## 六、文档体系
 
-- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（45 门徽章 1000+）+ LEARNING_PATH 入口
+- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（46 门徽章 1000+）+ LEARNING_PATH 入口
 - **WORKFLOW_GUIDE.md**：36 章（TOC）实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
 - **RELEASE_NOTES_v2.4–v9.2 + v1.0.x**：七份双语发布说明
 - **BENCHMARKS.md**：24 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
@@ -181,7 +181,7 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 cd tpms/tpms-platform
 npm run dev          # 开发
 npm run build        # 构建（dist → docs/platform 同步，勿入库 sourcemap）
-npm run test:all     # 45 门 CI（本机约 6-10 分钟）
+npm run test:all     # 46 门 CI（本机约 6-10 分钟）
 
 # Agent CLI
 node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.65 --resolution 96 --json

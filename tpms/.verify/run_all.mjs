@@ -29,6 +29,7 @@ const suites = [
   { name: 'meshcont卡（网格容器卡冒烟 4 项）', cmd: ['node', 'check_meshcont_card.mjs'], env: {} },
   { name: 'ui_mobile（移动端视口 4 项）', cmd: ['node', 'ui_mobile_check.mjs'], env: {} },
   { name: 'selector_audit（选择器 64 命中审计）', cmd: ['node', 'selector_audit.mjs'], env: {} },
+  { name: 'server_edge（静态服边缘行为 4 项）', cmd: ['node', 'server_edge_check.mjs'], env: {} },
 ];
 
 function startServer(port, dir) {

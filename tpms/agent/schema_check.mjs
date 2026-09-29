@@ -208,6 +208,8 @@ for (const [label, args] of [
   ['mode 不在 enum 被拒', ['--type', 'gyroid', '--porosity', '0.5', '--mode', 'warpdrive']],
   ['estimate 未知属性被拒（--weapon）', ['estimate', '--type', 'gyroid', '--porosity', '0.5', '--weapon', 'laser']],
   ['mesh 未知属性被拒（--weapon）', ['mesh', '--type', 'gyroid', '--porosity', '0.5', '--resolution', '48', '--weapon', 'laser']],
+  ['hybrid pattern 拒非法 typeB 形状 [红队 D L-2 钉]', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--hybrid', 'warpdrive:linear:0:0.5:x']],
+  ['hybrid pattern 拒注入串 [红队 D L-2 钉]', ['--type', 'gyroid', '--porosity', '0.6', '--resolution', '48', '--hybrid', 'diamond;rm -rf']],
   ['estimate 非法值拒绝为 exit 2（参数错误语义）', ['estimate', '--type', 'nope', '--porosity', '0.5']],
 ]) {
   const r = args[0] === 'estimate' || args[0] === 'mesh' ? run(...args) : run('mesh', ...args);
