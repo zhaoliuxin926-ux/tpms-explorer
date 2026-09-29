@@ -402,7 +402,19 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
     await browser?.close().catch(() => {});
     srv?.close();
   }
-  if (skip) console.log(`  ⚠ SKIP [I] WGSL 真执行：${skip}（不计断言；有 WebGPU 的环境自动获得本覆盖）`);
+  if (skip) {
+    // 【2026-09-29 能力强制（深挖轮）】「有能力必须真执行」：SKIP 的合法性只在环境真无能力。
+    // 若硬编码 Chrome 路径存在（本机/未来装了 Chrome 的 runner），SKIP 意味着能力漂移
+    // （Chrome 更新换路径/launch flags 失效）——真执行覆盖静默丢失而 GUARD 119 恰好不炸。
+    // 此处显式断言：chrome 二进制在而没跑成 = FAIL。
+    const chromeCapable = process.platform === 'win32'
+      && existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe');
+    if (chromeCapable) {
+      check('[I] WGSL 真执行能力在场却 SKIP（能力漂移，须修复 launch 链）', false, skip);
+    } else {
+      console.log(`  ⚠ SKIP [I] WGSL 真执行：${skip}（不计断言；本环境无 chrome 二进制，合法跳过）`);
+    }
+  }
 }
 
 // ── 汇总 ──
