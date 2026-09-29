@@ -22,10 +22,10 @@ const FAST = process.argv.includes('--fast');
 let pass = 0, fail = 0;
 const ok = (n) => { pass++; console.log('PASS', n); };
 const bad = (n, i = '') => { fail++; console.log('FAIL', n, i); };
-// 超时 300s：防 spawnSync 无界长挂（bugs.md；残留 _schema_tmp_ / 脏环境曾卡本地）。
-// 2026-09-28 红队 F 后实测 CI Windows 2 核极慢（conformal 1522s/水平集 1071s），
-// 120s 对重探针（fcks R120 等）过紧——超时表现恰为「stderr 空 + 状态非零」假因不明。
-const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: 300_000 });
+// 超时 600s：CI runner 2 核 + run_ci_suite JOBS=4 资源争抢下，重探针（gyroid R96 k12
+// 本地 15s / fcks R120 系列）实测间歇性超 300s——挂哪个门看调度运气（2026-09-28/29
+// Windows 三连挂漂移实录）。超时 kill 的指纹 = stderr 空 + 状态非零。
+const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', timeout: 600_000 });
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
@@ -58,7 +58,7 @@ for (const [label, args, check] of [
   ['cylinder+diamond p0.6 R96 已登记 fail-closed（容器深水区，可用域）', ['--type', 'diamond', '--porosity', '0.6', '--container', 'cylinder', '--resolution', '96', '--out', join(tmpOut())], (r) => r.status === 3 && (r.stderr || '').includes('水密门')],
 ]) {
   const r = run('mesh', ...args, '--json');
-  check(r) ? ok(label) : bad(label, (r.stderr || '').slice(-80));
+  check(r) ? ok(label) : bad(label, [(r.stderr || '').slice(-120), `exit=${r.status}`, r.error ? `err=${r.error.code || r.error.message}` : '', `signal=${r.signal || '-'}`, `stdoutTail=${(r.stdout || '').slice(-200)}`].filter(Boolean).join(' | '));
 }
 // type enum 逐值遍历（验证 enum 与 CLI 接受域完全一致）
 // frd 例外（2026-09-06 登记，bugs.md）：k 修复后精确投影暴露 R48/R64 薄壁自触非流形
