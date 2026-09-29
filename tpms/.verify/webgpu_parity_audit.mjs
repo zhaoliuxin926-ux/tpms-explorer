@@ -335,8 +335,12 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
     if (!hasDevice) {
       skip = 'requestAdapter() 不可用（无 chrome channel / runner 无 WebGPU 后端）';
     } else {
-      const K = compileFieldKernel(mkCfg('gyroid'));
-      const N = 17, R = 16, k = 2;
+      // 【2026-09-29 红队定审】执行段异常不得降级为 SKIP：外层 catch 曾把本段任何错误
+      // （含断言代码自身的 ReferenceError——本会话 ok-is-not-defined 实证）吞成 SKIP →
+      // 真执行失败静默变绿。环境探测失败=SKIP 合法；设备已确认后的执行失败=FAIL。
+      try {
+        const K = compileFieldKernel(mkCfg('gyroid'));
+        const N = 17, R = 16, k = 2;
       const gpuVals = await page.evaluate(async ({ wgsl, N, R, k }) => {
         const adapter = await navigator.gpu.requestAdapter();
         const device = await adapter.requestDevice();
@@ -386,8 +390,13 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
       worstAbs <= 5e-4 && worstRel <= 5e-4
         ? check(`[I] WGSL 真执行 vs f64 JS IR：abs≤5e-4（全点）/ rel≤5e-4（|ref|≥0.1）`, true, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
         : check('[I] WGSL 真执行对拍超差', false, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`);
+      } catch (e) {
+        // 执行段（设备已确认）：任何异常=FAIL，绝不降级 SKIP
+        check('[I] WGSL 真执行异常（fail-closed，不降级 SKIP）', false, String(e).slice(0, 160));
+      }
     }
   } catch (e) {
+    // 环境段（launch/goto/adapter 探测）：失败=SKIP 合法（无 chrome channel / 无 WebGPU）
     skip = String(e).slice(0, 140);
   } finally {
     await browser?.close().catch(() => {});
