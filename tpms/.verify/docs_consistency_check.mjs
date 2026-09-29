@@ -33,14 +33,14 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
   const guardOf = (src, n) => new RegExp(`\\bpass(?:Count)?\\s*<\\s*${n}\\b`).test(src);
   guardOf(parity, 332) ? ok('parity_math GUARD 332') : bad('parity_math GUARD 332');
   guardOf(selftest, 50) ? ok('selftest GUARD 50') : bad('selftest GUARD 50');
-  guardOf(llmp, 33) ? ok('llm_provider GUARD 33') : bad('llm_provider GUARD 33');
+  guardOf(llmp, 35) ? ok('llm_provider GUARD 35') : bad('llm_provider GUARD 35');
   guardOf(schema, 98) ? ok('schema_check GUARD 98（实测可 >）') : bad('schema_check GUARD 98');
   guardOf(inv, 27) ? ok('inverse_design GUARD 27') : bad('inverse_design GUARD 27');
 
   const readme = read('README.md');
   const readmeEn = read('README_EN.md');
-  (/45\/45|45 道|45 gates/i.test(readme + readmeEn))
-    ? ok('README 宣称 45 门') : bad('README 宣称 45 门');
+  (readme + readmeEn).includes('46') && /46\/46|46 道|46 gates/i.test(readme + readmeEn)
+    ? ok('README 宣称 46 门') : bad('README 宣称 46 门');
   readme.includes('332') ? ok('README 引用 parity 332') : bad('README 引用 parity 332');
   readme.includes('inverse_design_audit 27') ? ok('README 反演 27 断言') : bad('README 反演 27 断言');
 }

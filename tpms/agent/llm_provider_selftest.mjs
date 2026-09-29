@@ -40,6 +40,18 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'diamond', porosity: 65, resolution: 64 }), schema);
   ok('porosity=65 百分数通过 schema（CLI 双口径）', v.ok === true, JSON.stringify(v.errors));
 }
+// 2b2. 数量上限：65 个 toolCalls 拒绝（红队 D L-3 防批量 spawn DoS，2026-09-29 补钉）
+{
+  const calls = Array.from({ length: 65 }, () => mkCall('tpms_estimate', { type: 'gyroid', porosity: 0.65 })[0]);
+  const v = validateToolCalls(calls, schema);
+  ok('toolCalls 65 个超上限被拒', v.ok === false && v.errors.some((e) => e.includes('64')), JSON.stringify(v.errors));
+}
+// 2b3. 边界：64 个放行（上限处不误伤）
+{
+  const calls = Array.from({ length: 64 }, () => mkCall('tpms_estimate', { type: 'gyroid', porosity: 0.65 })[0]);
+  const v = validateToolCalls(calls, schema);
+  ok('toolCalls 恰 64 个放行', v.ok === true, JSON.stringify(v.errors ?? []).slice(0, 80));
+}
 // 2c. 越界：resolution=200
 {
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 0.6, resolution: 200 }), schema);
@@ -192,5 +204,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 33) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 33`); process.exit(1); }
+if (pass < 35) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 35（33 + toolCalls 上限双钉 2026-09-29）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

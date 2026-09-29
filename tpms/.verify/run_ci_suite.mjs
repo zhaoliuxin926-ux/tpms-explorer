@@ -1,6 +1,6 @@
 // run_ci_suite.mjs —— 一键 CI 套件调度器（Task 6 → 2026-09-06 并行化）
 //
-// 调度：45 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
+// 调度：46 门全部自包含（各门自带服务/临时 bundle 名互不碰撞），按并发池执行；
 //       结果按原序汇报。并发度 CI_JOBS 可调（默认 4；18 核机器实测安全）。
 // 用法：
 //   cd tpms/tpms-platform && npm run test:all
@@ -67,7 +67,7 @@ function sweepPorts(ports) {
   }
 }
 
-// 最重单门=run_all（14 套件，含 card_smoke 重卡）；默认 60min——run54 实证 runner 高峰期
+// 最重单门=run_all（15 套件，含 card_smoke 重卡）；默认 60min——run54 实证 runner 高峰期
 // 系统性变慢（重门 306-569s 可膨胀至 1200s+）；2026-09-20 card_smoke 入列后 windows 跑者
 // 实测 run_all 超 30min 被误杀（ubuntu/macos <30min 绿），上限放宽至 60min
 const STEP_TIMEOUT_MS = (() => {
@@ -158,13 +158,14 @@ const SCHEDULE = [
   ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/禁句/publish 同源+sync-publish/调色单例/徽章↔tag，197 断言）', '文档一致性', 'docs_consistency_check.mjs'],
-  ['run_all UI 回归（14 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector）', 'UI 回归', 'run_all.mjs'],
+  ['run_all UI 回归（15 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
-  ['schema_check 契约与可用域（106 断言实测/98 基线，2026-09-13 +README 防漂移守卫）', 'Schema 契约', '../agent/schema_check.mjs'],
+  ['schema_check 契约与可用域（105 断言实测/98 基线，2026-09-13 +README 防漂移守卫；+2 hybrid pattern 钉 2026-09-29）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
-  ['llm_provider_selftest M3 拦截器自检（33 断言，离线）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
+  ['llm_provider_selftest M3 拦截器自检（37 断言/GUARD 35，离线；+toolCalls 上限双钉 2026-09-29）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
+  ['guard_audit 元门（恒真高置信扫描+GUARD 基线账实对拍，2026-09-29 纳管）', '门禁元审计', 'guard_audit.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));
