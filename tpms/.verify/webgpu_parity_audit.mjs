@@ -316,7 +316,7 @@ console.log('\n[H] 无 GPU 环境优雅降级');
 // （GUARD 119 由 A–H 维持），有 GPU 的环境自动获得真执行覆盖。
 console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点）');
 {
-  let browser = null, skip = null, srv = null;
+  let browser = null, skip = null, srv = null, skipKind = null; // 'launch'|'no-adapter'
   try {
     const { chromium } = await import('playwright');
     const { createServer } = await import('node:http');
@@ -334,6 +334,7 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
     });
     if (!hasDevice) {
       skip = 'requestAdapter() 不可用（无 chrome channel / runner 无 WebGPU 后端）';
+      skipKind = 'no-adapter';
     } else {
       // 【2026-09-29 红队定审】执行段异常不得降级为 SKIP：外层 catch 曾把本段任何错误
       // （含断言代码自身的 ReferenceError——本会话 ok-is-not-defined 实证）吞成 SKIP →
@@ -398,21 +399,22 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
   } catch (e) {
     // 环境段（launch/goto/adapter 探测）：失败=SKIP 合法（无 chrome channel / 无 WebGPU）
     skip = String(e).slice(0, 140);
+    skipKind = 'launch';
   } finally {
     await browser?.close().catch(() => {});
     srv?.close();
   }
   if (skip) {
-    // 【2026-09-29 能力强制（深挖轮）】「有能力必须真执行」：SKIP 的合法性只在环境真无能力。
-    // 若硬编码 Chrome 路径存在（本机/未来装了 Chrome 的 runner），SKIP 意味着能力漂移
-    // （Chrome 更新换路径/launch flags 失效）——真执行覆盖静默丢失而 GUARD 119 恰好不炸。
-    // 此处显式断言：chrome 二进制在而没跑成 = FAIL。
+    // 【2026-09-29 能力强制（深挖轮·语义修正）】FAIL 仅限「二进制在场却 launch 失败」的真漂移
+    //（Chrome 换路径/launch flags 失效——真执行覆盖静默丢失而 GUARD 119 恰好不炸的洞）。
+    // adapter null 是环境真实能力上限（GH Windows runner 实测：预装 Chrome 但 VM 无 WebGPU
+    // 后端，launch 成功 requestAdapter 不可用——CI 首跑误伤实证），合法 SKIP。
     const chromeCapable = process.platform === 'win32'
       && existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe');
-    if (chromeCapable) {
-      check('[I] WGSL 真执行能力在场却 SKIP（能力漂移，须修复 launch 链）', false, skip);
+    if (skipKind === 'launch' && chromeCapable) {
+      check('[I] WGSL 真执行：chrome 二进制在场却 launch 失败（能力漂移，须修复 launch 链）', false, skip);
     } else {
-      console.log(`  ⚠ SKIP [I] WGSL 真执行：${skip}（不计断言；本环境无 chrome 二进制，合法跳过）`);
+      console.log(`  ⚠ SKIP [I] WGSL 真执行：${skip}${skipKind === 'no-adapter' ? '（chrome 在但环境无 WebGPU 后端=真实能力上限）' : '（本环境无 chrome 二进制）'}（合法跳过，不计断言）`);
     }
   }
 }
