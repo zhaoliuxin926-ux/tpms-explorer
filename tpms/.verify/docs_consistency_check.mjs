@@ -151,11 +151,12 @@ console.log('\n[C2] 调色预设结构');
   appHtml.includes('flashToast') && appHtml.includes('.toast')
     ? ok('教学版 toast 契约在位') : bad('教学版 toast 缺失');
 
-  // 索引池上界须为 18·R³ 算法硬上界（2026-09-27 红队矩阵五连溢出实锤；防回退 6×N³ 经验值）
+  // 索引池上界须为 18·R³ 算法硬上界（2026-09-27 红队矩阵五连溢出实锤；防回退 6×N³ 经验值；
+  // 2026-09-29 绝对帽提 9M→18M，哨兵同步——cdd k10 R116 实测需求 9,000,003 曾距旧帽差 3）
   const snSrc = read('tpms/tpms-platform/src/geometry/surface-nets.ts');
-  /ensureIndices\(\s*Math\.min\(\s*9_000_000\s*,\s*R\s*\*\s*R\s*\*\s*R\s*\*\s*18\s*\)/.test(snSrc)
-    ? ok('索引池上界 18·R³（算法硬上界）')
-    : bad('索引池上界回退', '期望 ensureIndices(min(9M, R*R*R*18))');
+  /ensureIndices\(\s*Math\.min\(\s*18_000_000\s*,\s*R\s*\*\s*R\s*\*\s*R\s*\*\s*18\s*\)/.test(snSrc)
+    ? ok('索引池上界 18·R³（算法硬上界；绝对帽 18M）')
+    : bad('索引池上界回退', '期望 ensureIndices(min(18M, R*R*R*18))');
 
   // RELEASE_NOTES 一律带「发布时点快照」边界（防当轮门禁数被读成现态）
   const rnFiles = readdirSync(path.join(ROOT, 'docs')).filter((f) => f.startsWith('RELEASE_NOTES'));

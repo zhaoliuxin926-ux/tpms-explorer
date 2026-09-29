@@ -67,9 +67,21 @@ export function porAnalytic(
   return 1 - solid / N;
 }
 
-/** 进程内 iso* 记忆化：同 (target,W,grad) 在 UI 反复重建/导出时不再重跑 2M 次 MC */
+/** 进程内 iso* 记忆化：同 (f,target,W,grad) 在 UI 反复重建/导出时不再重跑 2M 次 MC */
 const isoMemo = new Map<string, { iso: number; slope: number }>();
 const ISO_MEMO_MAX = 64;
+
+// 【2026-09-29 结构性防呆（红队 D footgun 收口）】key 强制掺函数实例身份：旧 key 只含
+// cacheTag，跨族隔离完全依赖调用方传对 tag（现调用方已掺 type 无实害，但属约定而非
+// 结构保证）。fnId 经 WeakMap 发号：内置族查表返回稳定引用 → 缓存行为不变；
+// custom+dyn 闭包每次新建 → 退化为 miss（仅损失缓存，不损正确性）。
+const fnIds = new WeakMap<TpmsFn, number>();
+let fnIdNext = 1;
+const fnId = (f: TpmsFn): number => {
+  let id = fnIds.get(f);
+  if (id === undefined) { id = fnIdNext++; fnIds.set(f, id); }
+  return id;
+};
 
 /** 解析求根 iso* + 数值斜率 d(por)/d(iso)（供网格割线校正）。 */
 export function solveIsoAnalytic(
@@ -79,8 +91,8 @@ export function solveIsoAnalytic(
   isoGrad?: IsoGradStops | null,
   cacheTag = '',
 ): { iso: number; slope: number } {
-  // cacheTag 必须区分曲面/公式（f 引用不可稳定序列化）——否则跨族串 iso
-  const key = `${cacheTag}|${target.toFixed(8)}|${[...W].join(',')}|${isoGrad ? JSON.stringify(isoGrad.stops) : ''}`;
+  // key = 函数身份 + cacheTag + target + W + grad：调用方忘掺 type 也不会跨族串 iso
+  const key = `${fnId(f)}|${cacheTag}|${target.toFixed(8)}|${[...W].join(',')}|${isoGrad ? JSON.stringify(isoGrad.stops) : ''}`;
   const hit = isoMemo.get(key);
   if (hit) return hit;
   resetPorosityRng();
