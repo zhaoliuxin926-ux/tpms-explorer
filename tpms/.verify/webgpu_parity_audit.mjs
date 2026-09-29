@@ -13,6 +13,8 @@
  *   F. Hybrid 混合 ×2（轴向/径向波前 × sigmoid/linear）：vs createHybridField ≤1e-6
  *   G. 端到端：gpuVField 注入 buildSurface → 水密 open=0 + 体积 vs CPU 构建 ≤0.5%
  *   H. Node 无 GPU 环境：evaluateFieldGPU/probeGpuAvailability 优雅返回 null/false
+ *   I. WGSL 真执行对拍：Chrome WebGPU 真跑 gyroid 17³ compute vs f64 JS IR ≤2e-5
+ *      （secure context 前置：本地 HTTP + goto；无 GPU 环境响亮 SKIP 不计断言，GUARD 由 A–H 维持）
  *
  * 精度口径注记：真实 GPU 为 f32，场值残差 ~1e-7·|F|（对等值面符号判定无影响）；
  * 本审计走 f64 模拟内核，验证的是公式转录正确性。128³ ≤30ms 为 GPU 运行时
@@ -305,27 +307,33 @@ console.log('\n[H] 无 GPU 环境优雅降级');
   check('probeGpuAvailability 无 navigator.gpu 返回 false', ok === false);
 }
 
-// ── E. WGSL 真执行对拍（红队 G H1：A–D 全部为 JS IR 模拟，WGSL 文本此前从未被编译执行）
-// Chrome headless（--enable-unsafe-webgpu + SwiftShader/Dawn）真跑 gyroid 内核 vs f64 JS IR。
-// 无 WebGPU 设备的环境（部分 CI runner）→ 响亮 SKIP 且不计断言（GUARD 119 由 A–D 维持），
-// 有 GPU 的环境自动获得真执行覆盖。
-console.log('\n[E] WGSL 真执行（Chrome SwiftShader/WebGPU，gyroid R16 k2 = 17³ 格点）');
+// ── I. WGSL 真执行对拍（红队 G H1：A–H 全部为 JS IR 模拟，WGSL 文本此前从未被编译执行）
+// Chrome headless（--enable-unsafe-webgpu + 真 GPU/SwiftShader）真跑 gyroid 内核 vs f64 JS IR。
+// 【secure context 前置（2026-09-29 取证）】WebGPU 仅在 secure context 暴露：setContent 的
+// about:blank 上 navigator.gpu 恒 undefined（chrome://gpu 无任何报错、静默不可用）——必须起
+// 本地 HTTP 服务并 page.goto（127.0.0.1 属 secure context）。本机 Chrome 154 headless 实测
+// 拿到真 adapter（amd/gcn-4）；无 WebGPU 设备的环境（CI runner）→ 响亮 SKIP 且不计断言
+// （GUARD 119 由 A–H 维持），有 GPU 的环境自动获得真执行覆盖。
+console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点）');
 {
-  let browser = null, skip = null;
+  let browser = null, skip = null, srv = null;
   try {
     const { chromium } = await import('playwright');
+    const { createServer } = await import('node:http');
+    srv = createServer((q, s) => { s.writeHead(200, { 'content-type': 'text/html' }); s.end('<!doctype html><html><body></body></html>'); });
+    await new Promise((res) => srv.listen(0, '127.0.0.1', res));
     browser = await chromium.launch({
       channel: 'chrome',
       executablePath: process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : undefined,
-      args: ['--use-gl=swiftshader', '--enable-unsafe-webgpu', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--headless=new'],
+      args: ['--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--no-sandbox', '--headless=new'],
     });
     const page = await (await browser.newContext()).newPage();
-    await page.setContent('<!doctype html><html><body></body></html>');
+    await page.goto(`http://127.0.0.1:${srv.address().port}/`);
     const hasDevice = await page.evaluate(async () => {
       try { return !!(await navigator.gpu?.requestAdapter()); } catch { return false; }
     });
     if (!hasDevice) {
-      skip = 'navigator.gpu.requestAdapter() 不可用（runner 无 WebGPU 后端）';
+      skip = 'requestAdapter() 不可用（无 chrome channel / runner 无 WebGPU 后端）';
     } else {
       const K = compileFieldKernel(mkCfg('gyroid'));
       const N = 17, R = 16, k = 2;
@@ -365,21 +373,24 @@ console.log('\n[E] WGSL 真执行（Chrome SwiftShader/WebGPU，gyroid R16 k2 = 
         if (!Number.isFinite(got)) mismatch++;
         const abs = Math.abs(got - ref);
         worstAbs = Math.max(worstAbs, abs);
-        worstRel = Math.max(worstRel, abs / Math.max(Math.abs(ref), 1e-6));
+        // 相对误差只统计非零域（|ref|≥0.1）：gyroid 场过零点的 rel 分母塌缩属 f32 舍入
+        // 噪声（实测 abs ≤1.12e-6），对等值面符号判定无意义——与头注 f32 口径一致
+        if (Math.abs(ref) >= 0.1) worstRel = Math.max(worstRel, abs / Math.abs(ref));
       }
       gpuVals.length === N * N * N && mismatch === 0
-        ? ok(`[E] WGSL 派发全量回读（${N}³=${gpuVals.length} 点，无非有限值）`)
-        : bad('[E] WGSL 回读', `len=${gpuVals.length} mismatch=${mismatch}`);
+        ? check(`[I] WGSL 派发全量回读（${N}³=${gpuVals.length} 点，无非有限值）`, true)
+        : check('[I] WGSL 回读', false, `len=${gpuVals.length} mismatch=${mismatch}`);
       worstAbs <= 2e-5 && worstRel <= 2e-4
-        ? ok(`[E] WGSL 真执行 vs f64 JS IR 对拍 ≤2e-5`, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
-        : bad('[E] WGSL 真执行对拍超差', `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`);
+        ? check(`[I] WGSL 真执行 vs f64 JS IR：abs≤2e-5（全点）/ rel≤2e-4（|ref|≥0.1）`, true, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`)
+        : check('[I] WGSL 真执行对拍超差', false, `worstAbs=${worstAbs.toExponential(2)} worstRel=${worstRel.toExponential(2)}`);
     }
   } catch (e) {
     skip = String(e).slice(0, 140);
   } finally {
     await browser?.close().catch(() => {});
+    srv?.close();
   }
-  if (skip) console.log(`  ⚠ SKIP [E] WGSL 真执行：${skip}（不计断言；有 WebGPU 的环境自动获得本覆盖）`);
+  if (skip) console.log(`  ⚠ SKIP [I] WGSL 真执行：${skip}（不计断言；有 WebGPU 的环境自动获得本覆盖）`);
 }
 
 // ── 汇总 ──
