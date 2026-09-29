@@ -255,7 +255,7 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 180，防断言集体跳过；实测 197）
-if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 160`); process.exit(1); }
+if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 180（实测 197；文案 160 为历史漂移，guard_audit 首跑抓出 2026-09-29）`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
