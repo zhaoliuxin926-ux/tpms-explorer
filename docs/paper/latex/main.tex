@@ -55,7 +55,11 @@ a five-operation deterministic tool schema consumed through LLM function calling
 validating interceptor (enumeration, range, unknown-property, and path-traversal rejection), and a
 closed-loop design-verification driver in which the LLM selects repairs only from a bounded
 strategy menu while patch application, execution, and acceptance remain deterministic --- including
-structured unreachability declarations for representation-limited parameter combinations.
+structured unreachability declarations for representation-limited parameter combinations. The
+verification suite also audits itself: a meta-gate scans all gate sources for tautological
+assertions and guard-baseline drift, and the WGSL compute backend is executed, not merely
+type-checked, on both a physical GPU and a CI software rasterizer (worst-case field deviation
+$1.9	imes10^{-4}$ against a double-precision reference).
 Versions 9.0--9.1 close the manufacturing loop: (ix) conformal filling of arbitrary
 anatomical manifolds (voxelized signed-distance containers with wall-side Gaussian
 deburring and a divergence-volume porosity denominator); (x) ISO~13314 experimental-curve
