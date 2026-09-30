@@ -84,7 +84,7 @@ tpms/agent/.iso-cache.json.tmp
 audit_ubuntu/
 # 物理试样 STL（上机打印用）——仅本机保留，不入库
 # 根/agent/.verify 下 *-verified/*.solved.stl 为 CLI 默认落盘名，可 tpms.mjs mesh 重生成
-specimens/
+specimens/*
 
 # ����Ӵ�����ʱ���
 .rt_*.txt
@@ -98,3 +98,6 @@ ci_gates_*.log
 # 2026-09-29 膨胀止血：playwright 录屏临时产物（page@hash 命名）与 .verify 一次性 INP 测试产物不入库
 docs/screenshots/page@*.webm
 tpms/.verify/*.inp
+
+# specimens/ 仅 README 索引入库（STL 大文件仍被上面规则挡住）
+!specimens/README.md
