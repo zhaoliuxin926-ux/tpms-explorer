@@ -171,7 +171,7 @@ try {
         <p class="sub">浏览器里的三周期极小曲面：设计 → 验证 → 3D 打印文件，零后端</p>
         <div class="stats">
           <div class="stat"><b>24</b><span>曲面族</span></div>
-          <div class="stat"><b>45 × 3</b><span>CI 门禁 × 平台</span></div>
+          <div class="stat"><b>46 × 3</b><span>CI 门禁 × 平台</span></div>
           <div class="stat"><b>1000+</b><span>断言（带防中和守卫）</span></div>
           <div class="stat"><b>M0-M5</b><span>LLM Agent 闭环</span></div>
         </div>
