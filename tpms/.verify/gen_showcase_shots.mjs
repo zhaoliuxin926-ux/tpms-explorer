@@ -14,6 +14,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+// 【2026-09-30 注入式根治】门数从 SCHEDULE 唯一定义源动态解析（44→45→46 三次图内漂移教训），
+// 与 schema_check 的 SCHEDULE 解析同口径（['名', '步骤', 'x.mjs'] 三元组行计数）
+const GATE_COUNT = (() => {
+  const s = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'run_ci_suite.mjs'), 'utf8');
+  const m = s.match(/^\s*\[.+?,\s*'.+?',\s*'[^']+\.mjs'\],?$/gm) || [];
+  if (m.length < 40) throw new Error('SCHEDULE 解析异常：' + m.length + ' 门（<40）');
+  return m.length;
+})();
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -171,7 +181,7 @@ try {
         <p class="sub">浏览器里的三周期极小曲面：设计 → 验证 → 3D 打印文件，零后端</p>
         <div class="stats">
           <div class="stat"><b>24</b><span>曲面族</span></div>
-          <div class="stat"><b>46 × 3</b><span>CI 门禁 × 平台</span></div>
+          <div class="stat"><b>${GATE_COUNT} × 3</b><span>CI 门禁 × 平台</span></div>
           <div class="stat"><b>1000+</b><span>断言（带防中和守卫）</span></div>
           <div class="stat"><b>M0-M5</b><span>LLM Agent 闭环</span></div>
         </div>
