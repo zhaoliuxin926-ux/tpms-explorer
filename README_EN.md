@@ -84,6 +84,16 @@ node ../agent/tpms.mjs mesh --type gyroid --porosity 0.65 --out scaffold.stl
 node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ```
 
+**Self-verify in 60 seconds (no `npm install` needed — both gates are pure `node:fs`):**
+
+```bash
+git clone --depth 1 https://github.com/zhaoliuxin926-ux/tpms-explorer && cd tpms-explorer
+node tpms/.verify/guard_audit.mjs            # meta-gate: audits the gates themselves (~2s)
+node tpms/.verify/docs_consistency_check.mjs # doc-number consistency, 197 assertions (~10s)
+```
+
+The 46-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
+
 ## Quick links
 
 - [QUICKSTART](docs/QUICKSTART.md) — 5-minute first STL
