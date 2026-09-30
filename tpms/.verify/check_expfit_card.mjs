@@ -59,7 +59,10 @@ await page.evaluate(([csvText]) => {
   input.files = dt.files;
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }, [csv]);
-await page.waitForTimeout(800);
+// 【2026-09-29 Windows runner 校准（B5 同型）】拟合计算在慢 runner 高负载下超 800ms 固定窗
+//（CI 实测 resultText 空 → 指标文本/E* 恢复/canvas 三断言连挂）——改轮询等待结果节点
+// 出现 E* 文本，上限 15s；超时则照常进入断言（失败详情可见，不静默吞）
+await page.waitForFunction(() => /E\*=\d/.test(document.querySelector('#expfit-result')?.textContent ?? ''), { timeout: 15000 }).catch(() => {});
 
 const resultText = await page.evaluate(() => document.querySelector('#expfit-result')?.textContent ?? '');
 const canvasVisible = await page.evaluate(() => {
