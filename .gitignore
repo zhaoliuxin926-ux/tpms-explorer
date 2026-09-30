@@ -94,3 +94,7 @@ tpms/.verify/tpms_selftest_scn_*
 
 # CI 门禁日志（本地复跑/下载的产物，不入库）
 ci_gates_*.log
+
+# 2026-09-29 膨胀止血：playwright 录屏临时产物（page@hash 命名）与 .verify 一次性 INP 测试产物不入库
+docs/screenshots/page@*.webm
+tpms/.verify/*.inp
