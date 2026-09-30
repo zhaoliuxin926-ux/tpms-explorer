@@ -256,7 +256,33 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
 
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 180，防断言集体跳过；实测 197）
-if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 180（实测 197；文案 160 为历史漂移，guard_audit 首跑抓出 2026-09-29）`); process.exit(1); }
+// ── 5. 文档链接完整性（2026-09-30 第 16 轮断链教训加钉：5 断链修复后必须有哨兵防复发）──
+{
+  const broken = [];
+  const mdFiles = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name === 'dist' || e.name === '.git' || e.name === 'archive') continue;
+      const p2 = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p2);
+      else if (e.name.endsWith('.md') && !p2.includes(path.join('agent_memory', 'archive'))) mdFiles.push(p2);
+    }
+  };
+  walk(ROOT);
+  for (const f of mdFiles) {
+    const base = path.dirname(f);
+    const s = readFileSync(f, 'utf8');
+    for (const m of s.matchAll(/\]\((?!https?:\/\/|#|mailto:)([^)#\s]+)\)/g)) {
+      const t = path.resolve(base, m[1].trim());
+      if (!existsSync(t)) broken.push(`${path.relative(ROOT, f)} -> ${m[1]}`);
+    }
+  }
+  broken.length === 0
+    ? ok(`md 相对链接零断链（扫 ${mdFiles.length} 文件）`)
+    : bad('md 断链', broken.slice(0, 5).join(' | '));
+}
+
+if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 180（实测 198：197+链接哨兵 2026-09-30）`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
