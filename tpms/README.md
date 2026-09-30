@@ -6,7 +6,7 @@
 
 | 教学版：三段看懂 TPMS 概念视频 | 工程版：radial-grad M(r) 卡（MT 实时预览） | Agent 闭环：自然语言 → 水密交付 |
 |---|---|---|
-| ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
+| ![教学版概念视频](../docs/screenshots/teaching-video.png) | ![工程版 radial-grad](../docs/screenshots/engineering-rg.png) | ![Agent 终端演示](../docs/screenshots/agent-terminal.png) |
 
 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
@@ -31,7 +31,7 @@
 | 拦截器自身 | 离线确定性门禁 35 断言（含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截） |
 | 闭环驱动器 | 注入缺陷方案 ≤5 轮自动收敛（LLM 只选修复策略，应用与验收全确定性） |
 
-📘 技术叙事：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](docs/blog/2026-09-16-44-gates.md)（红队实录与验证方法论）｜ [《从一句话到水密 STL：LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（工具调用安全与闭环驱动器）。
+📘 技术叙事：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](../docs/blog/2026-09-16-44-gates.md)（红队实录与验证方法论）｜ [《从一句话到水密 STL：LLM Agent 的安全架构实录》](../docs/blog/2026-09-17-agent-architecture.md)（工具调用安全与闭环驱动器）。
 
 演示见上方三联图第三屏；复现：`TPMS_LLM_TIMEOUT_MS=170000 node tpms/agent/llm-agent.mjs --provider openai --model glm-5.3-flash "设计一个孔隙率 75% 的 Gyroid 骨支架"`。
 
