@@ -33,3 +33,10 @@
 TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \
   node tpms/agent/llm_regression.mjs --model glm-5.3-flash
 ```
+
+## 2026-09-30 glm-4-flash 双轮 34/37（拦截器改动真实链路验证轮）
+
+- **轮次 n=2**：两轮均 34 PASS / 3 FAIL，失败项完全相同（B5/B6/F2）——稳定弱项非方差。
+- **失败定性（单条复现取证）**：B5=fks/fcks 一字母族名混淆（选 fks，工具/参数正确）；B6=无动词指令判成 estimate；F2=多目标只发 1 调用——**全部为 4-flash 档位模型能力边界，与历史画像（33/37）一致**。
+- **本会话拦截器改动（toolCalls≤64 / hybrid pattern / Map 化 / design 裸点串封堵）真实链路零误伤**：34 条通过的参数校验/放行全部正确；**E 组对抗 4/4 两轮全 PASS**（路径穿越拒绝/越界拒绝真实有效）。
+- 勿称确定性；5.3 档基线（37/37）待账户余额。
