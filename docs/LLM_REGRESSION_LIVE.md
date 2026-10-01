@@ -53,3 +53,11 @@ TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \
 TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic \
   node tpms/agent/llm_regression.mjs --model glm-5.3
 ```
+
+## 2026-10-01 M4 修复决策双路径真实模型首验（glm-5.3 · anthropic 通道）
+
+此前 (viii) 节"LLM selects repairs from a bounded strategy menu + structured unreachability declarations"仅有 mock 队列证据——本轮两路径全部真实模型走通：
+
+- **declare_unreachable 路径**：design=diamond+cylinder p0.6 R96（在案拒产域）→ verify exit 3 water_tightness → glm-5.3 在有界菜单选择 `declare_unreachable`，理由与 bugs.md 人类定案一致（"该 (曲面族,容器) 组合结构不可达、避免无效修补"）——诚实宣告而非盲目打补丁。
+- **patch_design 路径**：design type=`gyr0id`（拼写错误）→ paramErrors → 选择 `patch_design {"type":"gyroid"}`，理由体现最小修补原则（仅改 type、无关参数保持原值）→ 第 2 轮 verify pass，产出 `tpms-gyroid-verified.stl`（水密）。
+- 层间语义注记：resolution 200 在 verify 层被钳制直过（拦截器拒 LLM 越界输出 ≠ design 文件越界值被拒，两语义并存为设计口径）。
