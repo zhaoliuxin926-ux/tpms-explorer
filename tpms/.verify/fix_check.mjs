@@ -219,7 +219,8 @@ await page.waitForTimeout(300);
 let m2 = await page.evaluate(() => document.querySelector('[data-material].active')?.getAttribute('data-material'));
 m2 === 'polymer' ? ok('B4 再按 9 材料 tc4→polymer') : bad('B4 材料2', 'material=' + m2);
 await page.keyboard.press('?');
-await page.waitForTimeout(300);
+// 【2026-10-02 B5 同型第 5 例】帮助 toast 固定 300ms 快照在慢 runner 上错过淡出窗——轮询 5s
+await page.waitForFunction(() => /1-8 曲面/.test(document.body.innerText), { timeout: 5000 }).catch(() => {});
 const toastText = await page.evaluate(() => document.body.innerText.match(/1-8 曲面[^\n]*/)?.[0] || '');
 toastText.includes('1-8 曲面') && toastText.includes('9 材料') && toastText.includes('R 旋转') && toastText.includes('V 复位视角')
   ? ok('B4 帮助文案与实际一致') : bad('B4 帮助文案', toastText);
