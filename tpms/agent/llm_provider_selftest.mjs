@@ -27,6 +27,16 @@ ok('schema 含 5 工具', schema.tools.length === 5, `got ${schema.tools.length}
 ok('ollama tools 格式完整', tools.every((t) => t.type === 'function' && t.function.name && t.function.parameters));
 ok('ollama tools 名称与 schema 一致', tools.map((t) => t.function.name).join() === schema.tools.map((t) => t.name).join());
 
+// ── 1b. AnthropicCompatProvider（2026-10-01 新增：智谱 Coding Plan 通道）──
+{
+  const { AnthropicCompatProvider } = await import('./llm-provider.mjs');
+  let threw = false;
+  try { new AnthropicCompatProvider({}); } catch { threw = true; }
+  ok('AnthropicCompatProvider 缺 apiKey 拒绝构造', threw);
+  const ap = new AnthropicCompatProvider({ apiKey: 'test-key' });
+  ok('AnthropicCompatProvider 默认端点/模型（Coding Plan 通道）', ap.baseUrl.includes('/api/anthropic') && ap.model === 'glm-5.3' && ap.maxTokens > 0);
+}
+
 // ── 2. validateToolCalls 拦截器 ──
 const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(args) } }];
 
@@ -204,5 +214,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 35) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 35（33 + toolCalls 上限双钉 2026-09-29）`); process.exit(1); }
+if (pass < 37) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 37（35 + anthropic provider 双钉 2026-10-01）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

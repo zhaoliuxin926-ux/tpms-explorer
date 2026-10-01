@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   loadToolsSchema, validateToolCalls, schemaToOllamaTools,
-  OllamaProvider, MockProvider, OpenAICompatProvider,
+  OllamaProvider, MockProvider, OpenAICompatProvider, AnthropicCompatProvider,
 } from './llm-provider.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -101,7 +101,7 @@ async function main() {
   const a = parseArgs(process.argv.slice(2));
   const userMsg = a._.join(' ').trim();
   if (!userMsg) {
-    console.error('用法: node llm-agent.mjs [--provider ollama|openai|mock] [--model X] [--base-url U] [--api-key K] [--dry-run] "<自然语言指令>"');
+    console.error('用法: node llm-agent.mjs [--provider ollama|openai|anthropic|mock] [--model X] [--base-url U] [--api-key K] [--dry-run] "<自然语言指令>"');
     process.exit(2);
   }
 
@@ -138,6 +138,17 @@ async function main() {
       timeoutMs: Number(process.env.TPMS_LLM_TIMEOUT_MS) || 170_000,
     });
     } catch (e) { console.error('✗ Provider 构造失败: ' + (e?.message ?? e)); process.exitCode = 2; return; } // 红队 C C-6
+  } else if (a.provider === 'anthropic') {
+    // Anthropic 兼容通道（智谱 Coding Plan 订阅额度在此抵扣；2026-10-01 实测同 key
+    // paas/v4 调 5.3 得 429/1113、anthropic 通道成功）：key 走 TPMS_LLM_API_KEY 或 --api-key
+    try {
+    provider = new AnthropicCompatProvider({
+      baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
+      apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
+      model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-5.3',
+      timeoutMs: Number(process.env.TPMS_LLM_TIMEOUT_MS) || 170_000,
+    });
+    } catch (e) { console.error('✗ Provider 构造失败: ' + (e?.message ?? e)); process.exitCode = 2; return; }
   } else {
     provider = new OllamaProvider({ baseUrl: a.baseUrl, model: a.model });
   }

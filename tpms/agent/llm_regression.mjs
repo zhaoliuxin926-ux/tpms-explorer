@@ -92,7 +92,8 @@ for (const tc of CASES) {
   const t0 = Date.now();
   let lastErr = null, exit = null, out = null, errText = '';
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const r = spawnSync(process.execPath, [AGENT, '--provider', 'openai', '--model', MODEL, '--dry-run', '--json', tc.instr], {
+    const prov = process.env.TPMS_REG_PROVIDER || 'openai';
+    const r = spawnSync(process.execPath, [AGENT, '--provider', prov, '--model', MODEL, '--dry-run', '--json', tc.instr], {
       encoding: 'utf8', timeout: 180_000, maxBuffer: 16 * 1024 * 1024,
       env: { ...process.env },
     });

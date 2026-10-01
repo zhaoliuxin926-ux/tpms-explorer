@@ -40,3 +40,15 @@ TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \
 - **失败定性（单条复现取证）**：B5=fks/fcks 一字母族名混淆（选 fks，工具/参数正确）；B6=无动词指令判成 estimate；F2=多目标只发 1 调用——**全部为 4-flash 档位模型能力边界，与历史画像（33/37）一致**。
 - **本会话拦截器改动（toolCalls≤64 / hybrid pattern / Map 化 / design 裸点串封堵）真实链路零误伤**：34 条通过的参数校验/放行全部正确；**E 组对抗 4/4 两轮全 PASS**（路径穿越拒绝/越界拒绝真实有效）。
 - 勿称确定性；5.3 档基线（37/37）待账户余额。
+
+## 2026-10-01 Coding Plan 通道打通：glm-5.3 满血 37/37（Anthropic 协议 provider 新增）
+
+- **根因链**：GLM Coding Plan 订阅额度绑定 **Anthropic 兼容通道**（open.bigmodel.cn/api/anthropic，Claude Code 类工具路径），不抵扣开放平台 paas/v4 按量通道——同 key 在 paas/v4 调 5.3 得 429/1113。
+- **新增 `AnthropicCompatProvider`**（llm-provider.mjs）：/v1/messages 协议（system 顶层抽取 / tools input_schema 转换 / tool_use 块解析回 OpenAI 形——validateToolCalls 零改动）；`--provider anthropic`；回归脚本 `TPMS_REG_PROVIDER=anthropic` 切换。
+- **五档矩阵（n=1/档，勿称确定性）**：glm-5.3 **37/37**（满血基线复现）· glm-5.3-flash **37/37**（推荐档基线复现）· glm-5.3-flashx 套餐未开放（429/1311）· glm-4-flash 34/37×2 轮（paas/v4 免费档，失败=族名混淆/工具判断/多目标，档位能力边界）。
+- 错误处理链实证再 +2：429/1113（余额）与 429/1311（套餐权限）均被结构化捕获。
+- 复现（Coding Plan）：
+```bash
+TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic \
+  node tpms/agent/llm_regression.mjs --model glm-5.3
+```

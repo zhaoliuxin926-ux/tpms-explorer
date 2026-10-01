@@ -260,6 +260,91 @@ export class OpenAICompatProvider extends LLMProvider {
   }
 }
 
+// ── Anthropic 兼容 Provider（智谱 Coding Plan 通道等 /v1/messages 协议端点）──
+// 背景（2026-10-01 实测）：GLM Coding Plan 订阅额度绑定 Anthropic 兼容通道
+//（open.bigmodel.cn/api/anthropic，Claude Code 类工具的接入路径），不抵扣开放平台
+// paas/v4 按量通道——同 key 在 paas/v4 调 glm-5.3 得 429/1113，在 anthropic 通道成功。
+// 本类让订阅用户零额外成本跑满血模型回归。
+export class AnthropicCompatProvider extends LLMProvider {
+  /**
+   * @param {{ baseUrl?: string, apiKey?: string, model?: string, temperature?: number, timeoutMs?: number, maxTokens?: number }} opts
+   * baseUrl 如 https://open.bigmodel.cn/api/anthropic（自动拼 /v1/messages）
+   */
+  constructor(opts = {}) {
+    super();
+    this.baseUrl = (opts.baseUrl ?? 'https://open.bigmodel.cn/api/anthropic').replace(/\/$/, '');
+    if (!opts.apiKey) throw new Error('AnthropicCompatProvider 缺 apiKey（设 TPMS_LLM_API_KEY 或 --api-key）');
+    this.apiKey = opts.apiKey;
+    this.model = opts.model ?? 'glm-5.3';
+    this.temperature = opts.temperature ?? 0;
+    this.maxTokens = opts.maxTokens ?? 4096; // anthropic 协议 max_tokens 必填
+    this.timeoutMs = opts.timeoutMs ?? 120_000;
+  }
+
+  async complete(messages, tools) {
+    // OpenAI messages → anthropic：system 抽顶层，其余原样（content 兼容字符串与块数组）
+    const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+    const msgs = messages.filter((m) => m.role !== 'system');
+    const body = {
+      model: this.model,
+      max_tokens: this.maxTokens,
+      ...(system ? { system } : {}),
+      messages: msgs,
+      ...(this.temperature != null ? { temperature: this.temperature } : {}),
+      // OpenAI tools → anthropic：{type:'function',function:{...}} → {name,description,input_schema}
+      ...(tools?.length ? {
+        tools: tools.map((t) => ({
+          name: t.function?.name ?? t.name,
+          description: t.function?.description ?? t.description,
+          input_schema: t.function?.parameters ?? t.parameters,
+        })),
+      } : {}),
+    };
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), this.timeoutMs);
+    let res;
+    try {
+      res = await fetch(`${this.baseUrl}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+          Connection: 'close',
+        },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+    } catch (e) {
+      throw new Error(ac.signal.aborted
+        ? `端点 ${this.timeoutMs}ms 无响应（timeout）`
+        : `端点连接失败: ${e.message}`);
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    // anthropic content 块：text 拼接为 raw；tool_use 转回 OpenAI 形（validateToolCalls 双形兼容，
+    // 统一为 function 形让下游单一口径）；thinking 等块忽略
+    const rawParts = [];
+    const toolCalls = [];
+    for (const blk of json.content ?? []) {
+      if (blk.type === 'text') rawParts.push(blk.text);
+      else if (blk.type === 'tool_use') {
+        toolCalls.push({
+          id: blk.id,
+          type: 'function',
+          function: { name: blk.name, arguments: JSON.stringify(blk.input ?? {}) },
+        });
+      }
+    }
+    return { toolCalls, raw: rawParts.join('\n') };
+  }
+}
+
 // ── Mock Provider（离线回归测试用，不依赖 Ollama 进程）──────────
 export class MockProvider extends LLMProvider {
   /** @param {{toolCalls?: Array, raw?: string}} preset */
