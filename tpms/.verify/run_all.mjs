@@ -31,6 +31,7 @@ const suites = [
   { name: 'selector_audit（选择器 64 命中审计）', cmd: ['node', 'selector_audit.mjs'], env: {} },
   { name: 'server_edge（静态服边缘行为 4 项）', cmd: ['node', 'server_edge_check.mjs'], env: {} },
   { name: 'isograd法线（渐变场法线一致性 2 项）', cmd: ['node', 'probe_isograd_normals.mjs'], env: {} },
+  { name: 'file冒烟（教学版 file:// 交付形态 4 项）', cmd: ['node', 'probe_file_smoke.mjs'], env: {} },
 ];
 
 function startServer(port, dir) {
