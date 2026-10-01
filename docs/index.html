@@ -138,13 +138,13 @@ img{max-width:100%;display:block}
 
 /* ===== Footer ===== */
 .footer{border-top:1px solid var(--panel-border);background:var(--panel-2);margin-top:32px}
-.footer-inner{max-width:1180px;margin:0 auto;padding:34px 24px;display:flex;align-items:center;
+.footer-inner{max-width:1180px;margin:0 auto;padding:34px 24px;display:flex;align-items:center;color:#64748b;
   gap:18px;flex-wrap:wrap}
 .footer .brand .mark{width:30px;height:30px;border-radius:9px}
 .footer .brand h1{font-size:.92rem}
 .footer .brand .sub{display:none}
 .footer .spacer{flex:1}
-.footer .meta{font-size:.8rem;color:var(--ink-3)}
+.footer .meta{font-size:.8rem;color:#5c6675}
 .footer .stack{display:flex;gap:7px;flex-wrap:wrap}
 .footer .chip{padding:4px 10px;border-radius:7px;font-size:.72rem;font-weight:600;
   background:var(--panel);border:1px solid var(--panel-border);color:var(--ink-2)}
@@ -248,6 +248,7 @@ img{max-width:100%;display:block}
   </div>
 </nav>
 
+<main>
 <!-- Hero -->
 <section class="hero wrap">
   <span class="eyebrow"><span class="dot"></span>浏览器原生 · 零安装 · 实时交互</span>
@@ -439,21 +440,22 @@ img{max-width:100%;display:block}
   <div class="tech reveal" data-stagger>
     <div class="tech-item">
       <div class="label">算法</div>
-      <h5>Surface Nets 等值面重建</h5>
+      <h4>Surface Nets 等值面重建</h4>
       <p>从零实现的 Surface Nets v2：以「网格边穿越」为面提取键，构造性保证水密与定向一致，孔口自动封盖，切向平滑 + 解析投影锁定目标孔隙率——导出 STL 可直接打印。</p>
     </div>
     <div class="tech-item">
       <div class="label">性能</div>
-      <h5>动态分辨率预览</h5>
+      <h4>动态分辨率预览</h4>
       <p>拖动滑块时低分辨率即时预览，松手后自动恢复高清网格；配合 sin/cos 预计算加速浏览器端重建。</p>
     </div>
     <div class="tech-item">
       <div class="label">形态</div>
-      <h5>单 HTML 文件 · 零构建</h5>
+      <h4>单 HTML 文件 · 零构建</h4>
       <p>主体是一个自包含的 HTML 文件，Three.js 0.160 本地 vendor 打包（无 CDN），适合静态部署，也能离线打包分发。</p>
     </div>
   </div>
 </section>
+</main>
 
 <!-- Footer -->
 <footer class="footer">

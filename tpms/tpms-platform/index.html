@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TPMS 结构参数探索器</title>
+<meta name="description" content="浏览器端三重周期性极小曲面（TPMS）生成式设计平台：24 族曲面实时重建、水密 STL/Abaqus/OpenFOAM/G-code 交付、LLM Agent 安全闭环，46 道 CI 门禁三平台矩阵，零安装零后端。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%230891b2'/%3E%3Cpath%20d='M7%2022%20C%2012%208%2020%208%2025%2022%20M7%2010%20C%2012%2024%2020%2024%2025%2010'%20stroke='%23fff'%20stroke-width='2.4'%20fill='none'%20stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   /* ═══════════════════════════════════════════════════════════════
@@ -399,11 +400,12 @@
   .ob-card{position:fixed;left:50%;bottom:28px;top:auto;transform:translateX(-50%) translateY(12px);width:min(440px,calc(100vw - 32px));background:#fff;border:1px solid var(--panel-border);border-radius:16px;box-shadow:0 20px 50px rgba(10,13,20,.3);padding:18px 20px 15px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s,bottom .2s,top .2s}
   .ob-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
   .ob-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase}
+  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent-d);text-transform:uppercase}
   .ob-dots{display:flex;gap:5px;margin-left:auto}
   .ob-dots i{width:6px;height:6px;border-radius:50%;background:#d6dbe5;transition:all .2s}
   .ob-dots i.on{background:var(--accent);width:18px;border-radius:999px}
-  .ob-card h4{font-size:1.04rem;font-weight:700;margin-bottom:8px}
+  .ob-card .ob-title{font-size:1.04rem;font-weight:700;margin-bottom:8px}
+  .ob-step{color:var(--accent-d)}
   .ob-card p{font-size:.86rem;color:var(--ink-2);line-height:1.62;margin-bottom:13px}
   .ob-card p b{color:var(--ink);font-weight:600}
   .ob-demo{display:inline-flex;align-items:center;gap:7px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent-d);font-size:.8rem;font-weight:600;border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s;margin-bottom:13px}
@@ -412,8 +414,8 @@
   .ob-btn{appearance:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;border-radius:9px;padding:9px 16px;transition:all .15s}
   .ob-btn.ghost{background:#f0f2f7;color:var(--ink-2)}
   .ob-btn.ghost:hover{background:#e6e9f0}
-  .ob-btn.primary{background:var(--accent);color:#fff}
-  .ob-btn.primary:hover{background:var(--accent-d)}
+  .ob-btn.primary{background:var(--accent-d);color:#fff}
+  .ob-btn.primary:hover{background:#155e75}
   @media(max-width:560px){
     .ob-card{bottom:14px;padding:16px}
     .topbar .onboard-btn{padding:7px 9px}
@@ -811,7 +813,7 @@ window.addEventListener('error', function(e) {
     <div class="loader-sub" id="loader-sub">初始化中…</div>
   </div>
 </div>
-<div class="app">
+<main class="app">
   <div class="topbar">
     <a class="brand" href="index.html" title="返回首页">
       <div class="mark"></div>
@@ -890,7 +892,7 @@ window.addEventListener('error', function(e) {
           <div class="tipbar" id="tipbar"><span class="ti a">📊</span><span id="tip1"></span><button class="tip-toggle" id="tip-toggle" aria-expanded="false" title="展开 / 收起曲面与壁厚建议">建议 ▸</button><span class="tip-extra"><span class="tip-sep"></span><span class="ti b">🧬</span><span id="tip2"></span><span class="tip-sep"></span><span class="ti c">💡</span><span id="tip3"></span></span></div>
         </div>
         <div class="preset-card" id="preset-card" aria-hidden="true">
-          <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭">×</button></div>
+          <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭" tabindex="-1">×</button></div>
           <p id="pc-body"></p>
           <div class="pc-chain" id="pc-chain"></div>
         </div>
@@ -972,15 +974,15 @@ window.addEventListener('error', function(e) {
         </div>
         <div class="field">
           <div class="lbl"><span>底部偏移（偏实）</span><span class="val" id="ig-hard-value">-0.12</span></div>
-          <input type="range" id="ig-hard" min="-40" max="0" value="-12" step="1">
+          <input aria-label="底部偏移（偏实） -0.12" type="range" id="ig-hard" min="-40" max="0" value="-12" step="1">
         </div>
         <div class="field">
           <div class="lbl"><span>顶部偏移（偏疏）</span><span class="val" id="ig-soft-value">+0.12</span></div>
-          <input type="range" id="ig-soft" min="0" max="40" value="12" step="1">
+          <input aria-label="顶部偏移（偏疏） +0.12" type="range" id="ig-soft" min="0" max="40" value="12" step="1">
         </div>
         <div class="field">
           <div class="lbl"><span>过渡带宽</span><span class="val" id="ig-band-value">0.4</span></div>
-          <input type="range" id="ig-band" min="0" max="200" value="40" step="5">
+          <input aria-label="过渡带宽 0.4" type="range" id="ig-band" min="0" max="200" value="40" step="5">
         </div>
       </details>
 
@@ -988,19 +990,19 @@ window.addEventListener('error', function(e) {
         <summary class="sect-h">结构参数</summary>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="porosity">孔隙率</span><span class="val" id="porosity-value">75%</span></div>
-          <input type="range" id="porosity" min="60" max="90" value="75" step="1">
+          <input aria-label="孔隙率" type="range" id="porosity" min="60" max="90" value="75" step="1">
         </div>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="cell-density">单元密度</span><span class="val" id="cell-size-value">中等</span></div>
-          <input type="range" id="cell-size" min="1" max="5" value="3" step="1">
+          <input aria-label="单元密度" type="range" id="cell-size" min="1" max="5" value="3" step="1">
         </div>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>
-          <input type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
+          <input aria-label="壁厚系数" type="range" id="thickness" min="0.5" max="2.0" value="1.0" step="0.1">
         </div>
         <div class="field">
           <div class="lbl"><span>加载端板 (Endplates)</span><span class="val" id="endplate-value">关</span></div>
-          <input type="range" id="endplate" min="0" max="3.0" value="0" step="0.2">
+          <input aria-label="加载端板 (Endplates) 关" type="range" id="endplate" min="0" max="3.0" value="0" step="0.2">
           <div class="field-note">上下两端生成致密实心板，防止压缩试验压盘接触处支柱早溃。孔原率目标不变时材料占比会随端板增厚上升（以实测口径为准）。厚度超过 0.4×单元总宽时自动收窄。</div>
         </div>
       </details>
@@ -1102,9 +1104,9 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-blend="linear">线性过渡</button>
           </div>
           <div class="lbl" style="margin-top:8px"><span>过渡中心 z₀ / r₀</span><span class="val" id="hybrid-center-value">0.00</span></div>
-          <input type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
+          <input aria-label="混合函数" type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
           <div class="lbl" style="margin-top:8px"><span>过渡带特征宽度 δ</span><span class="val" id="hybrid-width-value">0.50</span></div>
-          <input type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
+          <input aria-label="混合函数" type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
         </div>
         <div class="model-desc" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上选择）。开启后自动推荐「场权重」着色直观呈现过渡带。</div>
       </details>
@@ -1117,7 +1119,7 @@ window.addEventListener('error', function(e) {
           </select>
           <div id="manifold-radius-row" style="margin-top:8px">
             <div class="lbl"><span>弯曲半径 R (mm)</span><span class="val" id="manifold-radius-value">15.0</span></div>
-            <input type="range" id="manifold-radius" min="8" max="30" value="15" step="0.5">
+            <input aria-label="弯曲半径 R (mm) 15.0" type="range" id="manifold-radius" min="8" max="30" value="15" step="0.5">
           </div>
           <div class="field-note">非欧度规空间映射：对生成的封闭网格做顶点级连续弯曲（圆柱 / 环面 / 双曲径向 / 应力线各向异性）。水密性与流形性质由映射的单射性构造保证；圆柱需 R 大于域半宽，环面需满足双半径约束。</div>
         </div>
@@ -1134,9 +1136,9 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-stress="torsion">扭转<span class="o-sub">Torsion</span></button>
           </div>
           <div class="lbl" style="margin-top:9px"><span>壁厚-应力耦合 β</span><span class="val" id="stress-strength-value">0.50</span></div>
-          <input type="range" id="stress-strength" min="0" max="1" value="0.5" step="0.05">
+          <input aria-label="力学工况" type="range" id="stress-strength" min="0" max="1" value="0.5" step="0.05">
           <div class="lbl"><span>主轴各向异性 α</span><span class="val" id="stress-anisotropy-value">1.60</span></div>
-          <input type="range" id="stress-anisotropy" min="1" max="2.5" value="1.6" step="0.05">
+          <input aria-label="主轴各向异性 α 1.60" type="range" id="stress-anisotropy" min="1" max="2.5" value="1.6" step="0.05">
           <div class="field-note">主应力迹线引导：TPMS 晶胞沿最大主应力方向拉伸（仿生骨小梁 Wolff 定律），壳模式高应力侧孔隙板收窄、固相致密化。配合「着色模式 → 应力云图」可视化应力分布。</div>
         </div>
       </details>
@@ -1155,9 +1157,9 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-hier-micro="neovius">Neovius</button>
           </div>
           <div class="lbl" style="margin-top:9px"><span>微观频率倍率 N</span><span class="val" id="hier-frequency-value">4</span></div>
-          <input type="range" id="hier-frequency" min="3" max="8" value="4" step="1">
+          <input aria-label="主轴各向异性 α 1.60" type="range" id="hier-frequency" min="3" max="8" value="4" step="1">
           <div class="lbl"><span>微观调制幅值 λ</span><span class="val" id="hier-amplitude-value">0.25</span></div>
-          <input type="range" id="hier-amplitude" min="0.1" max="0.5" value="0.25" step="0.05">
+          <input aria-label="微观调制幅值 λ 0.25" type="range" id="hier-amplitude" min="0.1" max="0.5" value="0.25" step="0.05">
           <div class="field-note" id="hier-stats"></div>
           <div class="model-desc">F = F_macro + λ·F_micro(N·x)：宏观骨架承载与骨长入（300~600 µm），微孔供给营养输运与超高比表面积（20~50 µm）——骨组织工程支架与高效换热器的双重孔隙架构。</div>
         </div>
@@ -1180,14 +1182,14 @@ window.addEventListener('error', function(e) {
             </div>
             <div class="lbl" style="margin-top:9px"><span>潜在码 z ∈ R⁸（拖动 = 拓扑流形插值）</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px">
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₀</span><span class="val" style="font-size:.62rem" id="neural-z-0-value">3.0</span></div><input type="range" id="neural-z-0" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₁</span><span class="val" style="font-size:.62rem" id="neural-z-1-value">3.0</span></div><input type="range" id="neural-z-1" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₂</span><span class="val" style="font-size:.62rem" id="neural-z-2-value">3.0</span></div><input type="range" id="neural-z-2" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₃</span><span class="val" style="font-size:.62rem" id="neural-z-3-value">3.0</span></div><input type="range" id="neural-z-3" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₄</span><span class="val" style="font-size:.62rem" id="neural-z-4-value">3.0</span></div><input type="range" id="neural-z-4" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₅</span><span class="val" style="font-size:.62rem" id="neural-z-5-value">3.0</span></div><input type="range" id="neural-z-5" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₆</span><span class="val" style="font-size:.62rem" id="neural-z-6-value">3.0</span></div><input type="range" id="neural-z-6" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₇</span><span class="val" style="font-size:.62rem" id="neural-z-7-value">3.0</span></div><input type="range" id="neural-z-7" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₀</span><span class="val" style="font-size:.62rem" id="neural-z-0-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-0" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₁</span><span class="val" style="font-size:.62rem" id="neural-z-1-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-1" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₂</span><span class="val" style="font-size:.62rem" id="neural-z-2-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-2" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₃</span><span class="val" style="font-size:.62rem" id="neural-z-3-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-3" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₄</span><span class="val" style="font-size:.62rem" id="neural-z-4-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-4" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₅</span><span class="val" style="font-size:.62rem" id="neural-z-5-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-5" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₆</span><span class="val" style="font-size:.62rem" id="neural-z-6-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-6" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₇</span><span class="val" style="font-size:.62rem" id="neural-z-7-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-7" min="-3" max="3" value="3" step="0.1"></div>
             </div>
           </div>
           <div class="field-note" id="neural-status"></div>
@@ -1213,8 +1215,8 @@ window.addEventListener('error', function(e) {
           <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
           <input type="file" id="expfit-file" accept=".csv,.txt,.tsv" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
           <div class="opt-row two" style="gap:6px;margin-top:4px">
-            <label style="font-size:.7rem">L0 mm<input id="expfit-l0" type="number" value="12" min="1" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">A0 mm²<input id="expfit-area" type="number" value="100" min="1" step="1" style="width:100%"></label>
+            <label style="font-size:.7rem">L0 mm<input aria-label="微观调制幅值 λ 0.25" id="expfit-l0" type="number" value="12" min="1" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">A0 mm²<input aria-label="微观调制幅值 λ 0.25" id="expfit-area" type="number" value="100" min="1" step="1" style="width:100%"></label>
           </div>
           <label style="font-size:.7rem;display:flex;align-items:center;gap:6px;margin-top:4px"><input type="checkbox" id="expfit-df"> 输入为位移-载荷（勾选后按 L0/A0 换算）</label>
           <canvas id="expfit-curve" width="280" height="150" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
@@ -1227,8 +1229,8 @@ window.addEventListener('error', function(e) {
         <div class="field">
           <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
           <div class="opt-row two" style="gap:6px">
-            <label style="font-size:.7rem">功率 W<input id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
-            <label style="font-size:.7rem">速度 m/s<input id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
+            <label style="font-size:.7rem">功率 W<input aria-label="微观调制幅值 λ 0.25" id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
+            <label style="font-size:.7rem">速度 m/s<input aria-label="微观调制幅值 λ 0.25" id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
           </div>
           <button class="opt" id="btn-lpbf" style="width:100%;justify-content:center;margin-top:4px">▶ 模拟熔池与残余应力</button>
           <div class="field-note" id="lpbf-result" style="display:none"></div>
@@ -1247,9 +1249,9 @@ window.addEventListener('error', function(e) {
           </select>
           <div class="lbl" style="margin-top:8px"><span>工作应力状态 σ₀（主应力，MPa）</span></div>
           <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
-            <label style="font-size:.7rem">σ₁<input id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₂<input id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₃<input id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₁<input aria-label="微观调制幅值 λ 0.25" id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₂<input aria-label="微观调制幅值 λ 0.25" id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₃<input aria-label="微观调制幅值 λ 0.25" id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
           </div>
           <button class="opt" id="btn-yield" style="width:100%;justify-content:center;margin-top:6px">▶ 渲染屈服面 + 安全系数</button>
           <canvas id="yield-canvas" width="280" height="220" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px;cursor:grab"></canvas>
@@ -1273,7 +1275,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
           <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
           <div class="lbl" style="margin-top:8px;display:none" id="tissue-day-row"><span>时间轴</span><span class="val" id="tissue-day-value">0 天</span></div>
-          <input type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
+          <input aria-label="微观调制幅值 λ 0.25" type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
           <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="tissue-result" style="display:none"></div>
         </div>
@@ -1299,11 +1301,11 @@ window.addEventListener('error', function(e) {
             <option value="heatsink">高通量散热沉 (κ+P)</option>
           </select>
           <div class="lbl" style="margin-top:9px"><span>目标弹性模量 E* (GPa)</span><span class="val" id="inv-e-value">15.0</span></div>
-          <input type="range" id="inv-e" min="1" max="250" value="150" step="5">
+          <input aria-label="目标预设" type="range" id="inv-e" min="1" max="250" value="150" step="5">
           <div class="lbl"><span>目标渗透率 κ (×10⁻⁸ m²)</span><span class="val" id="inv-k-value">10</span></div>
-          <input type="range" id="inv-k" min="0" max="300" value="10" step="1">
+          <input aria-label="目标渗透率 κ (×10⁻⁸ m²) 1" type="range" id="inv-k" min="0" max="300" value="10" step="1">
           <div class="lbl"><span>目标孔隙率 P (%)</span><span class="val" id="inv-p-value">25</span></div>
-          <input type="range" id="inv-p" min="2" max="98" value="25" step="1">
+          <input aria-label="目标孔隙率 P (%) 25" type="range" id="inv-p" min="2" max="98" value="25" step="1">
           <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:9px">
             <button class="opt" id="btn-inv-solve">一键反演寻优<span class="o-sub">NM+LM</span></button>
             <button class="opt" id="btn-inv-apply">应用最优解<span class="o-sub">Apply</span></button>
@@ -1331,7 +1333,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
           <div class="opt-row two" style="gap:6px">
             <button class="opt" id="btn-ls-evolve" style="justify-content:center">▶ 演化 10 步</button>
-            <label style="font-size:.7rem">流阻权重<input id="ls-wflow" type="number" value="0" min="0" max="1" step="0.1" style="width:100%"></label>
+            <label style="font-size:.7rem">流阻权重<input aria-label="目标孔隙率 P (%) 25" id="ls-wflow" type="number" value="0" min="0" max="1" step="0.1" style="width:100%"></label>
           </div>
           <div class="field-note" id="ls-result" style="display:none"></div>
           <button class="opt" id="btn-ls-apply" style="width:100%;justify-content:center;margin-top:6px;display:none">✔ 应用演化结果到视口</button>
@@ -1350,14 +1352,14 @@ window.addEventListener('error', function(e) {
           <div class="field-note">【C5 v9.0】外部 STL 保形容器：加载任意封闭流形网格（如解剖骨缺损段），TPMS 骨小梁自动贴壁填充（壁面高斯倒角）。非水密输入 fail-closed 拒绝；启用时端板自动禁用（互斥）；输出 STL 为归一化域 mm 尺寸。</div>
           <input type="file" id="meshcont-file" accept=".stl" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
           <div class="lbl" style="margin-top:6px"><span>壁面倒角宽度 blend</span><span class="val" id="meshcont-blend-value">0</span></div>
-          <input type="range" id="meshcont-blend" min="0" max="0.6" step="0.05" value="0">
+          <input aria-label="目标孔隙率 P (%) 25" type="range" id="meshcont-blend" min="0" max="0.6" step="0.05" value="0">
           <div class="field-note" id="meshcont-status"></div>
         </div>
         <div class="field">
           <div class="lbl"><span>直接层切预览 (Direct Slicing)</span><span class="val" id="slicepv-info">—</span></div>
           <button class="opt" id="slicepv-gen" style="width:100%">生成层切（当前参数 · 120 层）</button>
           <div class="lbl" style="margin-top:6px"><span>层位 Z</span><span class="val" id="slicepv-z-value">—</span></div>
-          <input type="range" id="slicepv-z" min="0" max="119" value="60" step="1" disabled>
+          <input aria-label="直接层切预览 (Direct Slici" type="range" id="slicepv-z" min="0" max="119" value="60" step="1" disabled>
           <canvas id="slicepv-canvas" width="256" height="256" style="width:100%;aspect-ratio:1;margin-top:6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14)"></canvas>
           <div class="field-note" id="slicepv-status">【战役三】扫描线直接层切：跳过三角网格在隐式场上直出增材扫描路径（灰色=固相填充带，深色=扫描向量）。容器跟随构型（cube/cylinder/外部 STL）；体积口径经门禁对拍（vs 网格发散 ≤0.4%）。仅 solid_network。</div>
         </div>
@@ -1370,24 +1372,24 @@ window.addEventListener('error', function(e) {
             <option value="bambu">Bambu</option>
           </select>
           <div class="lbl" style="margin-top:6px"><span>层高 (mm)</span><span class="val" id="gcode-layer-value">0.20</span></div>
-          <input type="range" id="gcode-layer" min="0.08" max="0.32" step="0.04" value="0.2">
+          <input aria-label="G-code 工艺（原生切片） 0.2m" type="range" id="gcode-layer" min="0.08" max="0.32" step="0.04" value="0.2">
           <div class="lbl" style="margin-top:6px"><span>线宽 (mm)</span><span class="val" id="gcode-line-value">0.40</span></div>
-          <input type="range" id="gcode-line" min="0.2" max="0.8" step="0.05" value="0.4">
+          <input aria-label="G-code 工艺（原生切片） 0.2m" type="range" id="gcode-line" min="0.2" max="0.8" step="0.05" value="0.4">
           <div class="lbl" style="margin-top:6px"><span>喷嘴 / 热床 (°C)</span><span class="val" id="gcode-temp-value">210 / 60</span></div>
           <div class="opt-row two">
-            <input type="number" id="gcode-nozzle" min="160" max="300" step="5" value="210" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
-            <input type="number" id="gcode-bed" min="0" max="120" step="5" value="60" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
+            <input aria-label="G-code 工艺（原生切片） 0.2m" type="number" id="gcode-nozzle" min="160" max="300" step="5" value="210" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
+            <input aria-label="G-code 工艺（原生切片） 0.2m" type="number" id="gcode-bed" min="0" max="120" step="5" value="60" style="width:100%;font-size:.72rem;padding:6px;border-radius:8px">
           </div>
           <div class="field-note">导出中心「G-code 原生切片」使用本组参数。诚实边界：单壁轮廓 + 扫描线填充，无多墙/支撑/桥接——生产件请用 PrusaSlicer / Bambu Studio。</div>
         </div>
         <div class="field">
           <div class="lbl"><span>径向梯度构型 M(r) (radial-grad)</span><span class="val" id="rg-info">K=1.5</span></div>
           <div class="lbl" style="margin-top:6px"><span>密度梯度 K</span><span class="val" id="rg-k-value">1.5</span></div>
-          <input type="range" id="rg-k" min="1" max="2" step="0.25" value="1.5">
+          <input aria-label="径向梯度构型 M(r) (radial-" type="range" id="rg-k" min="1" max="2" step="0.25" value="1.5">
           <div class="lbl" style="margin-top:6px"><span>中心壁厚 ta (mm)</span><span class="val" id="rg-ta-value">0.20</span></div>
-          <input type="range" id="rg-ta" min="0.05" max="0.6" step="0.05" value="0.2">
+          <input aria-label="径向梯度构型 M(r) (radial-" type="range" id="rg-ta" min="0.05" max="0.6" step="0.05" value="0.2">
           <div class="lbl" style="margin-top:6px"><span>边缘壁厚 tb (mm)</span><span class="val" id="rg-tb-value">0.32</span></div>
-          <input type="range" id="rg-tb" min="0.05" max="0.6" step="0.001" value="0.322" disabled>
+          <input aria-label="径向梯度构型 M(r) (radial-" type="range" id="rg-tb" min="0.05" max="0.6" step="0.001" value="0.322" disabled>
           <div class="opt-row" style="margin-top:6px">
             <button class="opt" id="rg-gen">生成预览 (MT)</button>
             <button class="opt" id="rg-export">导出 STL (HD)</button>
@@ -1399,9 +1401,9 @@ window.addEventListener('error', function(e) {
           <div class="lbl" style="margin-top:6px"><span>内区曲面族（外区=当前曲面）</span></div>
           <select id="rgn-inner" style="width:100%;margin-top:4px"></select>
           <div class="lbl" style="margin-top:6px"><span>分界面半径 r</span><span class="val" id="rgn-r-value">0.55</span></div>
-          <input type="range" id="rgn-r" min="0.1" max="0.9" step="0.05" value="0.55">
+          <input aria-label="径向双族分区 (region) diam" type="range" id="rgn-r" min="0.1" max="0.9" step="0.05" value="0.55">
           <div class="lbl" style="margin-top:6px"><span>过渡带宽度 b</span><span class="val" id="rgn-blend-value">0.15</span></div>
-          <input type="range" id="rgn-blend" min="0.05" max="0.6" step="0.05" value="0.15">
+          <input aria-label="径向双族分区 (region) diam" type="range" id="rgn-blend" min="0.05" max="0.6" step="0.05" value="0.15">
           <div class="opt-row" style="margin-top:6px">
             <button class="opt" id="rgn-gen">生成预览 (MT)</button>
             <button class="opt" id="rgn-export">导出 STL (HD)</button>
@@ -1416,7 +1418,7 @@ window.addEventListener('error', function(e) {
             <button class="opt" data-slice-axis="y">Y 轴<span class="o-sub">Y</span></button>
             <button class="opt" data-slice-axis="invert" id="btn-slice-invert" title="反向剖切：保留另一半">反向 ⇄</button>
           </div>
-          <input type="range" id="slice" min="-100" max="100" value="100" step="1">
+          <input aria-label="动态剖切 (Section Clippi" type="range" id="slice" min="-100" max="100" value="100" step="1">
           <div class="field-note">拖动滑块透视内部孔道拓扑；松手后自动进行截面连通性预检。</div>
         </div>
         <div class="field" id="percolation-card" style="display:none">
@@ -1570,6 +1572,6 @@ window.addEventListener('error', function(e) {
       <input id="nl-input" type="text" placeholder="例如：孔隙率 75%、Gyroid、2mm 端板，导出 3MF" aria-label="自然语言设计指令">
       <button id="nl-send" aria-label="发送">发送</button>
     </div>
-  </div>
+  </main>
 </body>
 </html>

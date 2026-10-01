@@ -49,7 +49,7 @@ await page.waitForFunction(() => document.getElementById('ob-card')?.classList.c
 let ob = await page.evaluate(() => ({
   show: document.getElementById('ob-card')?.classList.contains('show'),
   step1: document.querySelector('.ob-step')?.textContent,
-  title: document.querySelector('#ob-card h4')?.textContent,
+  title: document.querySelector('#ob-card .ob-title')?.textContent,
   cardEl: !!document.getElementById('ob-card'),
   canvas: !!document.querySelector('canvas'),
   bootErr: !!document.querySelector('.boot-error,[data-boot-error]'),
@@ -90,7 +90,7 @@ await domClick('#ob-next'); await page.waitForTimeout(200);
 await domClick('#ob-next'); await page.waitForTimeout(200);
 await domClick('#ob-next'); await page.waitForTimeout(200);
 await domClick('#ob-next'); await page.waitForTimeout(200);
-let lastTitle = await page.evaluate(() => document.querySelector('#ob-card h4')?.textContent);
+let lastTitle = await page.evaluate(() => document.querySelector('#ob-card .ob-title')?.textContent);
 /把结果带走/.test(lastTitle || '') ? ok('B3 到达第 6 步') : bad('B3 第 6 步', String(lastTitle));
 await domClick('#ob-next'); // 开始探索 → 关闭
 await page.waitForTimeout(300);

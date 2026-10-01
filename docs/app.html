@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TPMS 结构参数探索器</title>
+<meta name="description" content="浏览器端三重周期性极小曲面（TPMS）交互探索：8 族经典曲面实时重建、参数滑杆、截面扫描、STL 导出——单 HTML 文件双击即玩，零安装零后端。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230d9488'/%3E%3Cstop offset='.55' stop-color='%230891b2'/%3E%3Cstop offset='1' stop-color='%232563eb'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='24' cy='22' r='10' fill='rgba(255,255,255,.85)'/%3E%3Ccircle cx='42' cy='42' r='7' fill='rgba(255,255,255,.5)'/%3E%3C/svg%3E">
 <script src="./vendor/three.bundle.js" onerror="document.body.innerHTML='<div style=&quot;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172a;color:#fff;font:15px/1.6 sans-serif;text-align:center;padding:32px&quot;><div style=&quot;max-width:540px&quot;><div style=&quot;font-size:42px;margin-bottom:12px&quot;>⚠️</div><div style=&quot;font-size:18px;font-weight:600;margin-bottom:8px&quot;>三维引擎加载失败</div><div style=&quot;opacity:.85&quot;>本地 <code>vendor/three.bundle.js</code> 缺失或损坏，无法启动三维渲染。请重新获取完整项目文件。</div></div></div>'"></script>
 <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0d9488;color:#fff;font:18px sans-serif;text-align:center;padding:24px">本工具需要 JavaScript 才能运行，请在浏览器设置中启用 JavaScript。</div></noscript>
@@ -12,7 +13,7 @@
   :root{
     --bg:#eef1f6; --bg2:#e3e8f0;
     --panel:#ffffff; --panel-2:#f7f9fc; --panel-border:#e6e9ef;
-    --ink:#1f2430; --ink-2:#5b6472; --ink-3:#8b93a3;
+    --ink:#1f2430; --ink-2:#5b6472; --ink-3:#69738a;
     --accent:#0d9488; --accent-d:#0b7a70; --accent-soft:#e6f4f2;
     --gyroid:#6366f1; --diamond:#f59e0b; --schwarz:#10b981;
     --neovius:#ec4899; --iwp:#0ea5e9; --frd:#a855f7; --lidinoid:#14b8a6; --splitp:#f43f5e;
@@ -51,7 +52,7 @@
   .sect:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
   .sect h3{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
   /* 折叠 section：用原生 details/summary，零 JS */
-  .sect > summary.sect-h{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-3);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;user-select:none}
+  .sect > summary.sect-h{font-size:.74rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--slate-600);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;user-select:none}
   .sect > summary.sect-h::-webkit-details-marker{display:none}
   .sect > summary.sect-h::after{content:"▾";transition:transform .25s;color:var(--ink-3);font-size:.9rem}
   .sect:not([open]) > summary.sect-h{margin-bottom:0}
@@ -74,24 +75,24 @@
     padding:9px 6px;border-radius:var(--radius-s);font-size:.84rem;font-weight:600;cursor:pointer;
     transition:all .16s ease;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1;
   }
-  .opt .o-sub{font-size:.66rem;font-weight:500;color:var(--ink-3);letter-spacing:.3px}
+  .opt .o-sub{font-size:.66rem;font-weight:500;color:var(--slate-600);letter-spacing:.3px}
   .opt:hover{border-color:#cdd3df;transform:translateY(-1px)}
   .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .opt[data-color="gyroid"].active{background:var(--gyroid);border-color:var(--gyroid);color:#fff}
-  .opt[data-color="diamond"].active{background:var(--diamond);border-color:var(--diamond);color:#fff}
-  .opt[data-color="schwarz"].active{background:var(--schwarz);border-color:var(--schwarz);color:#fff}
-  .opt[data-color="neovius"].active{background:var(--neovius);border-color:var(--neovius);color:#fff}
-  .opt[data-color="iwp"].active{background:var(--iwp);border-color:var(--iwp);color:#fff}
-  .opt[data-color="frd"].active{background:var(--frd);border-color:var(--frd);color:#fff}
-  .opt[data-color="lidinoid"].active{background:var(--lidinoid);border-color:var(--lidinoid);color:#fff}
-  .opt[data-color="splitp"].active{background:var(--splitp);border-color:var(--splitp);color:#fff}
-  .opt.active .o-sub{color:rgba(255,255,255,.82)}
-  .opt[data-model].active{background:var(--ink);border-color:var(--ink);color:#fff}
-  .opt[data-model].active .o-sub{color:rgba(255,255,255,.7)}
-  .opt[data-material].active{background:var(--ink);border-color:var(--ink);color:#fff}
-  .opt[data-material].active .o-sub{color:rgba(255,255,255,.7)}
-  .opt[data-structure].active,.opt[data-container].active{background:var(--ink);border-color:var(--ink);color:#fff}
-  .opt[data-structure].active .o-sub,.opt[data-container].active .o-sub{color:rgba(255,255,255,.7)}
+  .opt[data-color="gyroid"].active{background:#334155;border-color:#334155;border-left:4px solid var(--gyroid);color:#fff}
+  .opt[data-color="diamond"].active{background:#334155;border-color:#334155;border-left:4px solid var(--diamond);color:#fff}
+  .opt[data-color="schwarz"].active{background:#334155;border-color:#334155;border-left:4px solid var(--schwarz);color:#fff}
+  .opt[data-color="neovius"].active{background:#334155;border-color:#334155;border-left:4px solid var(--neovius);color:#fff}
+  .opt[data-color="iwp"].active{background:#334155;border-color:#334155;border-left:4px solid var(--iwp);color:#fff}
+  .opt[data-color="frd"].active{background:#334155;border-color:#334155;border-left:4px solid var(--frd);color:#fff}
+  .opt[data-color="lidinoid"].active{background:#334155;border-color:#334155;border-left:4px solid var(--lidinoid);color:#fff}
+  .opt[data-color="splitp"].active{background:#334155;border-color:#334155;border-left:4px solid var(--splitp);color:#fff}
+  .opt.active .o-sub{color:rgba(255,255,255,.9)}
+  .opt[data-model].active{background:#334155;border-color:#334155;color:#fff}
+  .opt[data-model].active .o-sub{color:rgba(255,255,255,.78)}
+  .opt[data-material].active{background:#334155;border-color:#334155;color:#fff}
+  .opt[data-material].active .o-sub{color:rgba(255,255,255,.78)}
+  .opt[data-structure].active,.opt[data-container].active{background:#334155;border-color:#334155;color:#fff}
+  .opt[data-structure].active .o-sub,.opt[data-container].active .o-sub{color:rgba(255,255,255,.78)}
   .field{margin-bottom:15px}
   .field:last-child{margin-bottom:0}
   .field .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
@@ -250,11 +251,11 @@
   .ob-card{position:fixed;left:50%;bottom:28px;top:auto;transform:translateX(-50%) translateY(12px);width:min(440px,calc(100vw - 32px));background:#fff;border:1px solid var(--panel-border);border-radius:16px;box-shadow:0 20px 50px rgba(10,13,20,.3);padding:18px 20px 15px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s,bottom .2s,top .2s}
   .ob-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
   .ob-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase}
+  .ob-step{font-size:.66rem;font-weight:700;letter-spacing:1px;color:var(--accent-d);text-transform:uppercase}
   .ob-dots{display:flex;gap:5px;margin-left:auto}
   .ob-dots i{width:6px;height:6px;border-radius:50%;background:#d6dbe5;transition:all .2s}
   .ob-dots i.on{background:var(--accent);width:18px;border-radius:999px}
-  .ob-card h4{font-size:1.04rem;font-weight:700;margin-bottom:8px}
+  .ob-card .ob-title{font-size:1.04rem;font-weight:700;margin-bottom:8px}
   .ob-card p{font-size:.86rem;color:var(--ink-2);line-height:1.62;margin-bottom:13px}
   .ob-card p b{color:var(--ink);font-weight:600}
   .ob-demo{display:inline-flex;align-items:center;gap:7px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent-d);font-size:.8rem;font-weight:600;border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s;margin-bottom:13px}
@@ -263,7 +264,7 @@
   .ob-btn{appearance:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;border-radius:9px;padding:9px 16px;transition:all .15s}
   .ob-btn.ghost{background:#f0f2f7;color:var(--ink-2)}
   .ob-btn.ghost:hover{background:#e6e9f0}
-  .ob-btn.primary{background:var(--accent);color:#fff}
+  .ob-btn.primary{background:var(--accent-d);color:#fff}
   .ob-btn.primary:hover{background:var(--accent-d)}
   /* 【修复 U4】原版 .topbar .onboard-btn{display:none} 让移动端用户关闭引导后无法重新打开。
      改为只隐藏文字保留图标，aria-label 提供可访问性。 */
@@ -343,11 +344,11 @@
   /* ===== 主题：浅 / 深 / 自动 ===== */
   .theme-switch{display:flex;gap:2px;background:var(--panel-2);border:1px solid var(--panel-border);
     border-radius:10px;padding:3px;flex:none}
-  .theme-switch button{border:none;background:transparent;color:var(--ink-2);cursor:pointer;
+  .theme-switch button{border:none;background:transparent;color:var(--slate-600);cursor:pointer;
     font-family:inherit;font-size:.78rem;padding:5px 9px;border-radius:7px;display:flex;align-items:center;gap:4px;
     transition:background .15s,color .15s}
   .theme-switch button:hover{color:var(--ink)}
-  .theme-switch button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .theme-switch button[aria-pressed="true"]{background:var(--accent-d);color:#fff}
   /* 浅色主题：浮在 3D 视口上的工具 / 指标用浅色磨砂玻璃 */
   .v-tools{background:rgba(255,255,255,.62);border:1px solid rgba(20,28,46,.08)}
   .v-tools .tbtn{color:var(--ink-2)}
@@ -371,7 +372,7 @@
   :root.dark .stat-overlay b{color:#fff}
   :root.dark .scene .ds, :root.dark .opt .o-sub{color:var(--ink-3)}
   /* 激活态副标签落在饱和底色上，必须保持白字（否则 1.21:1 不可读，终审实测） */
-  :root.dark .opt.active .o-sub{color:rgba(255,255,255,.82)}
+  :root.dark .opt.active .o-sub{color:rgba(255,255,255,.9)}
   :root.dark .ob-card{background:#141922;border-color:rgba(255,255,255,.1)}
   :root.dark .ob-btn.ghost{background:#2a3140;color:var(--ink-2)}
   :root.dark .ob-btn.ghost:hover{background:#333b4d}
@@ -398,7 +399,7 @@
 </style>
 </head>
 <body>
-<div class="app">
+<main class="app">
   <div class="topbar">
     <a class="brand" href="index.html" title="返回首页">
       <div class="mark"></div>
@@ -463,7 +464,7 @@
           <div class="tipbar" id="tipbar"><span class="ti a">📊</span><span id="tip1"></span><button class="tip-toggle" id="tip-toggle" aria-expanded="false" title="展开 / 收起曲面与壁厚建议">建议 ▸</button><span class="tip-extra"><span class="tip-sep"></span><span class="ti b">🧬</span><span id="tip2"></span><span class="tip-sep"></span><span class="ti c">💡</span><span id="tip3"></span></span></div>
         </div>
         <div class="preset-card" id="preset-card" aria-hidden="true">
-          <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭">×</button></div>
+          <div class="pc-head"><span class="pc-ic" id="pc-ic">🦴</span><h4 id="pc-title"></h4><button class="pc-close" id="pc-close" title="关闭" tabindex="-1">×</button></div>
           <p id="pc-body"></p>
           <div class="pc-chain" id="pc-chain"></div>
         </div>
@@ -601,9 +602,9 @@
               <button class="opt" data-hblend="linear">线性过渡</button>
             </div>
             <div class="lbl" style="margin-top:8px"><span>过渡中心</span><span class="val" id="hybrid-center-value">0.00</span></div>
-            <input type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
+            <input aria-label="启用混合（Type A = 当前曲面）" type="range" id="hybrid-center" min="-1" max="1" value="0" step="0.05">
             <div class="lbl" style="margin-top:8px"><span>过渡带特征宽度 δ</span><span class="val" id="hybrid-width-value">0.50</span></div>
-            <input type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
+            <input aria-label="启用混合（Type A = 当前曲面）" type="range" id="hybrid-width" min="0.1" max="2.0" value="0.5" step="0.05">
           </div>
           <div class="field-note" id="hybrid-desc">多相混合：两种 TPMS 曲面沿所选过渡方向以 Sigmoid/线性权重连续融合（Type A = 当前曲面类型，Type B 如上）。开启后公式面板显示混合波前参数。</div>
         </div>
@@ -655,7 +656,7 @@
       </details>
     </div>
   </div>
-</div>
+</main>
 
 <div class="ob-spot" id="ob-spot"></div>
 <div class="ob-card" id="ob-card"></div>
@@ -2671,7 +2672,7 @@ rebuild();
     const isLast=idx===steps.length-1;
     const dots=steps.map(function(_,i){return '<i class="'+(i===idx?'on':'')+'"></i>';}).join('');
     const demoHtml=s.demo?'<button class="ob-demo" id="ob-demo">'+s.demo.label+'</button>':'';
-    card.innerHTML='<div class="ob-head"><span class="ob-step">第 '+(idx+1)+' 步 / 共 '+steps.length+' 步</span><span class="ob-dots">'+dots+'</span></div><h4>'+s.title+'</h4><p>'+s.body+'</p>'+demoHtml+'<div class="ob-foot"><button class="ob-btn ghost" id="ob-skip">跳过引导</button>'+(idx>0?'<button class="ob-btn ghost" id="ob-prev">上一步</button>':'')+'<button class="ob-btn primary" id="ob-next">'+(isLast?'开始探索':'下一步')+'</button></div>';
+    card.innerHTML='<div class="ob-head"><span class="ob-step">第 '+(idx+1)+' 步 / 共 '+steps.length+' 步</span><span class="ob-dots">'+dots+'</span></div><p class="ob-title">'+s.title+'</p><p>'+s.body+'</p>'+demoHtml+'<div class="ob-foot"><button class="ob-btn ghost" id="ob-skip">跳过引导</button>'+(idx>0?'<button class="ob-btn ghost" id="ob-prev">上一步</button>':'')+'<button class="ob-btn primary" id="ob-next">'+(isLast?'开始探索':'下一步')+'</button></div>';
     positionSpot(s.target && s.target());
     const demoBtn=document.getElementById('ob-demo');
     if(demoBtn && s.demo) demoBtn.addEventListener('click', s.demo.run);

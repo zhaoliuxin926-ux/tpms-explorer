@@ -86,7 +86,7 @@ await domClick('#btn-onboard');
 await page.waitForTimeout(400);
 let m3 = await page.evaluate(() => {
   const card = document.getElementById('ob-card');
-  const h4 = card.querySelector('h4');
+  const h4 = card.querySelector('.ob-title');
   const ghost = card.querySelector('.ob-btn.ghost');
   return {
     bg: getComputedStyle(card).backgroundColor,

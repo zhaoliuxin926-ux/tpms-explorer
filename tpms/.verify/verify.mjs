@@ -41,7 +41,7 @@ async function reloadRetry(page, opts = {}) {
   await page.screenshot({ path: `${OUT}/01-onboard-start.png`, timeout: 15000 }).catch(() => {}); // 截图是产物非判据：swiftshader 合成器慢机可能不出帧（headless-gpu 坑），失败不阻塞断言
 
   // 第一步文字
-  const h4 = await page.locator('#ob-card h4').textContent();
+  const h4 = await page.locator('#ob-card .ob-title').textContent();
   log('第一步标题正确', /TPMS/.test(h4), `actual="${h4}"`);
 
   await ctx.close();
@@ -59,7 +59,7 @@ async function reloadRetry(page, opts = {}) {
   const stepTitles = [];
   for (let i = 0; i < 6; i++) {
     await page.waitForTimeout(400);
-    const t = await page.locator('#ob-card h4').textContent();
+    const t = await page.locator('#ob-card .ob-title').textContent();
     stepTitles.push(t);
     const dotCount = await page.locator('.ob-dots i').count();
     log(`第${i+1}步: "${t}"`, !!t, `dots=${dotCount}`);
