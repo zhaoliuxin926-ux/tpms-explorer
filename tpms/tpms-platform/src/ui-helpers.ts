@@ -422,6 +422,7 @@ export function showPresetCard(key: string): void {
   }
   card.classList.add('show');
   card.setAttribute('aria-hidden', 'false');
+  document.getElementById('pc-close')?.removeAttribute('tabindex');
   if (presetCardTimer) clearTimeout(presetCardTimer);
   presetCardTimer = setTimeout(hidePresetCard, 9000);
 }
@@ -431,6 +432,7 @@ export function hidePresetCard(): void {
   if (!card) return;
   card.classList.remove('show');
   card.setAttribute('aria-hidden', 'true');
+  (document.getElementById('pc-close') as HTMLButtonElement | null)?.setAttribute('tabindex', '-1');
 }
 
 /** 初始化预设教学卡事件 */
@@ -660,7 +662,7 @@ export function initOnboard(): void {
     const demoHtml = s.demo ? `<button class="ob-demo" id="ob-demo">${s.demo.label}</button>` : '';
     card.innerHTML =
       `<div class="ob-head"><span class="ob-step">第 ${idx + 1} 步 / 共 ${steps.length} 步</span><span class="ob-dots">${dots}</span></div>` +
-      `<h4>${s.title}</h4><p>${s.body}</p>${demoHtml}` +
+      `<p class="ob-title">${s.title}</p><p>${s.body}</p>${demoHtml}` +
       `<div class="ob-foot"><button class="ob-btn ghost" id="ob-skip">跳过引导</button>` +
       `${idx > 0 ? '<button class="ob-btn ghost" id="ob-prev">上一步</button>' : ''}` +
       `<button class="ob-btn primary" id="ob-next">${isLast ? '开始探索' : '下一步'}</button></div>`;
