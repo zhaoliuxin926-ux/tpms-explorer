@@ -9,7 +9,7 @@
  * 以及「不可达」的结构化宣告（如 cylinder+diamond 类深水区，修复无意义应如实报告）。
  *
  * 用法：
- *   node tpms-driver.mjs --design 方案.json [--max-rounds 6] [--provider openai|ollama|mock] [--model X]
+ *   node tpms-driver.mjs --design 方案.json [--max-rounds 6] [--provider openai|anthropic|ollama|mock] [--model X]
  * 退出码：0=收敛 PASS  2=参数/LLM 输出被拒  3=设计被宣告不可达  4=轮数耗尽未收敛
  */
 import { spawnSync } from 'node:child_process';
@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   validateToolCalls,
-  OllamaProvider, OpenAICompatProvider,
+  OllamaProvider, OpenAICompatProvider, AnthropicCompatProvider,
 } from './llm-provider.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -93,7 +93,7 @@ async function main() {
     if (!Number.isInteger(a.maxRounds) || a.maxRounds < 1 || a.maxRounds > 12) { console.error('--max-rounds 须为 1~12 整数'); process.exitCode = 2; return; } // 红队 C C-14：静默回退违反无静默回退铁律
     maxRounds = a.maxRounds;
   }
-  if (!a.design) { console.error('用法: node tpms-driver.mjs --design 方案.json [--max-rounds 6] [--provider openai|ollama|mock]'); process.exitCode = 2; return; }
+  if (!a.design) { console.error('用法: node tpms-driver.mjs --design 方案.json [--max-rounds 6] [--provider openai|anthropic|ollama|mock]'); process.exitCode = 2; return; }
 
   // 原始设计文件只读；工作副本独立维护（收官报告可 diff 出全部自动修复轨迹）
   let design;
@@ -118,6 +118,14 @@ async function main() {
         raw: 'mock',
       }),
     };
+  } else if (a.provider === 'anthropic') {
+    // 2026-10-01：Coding Plan 通道（与 llm-agent 同构造——红队 B3 逐跳转发：桥接层须支持全部 provider）
+    provider = new AnthropicCompatProvider({
+      baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
+      apiKey: a.apiKey ?? process.env.TPMS_LLM_API_KEY,
+      model: a.model ?? process.env.TPMS_LLM_MODEL ?? 'glm-5.3',
+      timeoutMs: Number(process.env.TPMS_LLM_TIMEOUT_MS) || 170_000,
+    });
   } else if (a.provider === 'openai') {
     provider = new OpenAICompatProvider({
       baseUrl: a.baseUrl ?? process.env.TPMS_LLM_BASE_URL,
