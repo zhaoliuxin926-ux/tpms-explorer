@@ -107,7 +107,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-provider.mjs | 三 Provider（Ollama / OpenAI 兼容端点 / Mock）+ validateToolCalls 拦截器（逐槽位校验，越界拒绝） |
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
-| 验收 | 真实模型 37 条中英回归（**glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2；缓解前 36/37 与 37/37 并存，勿称确定性）=推荐档**；四档画像：4-flash 33/4.6 35/5.3 36×2，temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
+| 验收 | 真实模型 37 条中英回归（**glm-5.3 与 5.3-flash 双档多轮 n=2 各 37/37（2026-10-01 anthropic 通道=Coding Plan 订阅直抵）**；五档画像：4-flash 34×2/4.5 通/4.6 35/5.3 37×2/5.3-flash 37×2，flashx 套餐未开放；temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
 | 自检（CI 纳管） | agent_selftest 50 + schema_check 105（GUARD 98） + llm_provider_selftest 39（GUARD 37）；llm_driver_selftest 6（手动门） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
@@ -118,7 +118,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 - **可打印性审计**：`overhang` 命令（悬垂角面积统计 + Fibonacci 球确定性摆盘寻优）；六试样实测 TPMS 近各向同性=摆盘收益仅 ±1pp
 - **CFD 交付链**：`--cfd-polyMesh` 直出可运行 OpenFOAM case（SIMPLE 字典 + dP/WSS 预埋 + mm 单位制自洽）+ `cfd-post`（Forchheimer 两点分离 K_int=2.34e-9 m² 实测落文献带 + WSS 促矿化窗口诊断）；WSL foamRun 真跑闭环五迭代定案（GAMG 六面体死锁→PCG 等）
 - **radial-grad 径向梯度构型**：度规逆映射（arctanh 径向+有理轴向+壁厚补偿阈值场）+ **Marching Tetrahedra 提取器**（不光滑场免疫；4-cut 环排序/corner 正则化/尺度无关退化判据三定案）——K∈[1,3] 五档全水密 STL 产出，平台进入双提取器格局（surface-nets 光滑场 + MT 不光滑场）
-- **模型线四档验收**：glm-5.3-flash 推荐（多轮 37/37，n≥2 勿称确定性）；provider 超时三处对称 170s+env；对抗指令四档零透传
+- **模型线五档验收 + Anthropic 通道**：glm-5.3 满血与 5.3-flash 双档多轮 n=2 全 37/37（AnthropicCompatProvider=Coding Plan 订阅直抵，四 Provider 体系）；provider 超时三处对称 170s+env；对抗指令全档零透传；M4 修复决策双路径真实首验（拒产域宣告/拼写最小修补） |
 - **诚实边界**：CFD 字典口径经真跑验证但几何为结构化六面体（绝对值须网格敏感性披露）；MT 管线退化判据=尺度无关口径（相切带等边微楔片为真实离散几何，manifold_audit 2026-09-11 先例）；radial-grad clip 边界半格内移（尺寸损 1/R）
 
 ### v9.2.0 增量（2026-09-15~16 · bugs.md 清欠轮 + 寿极对抗审查 v3 ）

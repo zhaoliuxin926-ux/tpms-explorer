@@ -42,7 +42,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 |---|---|
 | 37 bilingual instructions | **glm-5.3-flash multi-round 37/37** (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic) (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
-| The interceptor itself | 33 offline deterministic assertions (incl. live `../x.stl` traversal block) |
+| The interceptor itself | 39 offline deterministic assertions (guard 37; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
 
 Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, see [LLM_REGRESSION_LIVE](docs/LLM_REGRESSION_LIVE.md)): `TPMS_LLM_TIMEOUT_MS=170000 TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic node tpms/agent/llm-agent.mjs --provider anthropic --model glm-5.3 "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
