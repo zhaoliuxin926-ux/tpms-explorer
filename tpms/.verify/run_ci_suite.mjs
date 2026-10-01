@@ -67,7 +67,7 @@ function sweepPorts(ports) {
   }
 }
 
-// 最重单门=run_all（16 套件，含 card_smoke 重卡）；默认 60min——run54 实证 runner 高峰期
+// 最重单门=run_all（17 套件，含 card_smoke 重卡）；默认 60min——run54 实证 runner 高峰期
 // 系统性变慢（重门 306-569s 可膨胀至 1200s+）；2026-09-20 card_smoke 入列后 windows 跑者
 // 实测 run_all 超 30min 被误杀（ubuntu/macos <30min 绿），上限放宽至 60min
 const STEP_TIMEOUT_MS = (() => {
@@ -158,7 +158,7 @@ const SCHEDULE = [
   ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/禁句/publish 同源+sync-publish/调色单例/徽章↔tag，197 断言）', '文档一致性', 'docs_consistency_check.mjs'],
-  ['run_all UI 回归（16 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线）', 'UI 回归', 'run_all.mjs'],
+  ['run_all UI 回归（17 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
