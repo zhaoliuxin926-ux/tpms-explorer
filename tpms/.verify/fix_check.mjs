@@ -218,10 +218,22 @@ await page.keyboard.press('9');
 await page.waitForTimeout(300);
 let m2 = await page.evaluate(() => document.querySelector('[data-material].active')?.getAttribute('data-material'));
 m2 === 'polymer' ? ok('B4 再按 9 材料 tc4→polymer') : bad('B4 材料2', 'material=' + m2);
+// 【2026-10-02 定案：B5 同款 MutationObserver】轮询/waitForFunction/焦点/队列四假设全被
+// 插桩推翻或不可复现——复用 B5 在 CI 多轮实证的模式：按键前置 observer 记录 toast 历史，
+// 淡出后仍可断言（对快照时机完全免疫）
+await page.evaluate(() => {
+  (window).__b4Toasts = [];
+  const t = document.getElementById('toast');
+  if (!t) return;
+  new MutationObserver(() => {
+    const txt = (t.textContent || '').trim();
+    if (txt && !(window).__b4Toasts.includes(txt)) (window).__b4Toasts.push(txt);
+  }).observe(t, { childList: true, characterData: true, subtree: true });
+});
+await page.evaluate(() => document.body.focus());
 await page.keyboard.press('?');
-// 【2026-10-02 B5 同型第 5 例】帮助 toast 固定 300ms 快照在慢 runner 上错过淡出窗——轮询 5s
-await page.waitForFunction(() => /1-8 曲面/.test(document.body.innerText), { timeout: 5000 }).catch(() => {});
-const toastText = await page.evaluate(() => document.body.innerText.match(/1-8 曲面[^\n]*/)?.[0] || '');
+await page.waitForTimeout(2500);
+const toastText = await page.evaluate(() => ((window).__b4Toasts || []).join(' / '));
 toastText.includes('1-8 曲面') && toastText.includes('9 材料') && toastText.includes('R 旋转') && toastText.includes('V 复位视角')
   ? ok('B4 帮助文案与实际一致') : bad('B4 帮助文案', toastText);
 
