@@ -164,7 +164,7 @@ const SCHEDULE = [
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
   ['schema_check 契约与可用域（105 断言实测/98 基线，2026-09-13 +README 防漂移守卫；+2 hybrid pattern 钉 2026-09-29）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
-  ['llm_provider_selftest M3 拦截器自检（37 断言/GUARD 35，离线；+toolCalls 上限双钉 2026-09-29）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
+  ['llm_provider_selftest M3 拦截器自检（39 断言/GUARD 37，离线；+toolCalls 上限/anthropic provider 钉）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
   ['guard_audit 元门（恒真高置信扫描+GUARD 基线账实对拍，2026-09-29 纳管）', '门禁元审计', 'guard_audit.mjs'],
 ];
 
