@@ -59,7 +59,11 @@ structured unreachability declarations for representation-limited parameter comb
 verification suite also audits itself: a meta-gate scans all gate sources for tautological
 assertions and guard-baseline drift, and the WGSL compute backend is executed, not merely
 type-checked, on both a physical GPU and a CI software rasterizer (worst-case field deviation
-$1.9	imes10^{-4}$ against a double-precision reference).
+$1.9	imes10^{-4}$ against a double-precision reference). In live trials the repair menu exhibits
+both bounded behaviours as intended: given a representation-limited (family, container)
+combination the model declares structured unreachability rather than blind-patching, and given an
+enumeration typo it applies the minimal single-field patch, converging to a watertight STL in one
+repair round.
 Versions 9.0--9.1 close the manufacturing loop: (ix) conformal filling of arbitrary
 anatomical manifolds (voxelized signed-distance containers with wall-side Gaussian
 deburring and a divergence-volume porosity denominator); (x) ISO~13314 experimental-curve
