@@ -4,7 +4,6 @@
 // 直接用它做静态服务，三平台行为完全一致。
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { gzipSync } from 'node:zlib';
 import { join, extname, resolve as pathResolve, sep as pathSep } from 'node:path';
 import * as path from 'node:path';
 
@@ -22,10 +21,9 @@ const MIME = {
   // 2026-10-02 审查 M-2：缺 .xml 致 sitemap.xml 被当 octet-stream 下载
   '.xml': 'application/xml; charset=utf-8',
 };
-// gzip 白名单：可压缩文本类（2026-10-02 审查 M-2：此前无 gzip，经此服做的传输类 perf
-// 取证会系统性低估——624KB→160KB 教训未沉淀进工具）
-const GZIP_EXT = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.xml', '.map', '.wasm']);
-const GZIP_MIN_BYTES = 1024;
+// 【2026-10-02 CI 定案回滚】gzip 试验与 meshcont 冒烟 SDF 0% 卡死（Linux/macOS 确定性）
+// 时间重合——门禁服走 127.0.0.1 零传输收益，撤压缩保原始字节；Pages 侧 gzip 由 GitHub
+// 服务端承担，本地复现部署形态不靠此层。
 
 const absRoot = path.resolve(root);
 
@@ -53,17 +51,8 @@ createServer(async (req, res) => {
     let s = await stat(file).catch(() => null);
     if (s && s.isDirectory()) { file = join(file, 'index.html'); s = await stat(file).catch(() => null); }
     if (!s) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('404'); return; }
-    const ext = extname(file).toLowerCase();
-    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
-    let body = await readFile(file);
-    if (GZIP_EXT.has(ext) && body.length >= GZIP_MIN_BYTES
-      && /gzip/.test(String(req.headers['accept-encoding'] || ''))) {
-      headers['Content-Encoding'] = 'gzip';
-      headers.Vary = 'Accept-Encoding';
-      body = gzipSync(body);
-    }
-    res.writeHead(200, headers);
-    res.end(body);
+    res.writeHead(200, { 'Content-Type': MIME[extname(file).toLowerCase()] || 'application/octet-stream' });
+    res.end(await readFile(file));
   } catch {
     res.writeHead(500); res.end();
   }
