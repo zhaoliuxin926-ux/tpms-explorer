@@ -51,8 +51,10 @@ const frd: TpmsFunction = (mx, my, mz, w) =>
 /**
  * Lidinoid（利迪诺曲面）：2 权重
  * 0.5·w0·(2 sinx cosx cosy sinz + 2 siny cosy cosz sinx + 2 sinz cosz cosx siny)
- * − 0.5·w1·(cos2x cos2y + cos2y cos2z + cos2z cos2x)
+ * − 0.5·w1·(cos2x cos2y + cos2y cos2z + cos2z cos2x) + 0.15
  * 经典三周期极小曲面，与 Gyroid 同属螺旋对称族但通道更复杂。
+ * 常偏置 +0.15 对齐 MiniSurf 官方源（Minimalsurface.mlapp 提取实证；2026-10-02
+ * 对抗审查 H-1 修复——此前漏抄致 iso=0 两相体积差 12pp）。
  */
 const lidinoid: TpmsFunction = (mx, my, mz, w) =>
   w[0] * 0.5 * (
@@ -63,7 +65,7 @@ const lidinoid: TpmsFunction = (mx, my, mz, w) =>
     Math.cos(2 * mx) * Math.cos(2 * my) +
     Math.cos(2 * my) * Math.cos(2 * mz) +
     Math.cos(2 * mz) * Math.cos(2 * mx)
-  );
+  ) + 0.15;
 
 /**
  * Split-P（分裂 P 曲面）：3 权重

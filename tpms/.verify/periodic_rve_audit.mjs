@@ -225,8 +225,28 @@ for (const [type, poro] of [['gyroid', 0.75], ['diamond', 0.5], ['schwarz', 0.8]
     `solid=${res.meshSolidFraction.toFixed(4)}`);
 }
 
+// ── G.【2026-10-02 C2 哨兵】第六批四族 RVE 几何 ≠ schwarz ──
+// periodic-surface 的 useLookup 排除集曾漏 slotp/fs/qstar/ws：漏列时查表族静默回退
+// 默认项产出 schwarz 几何（对抗审查 C2 实锤 posHash 逐位一致），本审计原有断言
+// （边分析/配对/体积）对"几何是谁"不敏感故未拦截——此哨兵直接对拍位置哈希。
+console.log('\n[G] 第六批排除集哨兵（几何身份）');
+{
+  const R = 16;
+  const hashOf = (res) => {
+    let h = 0;
+    for (let i = 0; i < res.vertCount * 3; i++) h = (Math.imul(h, 31) + Math.round(res.positions[i] * 1e6)) | 0;
+    return h;
+  };
+  const base = hashOf(buildSurface(mkParams({ type: 'schwarz', resolution: R })));
+  for (const t of ['slotp', 'fs', 'qstar', 'ws']) {
+    const h = hashOf(buildSurface(mkParams({ type: t, resolution: R })));
+    check(`G. ${t} RVE 位置哈希 ≠ schwarz（排除集哨兵）`, h !== base,
+      `hash=${h} 与 schwarz=${base} 相同即静默回退查表默认项`);
+  }
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 88) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 88（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 92) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 92（恒真/集体跳过防护，2026-09-04 审查纳管；2026-10-02 C2 哨兵 +4 → 92）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

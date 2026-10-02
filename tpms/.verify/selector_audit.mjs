@@ -111,6 +111,9 @@ try {
 }
 
 console.log(`\n== SELECTOR-AUDIT ${pass} hit / ${fail} missing ==`);
+// 【2026-10-02 审查 M5】pass 下限守卫：此前 SUITES 被清空/重构为空时 pass=0、fail=0、
+// exit 0 静默绿——run_all 17 套件中唯一无集体跳过防护的一件。实测 64，钉 64。
+if (pass < 64) { console.error(`GUARD FAIL: 命中数 ${pass} < 基线 64`); process.exit(1); }
 if (missing.length) {
   console.log('零匹配选择器:');
   for (const m of missing) console.log('  - ' + m);

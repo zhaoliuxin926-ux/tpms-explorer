@@ -409,8 +409,11 @@ console.log('\n[I] WGSL 真执行（Chrome WebGPU，gyroid R16 k2 = 17³ 格点�
     //（Chrome 换路径/launch flags 失效——真执行覆盖静默丢失而 GUARD 119 恰好不炸的洞）。
     // adapter null 是环境真实能力上限（GH Windows runner 实测：预装 Chrome 但 VM 无 WebGPU
     // 后端，launch 成功 requestAdapter 不可用——CI 首跑误伤实证），合法 SKIP。
-    const chromeCapable = process.platform === 'win32'
-      && existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe');
+    // 【2026-10-02 审查 H-2】chromeCapable 此前仅查 win32 固定路径——ubuntu/macos CI 由
+    // playwright channel:'chrome' 装置解析，恒 false → 两平台真漂移恒走合法 SKIP、能力强制
+    // 仅 Windows 本机生效。修正：CI 环境（process.env.CI）三平台一律视为 chrome 应在场。
+    const chromeCapable = process.env.CI === 'true'
+      || (process.platform === 'win32' && existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe'));
     if (skipKind === 'launch' && chromeCapable) {
       check('[I] WGSL 真执行：chrome 二进制在场却 launch 失败（能力漂移，须修复 launch 链）', false, skip);
     } else {

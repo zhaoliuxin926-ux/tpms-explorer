@@ -60,7 +60,8 @@ function runCli(toolName, args, cliOpts = {}) {
     else if (v !== false && v !== undefined && v !== null) cliArgs.push(`--${k}`, String(v));
   }
   if (!args.json) cliArgs.push('--json');
-  const r = spawnSync(process.execPath, cliArgs, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  // timeout 与 runDesignVerify/runVerify 对齐（2026-10-02 审查 L-1：CLI 单命令卡死时 agent 永久挂起）
+  const r = spawnSync(process.execPath, cliArgs, { encoding: 'utf8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
   return { status: r.status ?? 1, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 }
 
@@ -73,7 +74,8 @@ function runDesignVerify(args, cliOpts) {
   for (const k of ['type', 'porosity', 'material', 'periods', 'resolution', 'container', 'mode', 'isoGrad', 'out']) {
     if (args[k] !== undefined) design[k] = args[k];
   }
-  const designFile = join(process.cwd(), `tpms-design-${args.type}.json`);
+  // pid 后缀防并发同 type 覆盖（2026-10-02 审查 L-2：与 driver 工作副本 .driver-${pid} 同款竞态）
+  const designFile = join(process.cwd(), `tpms-design-${args.type}.${process.pid}.json`);
   writeFileSync(designFile, JSON.stringify(design, null, 2));
   const driverArgs = [DRIVER, '--design', designFile, '--json'];
   if (cliOpts.provider) driverArgs.push('--provider', cliOpts.provider);
@@ -83,6 +85,8 @@ function runDesignVerify(args, cliOpts) {
   const r = spawnSync(process.execPath, driverArgs, {
     encoding: 'utf8', timeout: 900_000, maxBuffer: 32 * 1024 * 1024,
   });
+  // 【复审 M-2 裁决】不清理 designFile：schema_check「桥接 design JSON 确定性落盘」断言
+  // 以文件存在为桥接证据；同 pid 复用同名覆写已防进程内累积，跨进程孤儿量级与旧固定名相同
   return { status: r.status ?? 1, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 }
 

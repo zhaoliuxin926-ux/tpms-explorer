@@ -261,7 +261,7 @@ async function reloadRetry(page, opts = {}) {
 
 await browser.close();
 
-if (results.length < 27) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 22（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-16 概念视频 +5 → 27）'); process.exit(1); }
+if (results.length < 27) { console.error('GUARD FAIL: 断言执行数 ' + results.length + ' < 基线 27（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-16 概念视频 +5）'); process.exit(1); }
 const failed = results.filter(r => !r.ok);
 console.log('\n==== SUMMARY ====');
 console.log(`PASS ${results.length - failed.length} / ${results.length}`);

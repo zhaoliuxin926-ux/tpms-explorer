@@ -40,7 +40,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 | Acceptance | Result |
 |---|---|
-| 37 bilingual instructions | **glm-5.3-flash multi-round 37/37** (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic) (4-flash 33 / 4.6 35 / 5.3 36 — rotating single-item variance, all pass on rerun = pipeline defect-free) |
+| 37 bilingual instructions | **glm-5.3-flash multi-round 37/37** (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic) (five-tier matrix 2026-10-01: 4-flash 34/37×2 · 5.3-flash 37/37×2 · 5.3 37/37×2) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
 | The interceptor itself | 39 offline deterministic assertions (guard 37; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
@@ -114,11 +114,11 @@ node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 197
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
-node tpms/agent/schema_check.mjs                  # 108 assertions (guard baseline 98)
+node tpms/agent/schema_check.mjs                  # 106 assertions (guard baseline 98)
 cd tpms/tpms-platform && npm run test:all   # 46/46 gates, ~6–10 min
 ```
 
-Every gate carries a minimum guard (assertion count or case count, depending on the gate; summary-line formats vary), so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (36 chapters) for AM/CFD/CAE practice.
+Every gate carries a minimum guard (assertion count or case count, depending on the gate; summary-line formats vary), so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (37 chapters) for AM/CFD/CAE practice.
 
 ## Status & scope honesty
 

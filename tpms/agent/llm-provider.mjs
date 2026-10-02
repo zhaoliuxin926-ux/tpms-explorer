@@ -86,12 +86,24 @@ export function validateToolCalls(toolCalls, schema) {
   const toolsByName = new Map(schema.tools.map((t) => [t.name, t]));
   const cleaned = [];
 
+  // 2026-10-02 复审 M-1：顶层非数组（网络面 tool_calls:"abc" 形态）此前裸崩 exit 1——
+  // 与元素级守卫同型收口，结构化拒绝保契约 exit 2
+  if (toolCalls !== undefined && toolCalls !== null && !Array.isArray(toolCalls)) {
+    errors.push(`toolCalls 须为数组（收到 ${typeof toolCalls}）`);
+    return { ok: false, errors };
+  }
   const calls = toolCalls ?? [];
   if (calls.length > 64) {
     errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
     return { ok: false, errors };
   }
-  for (const call of calls) {
+  for (const [i, call] of calls.entries()) {
+    // 2026-10-02 审查 M-1：数组含 null/非对象元素此前裸崩 exit 1（openai/ollama 网络面
+    // tool_calls:[null] 实证可达）——循环首行守卫，结构化拒绝保契约 exit 2
+    if (call === null || typeof call !== 'object') {
+      errors.push(`tool call #${i}: 须为 object（收到 ${call === null ? 'null' : typeof call}）`);
+      continue;
+    }
     const name = call.function?.name ?? call.name;
     // 工具名形状校验：注册面全是 snake_case，畸形/原型链键名直接结构化拒绝
     if (typeof name !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(name)) {

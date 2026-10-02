@@ -95,6 +95,23 @@ jobs:
         working-directory: tpms/tpms-platform
         run: npx vite build
 
+      # 【2026-10-02 审查 H-1 结构缺口收口】Pages 部署的是 commit 进仓库的 docs/platform，
+      # 而下方 46 门测的是 runner 内重建副本——两者此前无强约束：忘 commit 重建产物 = CI 全绿
+      # + 线上陈旧。此步在替换前对拍重建产物与 commit 产物（排除 .map），不一致即红。
+      - name: Deployed-artifact parity (docs/platform vs rebuilt dist)
+        run: |
+          set +e
+          diff -r --exclude='*.map' tpms/tpms-platform/dist docs/platform > /tmp/parity_diff.txt 2>&1
+          code=$?
+          set -e
+          if [ $code -ne 0 ]; then
+            echo '::error::docs/platform 与源码重建产物不一致——Pages 正在部署陈旧产物。'
+            echo '本地修复: cd tpms/tpms-platform && npx vite build && cd ../.. && rm -rf docs/platform && cp -r tpms/tpms-platform/dist docs/platform && find docs/platform -name "*.map" -delete'
+            head -n 30 /tmp/parity_diff.txt
+            exit 1
+          fi
+          echo 'docs/platform 与重建产物一致'
+
       - name: Deploy docs/platform (CI-local copy)
         run: |
           rm -rf docs/platform
@@ -111,7 +128,7 @@ jobs:
       # 弃用 `| tee`：GH bash 自带 -e -o pipefail，长输出下 tee 偶发 EPIPE 会让全绿套件
       # 被判 exit 1（2026-09-24~28 连续四天随机平台假红实录，macOS #216 日志 45/45 全绿
       # 但步骤 exit 1 实锤）。输出直落文件 + 完整日志进 artifact + 尾部内联展示。
-      - name: Run 45-gate suite
+      - name: Run 46-gate suite
         working-directory: tpms/tpms-platform
         run: |
           set +e

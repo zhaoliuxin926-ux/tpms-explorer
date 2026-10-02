@@ -8,8 +8,12 @@
  *   κ*(p)  = ε³ / (C_k·Sv²)                  —— Kozeny-Carman（bulk Sv 口径，2026-09-10 量纲修正，mm² → m²）
  *   Sv(p)  = cArea(type)/cellSize          —— 单胞解析面积密度（mm⁻¹）
  *   P(p)   = porosity
- * 诚实边界：这是解析代理口径（与平台 UI 的 GA/κ 面板同源同量级），非 FEA；
- * 几何级精确验证请走 CAE 验证包（Stage III）。
+ * 诚实边界：这是解析代理口径（非 FEA）；几何级精确验证请走 CAE 验证包（Stage III）。
+ * 【2026-10-02 审查 M-2 勘正】本引擎 C1 采用经典文献带内估值（gyroid 0.30 等，
+ * 见下方 C1_MAP），与 UI GA 面板的网格标定口径（gibson-ashby.ts，gyroid 0.38）
+ * **不同源**——同参数下反演求得的 E* 与面板显示可差 ~27%。此前头注宣称"同源同
+ * 量级"失实。两套均为未实验标定的解析估值；统一口径属物理标定决策，待拍板
+ * （phononic-bandgap 先例：如实披露优于静默统一）。
  *
  * 参数矢量 p = [porosity, cellSize, anisotropy]（连续）× typeIndex（离散外层枚举）。
  * 求解策略：Nelder-Mead 多起点全局探索 → Levenberg-Marquardt 阻尼最小二乘精化。
@@ -18,12 +22,12 @@
 
 import type { TpmType } from '../types';
 
-// ── 常量表（与 gibson-ashby.ts / 物理面板同源口径）──
+// ── 常量表（E0 与 gibson-ashby.ts 同源；C1 为文献带内估值，与面板网格标定口径不同源，见头注勘正）──
 
 /** 基体弹性模量（GPa，TC4 钛合金缺省口径） */
 export const E0_GPA = 110;
 
-/** Gibson-Ashby C1（引用同 gibson-ashby.ts） */
+/** Gibson-Ashby C1（经典文献带内估值——非 gibson-ashby.ts 的网格标定口径，见头注勘正） */
 const C1_MAP: Record<string, number> = {
   gyroid: 0.3, diamond: 0.35, schwarz: 0.3, neovius: 0.35,
   iwp: 0.38, frd: 0.4, lidinoid: 0.32, splitp: 0.33,

@@ -39,8 +39,19 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
 
   const readme = read('README.md');
   const readmeEn = read('README_EN.md');
-  (readme + readmeEn).includes('46') && /46\/46|46 道|46 gates/i.test(readme + readmeEn)
-    ? ok('README 宣称 46 门') : bad('README 宣称 46 门');
+  // 门数唯一权威 = run_ci_suite SCHEDULE 三元组行数（2026-10-02 审查 M7：44→45→46
+  // 三次"数字进文档"漂移的机制根因=文本断言不解析调度真值——动态对拍后增减门自动跟随）
+  const sched = read('tpms/.verify/run_ci_suite.mjs');
+  const gateN = (sched.match(/^\s*\['/gm) || []).length;
+  gateN >= 40 ? ok(`SCHEDULE 调度 ${gateN} 门（≥40 卫生下限）`) : bad('SCHEDULE 门数异常', String(gateN));
+  (readme + readmeEn).includes(`${gateN}`) && new RegExp(`${gateN}/${gateN}|${gateN} 道|${gateN} gates`, 'i').test(readme + readmeEn)
+    ? ok(`README 双语宣称 ${gateN} 门（对拍 SCHEDULE）`) : bad(`README 宣称 ${gateN} 门`, '与 SCHEDULE 不一致');
+  const tpmsReadme = read('tpms/README.md');
+  new RegExp(`${gateN}\\s*(门|道|gates)|${gateN}/${gateN}`).test(tpmsReadme)
+    ? ok('tpms/README 门数对拍 SCHEDULE') : bad('tpms/README 门数漂移', `期望 ${gateN}`);
+  const ip = read('docs/career/interview-pack.md');
+  new RegExp(`${gateN} 道 CI 门禁`).test(ip)
+    ? ok('interview-pack 门数对拍 SCHEDULE') : bad('interview-pack 门数漂移', `期望 ${gateN} 道`);
   readme.includes('332') ? ok('README 引用 parity 332') : bad('README 引用 parity 332');
   readme.includes('inverse_design_audit 27') ? ok('README 反演 27 断言') : bad('README 反演 27 断言');
 }
@@ -77,6 +88,16 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     [/打穿六次/, '「六次」应为「两轮六例」'],
     [/selftest\.mjs[^\n]{0,40}49\s*断言|#\s*CLI 自检：49\s*断言|106\/49\/33/, 'selftest 断言数 49（GUARD 已钉 50）'],
     [/~3(?:50|53)KB\s*gzip|首屏[^\n]{0,10}35\dKB/, '首屏 35xKB gzip（分包后 ~283KB：three 182+主包 101）'],
+    // 2026-10-02 审查第 4 次门数漂移 + 单数字旧口径禁句（此前只禁 106/49/33 组合形态，
+    // 单独出现的 45 道/35 断言/10 套/1.3MB/三十六章 全部漏网——本轮清扫后加钉；
+    // schema_check 现值 106（C1 后 frd/dg 行为翻转钉 +1），禁 108 旧值）
+    [/45 道|45 门|45\/45|45 gates|45-gate|45 CI gates/, '门数旧值 45（现 46，对拍 SCHEDULE）'],
+    [/108 assertions|108-assertion/, 'schema 断言旧值英文形态 108（现 106）'],
+    [/拦截器[^\n]{0,12}35 断言|35 断言[^\n]{0,8}拦截|自检[:：]?\s*35 断言/, '拦截器断言旧值 35（现 40）'],
+    [/schema_check[^\n]{0,12}108 断言|108 断言[^\n]{0,6}(守卫|基线|对拍)|#\s*108 断言/, 'schema_check 断言旧值 108（现 106）'],
+    [/10 套 UI 回归|run_all[^\n]{0,8}10 套/, 'UI 回归旧值 10 套（现 17）'],
+    [/three\.bundle\.js[^\n]{0,12}1\.3MB|1\.3MB[^\n]{0,10}three/, 'three.bundle 体积旧值 1.3MB（实测 ≈0.53MB）'],
+    [/三十六章|36 chapters/, 'WORKFLOW_GUIDE 章数旧值 36（现 37）'],
   ];
   const scanList = targets.concat(optional.filter((rel) => existsSync(path.join(ROOT, rel))));
   for (const rel of scanList) {
@@ -94,7 +115,7 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     // 样本量限定：n=1/单轮 或 多轮 n≥2 均可（2026-09-27：LIVE 已是多轮 37/37，勿称确定性）
     // geq 变体：论文 LaTeX 写 n$\geq$2（pdflatex 不收 Unicode ≥）
     // 逐出现点判定（红队 I P3-10：文件级放行会放过同文件其他裸 37/37）
-    const scopeOk = /(n=1|n≥2|n\$\\geq\$\s?2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定)/i;
+    const scopeOk = /(n=1|n≥2|n\$\\geq\$\s?2|单轮|多轮|multi[- ]round|single|best[- ]of|一次全绿|勿称确定|×2)/i;
     let allScoped = true;
     for (const m of src.matchAll(/37\/37/g)) {
       const ctx = src.slice(Math.max(0, m.index - 80), m.index + 90);
@@ -254,6 +275,52 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
     : bad('README 徽章未对齐最新 tag', `期望 ${tag}`);
 }
 
+// ── 5b. SEO 三件哨兵（2026-10-02 审查 H1：robots/sitemap/canonical/og 此前零门禁，
+// 删光也 46 门全绿——"搜索与社交收录基建"不能是无回归防护的纯宣称）──
+console.log('\n[E] SEO 三件哨兵');
+{
+  const PAGE = 'https://zhaoliuxin926-ux.github.io/tpms-explorer';
+  const robots = read('docs/robots.txt');
+  /allow:\s*\//i.test(robots) && /sitemap:/i.test(robots)
+    ? ok('robots.txt Allow + sitemap 声明在位') : bad('robots.txt 缺 Allow/sitemap');
+  robots.includes(PAGE + '/sitemap.xml')
+    ? ok('robots sitemap 指向 Pages 域') : bad('robots sitemap 域漂移');
+
+  const sm = read('docs/sitemap.xml');
+  const locs = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
+  locs.length >= 3 ? ok(`sitemap ${locs.length} 入口（≥3）`) : bad('sitemap 入口不足', String(locs.length));
+  const locToFile = (u) => {
+    if (!u.startsWith(PAGE + '/')) return null;
+    const p = u.slice(PAGE.length + 1);
+    if (p === '' || p.endsWith('/')) return path.join(ROOT, 'docs', p, 'index.html');
+    return path.join(ROOT, 'docs', p);
+  };
+  let allLive = true;
+  for (const u of locs) {
+    const f = locToFile(u);
+    if (!f || !existsSync(f)) { allLive = false; bad('sitemap URL 无对应文件', u); }
+  }
+  if (allLive) ok('sitemap URL ↔ docs/ 文件一一对应');
+
+  for (const [rel, tail] of [['docs/index.html', '/'], ['docs/app.html', '/app.html'], ['docs/platform/index.html', '/platform/']]) {
+    const h = read(rel);
+    h.includes(`rel="canonical" href="${PAGE}${tail}"`) || h.includes(`rel='canonical' href='${PAGE}${tail}'`) || new RegExp(`rel="canonical"\\s+href="${PAGE}${tail.replace(/\//g, '\\/')}"`).test(h)
+      ? ok(`${rel} canonical 指向自身`) : bad(`${rel} canonical 缺失/漂移`, `期望 ${PAGE}${tail}`);
+  }
+
+  const landing = read('docs/index.html');
+  const og = landing.match(/property="og:image"\s+content="([^"]+)"/) || landing.match(/content="([^"]+)"\s+property="og:image"/);
+  og && /^https:\/\//.test(og[1])
+    ? ok('og:image 绝对 URL（og 规范）') : bad('og:image 缺失或相对 URL');
+  if (og) {
+    const assetRel = og[1].startsWith(PAGE + '/') ? og[1].slice(PAGE.length + 1) : null;
+    !assetRel || existsSync(path.join(ROOT, 'docs', assetRel))
+      ? ok('og:image 资源存在于 docs/') : bad('og:image 资源缺失', og[1]);
+  }
+  /name="description"\s+content="[^"]{20,}"/.test(landing) || /content="[^"]{20,}"\s+name="description"/.test(landing)
+    ? ok('落地页 meta description 在位（≥20 字符）') : bad('meta description 缺失/过短');
+}
+
 console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-27 对抗审查批：论文/targets/禁句+池上界/快照边界扩面后钉 180，防断言集体跳过；实测 197）
 // ── 5. 文档链接完整性（2026-09-30 第 16 轮断链教训加钉：5 断链修复后必须有哨兵防复发）──
@@ -282,7 +349,9 @@ console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
     : bad('md 断链', broken.slice(0, 5).join(' | '));
 }
 
-if (pass < 180) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 180（实测 198：197+链接哨兵 2026-09-30）`); process.exit(1); }
+// pass 下限守卫：基线=CI 环境实测 313（2026-10-02 SEO 哨兵+动态 SCHEDULE 对拍+禁句扩面后钉；
+// 本机另有 gitignored 的 job_narrative.md 贡献 ~16 条故本地 329>313——CI checkout 无该文件）
+if (pass < 313) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 313`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

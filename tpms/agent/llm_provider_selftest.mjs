@@ -56,6 +56,17 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   const v = validateToolCalls(calls, schema);
   ok('toolCalls 65 个超上限被拒', v.ok === false && v.errors.some((e) => e.includes('64')), JSON.stringify(v.errors));
 }
+// 2b2b. 数组含 null 元素：结构化拒绝不裸崩（2026-10-02 审查 M-1：网络面 tool_calls:[null]
+// 实证可达，此前 TypeError 穿透为 uncaught exit 1 破坏退出码契约）
+{
+  const v = validateToolCalls([null, { function: { name: 'tpms_estimate', arguments: JSON.stringify({ type: 'gyroid', porosity: 0.65 }) } }], schema);
+  ok('toolCalls 含 null 元素结构化拒绝', v.ok === false && v.errors.some((e) => e.includes('须为 object')), JSON.stringify(v.errors));
+}
+// 2b2c. 顶层非数组：结构化拒绝不裸崩（2026-10-02 复审 M-1：tool_calls:"abc" 网络面可达形态）
+{
+  const v = validateToolCalls('aaa', schema);
+  ok('toolCalls 顶层非数组结构化拒绝', v.ok === false && v.errors.some((e) => e.includes('须为数组')), JSON.stringify(v.errors));
+}
 // 2b3. 边界：64 个放行（上限处不误伤）
 {
   const calls = Array.from({ length: 64 }, () => mkCall('tpms_estimate', { type: 'gyroid', porosity: 0.65 })[0]);

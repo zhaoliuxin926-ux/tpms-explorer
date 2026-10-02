@@ -61,5 +61,5 @@ try {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 3) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 3`); process.exit(1); }
+if (pass < 4) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 4（2026-10-02 审查 M4 对齐实测 4）`); process.exit(1); }
 process.exit(fail ? 1 : 0);
