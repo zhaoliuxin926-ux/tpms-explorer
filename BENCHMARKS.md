@@ -1,36 +1,36 @@
 # BENCHMARKS — TPMS Explorer 公开基准
 
-> 生成于 2026-10-02T13:26:49.816Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
+> 生成于 2026-10-02T17:59:04.550Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
 > 口径：目标孔隙率 60%｜exact 孔隙率求解器（解析积分求根 + 网格实测割线校正）｜水密三硬指标（开放边/非流形边/退化面）任一非零即 fail-closed 拒产——**拒产是平台的正确行为**，代表该 (曲面, 孔隙率, 分辨率) 组合的网格表示不可靠（亚体素薄壁自触，随分辨率收敛）。
 
 ## 1. 几何基准矩阵（可产性 / 水密 / 孔隙率偏差）
 
 | 曲面 | R48 | R96 |
 |---|---|---|
-| gyroid | ✓ dev 0.59pp / 2734ms | ✓ dev 0.09pp / 7831ms |
-| diamond | ✓ dev 0.06pp / 2420ms | ✓ dev 0.37pp / 6133ms |
-| schwarz | ✓ dev 0.02pp / 1646ms | ✓ dev 0.12pp / 3953ms |
-| neovius | ✓ dev 0.18pp / 2148ms | ✓ dev 0.27pp / 4833ms |
-| iwp | ✓ dev 0.22pp / 2850ms | ✓ dev 0.02pp / 9287ms |
-| frd | ✓ dev 4.08pp / 3165ms | ✓ dev 0.04pp / 10758ms |
-| lidinoid | ✓ dev 0.3pp / 4170ms | ✓ dev 0.09pp / 17162ms |
-| splitp | ✓ dev 0.59pp / 4060ms | ✓ dev 0.3pp / 18192ms |
-| octo | ✓ dev 6.95pp / 2409ms | ✓ dev 0.34pp / 7499ms |
-| karcher | ✓ dev 0.49pp / 2915ms | ✓ dev 0.22pp / 11668ms |
-| fks | 拒产 (nm 9504) / 2964ms | ✓ dev 0.17pp / 8430ms |
-| fky | 拒产 (nm 4752) / 3024ms | ✓ dev 0.57pp / 13487ms |
-| gprime | ✓ dev 1.11pp / 4903ms | 拒产 (nm 19080) / 7088ms |
-| fcks | 拒产 (nm 27720) / 4492ms | 拒产 (nm 10368) / 14705ms |
-| dprime | 拒产 (nm 18252) / 4586ms | ✓ dev 0.14pp / 17262ms |
-| dp | ✓ dev 2.92pp / 4528ms | ✓ dev 0.22pp / 8280ms |
-| dd | ✓ dev 1.26pp / 3240ms | ✓ dev 0.16pp / 6590ms |
-| dg | 拒产 (nm 18354) / 5454ms | ✓ dev 0.19pp / 13485ms |
-| fcky | ✓ dev 0.28pp / 3998ms | ✓ dev 0.2pp / 7734ms |
-| cdd | 拒产 (nm 18252) / 4335ms | ✓ dev 0.16pp / 19791ms |
-| slotp | ✓ dev 2.16pp / 4162ms | ✓ dev 0.2pp / 12610ms |
-| fs | ✓ dev 9.55pp / 2524ms | ✓ dev 0.07pp / 6538ms |
-| qstar | 拒产 (nm 792) / 3133ms | ✓ dev 0.18pp / 6097ms |
-| ws | ✓ dev 13.26pp / 4365ms | ✓ dev 0.15pp / 13607ms |
+| gyroid | ✓ dev 0.59pp / 6210ms | ✓ dev 0.09pp / 13467ms |
+| diamond | ✓ dev 0.06pp / 5138ms | ✓ dev 0.37pp / 11273ms |
+| schwarz | ✓ dev 0.02pp / 3324ms | ✓ dev 0.12pp / 6683ms |
+| neovius | ✓ dev 0.18pp / 5729ms | ✓ dev 0.27pp / 8231ms |
+| iwp | ✓ dev 0.22pp / 3991ms | ✓ dev 0.02pp / 12663ms |
+| frd | ✓ dev 4.08pp / 5200ms | ✓ dev 0.04pp / 16749ms |
+| lidinoid | ✓ dev 0.3pp / 7350ms | ✓ dev 0.09pp / 24996ms |
+| splitp | ✓ dev 0.59pp / 6667ms | ✓ dev 0.3pp / 24252ms |
+| octo | ✓ dev 6.95pp / 4148ms | ✓ dev 0.34pp / 12405ms |
+| karcher | ✓ dev 0.49pp / 5342ms | ✓ dev 0.22pp / 17137ms |
+| fks | 拒产 (nm 9504) / 5031ms | ✓ dev 0.17pp / 13531ms |
+| fky | 拒产 (nm 4752) / 5044ms | ✓ dev 0.57pp / 20262ms |
+| gprime | ✓ dev 1.11pp / 6106ms | 拒产 (nm 19080) / 9079ms |
+| fcks | 拒产 (nm 27720) / 5936ms | 拒产 (nm 10368) / 18863ms |
+| dprime | 拒产 (nm 18252) / 5768ms | ✓ dev 0.14pp / 26668ms |
+| dp | ✓ dev 2.92pp / 6699ms | ✓ dev 0.22pp / 14148ms |
+| dd | ✓ dev 1.26pp / 5716ms | ✓ dev 0.16pp / 11108ms |
+| dg | 拒产 (nm 18354) / 7779ms | ✓ dev 0.19pp / 22226ms |
+| fcky | ✓ dev 0.28pp / 7662ms | ✓ dev 0.2pp / 12282ms |
+| cdd | 拒产 (nm 18252) / 5965ms | ✓ dev 0.16pp / 28158ms |
+| slotp | ✓ dev 2.16pp / 5359ms | ✓ dev 0.2pp / 16720ms |
+| fs | ✓ dev 9.55pp / 3317ms | ✓ dev 0.07pp / 9970ms |
+| qstar | 拒产 (nm 792) / 4248ms | ✓ dev 0.18pp / 8999ms |
+| ws | ✓ dev 13.26pp / 5300ms | ✓ dev 0.15pp / 18940ms |
 
 ## 2. 可用域速查（LLM/用户选择曲面时的决策表）
 
@@ -53,7 +53,7 @@
 | dprime | ⛔ | ✅ | 低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48） |
 | dp | ✅ | ✅ |  |
 | dd | ✅ | ✅ |  |
-| dg | ⛔ | ✅ | 求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），升分辨率可产 |
+| dg | ⛔ | ✅ | p0.6 iso 触求解域下界 −1.6：偏差 ~8pp 为可用域事实（nm=0 可产，如实报告） |
 | fcky | ✅ | ✅ |  |
 | cdd | ⛔ | ✅ | 低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48） |
 | slotp | ✅ | ✅ |  |
@@ -74,7 +74,7 @@
 | 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |
 | 曲面族 | 24 | 4 | 19 | 8+ |
 | 验证门禁 | 46 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |
-| 孔隙率求解 | exact 解析求根+网格实测校正（Diamond R96 0.13pp） | 解析 NIntegrate | level-set 近似 | 数值 |
+| 孔隙率求解 | exact 解析求根+网格实测校正（Diamond R96 0.37pp·当前快照；MC 噪声带内波动 0.1~0.4pp） | 解析 NIntegrate | level-set 近似 | 数值 |
 | 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |
 | 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |
 | 仿真交付 | STL/INP/OBJ/GLB/3MF/VTI/G-code | STL | STL/INP | STL/mesh |
