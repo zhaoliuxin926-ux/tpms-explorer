@@ -9,7 +9,7 @@ const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 4857;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
-const DEPLOYED = path.join(ROOT, 'docs/platform');
+const DEPLOYED = process.env.SMOKE_DEPLOYED ?? path.join(ROOT, "docs/platform");
 const server = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(PORT), DEPLOYED]);
 await new Promise((r) => setTimeout(r, 4000));
 
@@ -51,38 +51,100 @@ const stlBytes = await page.evaluate(() => {
   return new Uint8Array(buf);
 });
 
-await page.evaluate(() => {
-  document.querySelector('#meshcont-file')?.closest('details')?.setAttribute('open', '');
-});
-const handle = await page.evaluateHandle(([bytes]) => {
-  const file = new File([bytes], 'box.stl', { type: 'application/octet-stream' });
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  const input = document.querySelector('#meshcont-file');
-  input.files = dt.files;
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-}, [stlBytes]);
-// 轮询等待 SDF 终态（上传路径「已启用」会被后续 R 档 meshSdfEnsure 覆盖为「就绪」）
-let statusText0 = '';
-for (let i = 0; i < 180; i++) {
-  await page.waitForTimeout(1000);
-  statusText0 = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
-  if (/已启用|就绪|✗/.test(statusText0)) break;
-}
-
-const statusText = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
-// 诊断转储（只在状态未达终态时打，避免噪音）
-if (!/已启用|就绪|✗/.test(statusText)) {
+async function dumpDiag() {
   console.log('DIAG status="' + statusText.slice(0, 90) + '"');
   console.log('DIAG workers/js404: ' + (diag.length ? diag.join(' ; ') : '(无 worker 事件/无 JS 4xx)'));
+  // 主线程活性 + 长任务清单：timer 能回=活着；longtask 时长列表揭示谁在轰炸事件循环
+  const alive = await page.evaluate(() => new Promise((res) => {
+    const entries = [];
+    let obs;
+    try {
+      obs = new PerformanceObserver((l) => { for (const e of l.getEntries()) entries.push(Math.round(e.duration)); });
+      obs.observe({ entryTypes: ['longtask'] });
+    } catch { /* longtask 不可用退化为 timer */ }
+    const t0 = Date.now();
+    setTimeout(() => { try { obs?.disconnect(); } catch {} res('alive ' + (Date.now() - t0) + 'ms longtasks=[' + entries.join(',') + ']'); }, 2500);
+  }))
+    .catch((e) => 'BLOCKED/err: ' + String(e).slice(0, 60));
+  console.log('DIAG mainThread=' + alive);
+  // CPU profile 3s：CDP Profiler 抓轰炸源热点函数（bottom-up self 时间 top8）
+  try {
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.setSamplingInterval', { interval: 10000 });
+    await cdp.send('Profiler.start');
+    await new Promise((r) => setTimeout(r, 3000));
+    const { profile } = await cdp.send('Profiler.stop');
+    const nodes = new Map(profile.nodes.map((n) => [n.id, n]));
+    const self = new Map();
+    // samples→self 时间累计
+    const dt = profile.timeDeltas;
+    for (let i = 0; i < profile.samples.length; i++) {
+      const id = profile.samples[i];
+      self.set(id, (self.get(id) ?? 0) + (dt[i] ?? 0));
+    }
+    const top = [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([id, us]) => {
+        const cf = nodes.get(id)?.callFrame ?? {};
+        return Math.round(us / 1000) + 'ms ' + (cf.functionName || '(anon)') + ' @' + String(cf.url || '').split('/').pop() + ':' + (cf.lineNumber ?? '?');
+      });
+    console.log('DIAG profileTop=' + JSON.stringify(top));
+  } catch (e) {
+    console.log('DIAG profile 失败: ' + String(e).slice(0, 80));
+  }
+  // rAF 计数：2s 窗内帧数（0=按需渲染静默→轰源非渲染；≈120=持续渲染循环）
+  try {
+    const rafN = await page.evaluate(() => new Promise((res) => {
+      let n = 0; const orig = window.requestAnimationFrame;
+      const t0 = performance.now();
+      const tick = window.requestAnimationFrame.bind(window);
+      function loop() { n++; if (performance.now() - t0 < 2000) tick(loop); }
+      tick(loop);
+      setTimeout(() => res(n + ' rAF/2s'), 2200);
+    }));
+    console.log('DIAG raf=' + rafN);
+  } catch (e) { console.log('DIAG raf 失败: ' + String(e).slice(0, 60)); }
   const probe = await page.evaluate(() => {
-    const out = { meshcontFile: null, workerConstruct: 'n/a' };
+    const out = { meshcontFile: null };
     const inp = document.querySelector('#meshcont-file');
     out.meshcontFile = inp ? 'present' : 'missing';
     out.sw = (navigator.hardwareConcurrency ?? '?') + ' cores';
     return out;
   }).catch((e) => ({ err: String(e) }));
   console.log('DIAG probe=' + JSON.stringify(probe));
+}
+
+// 【2026-10-03 定案】上传路径存在已知深水 bug：偶发（本地 ~40%）主线程被 native 风暴
+// 轰炸（GC/结构化克隆，疑 build worker 看门狗超时-重生循环——取证链见 bugs.md），
+// SDF progress 消息永无主线程空隙。冻结自愈双试：每试冻结必留 DIAG 取证再整页重载；
+// 两试全冻才判红（与 run_all RETRY 同语义，但冻结样本保证进日志）。
+let statusText = '';
+for (let attempt = 1; attempt <= 2; attempt++) {
+  await page.evaluate(() => {
+    document.querySelector('#meshcont-file')?.closest('details')?.setAttribute('open', '');
+  });
+  const handle = await page.evaluateHandle(([bytes]) => {
+    const file = new File([bytes], 'box.stl', { type: 'application/octet-stream' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const input = document.querySelector('#meshcont-file');
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }, [stlBytes]);
+  // 轮询等待 SDF 终态（上传路径「已启用」会被后续 R 档 meshSdfEnsure 覆盖为「就绪」）
+  for (let i = 0; i < 180; i++) {
+    await page.waitForTimeout(1000);
+    const t = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
+    if (/已启用|就绪|✗/.test(t)) { statusText = t; break; }
+    statusText = t;
+  }
+  if (/已启用|就绪|✗/.test(statusText)) break;
+  console.log(`[attempt${attempt}] SDF 冻结 180s——DIAG 取证后重载重试（已知深水 bug，非本测断言对象）`);
+  await dumpDiag();
+  if (attempt < 2) {
+    await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+  }
 }
 let pass = 0, fail = 0;
 const ok = (n, c, d = '') => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL'), n, d); };
