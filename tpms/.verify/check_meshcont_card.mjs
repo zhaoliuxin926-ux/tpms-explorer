@@ -21,8 +21,11 @@ const ctx = await browser.newContext({ viewport: { width: 1600, height: 950 } })
 const page = await ctx.newPage();
 page.setDefaultTimeout(60000);
 const errors = [];
+const diag = [];  // 2026-10-02 CI 诊断：SDF 0% 卡死两轮（Linux/macOS 确定性，Windows 本地过）——全 console + JS 资源网络状态转储进日志
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
+page.on('response', (r) => { if (/\.js(\?|$)/.test(r.url()) && r.status() >= 400) diag.push('JS ' + r.status() + ' ' + r.url().split('/').pop()); });
+page.on('worker', (w) => diag.push('worker: ' + w.url().split('/').pop()));
 
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.evaluate(() => localStorage.setItem('tpms_onboard_v1', '1'));
@@ -68,6 +71,19 @@ for (let i = 0; i < 180; i++) {
 }
 
 const statusText = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
+// 诊断转储（只在状态未达终态时打，避免噪音）
+if (!/已启用|就绪|✗/.test(statusText)) {
+  console.log('DIAG status="' + statusText.slice(0, 90) + '"');
+  console.log('DIAG workers/js404: ' + (diag.length ? diag.join(' ; ') : '(无 worker 事件/无 JS 4xx)'));
+  const probe = await page.evaluate(() => {
+    const out = { meshcontFile: null, workerConstruct: 'n/a' };
+    const inp = document.querySelector('#meshcont-file');
+    out.meshcontFile = inp ? 'present' : 'missing';
+    out.sw = (navigator.hardwareConcurrency ?? '?') + ' cores';
+    return out;
+  }).catch((e) => ({ err: String(e) }));
+  console.log('DIAG probe=' + JSON.stringify(probe));
+}
 let pass = 0, fail = 0;
 const ok = (n, c, d = '') => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL'), n, d); };
 ok('加载状态文本（三角数+已启用/就绪）', /已启用|就绪/.test(statusText) && /\d/.test(statusText), statusText.slice(0, 80));
