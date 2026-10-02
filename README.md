@@ -15,7 +15,7 @@
 | 🎓 第一次接触 TPMS，想系统入门 | [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md)（五阶学习路径 + 概念动画） |
 | 🖱️ 不想读文字，直接上手玩 | [docs/index.html](docs/index.html)（浏览器打开即用，零安装；说明见 [docs/README-体验说明.md](docs/README-体验说明.md)） |
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
-| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十六章：AM/CFD/RVE/红队） |
+| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
 | 🕘 版本变更 | [docs/RELEASE_NOTES_v1.0.3.md](docs/RELEASE_NOTES_v1.0.3.md)（当前）｜[v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
@@ -64,7 +64,7 @@
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **46 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 46/46 |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 多轮 37/37 推荐（n≥2，勿称确定性），四档画像在案）+ llm_provider_selftest 39 断言（GUARD 37） |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 多轮 37/37 推荐（n≥2，勿称确定性），四档画像在案）+ llm_provider_selftest 40 断言（GUARD 37，+null 元素钉 2026-10-02） |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
@@ -81,7 +81,7 @@
 | 🥊 红队极端工况矩阵 | 100+ 案例：孔隙率/容器/长宽比/高频/鞍点/极端权重三硬指标 | redteam_matrix_audit 100/100 |
 | 📈 实验曲线反演 (v9.0) | 万能试验机 CSV/TSV → ISO 13314 特征（E*/Rp0.2/σpl/εd/Wv）+ Toe 虚拟原点补偿 + DT/GA 双向标定比 | experimental_fit_audit 19 断言（合成曲线解析真值恢复 ≤2%） |
 | ⚡ WebGPU 计算管线 | 指令 IR 双后端（WGSL + JS 寄存器机），体素场 GPU 并行填充，无感 CPU 回退 | webgpu_parity_audit 119 断言基线（+真 GPU 环境 WGSL 真执行 ×2；万点对拍 0.00e+0） |
-| 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 88 断言 |
+| 🧩 周期性 RVE / PBC | wrapped 提取 + 平面裁剪，单胞缝合边 ±L 精确配对，3×3×3 拼接 100% 水密 | periodic_rve_audit 92 断言（+四族排除集哨兵） |
 | 🏗️ Abaqus / OpenFOAM 体网格 | C3D8 INP（节点集+载荷步+RF/U 历史输出=压缩曲线数据源）与 polyMesh 直通求解，免 snappyHexMesh | cae_mesh_audit 67 断言 |
 | 🦴 应力场引导 (Stress-Driven) | 主应力迹线各向异性 + 壳致密化（Wolff 定律），von Mises 应力云图 | hierarchical_audit E 段单调性红测 |
 | 🌿 多级分形 TPMS | F=F_macro+λ·F_micro(Nx) 双重孔隙，coarea 比表面积分离 + 微孔连通率 100% | hierarchical_audit 18 断言 |

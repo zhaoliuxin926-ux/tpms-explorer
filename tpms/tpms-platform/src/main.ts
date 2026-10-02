@@ -98,7 +98,7 @@ let meshFill: THREE.Mesh | null = null;
 let meshStrut: THREE.LineSegments | null = null;
 let lastPorosityEstimate = 0;
 /** exact 路径一次性网格割线：解析 iso* 后若网格实测偏差大，用斜率再调一档（防环：forceExactIso 只消费一次） */
-let pendingExactFix: { target: number; slope: number; iso: number } | null = null;
+let pendingExactFix: { target: number; slope: number; iso: number; band?: [number, number] } | null = null;
 let forceExactIso: { iso: number; stateKey: string } | null = null;
 /** 同状态最后一次 exact 完成帧 iso（含割线）——导出侧复用，避免只拿解析根与屏幕不一致 */
 let lastExactIso: { iso: number; stateSig: string } | null = null;
@@ -198,13 +198,22 @@ function setGpuStatusText(text: string): void {
  * 纳入当前有效着色模式。否则用户在重建防抖窗口内切换着色时，旧响应
  * 可能以相同几何键覆盖新视觉状态。
  */
+/**
+ * mesh 容器指纹（2026-10-02 审查 HIGH-1）：blend 与容器身份进 BuildParams 却
+ * 不进 cacheKey，曾被缓存静默吞掉（拖倒角滑块/换 STL 后命中旧几何直接 return）。
+ * 所有几何缓存/请求键统一拼入此指纹。
+ */
+function meshContTag(): string {
+  return meshCont ? `|MC${meshCont.tris}:${meshCont.name}:${meshCont.scale}:${meshCont.blend}` : '';
+}
+
 function buildRequestKey(s: Readonly<AppState>, resolution: number): string {
-  return `${cacheKey(s, resolution)}|C${effectiveColoring(s)}`;
+  return `${cacheKey(s, resolution)}${meshContTag()}|C${effectiveColoring(s)}`;
 }
 
 /** 几何本身的状态指纹：材质/着色等渲染偏好不应使派生网格失效。 */
 function geometryStateKey(s: Readonly<AppState>): string {
-  return cacheKey(s, 0);
+  return cacheKey(s, 0) + meshContTag();
 }
 
 const SWEEP_BUILD_TIMEOUT_MS = 60_000;
@@ -1857,7 +1866,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
   const iso = baseIso(s);
 
   // 缓存检查
-  const key = cacheKey(s, R);
+  const key = cacheKey(s, R) + meshContTag();
   const cached = geoCache.get(key);
   if (cached) {
     // A cache hit can happen while an older GPU precompute/Worker request is
@@ -1937,10 +1946,10 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
         targetPorosity = undefined;
       } else {
         forceExactIso = null;
-        const { iso: isoStar, slope } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
+        const { iso: isoStar, slope, band } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
         isoOut = isoStar;
         targetPorosity = undefined;
-        pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar };
+        pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar, band };
       }
     } catch {
       // 解析求根失败回退体素二分（保持可构建）
@@ -2008,12 +2017,17 @@ function scheduleHdUpgrade(): void {
       meshSdfFor(fullR);
       return;
     }
+    // 【2026-10-02 审查 M3】与主重建/导出同一 exact 口径（resolveExportPorosity）：
+    // 此前走 baseIso+legacy 体素二分，HD 帧 iso 与 l2 exact 帧口径漂移，且其 isoUsed
+    // 会被 worker 结果处理器登记为 lastExactIso（lastBuildUsedExact 未重置）。
+    const expHd = resolveExportPorosity(s);
+    lastBuildUsedExact = expHd.targetPorosity === undefined;
     const params: BuildParams = {
       type: s.type,
-      iso: baseIso(s),
+      iso: expHd.iso,
       periods: s.cellSize,
       resolution: fullR,
-      targetPorosity: s.porosity / 100,
+      targetPorosity: expHd.targetPorosity as number,
       weights: s.weights,
       structureMode: s.structureMode,
       containerShape: s.containerShape,
@@ -2230,10 +2244,13 @@ function onWorkerResult(res: WorkerResponse): void {
     const err = res.porosityEstimate - fix.target;
     if (Math.abs(err) > 0.005 && Number.isFinite(fix.slope) && Math.abs(fix.slope) > 1e-6) {
       let next = fix.iso + (fix.target - res.porosityEstimate) / fix.slope;
-      next = Math.max(-1.6, Math.min(1.6, next - fix.iso > 0.35 ? fix.iso + 0.35 : next < fix.iso - 0.35 ? fix.iso - 0.35 : next));
+      // 钳制域与求根域同源（C1：族场值域自适应，非硬编码 ±1.6）
+      const bLo = fix.band ? fix.band[0] : -1.6;
+      const bHi = fix.band ? fix.band[1] : 1.6;
+      next = Math.max(bLo, Math.min(bHi, next - fix.iso > 0.35 ? fix.iso + 0.35 : next < fix.iso - 0.35 ? fix.iso - 0.35 : next));
       if (Math.abs(next - fix.iso) > 1e-4) {
         // 失效未校正缓存，防二次 rebuild 命中旧 iso 帧
-        geoCache.delete(cacheKey(current, res.resolution));
+        geoCache.delete(cacheKey(current, res.resolution) + meshContTag());
         forceExactIso = { iso: next, stateKey: buildRequestKey(current, res.resolution) };
         // 先落当前帧再校正，避免空白；校正完成后 scheduleRebuild 覆盖
         queueMicrotask(() => scheduleRebuild(false, true));
@@ -2282,7 +2299,7 @@ function onWorkerResult(res: WorkerResponse): void {
   // 缓存结果：Worker 已 transfer 独占，直接存引用（不再 new 拷一份）。
   // applyGeometry 对恒等映射零拷贝挂 BufferAttribute；非恒等映射先 slice 再 warp，
   // 不会原地改规范几何。导出/测量路径只读 position/normal/index。
-  const cKey = cacheKey(current, res.resolution);
+  const cKey = cacheKey(current, res.resolution) + meshContTag();
   geoCacheSet(cKey, {
     positions: res.positions!,
     normals: res.normals!,
@@ -3509,6 +3526,7 @@ async function bindHybridCustom(): Promise<void> { // 多相混合与自定义�
   document.querySelectorAll('[data-blend]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ hybrid: { ...getState().hybrid, blendFunction: btn.getAttribute('data-blend') as AppState['hybrid']['blendFunction'] } });
+      syncUI(getState());  // 2026-10-02 审查 M1：data-hybrid-type 同型漏网（点击后 active 高亮滞留）
       scheduleRebuild(false);
     });
   });
@@ -3740,7 +3758,9 @@ function bindKeyboardUndo(): void { // 键盘快捷键与撤销
       const mats: AppState['material'][] = ['auto', 'tc4', 'polymer', 'thermal'];
       const next = mats[(mats.indexOf(getState().material) + 1) % mats.length];
       setState({ material: next });
-      syncUI(getState());
+      const s9 = getState();
+      syncUI(s9);
+      updateBadges(s9.type, s9.model, s9.material, s9.structureMode);  // 2026-10-02 审查 M2：键盘 1-8 同型漏网（徽标/标题滞留旧材料）
       scheduleRebuild(false);
       flashToast(MATERIAL_LABEL[next]);
       return;
@@ -3869,6 +3889,14 @@ function syncUI(s: AppState): void {
   // 混合启用复选框
   const he = document.getElementById('hybrid-enabled') as HTMLInputElement | null;
   if (he) he.checked = s.hybrid.enabled;
+
+  // 自定义公式复选框与公式框显隐（2026-10-02 审查 M5：NL reset/undo 后此前不回弹）
+  const ce = document.getElementById('custom-enabled') as HTMLInputElement | null;
+  if (ce) {
+    ce.checked = s.type === 'custom';
+    const cfField = document.getElementById('custom-formula-field');
+    if (cfField) cfField.style.display = ce.checked ? 'block' : 'none';
+  }
 
   // WebGPU 加速开关态（v3.0 阶段 I）
   document.getElementById('btn-gpu')?.classList.toggle('on', s.gpuAccelerate);
@@ -4271,7 +4299,7 @@ async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
     updateFormulaDisplay(s.type, s.weights, res.isoUsed ?? 0);
     updateTips(s.type, s.porosity, s.thickness, res.porosityEstimate ?? null);
 
-    geoCacheSet(cacheKey(s, hdR), {
+    geoCacheSet(cacheKey(s, hdR) + meshContTag(), {
       positions: res.positions,
       normals: res.normals,
       indices: res.indices,
@@ -4515,6 +4543,12 @@ async function handleExportInner(fmt: string): Promise<void> {
           flashToast('自定义公式为空，无法导出体网格');
           return;
         }
+        // 【2026-10-02 审查 M4】外部 STL 容器下体素类导出此前静默按 cube/cylinder
+        // 体素化（与屏幕保形几何语义相悖且无提示）——违反无静默回退铁律，改 fail-closed
+        if (meshCont) {
+          flashToast('外部 STL 容器暂不支持体素网格导出（INP/polyMesh 为 cube/cylinder 口径）——请先移除容器或改用 STL/GLB 导出');
+          return;
+        }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
         const caePoro = resolveExportPorosity(s);
         const vox = exp.buildVoxelModel({
@@ -4541,6 +4575,10 @@ async function handleExportInner(fmt: string): Promise<void> {
       }
       case 'caesuite': {
         // 【v4.0 阶段 III】CAE 验证脚本包：Abaqus/OpenFOAM 自动化求解脚本 + 壳 + 对比模板
+        if (meshCont) {
+          flashToast('外部 STL 容器暂不支持 CAE 验证套件导出（体素为 cube/cylinder 口径）');
+          return;
+        }
         const suitePoro = resolveExportPorosity(s);
         const voxV = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
@@ -4558,6 +4596,10 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'vti': {
         if (s.type === 'custom' && !s.customFormula.trim()) {
           flashToast('自定义公式为空，无法导出体素场');
+          return;
+        }
+        if (meshCont) {
+          flashToast('外部 STL 容器暂不支持 VTI 体素场导出（场为 cube/cylinder 口径）');
           return;
         }
         const { field, dims } = buildVtiField(s);

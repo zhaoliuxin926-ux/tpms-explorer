@@ -68,7 +68,7 @@ export function porAnalytic(
 }
 
 /** 进程内 iso* 记忆化：同 (f,target,W,grad) 在 UI 反复重建/导出时不再重跑 2M 次 MC */
-const isoMemo = new Map<string, { iso: number; slope: number }>();
+const isoMemo = new Map<string, { iso: number; slope: number; band: [number, number]; clamped: boolean }>();
 const ISO_MEMO_MAX = 64;
 
 // 【2026-09-29 结构性防呆（红队 D footgun 收口）】key 强制掺函数实例身份：旧 key 只含
@@ -83,6 +83,39 @@ const fnId = (f: TpmsFn): number => {
   return id;
 };
 
+/**
+ * 族场值域估计：确定性粗网格采样（24³，域 [-π,π]³ 格心）→ [minV, maxV]，两侧外扩
+ * pad（≥0.25 或 5% 值域宽）防格点间极值低估。供 exact 求根域自适应用。
+ *
+ * 【2026-10-02 对抗审查 C1】此前二分域硬编码 ±1.6，对场值域远超 ±1.6 的族
+ * （neovius ±13、fcks ±5 等 11/24 族）可达孔隙率带被静默截断——dg 目标 85%
+ * 实测 51.5% 仍 exit0 交付。改为按族场值域自适应后可达带=全域 [0,1]。
+ */
+export function fieldRange(
+  f: TpmsFn,
+  W: number[] | readonly number[] = [1, 1, 1, 1],
+): { lo: number; hi: number } {
+  let minV = Infinity;
+  let maxV = -Infinity;
+  const N = 24;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      for (let k = 0; k < N; k++) {
+        const v = f(
+          -Math.PI + (2 * Math.PI * (i + 0.5)) / N,
+          -Math.PI + (2 * Math.PI * (j + 0.5)) / N,
+          -Math.PI + (2 * Math.PI * (k + 0.5)) / N,
+          W,
+        );
+        if (v < minV) minV = v;
+        if (v > maxV) maxV = v;
+      }
+    }
+  }
+  const pad = Math.max(0.25, (maxV - minV) * 0.05);
+  return { lo: minV - pad, hi: maxV + pad };
+}
+
 /** 解析求根 iso* + 数值斜率 d(por)/d(iso)（供网格割线校正）。 */
 export function solveIsoAnalytic(
   f: TpmsFn,
@@ -90,25 +123,31 @@ export function solveIsoAnalytic(
   W: number[] | readonly number[] = [1, 1, 1, 1],
   isoGrad?: IsoGradStops | null,
   cacheTag = '',
-): { iso: number; slope: number } {
+): { iso: number; slope: number; band: [number, number]; clamped: boolean } {
   // key = 函数身份 + cacheTag + target + W + grad：调用方忘掺 type 也不会跨族串 iso
   const key = `${fnId(f)}|${cacheTag}|${target.toFixed(8)}|${[...W].join(',')}|${isoGrad ? JSON.stringify(isoGrad.stops) : ''}`;
   const hit = isoMemo.get(key);
   if (hit) return hit;
   resetPorosityRng();
   const MC_BISECT_N = 60_000;
-  let lo = -1.6;
-  let hi = 1.6;
+  const { lo: domLo, hi: domHi } = fieldRange(f, W);
+  // isoGrad 在场时有效阈值为 iso+off(pz)（off ∈ ±1.5）——band 两侧外扩 max|off|，
+  // 否则极端渐变 + target 近 0/1 时可达带被低估（复审 M-3）
+  const gradPad = isoGrad ? Math.max(...isoGrad.stops.map((s) => Math.abs(s[1]))) : 0;
+  let lo = domLo - gradPad;
+  let hi = domHi + gradPad;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
     if (porAnalytic(f, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid;
     else hi = mid;
   }
   const iso = (lo + hi) / 2;
+  // 卡界检测：目标落在可达带边缘（自适应全域下仅 target≈0/1 时可达）——供调用方披露
+  const clamped = iso - lo < 1e-3 || hi - iso < 1e-3;
   const d = 0.02;
   const slope =
     (porAnalytic(f, iso + d, W, 40_000, isoGrad) - porAnalytic(f, iso - d, W, 40_000, isoGrad)) / (2 * d);
-  const result = { iso, slope };
+  const result = { iso, slope, band: [lo, hi] as [number, number], clamped };
   if (isoMemo.size >= ISO_MEMO_MAX) {
     const oldest = isoMemo.keys().next().value;
     if (oldest !== undefined) isoMemo.delete(oldest);
@@ -122,12 +161,12 @@ export function solveIsoAnalytic(
  * 调用方负责在最终 iso 上再 build 一次（或复用 improved 结果）。
  */
 export function secantCorrectPorosity(
-  _f: TpmsFn,
+  f: TpmsFn,
   target: number,
   initialIso: number,
   slope: number,
   buildOnce: (iso: number) => { porosityEstimate: number },
-  _W: number[] | readonly number[] = [1, 1, 1, 1],
+  W: number[] | readonly number[] = [1, 1, 1, 1],
 ): { iso: number; porosityEstimate: number; improved: boolean; trace: { iso: number; est: number }[] } {
   resetPorosityRng();
   let cur = initialIso;
@@ -135,8 +174,10 @@ export function secantCorrectPorosity(
   let est = res.porosityEstimate;
   const trace = [{ iso: cur, est }];
   if (Math.abs(est - target) > 0.005 && Number.isFinite(slope) && Math.abs(slope) > 1e-6) {
+    // 钳制域与求根域同源（C1：按族场值域而非硬编码 ±1.6）
+    const { lo: bLo, hi: bHi } = fieldRange(f, W);
     let next = cur + (target - est) / slope;
-    next = Math.max(-1.6, Math.min(1.6, next - cur > 0.35 ? cur + 0.35 : next < cur - 0.35 ? cur - 0.35 : next));
+    next = Math.max(bLo, Math.min(bHi, next - cur > 0.35 ? cur + 0.35 : next < cur - 0.35 ? cur - 0.35 : next));
     const res2 = buildOnce(next);
     if (Math.abs(res2.porosityEstimate - target) < Math.abs(est - target)) {
       est = res2.porosityEstimate;

@@ -93,19 +93,26 @@ function formulaFingerprint() {
 }
 function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   const gradKey = isoGrad ? 'G' + JSON.stringify(isoGrad.stops) : '';
-  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}${gradKey}`;
+  // 【2026-10-02 C1 修复】键版本 v2：求根域从硬编码 ±1.6 改为族场值域自适应，
+  // 旧缓存条目（截断 iso*）必须失活，不静默命中。
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}:v2${gradKey}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
-  let lo = -1.6, hi = 1.6;
+  // 求根域=族场值域（粗网格 24³ 采样 + pad），可达孔隙率带=全域 [0,1]；
+  // isoGrad 在场时有效阈值 iso+off(pz)（off∈±1.5）——band 两侧外扩 max|off|（复审 M-3）
+  const { lo: domLo, hi: domHi } = core.fieldRange(core.getTpmsFunction(type), W);
+  const gradPad = isoGrad ? Math.max(...isoGrad.stops.map((s) => Math.abs(s[1]))) : 0;
+  let lo = domLo - gradPad, hi = domHi + gradPad;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
     if (porAnalytic(core, type, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid; else hi = mid;
   }
   const iso = (lo + hi) / 2;
+  const clamped = iso - lo < 1e-3 || hi - iso < 1e-3;
   const d = 0.02;
   const slope = (porAnalytic(core, type, iso + d, W, 40000, isoGrad) - porAnalytic(core, type, iso - d, W, 40000, isoGrad)) / (2 * d);
-  const result = { iso, slope };
+  const result = { iso, slope, band: [lo, hi], clamped };
   cache[key] = result;
   // 原子写（终审：直写被并发/中断截断会丢整个缓存）：temp + rename
   try { writeFileSync(ISO_CACHE_TMP, JSON.stringify(cache, null, 1)); renameSync(ISO_CACHE_TMP, ISO_CACHE); } catch { /* 只读环境忽略 */ }
@@ -120,14 +127,15 @@ function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
 function solveExactPorosity(core, type, pf, R, buildOnce, isoGrad = null) {
   const W = [1, 1, 1, 1];
   _lcg = 0x9e3779b9; // 每次求解重置种子：确定性
-  const { iso, slope } = solveIsoAnalytic(core, type, pf, W, isoGrad);
+  const { iso, slope, band } = solveIsoAnalytic(core, type, pf, W, isoGrad);
+  const [bLo, bHi] = band ?? [-1.6, 1.6];
   let cur = iso;
   let res = buildOnce(cur);
   let est = res.porosityEstimate;
   const trace = [{ iso: cur, est }];
   if (Math.abs(est - pf) > 0.005 && Number.isFinite(slope) && Math.abs(slope) > 1e-6) {
     let next = cur + (pf - est) / slope;
-    next = Math.max(-1.6, Math.min(1.6, next - cur > 0.35 ? cur + 0.35 : next < cur - 0.35 ? cur - 0.35 : next));
+    next = Math.max(bLo, Math.min(bHi, next - cur > 0.35 ? cur + 0.35 : next < cur - 0.35 ? cur - 0.35 : next));
     const res2 = buildOnce(next);
     // 低分辨率下网格损耗因子随 iso 漂移，割线可能过冲——变差则回退直出
     if (Math.abs(res2.porosityEstimate - pf) < Math.abs(est - pf)) {
@@ -350,7 +358,8 @@ function cmdSolve(a, json) {
 
   _lcg = 0x9e3779b9;
   const W = [1, 1, 1, 1];
-  const { iso: iso0, slope } = solveIsoAnalytic(core, type, pf, W, isoGrad0);
+  const { iso: iso0, slope, band: solBand } = solveIsoAnalytic(core, type, pf, W, isoGrad0);
+  const [bandLo, bandHi] = solBand ?? [-1.6, 1.6];
 
   const trace = [];
   let iso = iso0, est = NaN, res = null, audit = null, best = null;
@@ -403,7 +412,7 @@ function cmdSolve(a, json) {
     let next = iso + (pf - est) / slopeUse;
     const step = Math.max(-0.35, Math.min(0.35, next - iso));
     next = iso + step;
-    if (next <= -1.6 || next >= 1.6) {
+    if (next <= bandLo || next >= bandHi) {
       unreachable = { reason: 'iso_boundary', detail: `iso 触界 ${next.toFixed(3)}（目标在该分辨率下不可达）`, iso };
       break;
     }
@@ -720,8 +729,16 @@ function cmdMesh(a, json) {
   const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
   // porosityEstimate 平台口径为小数（=1−发散固相/包络，surface-nets 内建钳制），恒 ≤1
   const porEst = res.porosityEstimate;
+  // 【2026-10-02 C1 配套】诚实披露：实测偏离目标 >2pp 时进 warnings（截断族已由自适应求根域
+  // 根治；此处兜 shell 低孔隙率结构性不可达、fs 族 p≈0.5 退化区、R48 网格损耗等残余——
+  // exit0 交付但绝不让"实测≠目标"静默）
+  const warnings = [];
+  if (Math.abs(porEst - pf) > 0.02) {
+    warnings.push(`实测孔隙率 ${(porEst * 100).toFixed(1)}% 偏离目标 ${(pf * 100).toFixed(0)}% 达 ${(Math.abs(porEst - pf) * 100).toFixed(1)}pp（该参数组合物理/分辨率受限，交付物如实反映实测值）`);
+  }
   const out = {
     command: 'mesh', type, porosity: pf, periods, resolution, container, mode,
+    warnings,
     vertCount: res.vertCount, triCount: res.triCount,
     isoUsed: res.isoUsed,
     porosityEstimate: porEst,
@@ -813,7 +830,7 @@ function cmdMesh(a, json) {
   console.log('  ───────────────────────────────');
   console.log(`  顶点/三角形  ${res.vertCount} / ${res.triCount}`);
   console.log(`  实测孔隙率   ${(porEst * 100).toFixed(2)}%（目标 ${(pf * 100).toFixed(1)}%，偏差 ${(Math.abs(porEst - pf) * 100).toFixed(2)}pp）`);
-  if (Math.abs(porEst - pf) > 0.02) console.log('  ⚠ 偏差 >2pp：exact 与 legacy 在不同工况互有胜负（gyroid R48 legacy 更准），可尝试 --porosity-solver legacy；或提高 --resolution（上限 128）');
+  if (Math.abs(porEst - pf) > 0.02) console.log(`  ⚠ 偏差 >2pp：该参数组合物理/分辨率受限（JSON warnings 字段同源披露）；可尝试 --porosity-solver legacy（不同工况互有胜负）或提高 --resolution（上限 128）`);
   console.log(`  水密自检     开放边=${audit.openEdges} 非流形=${audit.nonManifoldEdges} 退化面=${audit.degenTris} → 通过（索引空间定向观测 misoriented=${audit.misorientedEdges}）`);
   console.log(`  STL 已写入   ${outFile}（${(stl.byteLength / 1024).toFixed(1)} KB，单位 mm，${scale.toFixed(4)} mm/wc）`);
 }
@@ -1266,6 +1283,28 @@ function cmdScenario(a, json) {
   const specimenSizeMm = design.specimenSizeMm === undefined ? periods : Number(design.specimenSizeMm);
   if (!Number.isFinite(specimenSizeMm) || specimenSizeMm <= 0 || specimenSizeMm > 1000) paramErrors.push('specimenSizeMm 须为 0 < L ≤ 1000');
   const outPrefix = String(SAFE_OUT_BASENAME(design.out) ?? `scenario-${type}`);
+  // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）。
+  // INP 体素模型暂不支持渐变——isoGrad 存在时 INP 跳过，报告如实注明。
+  // 【2026-10-02 审查 M-2 + 复审 M-4】与 verify(:881)/tools.schema.json 真同源：整块在
+  // 参数出口门前（此前位于门后属"校验死代码"），幅值域/元素数 2~6/未知属性拒绝三项
+  // 齐全——此前只查有限性，超域 isoGrad 场退化近全实心仍 exit0 交付"合格" STL。
+  let isoGradS = null;
+  if (design.isoGrad) {
+    const g = design.isoGrad;
+    if (typeof g !== 'object' || Array.isArray(g)) paramErrors.push('isoGrad 须为 object');
+    else {
+      for (const k of Object.keys(g)) if (!['values', 'band'].includes(k)) paramErrors.push(`isoGrad 未知属性 "${k}"`);
+      const vals = g.values;
+      if (!Array.isArray(vals) || vals.length < 2 || vals.length > 6 || vals.some((v) => typeof v !== 'number' || !Number.isFinite(v) || v < -1.5 || v > 1.5)) {
+        paramErrors.push('isoGrad.values 须为 2~6 个 ∈[-1.5,1.5] 的有限数字');
+      } else {
+        const band = g.band === undefined ? 0.4 : Number(g.band);
+        if (!Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须 0 ≤ b ≤ 2');
+        else isoGradS = { dir: 'z', stops: gradStops(vals, band) };
+      }
+      if (mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
+    }
+  }
   if (paramErrors.length) {
     const out = { command: 'scenario', stage: 'parameter', paramErrors, designPath };
     if (json) { console.log(JSON.stringify(out, null, 2)); process.exit(3); }
@@ -1288,20 +1327,7 @@ function cmdScenario(a, json) {
   const sigmaBandMPa = [0.23 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material], 0.3 * Math.pow(rel, 1.5) * core.BASE_YIELD_STRENGTH[material]];
 
   // ── 3. exact 孔隙率求解（解析求根 + 网格实测割线校正）──
-  // C1 渐变等值场（design JSON：isoGrad: { values: [...], band?: 0.4 }，z 向）。
-  // INP 体素模型暂不支持渐变——isoGrad 存在时 INP 跳过，报告如实注明。
-  let isoGradS = null;
-  if (design.isoGrad) {
-    const g = design.isoGrad;
-    if (!Array.isArray(g.values) || g.values.length < 2 || g.values.some((v) => !Number.isFinite(v))) {
-      paramErrors.push('isoGrad.values 须为 ≥2 个有限数字数组');
-    } else {
-      const band = g.band === undefined ? 0.4 : Number(g.band);
-      if (!Number.isFinite(band) || band < 0 || band > 2) paramErrors.push('isoGrad.band 须 0 ≤ b ≤ 2');
-      else isoGradS = { dir: 'z', stops: gradStops(g.values, band) };
-    }
-    if (mode !== 'solid_network') paramErrors.push('isoGrad 暂仅支持 solid_network 模式');
-  }
+  // （isoGrad 校验与构型已在参数段完成——见上方出口门前的 isoGrad 块）
   const buildOnce = (iso) => {
     core.globalBufferPool.reset();
     return core.buildSurface({

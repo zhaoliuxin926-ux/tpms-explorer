@@ -89,7 +89,7 @@ const LIT = {
       2 * Math.sin(z) * Math.cos(z) * Math.cos(x) * Math.sin(y)
     ) + w[1] * (-0.5) * (
       Math.cos(2 * x) * Math.cos(2 * y) + Math.cos(2 * y) * Math.cos(2 * z) + Math.cos(2 * z) * Math.cos(2 * x)
-    ),
+    ) + 0.15, // MiniSurf 官方源常偏置（2026-10-02 H-1 修复同步）
   splitp: (x, y, z, w) =>
     w[0] * 1.1 * (
       2 * Math.sin(x) * Math.cos(x) * Math.cos(y) * Math.sin(z) +
@@ -560,7 +560,7 @@ const APP_FORMULAS = {
   iwp: 'w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx)-w[1]*(C2x+C2y+C2z)',
   frd: 'w[0]*4*Cx*Cy*Cz-w[1]*(C2x*C2y+C2y*C2z+C2z*C2x)',
   diamond: 'w[0]*Sx*Sy*Sz+w[1]*Sx*Cy*Cz+w[2]*Cx*Sy*Cz+w[3]*Cx*Cy*Sz',
-  lidinoid: 'w[0]*0.5*(2*Sx*Cx*Cy*Sz+2*Sy*Cy*Cz*Sx+2*Sz*Cz*Cx*Sy)+w[1]*(-0.5)*(C2x*C2y+C2y*C2z+C2z*C2x)',
+  lidinoid: 'w[0]*0.5*(2*Sx*Cx*Cy*Sz+2*Sy*Cy*Cz*Sx+2*Sz*Cz*Cx*Sy)+w[1]*(-0.5)*(C2x*C2y+C2y*C2z+C2z*C2x)+0.15',
   splitp: 'w[0]*1.1*(2*Sx*Cx*Cy*Sz+2*Sx*Sy*Cy*Cz+2*Cx*Sy*Sz*Cz)+w[1]*(-0.2)*(C2x*C2y+C2y*C2z+C2z*C2x)+w[2]*(-0.4)*(C2x+C2y+C2z)',
   schwarz: null, // 走 else 分支：w[0]*Cx+w[1]*Cy+w[2]*Cz
 };

@@ -68,7 +68,7 @@ const FORMULAS = [
   { expr: 'cos(x) + cos(y) + cos(z)', mirror: (x, y, z) => Math.cos(x) + Math.cos(y) + Math.cos(z) },
   { expr: 'sin(z) - sinh(x)*sinh(y)', mirror: (x, y, z) => Math.sin(z) - Math.sinh(x) * Math.sinh(y) },
   { expr: 'exp(z)*cos(x) - cos(y)', mirror: (x, y, z) => Math.exp(z) * Math.cos(x) - Math.cos(y) },
-  { expr: '0.5*(2*sin(x)*cos(x)*cos(y)*sin(z) + 2*sin(y)*cos(y)*cos(z)*sin(x) + 2*sin(z)*cos(z)*cos(x)*sin(y)) - 0.5*(cos(2*x)*cos(2*y) + cos(2*y)*cos(2*z) + cos(2*z)*cos(2*x))', builtin: 'lidinoid' },
+  { expr: '0.5*(2*sin(x)*cos(x)*cos(y)*sin(z) + 2*sin(y)*cos(y)*cos(z)*sin(x) + 2*sin(z)*cos(z)*cos(x)*sin(y)) - 0.5*(cos(2*x)*cos(2*y) + cos(2*y)*cos(2*z) + cos(2*z)*cos(2*x)) + 0.15', builtin: 'lidinoid' },
   { expr: 'sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x) + 0.5*cos(2*x)*cos(2*y)*cos(2*z)' },
   { expr: 'cos(x) + cos(y) + cos(z) + 0.4*cos(2*r)', smoothAvoidOrigin: true },
   { expr: 'sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x) + 0.2*t*sin(x)*sin(y)*sin(z)', params: { k: 1, t: 1.4, iso: 0 } },

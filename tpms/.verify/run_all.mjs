@@ -23,7 +23,7 @@ const suites = [
   { name: 'slicepv（直接层切预览 6 项）', cmd: ['node', 'slicepv_check.mjs'], env: {} },
   { name: 'radialgrad（M(r) 径向梯度卡 7 项）', cmd: ['node', 'radialgrad_card_check.mjs'], env: {} },
   { name: 'region（径向双族分区卡 6 项）', cmd: ['node', 'region_card_check.mjs'], env: {} },
-  { name: 'card_smoke（深水卡默认配置冒烟 16 项）', cmd: ['node', 'card_smoke_check.mjs'], env: {} },
+  { name: 'card_smoke（深水卡默认配置冒烟 17 项）', cmd: ['node', 'card_smoke_check.mjs'], env: {} },
   // 红队 G M7 纳管（2026-09-29）：此前四探针游离于调度外，仅手动跑
   { name: 'expfit卡（实验曲线卡冒烟 4 项）', cmd: ['node', 'check_expfit_card.mjs'], env: {} },
   { name: 'meshcont卡（网格容器卡冒烟 4 项）', cmd: ['node', 'check_meshcont_card.mjs'], env: {} },

@@ -52,13 +52,20 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/lidinoid|利迪诺/i, 'lidinoid', 'Lidinoid'],
   [/split-?p|分裂p/i, 'splitp', 'Split-P'],
   [/o,?-?c-?to|octo|正交/i, 'octo', 'O,C-TO'],
-  [/karcher|\bk\b|卡切尔/i, 'karcher', 'K'],
+  [/karcher|karcher ?曲面|卡切尔/i, 'karcher', 'K'],
   [/fischer-?koch-?s|fk-?s\b/i, 'fks', 'Fischer-Koch S'],
   [/fischer-?koch-?y|fk-?y\b/i, 'fky', 'Fischer-Koch Y'],
   [/g-?prime|g′|g撇/i, 'gprime', "G'"],
-  [/c\(?s\)?|fischer-?koch-?c-?s/i, 'fcks', 'Fisher-Koch C(S)'],
+  // 2026-10-02 审查 M-1：裸 cs 无词边界劫持任意 "cs" 子串（"physics/mechanics"→fcks 实锤，
+  // Double Diamond 同族残留）；\bk\b 同理把 "k 系列" 劫持为 karcher——均加边界+中文锚
+  [/\bcs\b|\bc\(s\)|fischer-?koch-?c-?s/i, 'fcks', 'Fisher-Koch C(S)'],
   [/fischer-?koch-?c-?\(?y\)?|fk-?c-?\(?y\)?|c\(y\)/i, 'fcky', 'Fisher-Koch C(Y)'],
   [/complementary.?d|comp-?d|互补d/i, 'cdd', 'Complementary D'],
+  // 2026-10-02 审查 L-4：第六批四族补中文/英文词（此前 20/24 族可选中）
+  [/slot-?t-?e-?d.?p|slotp|开槽p|缝p/i, 'slotp', 'Slotted P'],
+  [/\bfs\b|fischer.?s\b/i, 'fs', 'F-S'],
+  [/q-?star|q\*|星q/i, 'qstar', 'Q*'],
+  [/\bws\b|w-?s\b/i, 'ws', 'W-S'],
 ];
 
 const MATERIAL_WORDS: Array<[RegExp, string, string]> = [

@@ -697,7 +697,7 @@ function buildSurface(type, iso, periods, R, options={}){
         else if(type==='iwp') v = w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx) - w[1]*(C2x+C2y+C2z);
         else if(type==='frd') v = w[0]*4*Cx*Cy*Cz - w[1]*(C2x*C2y+C2y*C2z+C2z*C2x);
         else if(type==='diamond') v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz;
-        else if(type==='lidinoid') v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x);
+        else if(type==='lidinoid') v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x) + 0.15;
         else if(type==='splitp') v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z);
         else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
         V[idxF(ix,iy,iz)] = v;
@@ -723,7 +723,7 @@ function buildSurface(type, iso, periods, R, options={}){
           else if(tB==='iwp') v = w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx) - w[1]*(C2x+C2y+C2z);
           else if(tB==='frd') v = w[0]*4*Cx*Cy*Cz - w[1]*(C2x*C2y+C2y*C2z+C2z*C2x);
           else if(tB==='diamond') v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz;
-          else if(tB==='lidinoid') v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x);
+          else if(tB==='lidinoid') v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x) + 0.15;
           else if(tB==='splitp') v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z);
           else v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
           VB[idxF(ix,iy,iz)] = v;
@@ -1348,7 +1348,7 @@ function tortFluidAt(state, x, y, z, isoUsed, tEff){
     case 'iwp': v = w[0]*2*(Cx*Cy+Cy*Cz+Cz*Cx) - w[1]*(C2x+C2y+C2z); break;
     case 'frd': v = w[0]*4*Cx*Cy*Cz - w[1]*(C2x*C2y+C2y*C2z+C2z*C2x); break;
     case 'diamond': v = w[0]*Sx*Sy*Sz + w[1]*Sx*Cy*Cz + w[2]*Cx*Sy*Cz + w[3]*Cx*Cy*Sz; break;
-    case 'lidinoid': v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x); break;
+    case 'lidinoid': v = w[0]*0.5*(2*Sx*Cx*Cy*Sz + 2*Sy*Cy*Cz*Sx + 2*Sz*Cz*Cx*Sy) + w[1]*(-0.5)*(C2x*C2y + C2y*C2z + C2z*C2x) + 0.15; break;
     case 'splitp': v = w[0]*1.1*(2*Sx*Cx*Cy*Sz + 2*Sx*Sy*Cy*Cz + 2*Cx*Sy*Sz*Cz) + w[1]*(-0.2)*(C2x*C2y + C2y*C2z + C2z*C2x) + w[2]*(-0.4)*(C2x + C2y + C2z); break;
     default: v = w[0]*Cx + w[1]*Cy + w[2]*Cz;
   }

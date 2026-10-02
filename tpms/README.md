@@ -26,9 +26,9 @@
 
 | 验收维度 | 结果 |
 |---|---|
-| 中英指令回归（37 条） | **glm-5.3-flash 多轮 37/37**（C3 缓解后 n≥2；缓解前 36/37 与 37/37 并存，勿称确定性；4-flash 33 / 4.6 35 / 5.3 36） |
+| 中英指令回归（37 条） | **glm-5.3-flash 多轮 37/37**（C3 缓解后 n≥2；勿称确定性；五档矩阵 2026-10-01：4-flash 34/37×2 · 5.3-flash 37/37×2 · 5.3 37/37×2） |
 | 对抗指令（路径穿越/越界/注入） | 四模型**零非法执行**（平台拒/模型拒/模型改发合法值三形态均零执行） |
-| 拦截器自身 | 离线确定性门禁 35 断言（含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截） |
+| 拦截器自身 | 离线确定性门禁 40 断言（含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截） |
 | 闭环驱动器 | 注入缺陷方案 ≤5 轮自动收敛（LLM 只选修复策略，应用与验收全确定性） |
 
 📘 技术叙事：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](../docs/blog/2026-09-16-44-gates.md)（红队实录与验证方法论）｜ [《从一句话到水密 STL：LLM Agent 的安全架构实录》](../docs/blog/2026-09-17-agent-architecture.md)（工具调用安全与闭环驱动器）。
@@ -66,7 +66,7 @@
 └── tpms/                      ← 工程化与开发辅助（不参与 Pages）
     ├── README.md              ← 你正在看的项目中枢
     ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185）
-    │   └── 86 个源文件 · Web Worker 重建 · 10+ 种导出格式
+    │   └── 87 个源文件 · Web Worker 重建 · 10+ 种导出格式
     ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
     ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
     ├── .verify/               ← 回归验证脚本（已入库；run_all.mjs 一键全量 + parity_math.mjs 数学一致性）
@@ -154,7 +154,7 @@ npm run dev      # 访问 http://localhost:5173
 - **Surface Nets v2 等值面重建**：自研替代 Marching Cubes，避免 256 条查找表。以「网格边穿越」为面提取键（构造性水密），孔口自动封盖，切向平滑 + 解析投影保体积，导出 STL 严格水密、定向一致、固相体积偏差 ≤6%（34 案例审计 `tpms/.verify/mesh_audit.mjs` 全过）。
 - **孔隙率 exact 求解**：解析 MC 求根 + 网格实测割线校正（shell 路径仍为体素分位二分，不宣称 exact）。
 - **渐进式重建**：拖动滑块低分辨率预览，松手后高清重建，保证 60fps 交互。
-- **零依赖交付**：单文件版内联 Three.js 0.160 IIFE bundle（docs/vendor/three.bundle.js，1.3MB），断网双击即开。
+- **零依赖交付**：单文件版内联 Three.js 0.160 IIFE bundle（docs/vendor/three.bundle.js，≈0.53MB），断网双击即开。
 
 ---
 
@@ -173,12 +173,12 @@ npm run dev      # 访问 http://localhost:5173
 
 ### 验证（一键全量）
 ```bash
-cd tpms/.verify && node run_all.mjs     # 10 套 UI 回归（需先起服务，见下）
+cd tpms/.verify && node run_all.mjs     # 17 套 UI 回归（需先起服务，见下）
 node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 调度 **45/45** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
+> CI 数量口径：`run_ci_suite.mjs` 调度 **46/46** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 
 ### 工程版部署到 GitHub Pages
 ```bash

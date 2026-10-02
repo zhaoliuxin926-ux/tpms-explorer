@@ -280,6 +280,6 @@ if (process.argv.includes('--json')) {
   const idx = process.argv.indexOf('--json');
   writeFileSync(process.argv[idx + 1], JSON.stringify(results, null, 2));
 }
-if (results.length < 30) { console.error('GUARD FAIL: 案例执行数 ' + results.length + ' < 基线 30（恒真/集体跳过防护，2026-09-04 审查纳管；2026-09-11 fcky+cdd +2）'); process.exit(1); }
+if (results.length < 34) { console.error('GUARD FAIL: 案例执行数 ' + results.length + ' < 基线 34（恒真/集体跳过防护；2026-10-02 审查 M4 对齐实测 34——旧 30 可静默丢 4 案例）'); process.exit(1); }
 console.log(pass ? '\n=== 全部通过 ===' : '\n=== 存在 FAIL ===');
 process.exit(pass ? 0 : 1);

@@ -511,5 +511,5 @@ function fillTorus(blend) {
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
 // 【2026-09-13 口径专项】10→14（+体积对拍/孔隙率闭环/envelope 换算共 5 条；实测 15 留 1 余量）
-if (pass < 25) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 25（方向 C 四 patch +8）`); process.exit(1); }
+if (pass < 30) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 30（2026-10-02 审查 M4 对齐实测 30——旧 25 可静默丢 5 断言）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

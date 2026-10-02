@@ -197,7 +197,7 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       return b.binary('sub', termA4, termB);
     }
     case 'lidinoid': {
-      // 0.5·w0·A − 0.5·w1·B（A/B 逐项见 tpms-functions.ts）
+      // 0.5·w0·A − 0.5·w1·B + 0.15（常偏置对齐 MiniSurf 源，与 tpms-functions.ts 同步）
       const half = b.load(0.5);
       const a1 = mulChain(b, [b.load(2), sin(mx), cos(mx), cos(my), sin(mz)]);
       const a2 = mulChain(b, [b.load(2), sin(my), cos(my), cos(mz), sin(mx)]);
@@ -207,7 +207,7 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const b2 = b.binary('mul', cos2(b, my), cos2(b, mz));
       const b3 = b.binary('mul', cos2(b, mz), cos2(b, mx));
       const termB = b.binary('mul', mulChain(b, [half, wreg(1), b.load(-1)]), sumChain(b, [b1, b2, b3]));
-      return b.binary('add', termA, termB);
+      return b.binary('add', b.binary('add', termA, termB), b.load(0.15));
     }
     case 'splitp': {
       const kA = b.load(1.1), kB = b.load(-0.2), kC = b.load(-0.4);

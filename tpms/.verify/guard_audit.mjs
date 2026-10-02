@@ -86,8 +86,11 @@ console.log('\n[B] GUARD 基线：代码阈值 vs 文案数字 账实一致性')
     //   模板串 `${pass} < 17（...）` 与 拼接串 '执行数 ' + passCount + ' < 基线 14（...）'
     // 【2026-09-29 红队自审修复】旧正则只看 console.error( 后第一个引号段——拼接串的
     // '基线 14' 在第二段被静默跳过（实测 15+ 处 GUARD 仅匹配 12 处）。改为截取整个
-    // console.error(...) 调用文本，收集其中全部数字：任一数字 == 阈值即视为一致
-    //（消息可含日期/批次等无关数字），全不等才报分裂。
+    // console.error(...) 调用文本，收集其中全部数字。
+    // 【2026-10-02 审查 H-3 收严】"任一数字==阈值"放过同消息双数字漂移（verify.mjs
+    // "基线 22（…+5 → 27）"实锤：阈值 27、消息首数字 22 陈旧、27 恰在消息尾部而放行）。
+    // 收严为两级：①消息含「基线 N」形态时 N 必须严格等于阈值；②否则退回任一数字命中
+    //（日期/批次等无关数字的消息仍可过，避免误伤）。
     const stmtRe = /<\s*(\d+)\s*\)[^{]*\{\s*console\.error\(([^;]*?)\);\s*\}?/g;
     let m;
     while ((m = stmtRe.exec(src))) {
@@ -96,8 +99,10 @@ console.log('\n[B] GUARD 基线：代码阈值 vs 文案数字 账实一致性')
       // 消息无数字（如参数校验 '--rounds 必须为正整数'）＝无可对拍文案，跳过
       if (nums.length === 0) continue;
       guardGates++;
-      if (!nums.includes(codeN)) {
-        splits.push(`${rel}: 代码阈值 ${codeN} 未在消息数字 [${nums.join(',')}] 中出现 → ${src.slice(m.index, m.index + 110).replace(/\s+/g, ' ')}`);
+      const jiXian = [...m[2].matchAll(/基线\s*(\d+)/g)].map((x) => Number(x[1]));
+      const mismatch = jiXian.length > 0 ? jiXian.some((n) => n !== codeN) : !nums.includes(codeN);
+      if (mismatch) {
+        splits.push(`${rel}: 代码阈值 ${codeN} 与消息${jiXian.length > 0 ? '「基线 N」' : '数字'} [${nums.join(',')}] 不一致 → ${src.slice(m.index, m.index + 110).replace(/\s+/g, ' ')}`);
       }
     }
   }
