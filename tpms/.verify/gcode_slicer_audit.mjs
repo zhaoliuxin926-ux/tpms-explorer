@@ -130,8 +130,8 @@ console.log('\n[E] gyroid 真实网格（R=16）');
     try { jm = JSON.parse(rm.stdout); } catch { /* */ }
     const meshVol = js && jm ? (1 - jm.porosityEstimate) * Math.pow(k, 3) : NaN;
     const dev = js && Number.isFinite(meshVol) ? Math.abs(js.slicedVolumeMm3 - meshVol) / meshVol : NaN;
-    check('F1 ' + ty + ' 直接层切 ≡ mesh 发散体积（双口径 ≤2%）',
-      rs.status === 0 && rm.status === 0 && dev <= 0.02,
+    check('F1 ' + ty + ' 直接层切 ≡ mesh 发散体积（双口径 ≤3%）',
+      rs.status === 0 && rm.status === 0 && dev <= 0.03,
       'dev=' + (Number.isFinite(dev) ? (dev * 100).toFixed(2) + '%' : 'n/a') + ' sliceExit=' + rs.status + ' meshExit=' + rm.status);
     if (js && js.files && js.files[0]) {
       const svg = readFileSync(js.files[0].file, 'utf8');

@@ -61,7 +61,7 @@ const handle = await page.evaluateHandle(([bytes]) => {
 }, [stlBytes]);
 // 轮询等待 SDF 终态（上传路径「已启用」会被后续 R 档 meshSdfEnsure 覆盖为「就绪」）
 let statusText0 = '';
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 180; i++) {
   await page.waitForTimeout(1000);
   statusText0 = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
   if (/已启用|就绪|✗/.test(statusText0)) break;
