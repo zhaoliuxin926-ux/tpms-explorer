@@ -622,8 +622,7 @@ export function initOnboard(): void {
     el.scrollIntoView({ block: 'nearest' });
     const r = el.getBoundingClientRect();
     const pad = 7;
-    spot.style.left = `${r.left - pad}px`;
-    spot.style.top = `${r.top - pad}px`;
+    spot.style.transform = `translate(${r.left - pad}px, ${r.top - pad}px)`;
     spot.style.width = `${r.width + pad * 2}px`;
     spot.style.height = `${r.height + pad * 2}px`;
     spot.classList.add('show');

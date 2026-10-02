@@ -244,7 +244,7 @@
   .onboard-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:#fff;color:var(--accent-d);transition:all .15s}
   .onboard-btn:hover{background:var(--accent-soft)}
   .onboard-btn svg{width:16px;height:16px}
-  .ob-spot{position:fixed;left:0;top:0;width:0;height:0;border-radius:12px;z-index:10000;pointer-events:none;box-shadow:0 0 0 100vmax rgba(10,13,20,.6);border:2.5px solid var(--accent);opacity:0;transition:left .32s cubic-bezier(.2,.8,.2,1),top .32s cubic-bezier(.2,.8,.2,1),width .32s cubic-bezier(.2,.8,.2,1),height .32s cubic-bezier(.2,.8,.2,1),opacity .2s}
+  .ob-spot{position:fixed;left:0;top:0;width:0;height:0;border-radius:12px;z-index:10000;pointer-events:none;box-shadow:0 0 0 100vmax rgba(10,13,20,.6);border:2.5px solid var(--accent);opacity:0;/* 2026-10-02 CLS 根修：left/top 过渡每帧触发布局位移计分(trace 归因 ob-spot 10 次 shift)——位移走 transform 合成层动画不计 CLS,尺寸直设 */transform:translate(0,0);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .2s;will-change:transform}
   .ob-spot.show{opacity:1}
   .ob-spot::after{content:"";position:absolute;inset:-3px;border-radius:13px;animation:obPulse 1.9s ease-out infinite;pointer-events:none}
   @keyframes obPulse{0%{box-shadow:0 0 0 0 rgba(13,148,136,.5)}70%{box-shadow:0 0 0 12px rgba(13,148,136,0)}100%{box-shadow:0 0 0 0 rgba(13,148,136,0)}}
@@ -2658,8 +2658,7 @@ rebuild();
     el.scrollIntoView({block:'nearest'});
     const r=el.getBoundingClientRect();
     const pad=7;
-    spot.style.left=(r.left-pad)+'px';
-    spot.style.top=(r.top-pad)+'px';
+    spot.style.transform='translate('+(r.left-pad)+'px,'+(r.top-pad)+'px)';
     spot.style.width=(r.width+pad*2)+'px';
     spot.style.height=(r.height+pad*2)+'px';
     spot.classList.add('show');
