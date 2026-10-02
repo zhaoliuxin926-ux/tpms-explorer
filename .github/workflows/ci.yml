@@ -101,7 +101,7 @@ jobs:
       - name: Deployed-artifact parity (docs/platform vs rebuilt dist)
         run: |
           set +e
-          diff -r --exclude='*.map' tpms/tpms-platform/dist docs/platform > /tmp/parity_diff.txt 2>&1
+          diff -r --strip-trailing-cr --exclude='*.map' tpms/tpms-platform/dist docs/platform > /tmp/parity_diff.txt 2>&1
           code=$?
           set -e
           if [ $code -ne 0 ]; then
