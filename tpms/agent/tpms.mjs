@@ -93,9 +93,10 @@ function formulaFingerprint() {
 }
 function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   const gradKey = isoGrad ? 'G' + JSON.stringify(isoGrad.stops) : '';
-  // 【2026-10-02 C1 修复】键版本 v2：求根域从硬编码 ±1.6 改为族场值域自适应，
-  // 旧缓存条目（截断 iso*）必须失活，不静默命中。
-  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}:v2${gradKey}`;
+  // 键版本史：v2=求根域自适应（C1）；v3=2026-10-03 追杀 band 语义修复——v2 时代条目的
+  // band 误存二分收敛指针（~5e-10 缝，致 solve 割线全线 iso_boundary 早退、mesh 校正
+  // 失效），v3 强制重算不再命中带毒 band
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}:v3${gradKey}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
@@ -103,16 +104,18 @@ function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   // isoGrad 在场时有效阈值 iso+off(pz)（off∈±1.5）——band 两侧外扩 max|off|（复审 M-3）
   const { lo: domLo, hi: domHi } = core.fieldRange(core.getTpmsFunction(type), W);
   const gradPad = isoGrad ? Math.max(...isoGrad.stops.map((s) => Math.abs(s[1]))) : 0;
-  let lo = domLo - gradPad, hi = domHi + gradPad;
+  // band=求根域本身（非二分收敛后的 lo/hi 指针——见键版本史 v3 注）
+  const bandLo = domLo - gradPad, bandHi = domHi + gradPad;
+  let lo = bandLo, hi = bandHi;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
     if (porAnalytic(core, type, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid; else hi = mid;
   }
   const iso = (lo + hi) / 2;
-  const clamped = iso - lo < 1e-3 || hi - iso < 1e-3;
+  const clamped = iso - bandLo < 1e-3 || bandHi - iso < 1e-3;
   const d = 0.02;
   const slope = (porAnalytic(core, type, iso + d, W, 40000, isoGrad) - porAnalytic(core, type, iso - d, W, 40000, isoGrad)) / (2 * d);
-  const result = { iso, slope, band: [lo, hi], clamped };
+  const result = { iso, slope, band: [bandLo, bandHi], clamped };
   cache[key] = result;
   // 原子写（终审：直写被并发/中断截断会丢整个缓存）：temp + rename
   try { writeFileSync(ISO_CACHE_TMP, JSON.stringify(cache, null, 1)); renameSync(ISO_CACHE_TMP, ISO_CACHE); } catch { /* 只读环境忽略 */ }

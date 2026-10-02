@@ -88,9 +88,10 @@ if (mdPath) {
     '## 4. 对标（开源生态）', '',
     '| 能力 | 本项目 | RegionTPMS | MiniSurf | microgen |', '|---|---|---|---|---|',
     '| 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |',
-    '| 曲面族 | 20 | 4 | 19 | 8+ |',
-    '| 验证门禁 | 45 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |',
-    '| 孔隙率求解 | exact 解析求根+网格实测校正（Diamond R96 0.13pp） | 解析 NIntegrate | level-set 近似 | 数值 |',
+    // 2026-10-02 审查：模板数字曾停 20 族/45 门——生成器每次重算冲掉手修，源头修
+    '| 曲面族 | 24 | 4 | 19 | 8+ |',
+    '| 验证门禁 | 46 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |',
+    '| 孔隙率求解 | exact 解析求根+网格实测校正（Diamond R96 见 §2 当前快照，MC 噪声带 0.1~0.4pp） | 解析 NIntegrate | level-set 近似 | 数值 |',
     '| 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |',
     '| 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |',
     '| 仿真交付 | STL/INP/OBJ/GLB/3MF/VTI/G-code | STL | STL/INP | STL/mesh |', '',

@@ -134,8 +134,14 @@ export function solveIsoAnalytic(
   // isoGrad 在场时有效阈值为 iso+off(pz)（off ∈ ±1.5）——band 两侧外扩 max|off|，
   // 否则极端渐变 + target 近 0/1 时可达带被低估（复审 M-3）
   const gradPad = isoGrad ? Math.max(...isoGrad.stops.map((s) => Math.abs(s[1]))) : 0;
-  let lo = domLo - gradPad;
-  let hi = domHi + gradPad;
+  // 【2026-10-03 追杀修复】band 必须是【求根域】本身——此前误用二分收敛后的 lo/hi 指针
+  // （34 轮后宽度 ~5e-10 的缝）：clamped 恒真 + 任何割线校正步都"触界"（solve 全线
+  // iso_boundary 早退、mesh 校正被钳死失效——CI iwp 三平台逐位同 0.78pp 的真根因，
+  // 非	Node 差异；本地曾因命中无 band 旧缓存走 ±1.6 兜底而侥幸绿）
+  const bandLo = domLo - gradPad;
+  const bandHi = domHi + gradPad;
+  let lo = bandLo;
+  let hi = bandHi;
   for (let it = 0; it < 34; it++) {
     const mid = (lo + hi) / 2;
     if (porAnalytic(f, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid;
@@ -143,11 +149,11 @@ export function solveIsoAnalytic(
   }
   const iso = (lo + hi) / 2;
   // 卡界检测：目标落在可达带边缘（自适应全域下仅 target≈0/1 时可达）——供调用方披露
-  const clamped = iso - lo < 1e-3 || hi - iso < 1e-3;
+  const clamped = iso - bandLo < 1e-3 || bandHi - iso < 1e-3;
   const d = 0.02;
   const slope =
     (porAnalytic(f, iso + d, W, 40_000, isoGrad) - porAnalytic(f, iso - d, W, 40_000, isoGrad)) / (2 * d);
-  const result = { iso, slope, band: [lo, hi] as [number, number], clamped };
+  const result = { iso, slope, band: [bandLo, bandHi] as [number, number], clamped };
   if (isoMemo.size >= ISO_MEMO_MAX) {
     const oldest = isoMemo.keys().next().value;
     if (oldest !== undefined) isoMemo.delete(oldest);

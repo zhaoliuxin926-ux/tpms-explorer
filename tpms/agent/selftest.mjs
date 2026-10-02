@@ -157,11 +157,11 @@ rmSync(stlPath, { force: true });
   } catch (e) { bad('solve STL 复核异常', String(e)); }
   // 10b. splitp 高容差收敛（R96 tol 0.5pp——R48 0.05pp 属 C1 前旧 iso 幸运收敛，ubuntu
   // 实测 1.38pp；R96 基准 0.30pp 有 margin；k 修复前 stall@0.18pp 判不可达的对照语义保留）
-  const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '96', '--tolerance', '0.01', '--max-rounds', '4', '--json');
+  const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '96', '--tolerance', '0.0005', '--max-rounds', '4', '--json');
   let j10b = null;
   try { j10b = JSON.parse(r10b.stdout); } catch { /* 忽略 */ }
-  r10b.status === 0 && j10b?.reachable === true && j10b.porosityDeviation <= 0.01 && j10b.watertight === true
-    ? ok(`splitp R96 1pp 容差收敛（实测 ${(j10b.porosityDeviation * 100).toFixed(3)}pp，k 修复前 stall@0.18pp）`) : bad('splitp 高精度收敛', JSON.stringify({ s: r10b.status, r: j10b?.reachable, d: j10b?.porosityDeviation }).slice(-100));
+  r10b.status === 0 && j10b?.reachable === true && j10b.porosityDeviation <= 0.0005 && j10b.watertight === true
+    ? ok(`splitp R96 0.05pp 容差收敛（实测 ${(j10b.porosityDeviation * 100).toFixed(3)}pp，k 修复前 stall@0.18pp）`) : bad('splitp 高精度收敛', JSON.stringify({ s: r10b.status, r: j10b?.reachable, d: j10b?.porosityDeviation }).slice(-100));
   // 10c. solve 参数防呆
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--tolerance', '0.5').status !== 0 ? ok('solve tolerance 越界被拒') : bad('solve tolerance 未拒绝');
   run('solve', '--type', 'gyroid', '--porosity', '0.5', '--max-rounds', '0').status !== 0 ? ok('solve max-rounds 越界被拒') : bad('solve max-rounds 未拒绝');
@@ -170,13 +170,14 @@ rmSync(stlPath, { force: true });
 }
 // ── 11. B4.2 不可达判定轮次（显式用例）：高谐波族低分辨率 tol 不可达 → max-rounds 内 stall 判定 ──
 {
-  // 11a.【k 修复后】iwp tol 0.5pp 收敛（R96 鲁棒档——R48 属 C1 后非确定收敛域，
-  // round2 ubuntu 实测 dev 3.7pp；修复前 stall best=23.1pp 的对照语义保留）
-  const r11 = run('solve', '--type', 'iwp', '--porosity', '0.6', '--resolution', '96', '--tolerance', '0.01', '--max-rounds', '5', '--json');
+  // 11a.【k 修复后】iwp R96 0.05pp 收敛——r2~r4 的 3.7pp/0.78pp "跨平台差"实为缝 band
+  // bug（band 误存二分指针→割线全线 iso_boundary），2026-10-03 v3 修复后恢复本值；
+  // 修复前 stall best=23.1pp 的对照语义保留
+  const r11 = run('solve', '--type', 'iwp', '--porosity', '0.6', '--resolution', '96', '--tolerance', '0.0005', '--max-rounds', '5', '--json');
   let j11 = null;
   try { j11 = JSON.parse(r11.stdout); } catch { /* 忽略 */ }
-  r11.status === 0 && j11?.reachable === true && j11.porosityDeviation <= 0.01 && j11.watertight === true
-    ? ok(`B4.2 iwp R96 1pp 容差收敛（${j11.rounds} 轮，k 修复前 stall@23.1pp）`) : bad('B4.2 iwp 收敛', JSON.stringify({ s: r11.status, r: j11?.reachable, d: j11?.porosityDeviation }).slice(-100));
+  r11.status === 0 && j11?.reachable === true && j11.porosityDeviation <= 0.0005 && j11.watertight === true
+    ? ok(`B4.2 iwp R96 0.05pp 容差收敛（${j11.rounds} 轮，k 修复前 stall@23.1pp）`) : bad('B4.2 iwp 收敛', JSON.stringify({ s: r11.status, r: j11?.reachable, d: j11?.porosityDeviation }).slice(-100));
   // 11b. 不可达诊断路径保底：极端容差 + 单轮 → max_rounds 结构化诊断（确定性）
   const r11b = run('solve', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--tolerance', '0.00005', '--max-rounds', '1', '--json');
   let j11b = null;

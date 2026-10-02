@@ -98,7 +98,7 @@ let meshFill: THREE.Mesh | null = null;
 let meshStrut: THREE.LineSegments | null = null;
 let lastPorosityEstimate = 0;
 /** exact 路径一次性网格割线：解析 iso* 后若网格实测偏差大，用斜率再调一档（防环：forceExactIso 只消费一次） */
-let pendingExactFix: { target: number; slope: number; iso: number; band?: [number, number] } | null = null;
+let pendingExactFix: { target: number; slope: number; iso: number; band?: [number, number]; stateSig?: string } | null = null;
 let forceExactIso: { iso: number; stateKey: string } | null = null;
 /** 同状态最后一次 exact 完成帧 iso（含割线）——导出侧复用，避免只拿解析根与屏幕不一致 */
 let lastExactIso: { iso: number; stateSig: string } | null = null;
@@ -1949,7 +1949,9 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
         const { iso: isoStar, slope, band } = solveIsoAnalytic(fExact as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, s.porosity / 100, s.weights, undefined, `ui:${s.type}:${s.customFormula || ''}`);
         isoOut = isoStar;
         targetPorosity = undefined;
-        pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar, band };
+        // stateSig 供结果处理器校验：in-flight 响应到达时用户已改参则弃用旧 fix
+        //（复审 L-3：与 forceExactIso 的 stateKey 防护对称）
+        pendingExactFix = { target: s.porosity / 100, slope, iso: isoStar, band, stateSig: geometryStateKey(s) };
       }
     } catch {
       // 解析求根失败回退体素二分（保持可构建）
@@ -2238,9 +2240,14 @@ function onWorkerResult(res: WorkerResponse): void {
 
   // exact 一次性割线校正（CLI solveExactPorosity 同策略）：网格实测偏离目标时
   // 用斜率调 iso 再建一档；变差或已够准则不重入（forceExactIso 单次消费）。
+  // stateSig 守卫（复审 L-3）：响应到达时若几何状态指纹已变（防抖窗内改参），
+  // 旧 fix 与新状态错配——弃用本轮校正，与 forceExactIso 的防护对称。
   if (pendingExactFix) {
     const fix = pendingExactFix;
     pendingExactFix = null;
+    if (fix.stateSig !== undefined && fix.stateSig !== geometryStateKey(current)) {
+      // 状态已变：跳过校正（新状态的 rebuild 自带新 fix）
+    } else {
     const err = res.porosityEstimate - fix.target;
     if (Math.abs(err) > 0.005 && Number.isFinite(fix.slope) && Math.abs(fix.slope) > 1e-6) {
       let next = fix.iso + (fix.target - res.porosityEstimate) / fix.slope;
@@ -2255,6 +2262,7 @@ function onWorkerResult(res: WorkerResponse): void {
         // 先落当前帧再校正，避免空白；校正完成后 scheduleRebuild 覆盖
         queueMicrotask(() => scheduleRebuild(false, true));
       }
+    }
     }
   }
 
