@@ -91,4 +91,5 @@
 - 2026-10-03 实测（Chrome 稳定版 · Pages 线上 · 落地页+platform × desktop+mobile 四轮）：Accessibility / Best Practices / SEO / Agentic Browsing 四类 **100/100**（落地页两轮各 40 项审计零失败；platform 两轮各 50 项零失败；分数有环境方差，以当日复测为准）
 - 2026-10-04 补测教学版 docs/app.html（Pages 形态 × desktop+mobile 两轮）：四类同样 **100/100**（各 51 项审计零失败）——三页 × 双端六轮全满贯
 - 关键时延（同日 Navigation Timing，未节流口径）：落地页 TTFB 194ms · FCP 1.06s · load 0.95s；platform 首开 load 4.7s · 传输 ~325KB（gzip；three.js 主包 277KB 见 GitHub 压缩产物口径）；教学版 TTFB 516ms · FCP 0.93s · load 1.8s · 传输 ~138KB
-- 复测口径：chrome-devtools MCP `lighthouse_audit`（navigation，desktop/mobile）×3 页；本节数字仅在人工复测后更新（生成器重跑 §1-§5 不触碰本节内容块以外的快照值）
+- 复测口径（访客可复现）：Chrome DevTools Lighthouse 面板 / Lighthouse CLI / PageSpeed Insights 任一，对三页各跑 desktop+mobile navigation 审计；本节数字仅在人工复测后更新（生成器重跑 §1-§5 不触碰本节内容块以外的快照值）
+- 口径披露：本快照为 Accessibility/Best Practices/SEO/Agentic 四类，**不含 Performance 类**；加载时延以上行未节流 Navigation Timing 另列，**与 Lighthouse simulated 节流值口径不可互比**
