@@ -736,12 +736,47 @@ function meshSdfEnsure(R: number): Promise<void> {
   sdfEnsureJobs.set(n, job);
   return job;
 }
+/**
+ * SDF 降档重采样：【2026-10-03 S2 实测】每个新 R 档全量重算 O(采样×三角)——82k 三角
+ * STL 拖一下 cellSize 等 103s。改为：上传时的 HD 档 SDF 算一次，更小档（l2/预览）
+ * 三线性降采样瞬时供给。误差口径（球面 SDF 63³→50³ 离线对拍实测）：maxErr≈1.7×目标
+ * 格距（三线性+Lipschitz 场的盒半对角级），与该档直接全量计算的表面定位固有精度
+ * （±1 格距级）工程等价；升档（R>R0）仍走 Worker 全量，不引入上采样失真。
+ */
+function meshSdfResampleFrom(n: number): Float32Array | null {
+  if (!meshCont) return null;
+  if (meshCont.sdfCache.has(n)) return meshCont.sdfCache.get(n) ?? null;
+  let srcN = -1;
+  for (const k of meshCont.sdfCache.keys()) if (k >= n && k > srcN) srcN = k;
+  if (srcN < 0) return null;
+  const src = meshCont.sdfCache.get(srcN)!;
+  const out = new Float32Array(n * n * n);
+  const ratio = (srcN - 1) / (n - 1);
+  for (let z = 0; z < n; z++) {
+    const zs = Math.min(srcN - 2, z * ratio), z0 = Math.floor(zs), fz = zs - z0;
+    for (let y = 0; y < n; y++) {
+      const ys = Math.min(srcN - 2, y * ratio), y0 = Math.floor(ys), fy = ys - y0;
+      const base = (z * n + y) * n;
+      for (let x = 0; x < n; x++) {
+        const xs = Math.min(srcN - 2, x * ratio), x0 = Math.floor(xs), fx = xs - x0;
+        const i000 = (z0 * srcN + y0) * srcN + x0;
+        const c00 = src[i000] + (src[i000 + 1] - src[i000]) * fx;
+        const c01 = src[i000 + srcN] + (src[i000 + srcN + 1] - src[i000 + srcN]) * fx;
+        const c10 = src[i000 + srcN * srcN] + (src[i000 + srcN * srcN + 1] - src[i000 + srcN * srcN]) * fx;
+        const c11 = src[i000 + srcN * srcN + srcN] + (src[i000 + srcN * srcN + srcN + 1] - src[i000 + srcN * srcN + srcN]) * fx;
+        out[base + x] = (c00 + (c01 - c00) * fy) + ((c10 + (c11 - c10) * fy) - (c00 + (c01 - c00) * fy)) * fz;
+      }
+    }
+  }
+  meshCont.sdfCache.set(n, out);
+  return out;
+}
 function meshSdfFor(R: number): Float32Array | null {
   if (!meshCont) return null;
   const n = R + 1;
-  const sdf = meshCont.sdfCache.get(n) ?? null;
+  const sdf = meshSdfResampleFrom(n);
   if (!sdf) {
-    // 缓存 miss：触发异步预热，完成后重入重建——绝不主线程同步算（冻结源）
+    // 缓存 miss（无更大档可降采样）：触发异步预热，完成后重入重建——绝不主线程同步算（冻结源）
     meshSdfEnsure(R)
       .then(() => scheduleRebuild(false))
       .catch((e) => flashToast('失败：' + (e instanceof Error ? e.message : String(e))));
