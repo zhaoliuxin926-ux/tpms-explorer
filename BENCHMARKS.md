@@ -89,5 +89,6 @@
 ## 6. 访客体验快照（Lighthouse·环境相关·人工复测节——生成器不重算，数字为标注日期的实测快照）
 
 - 2026-10-03 实测（Chrome 稳定版 · Pages 线上 · 落地页+platform × desktop+mobile 四轮）：Accessibility / Best Practices / SEO / Agentic Browsing 四类 **100/100**（落地页两轮各 40 项审计零失败；platform 两轮各 50 项零失败；分数有环境方差，以当日复测为准）
-- 关键时延（同日 Navigation Timing）：落地页 TTFB 194ms · FCP 1.06s · load 0.95s；platform 首开 load 4.7s · 传输 ~325KB（gzip；three.js 主包 277KB 见 GitHub 压缩产物口径）
-- 复测口径：chrome-devtools MCP `lighthouse_audit`（navigation，desktop/mobile）对两页各跑一轮；本节数字仅在人工复测后更新（生成器重跑 §1-§5 不触碰本节内容块以外的快照值）
+- 2026-10-04 补测教学版 docs/app.html（Pages 形态 × desktop+mobile 两轮）：四类同样 **100/100**（各 51 项审计零失败）——三页 × 双端六轮全满贯
+- 关键时延（同日 Navigation Timing，未节流口径）：落地页 TTFB 194ms · FCP 1.06s · load 0.95s；platform 首开 load 4.7s · 传输 ~325KB（gzip；three.js 主包 277KB 见 GitHub 压缩产物口径）；教学版 TTFB 516ms · FCP 0.93s · load 1.8s · 传输 ~138KB
+- 复测口径：chrome-devtools MCP `lighthouse_audit`（navigation，desktop/mobile）×3 页；本节数字仅在人工复测后更新（生成器重跑 §1-§5 不触碰本节内容块以外的快照值）
