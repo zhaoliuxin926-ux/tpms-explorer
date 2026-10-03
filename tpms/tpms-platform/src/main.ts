@@ -686,6 +686,7 @@ function meshSdfEnsure(R: number): Promise<void> {
     const w = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
     const id = ++meshSdfSeq;
     const status = meshSdfStatus();
+    const t0 = performance.now();
     if (status) { status.style.display = 'block'; status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 0%'; }
     // 看门狗：worker 卡死时 Promise 永不 settle 且 sdfEnsureJobs 占位——后续同档全挂。
     // 【2026-10-03 R2】与上传路径统一为活跃度看门狗：progress 在跳就重置 180s，任意
@@ -708,7 +709,17 @@ function meshSdfEnsure(R: number): Promise<void> {
       if (d.id !== id) return;
       if (d.progress !== undefined) {
         feedWatchdog();
-        if (status) status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 ' + Math.round(d.progress * 100) + '%';
+        if (status) {
+          // ETA 实测外推（免标定吞吐模型）：elapsed×(1−p)/p。前 3% 单条进度噪声大不显示；
+          // 秒级取 5s 步进防跳变，≥90s 报分钟量级（大 STL 升档全量可达 10 分钟级，
+          // 2026-10-03 取证：裸百分比让用户无从判断该等还是该放弃）
+          let eta = '';
+          if (d.progress > 0.03) {
+            const sec = ((performance.now() - t0) / 1000) * (1 - d.progress) / d.progress;
+            eta = sec < 90 ? `（预计剩余 ~${Math.max(5, Math.round(sec / 5) * 5)}s）` : `（预计剩余 ~${Math.max(1, Math.round(sec / 60))} 分钟）`;
+          }
+          status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 ' + Math.round(d.progress * 100) + '%' + eta;
+        }
         return;
       }
       clearTimeout(watchdog);
@@ -1916,6 +1927,14 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     R = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);  // Level 3: 首屏直接高清
   } else {
     R = l2Resolution(s.type, s.structureMode, s.gradientDir, s.cellSize);  // Level 2: 中等分辨率
+    // 【2026-10-03 升档单 job】l2 档大于已缓存最大档（升档态）时 l2 让位 HD：否则
+    // rebuild(l2) 与 scheduleHdUpgrade(HD) 双 Worker 全量并行互拖（5120 三角实测
+    // R69/R89 交错抢核）。HD 就绪后 l2 由降采样瞬时供给，不损失任何档位。
+    if (meshCont) {
+      let maxTier = 0;
+      for (const k of meshCont.sdfCache.keys()) if (k > maxTier) maxTier = k;
+      if (R + 1 > maxTier) R = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+    }
   }
   const iso = baseIso(s);
 
@@ -1965,12 +1984,14 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     return { fromCache: true };
   }
 
-  // B+ 专项：mesh 容器 SDF 该 R 档未就绪时本轮跳过（meshSdfFor 内部已触发异步预热，
-  // 完成后 scheduleRebuild 重入）——绝不主线程同步算 SDF（冻结源），也绝不无 SDF
-  // 降级 cube 裁剪重建（红队 A C-3 竞态先例：屏幕保形/静默 cube 是 CRITICAL 形态）
+  // B+ 专项：mesh 容器 SDF 该 R 档未就绪时，meshSdfFor 内部先尝试降采样（有更大缓存档
+  // 即时供给）并触发异步预热——绝不主线程同步算 SDF（冻结源），也绝不无 SDF 降级 cube
+  // 裁剪重建（红队 A C-3 竞态先例：屏幕保形/静默 cube 是 CRITICAL 形态）。
+  // 【2026-10-03 修】降采样命中则本轮继续正常重建：原实现无条件 return 把降采样结果
+  // 丢弃——升档拖动期间 preview/l2/HD 全部 no-op，屏幕定格旧帧直至全量就绪
+  // （5120 三角实测 167s 零视觉反馈）。仅真无档（如上传中）才跳过，预热完成后重入。
   if (meshCont && !meshCont.sdfCache.has(R + 1)) {
-    meshSdfFor(R);
-    return { fromCache: false };
+    if (!meshSdfFor(R)) return { fromCache: false };
   }
 
   // A2 exact 求解器（与 CLI 默认同源）：纯 solid_network + 无修饰时用解析 iso*，

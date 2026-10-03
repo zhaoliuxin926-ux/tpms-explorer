@@ -2,9 +2,14 @@
 // 守护对象（修复史见 main.ts meshSdfResampleFrom / 活跃度看门关注释）：
 //   A. 活跃度看门狗：5120 三角球（icosphere(4)）上传 SDF 须完成而非撞固定墙
 //      （81920 三角时代 180s 硬墙恰在完成前误杀——进度正常到 79% 被 terminate）
-//   B. 降档重采样：上传就绪后拖 cellSize，更小档 SDF 须即时供给（60s 观测窗零
+//   B. 降档重采样：上传就绪后拖 cellSize，更小档 SDF 须即时供给（30s 观测窗零
 //      "档计算中" Worker 文案即降采样路径生效；修复前同路径 82k 实测 103s 全量重算）
-// fixture 运行时生成（icosphere 确定性），无二进制入库；~25s 总耗时入 run_all。
+//   C. 升档单 job+ETA（2026-10-03 第二批）：拖 cellSize 3→5（R61→R89 升档全量），
+//      ①只允许 R89 一个档号出现在"档计算中"（修复前 rebuild(l2 R69) 与
+//      scheduleHdUpgrade(HD R89) 双 Worker 全量并行互拖，5120 三角实测 167s；
+//      修复=升档态 l2 让位 HD，HD 就绪后 l2 降采样供给）②status 须带"预计剩余"
+//      （实测外推 ETA——裸百分比让用户无从判断该等还是该放弃）
+// fixture 运行时生成（icosphere 确定性），无二进制入库；~40s 总耗时入 run_all。
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -88,6 +93,25 @@ try {
     ok('B 降档重采样：拖 cellSize 后 30s 无「档计算中」（更小档即时供给）', !sawCompute, sawCompute ? '出现计算中文本（若为 HD 升档后台算属合法，人工判读）' : '即时');
     ok('B 调参零 pageerror', errors.length === 0, errors.slice(0, 2).join(' | '));
   }
+
+  // C. 升档单 job+ETA：拖 cellSize 3→5（R61→R89 全量升档）
+  if (/已启用/.test(uploaded)) {
+    await page.evaluate(() => { const el = document.getElementById('cell-size'); el.value = '5'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+    const tiers = new Set(); let etaSeen = false, cStatus = '', etaAt = -1;
+    for (let i = 0; i < 90; i++) {
+      await page.waitForTimeout(1000);
+      cStatus = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '').catch(() => '');
+      const m = cStatus.match(/R(\d+) 档计算中/); if (m) tiers.add(m[1]);
+      if (etaAt < 0 && /预计剩余/.test(cStatus)) etaAt = i;
+      if (etaAt >= 0 && /预计剩余/.test(cStatus)) etaSeen = true;
+      // ETA 确认后再守 10s：第二档号若迟到（双 job 回归）在此窗口暴露
+      if (etaAt >= 0 && i - etaAt >= 10) break;
+      if (/档就绪|✗/.test(cStatus)) break;
+    }
+    ok('C 升档单 job：仅 HD 档(R89)在算（l2 让位，无双 Worker 互拖）', tiers.size === 1 && tiers.has('89'), `tiers=[${[...tiers].join(',')}] ${cStatus.slice(0, 50)}`);
+    ok('C 升档 ETA：status 带预估剩余时间', etaSeen, cStatus.slice(0, 50));
+    ok('C 升档零 pageerror', errors.length === 0, errors.slice(0, 2).join(' | '));
+  }
   await browser.close();
 } catch (e) {
   fail++; console.log('FAIL 探针异常', String(e).slice(0, 100));
@@ -96,5 +120,5 @@ try {
   try { rmSync(OUT); } catch { /* 忽略 */ }
 }
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==  (MESHCONT SCALE PROBE)`);
-if (pass < 4) { console.error(`GUARD FAIL: ${pass} < 4（活跃度看门狗+降档重采样双修复回归钉）`); process.exit(1); }
+if (pass < 7) { console.error(`GUARD FAIL: ${pass} < 7（活跃度看门狗+降档重采样+升档单job/ETA 三修复回归钉）`); process.exit(1); }
 process.exit(fail ? 1 : 0);
