@@ -111,22 +111,10 @@ function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
-  // 求根域=族场值域（粗网格 24³ 采样 + pad），可达孔隙率带=全域 [0,1]；
-  // isoGrad 在场时有效阈值 iso+off(pz)（off∈±1.5）——band 两侧外扩 max|off|（复审 M-3）
-  const { lo: domLo, hi: domHi } = core.fieldRange(core.getTpmsFunction(type), W);
-  const gradPad = isoGrad ? Math.max(...isoGrad.stops.map((s) => Math.abs(s[1]))) : 0;
-  // band=求根域本身（非二分收敛后的 lo/hi 指针——见键版本史 v3 注）
-  const bandLo = domLo - gradPad, bandHi = domHi + gradPad;
-  let lo = bandLo, hi = bandHi;
-  for (let it = 0; it < 34; it++) {
-    const mid = (lo + hi) / 2;
-    if (porAnalytic(core, type, mid, W, MC_BISECT_N, isoGrad) > target) lo = mid; else hi = mid;
-  }
-  const iso = (lo + hi) / 2;
-  const clamped = iso - bandLo < 1e-3 || bandHi - iso < 1e-3;
-  const d = 0.02;
-  const slope = (porAnalytic(core, type, iso + d, W, 40000, isoGrad) - porAnalytic(core, type, iso - d, W, 40000, isoGrad)) / (2 * d);
-  const result = { iso, slope, band: [bandLo, bandHi], clamped };
+  // 【复审 L1 归一】数学单一来源=core.solveIsoAnalytic（porosity-solver.ts）——此前 CLI
+  // 内嵌手工拷贝，"只改 core 修 bug"时 CLI 漂移（指纹盖 core 源却盖不住拷贝，键声称新
+  // 值是旧行为）。CLI 现在只是磁盘缓存壳：miss 即调 core，键/值同源。
+  const result = core.solveIsoAnalytic(core.getTpmsFunction(type), target, W, isoGrad ?? undefined, `cli:${type}`);
   cache[key] = result;
   // 原子写（终审：直写被并发/中断截断会丢整个缓存）：temp + rename
   try { writeFileSync(ISO_CACHE_TMP, JSON.stringify(cache, null, 1)); renameSync(ISO_CACHE_TMP, ISO_CACHE); } catch { /* 只读环境忽略 */ }

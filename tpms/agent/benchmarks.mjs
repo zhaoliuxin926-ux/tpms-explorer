@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// benchmarks.mjs —— B5 公开基准采集：20 曲面 × R{48,96} × p0.6 矩阵
+// benchmarks.mjs —— B5 公开基准采集：24 曲面 × R{48,96} × p0.6 矩阵
 // 每格：退出码/水密三硬指标/解析-实测孔隙率偏差/构建耗时/交付物
 // 用法: node tpms/agent/benchmarks.mjs [--md 仓库根/BENCHMARKS.md] [--json 路径] [--quick(R48-only)]
 // 诚实口径：拒产/超时如实记录（fail-closed 是平台行为的一部分）；fcks 可产域=R120 中段孔隙率（p0.5-0.7 实测可产）。
@@ -76,7 +76,7 @@ if (mdPath) {
       const g = (R) => { const r = rows.find((x) => x.type === t && x.R === R); return r?.watertight ? '✅' : '⛔'; };
       const note = t === 'fcks' ? '谐波 3×：可产域=R120 k6（p0.5-0.7 nm=0）∪ R128 k2（nm=0，偏差 0.13pp，~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避'
         : t === 'dprime' || t === 'cdd' ? '低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48）'
-        : t === 'dg' ? 'p0.6 iso 触求解域下界 −1.6：偏差 ~8pp 为可用域事实（nm=0 可产，如实报告）'
+        : t === 'dg' ? '求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 ~8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），升分辨率可产'
         : t === 'gprime' ? '默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产'
         : ['frd', 'lidinoid', 'fks', 'fky'].includes(t) ? '低分辨率薄壁自触 fail-closed，R96 可产' : '';
       return `| ${t} | ${g(48)} | ${g(96)} | ${note} |`;

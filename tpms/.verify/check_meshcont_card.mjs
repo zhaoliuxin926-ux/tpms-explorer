@@ -10,6 +10,16 @@ const PORT = 4857;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const DEPLOYED = process.env.SMOKE_DEPLOYED ?? path.join(ROOT, "docs/platform");
+// 【复审 INFO-8】端口预检：残留旧 server 占 4857 时本测会连到旧目录假绿——先探活再起
+{
+  const { createConnection } = await import('node:net');
+  const occupied = await new Promise((res) => {
+    const c = createConnection({ port: PORT, host: '127.0.0.1' });
+    c.on('connect', () => { c.destroy(); res(true); });
+    c.on('error', () => res(false));
+  });
+  if (occupied) { console.error(`端口 ${PORT} 已被占用（残留 server？）——拒绝启动防假绿，先清理再跑`); process.exit(2); }
+}
 const server = spawn(process.execPath, [path.join(HERE, 'static-server.mjs'), String(PORT), DEPLOYED]);
 await new Promise((r) => setTimeout(r, 4000));
 
@@ -67,6 +77,15 @@ async function dumpDiag() {
   }))
     .catch((e) => 'BLOCKED/err: ' + String(e).slice(0, 60));
   console.log('DIAG mainThread=' + alive);
+  // M3 增强：堆双采样（2.5s 间隔 jsHeapSize 斜率——证伪/证实 GC 主导）
+  try {
+    const cdpM = await ctx.newCDPSession(page);
+    const c1 = await cdpM.send('Memory.getDOMCounters');
+    await new Promise((r) => setTimeout(r, 2500));
+    const c2 = await cdpM.send('Memory.getDOMCounters');
+    console.log(`DIAG heap=${Math.round(c1.jsHeapSize / 1048576)}MB→${Math.round(c2.jsHeapSize / 1048576)}MB (Δ${Math.round((c2.jsHeapSize - c1.jsHeapSize) / 1048576)}MB/2.5s) nodes=${c1.nodes}→${c2.nodes}`);
+    try { await cdpM.detach(); } catch {}
+  } catch (e) { console.log('DIAG heap 失败: ' + String(e).slice(0, 60)); }
   // CPU profile 3s：CDP Profiler 抓轰炸源热点函数（bottom-up self 时间 top8）
   try {
     const cdp = await ctx.newCDPSession(page);
@@ -97,7 +116,9 @@ async function dumpDiag() {
     const cdp2 = await ctx.newCDPSession(page);
     const chunks = [];
     cdp2.on('Tracing.dataCollected', (d) => chunks.push(...d.value));
-    await cdp2.send('Tracing.start', { transferMode: 'ReturnAsStream', categories: 'devtools.timeline', options: 'sampling-frequency=10000' });
+    // 【复审 H1 修复】ReturnAsStream 下 dataCollected 永不推送（数据进 stream 句柄须
+    // IO.read 拉）——探针交付即死且静默；ReportEvents 实测 1152 事件/606 X 切片可用
+    await cdp2.send('Tracing.start', { transferMode: 'ReportEvents', categories: 'devtools.timeline' });
     await new Promise((r) => setTimeout(r, 3000));
     await cdp2.send('Tracing.end');
     await new Promise((r) => setTimeout(r, 500));
@@ -108,7 +129,8 @@ async function dumpDiag() {
       byName.set(ev.name, (byName.get(ev.name) ?? 0) + (ev.dur ?? 0));
     }
     const topT = [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([n, us]) => n + '=' + Math.round(us / 1000) + 'ms');
-    console.log('DIAG traceTop=' + topT.join(' | '));
+    console.log('DIAG traceTop=' + topT.join(' | ') + ' (events=' + chunks.length + ')');
+    try { await cdp2.detach(); } catch { /* 进程即退，防御性收尾 */ }
   } catch (e) {
     console.log('DIAG trace 失败: ' + String(e).slice(0, 80));
   }
@@ -140,6 +162,7 @@ async function dumpDiag() {
 // 两试全冻才判红（与 run_all RETRY 同语义，但冻结样本保证进日志）。
 let statusText = '';
 for (let attempt = 1; attempt <= 2; attempt++) {
+  diag.length = 0;  // 复审 L5：worker 事件随 attempt 重置，防跨试张冠李戴
   await page.evaluate(() => {
     document.querySelector('#meshcont-file')?.closest('details')?.setAttribute('open', '');
   });
@@ -157,6 +180,23 @@ for (let attempt = 1; attempt <= 2; attempt++) {
     const t = await page.evaluate(() => document.querySelector('#meshcont-status')?.textContent ?? '');
     if (/已启用|就绪|✗/.test(t)) { statusText = t; break; }
     statusText = t;
+    // M3 增强：60s 仍 0% 时抓一次中途 profile（build 看门狗 120s respawn 之前——
+    // 若此刻主线程已 native 满，看门狗循环被排除出首因；与 180s 终局 DIAG 对照）
+    if (i === 60 && !/已启用|就绪|✗/.test(t)) {
+      try {
+        const cdpMid = await ctx.newCDPSession(page);
+        await cdpMid.send('Profiler.enable');
+        await cdpMid.send('Profiler.start');
+        await new Promise((r) => setTimeout(r, 2000));
+        const { profile } = await cdpMid.send('Profiler.stop');
+        const nodesM = new Map(profile.nodes.map((n) => [n.id, n]));
+        const selfM = new Map();
+        for (let k = 0; k < profile.samples.length; k++) selfM.set(profile.samples[k], (selfM.get(profile.samples[k]) ?? 0) + (profile.timeDeltas[k] ?? 0));
+        const topM = [...selfM.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, us]) => { const cf = nodesM.get(id)?.callFrame ?? {}; return Math.round(us / 1000) + 'ms ' + (cf.functionName || '(anon)'); });
+        console.log('DIAG midPoll@60s=' + topM.join(' | '));
+        try { await cdpMid.detach(); } catch {}
+      } catch { /* 中途探针失败不影响主流程 */ }
+    }
   }
   if (/已启用|就绪|✗/.test(statusText)) break;
   console.log(`[attempt${attempt}] SDF 冻结 180s——DIAG 取证后重载重试（已知深水 bug，非本测断言对象）`);
@@ -183,5 +223,5 @@ ok('blend 滑块重建 0 pageerror', errors.length === 0, errors.slice(0, 2).joi
 
 await browser.close();
 server.kill();
-console.log(`\n== MESHCONT CARD SMOKE: ${pass} PASS / ${fail} FAIL ==`);
+console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==  (MESHCONT CARD SMOKE)`);
 process.exit(fail ? 1 : 0);
