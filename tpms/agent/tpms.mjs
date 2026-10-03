@@ -105,9 +105,10 @@ function solverFingerprint() {
 }
 function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   const gradKey = isoGrad ? 'G' + JSON.stringify(isoGrad.stops) : '';
-  // 键构成：类型|目标|权重|公式指纹:求解器指纹:样本数（求解器指纹随源码变，改求解器
-  // 结构性不命中旧条目；v3 历史段保留作人类可读锚）
-  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${solverFingerprint()}:${MC_BISECT_N}:v3${gradKey}`;
+  // 键构成：类型|目标|权重|公式指纹:求解器指纹（两个指纹均盖源码——公式/求解器/样本数
+  // 任何源级变化都会改指纹，结构性失活旧条目；不再拼独立样本数段——core 侧 N 变化会
+  // 随 solverFingerprint 失活，独立常量反而可能脱钩撒谎。P4 自审收尾）
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${solverFingerprint()}${gradKey}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
