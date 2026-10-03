@@ -92,6 +92,26 @@ async function dumpDiag() {
   } catch (e) {
     console.log('DIAG profile 失败: ' + String(e).slice(0, 80));
   }
+  // CDP Tracing 3s：抓长任务的真实切片名（MajorGC/Layout/Parse/Compile…聚合 top10）
+  try {
+    const cdp2 = await ctx.newCDPSession(page);
+    const chunks = [];
+    cdp2.on('Tracing.dataCollected', (d) => chunks.push(...d.value));
+    await cdp2.send('Tracing.start', { transferMode: 'ReturnAsStream', categories: 'devtools.timeline', options: 'sampling-frequency=10000' });
+    await new Promise((r) => setTimeout(r, 3000));
+    await cdp2.send('Tracing.end');
+    await new Promise((r) => setTimeout(r, 500));
+    const byName = new Map();
+    for (const ev of chunks) {
+      if (!ev.name || ev.ph !== 'X') continue;
+      if (/^(RunTask|Task|Program|Thread|UpdateLayoutTree|Rasterizer|Layerize|FireAnimationFrame|RequestAnimationFrame|TimerFire|RunMicrotasks)$/i.test(ev.name)) continue;
+      byName.set(ev.name, (byName.get(ev.name) ?? 0) + (ev.dur ?? 0));
+    }
+    const topT = [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([n, us]) => n + '=' + Math.round(us / 1000) + 'ms');
+    console.log('DIAG traceTop=' + topT.join(' | '));
+  } catch (e) {
+    console.log('DIAG trace 失败: ' + String(e).slice(0, 80));
+  }
   // rAF 计数：2s 窗内帧数（0=按需渲染静默→轰源非渲染；≈120=持续渲染循环）
   try {
     const rafN = await page.evaluate(() => new Promise((res) => {

@@ -91,12 +91,23 @@ function formulaFingerprint() {
   } catch { _formulaFp = 'nosrc'; }
   return _formulaFp;
 }
+// 【2026-10-03 结构化防毒】求解器源码哈希掺 key：porosity-solver.ts（solveIsoAnalytic/
+// fieldRange/porAnalytic 的唯一实现源，经 core-loader 打包进本 CLI）任何改动→指纹变→
+// 旧条目自动失活。终结"改求解器忘 bump 手动版本号"事故形态（v2→v3 缝 band 事故的教训）。
+let _solverFp = null;
+function solverFingerprint() {
+  if (_solverFp) return _solverFp;
+  try {
+    const src = readFileSync(new URL('../tpms-platform/src/core/porosity-solver.ts', import.meta.url));
+    _solverFp = createHash('sha1').update(src).digest('hex').slice(0, 8);
+  } catch { _solverFp = 'nosolver'; }
+  return _solverFp;
+}
 function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
   const gradKey = isoGrad ? 'G' + JSON.stringify(isoGrad.stops) : '';
-  // 键版本史：v2=求根域自适应（C1）；v3=2026-10-03 追杀 band 语义修复——v2 时代条目的
-  // band 误存二分收敛指针（~5e-10 缝，致 solve 割线全线 iso_boundary 早退、mesh 校正
-  // 失效），v3 强制重算不再命中带毒 band
-  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${MC_BISECT_N}:v3${gradKey}`;
+  // 键构成：类型|目标|权重|公式指纹:求解器指纹:样本数（求解器指纹随源码变，改求解器
+  // 结构性不命中旧条目；v3 历史段保留作人类可读锚）
+  const key = `${type}|${target.toFixed(6)}|${W.join(',')}|${formulaFingerprint()}:${solverFingerprint()}:${MC_BISECT_N}:v3${gradKey}`;
   let cache = {};
   try { cache = JSON.parse(readFileSync(ISO_CACHE, 'utf8')); } catch { /* 首次无缓存 */ }
   if (cache[key]) return cache[key];
