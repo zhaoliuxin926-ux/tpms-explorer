@@ -155,7 +155,7 @@ rmSync(stlPath, { force: true });
     for (const [, [a, b]] of eS) { if (a + b === 1) openS++; else if ((a === 0) !== (b === 0)) misoS++; }
     openS === 0 && misoS === 0 ? ok('solve STL 独立读回复核：open=0 misoriented=0（字节级）') : bad('solve STL 读回', `open=${openS} miso=${misoS}`);
   } catch (e) { bad('solve STL 复核异常', String(e)); }
-  // 10b. splitp 高容差收敛（R96 tol 0.5pp——R48 0.05pp 属 C1 前旧 iso 幸运收敛，ubuntu
+  // 10b. splitp 收敛（R96 tol 0.05pp 紧档——缝 band 修复后割线复活；r3 的 0.5/1pp 放宽
   // 实测 1.38pp；R96 基准 0.30pp 有 margin；k 修复前 stall@0.18pp 判不可达的对照语义保留）
   const r10b = run('solve', '--type', 'splitp', '--porosity', '0.55', '--resolution', '96', '--tolerance', '0.0005', '--max-rounds', '4', '--json');
   let j10b = null;
