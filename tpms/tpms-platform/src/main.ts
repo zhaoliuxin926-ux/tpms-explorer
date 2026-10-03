@@ -687,17 +687,27 @@ function meshSdfEnsure(R: number): Promise<void> {
     const id = ++meshSdfSeq;
     const status = meshSdfStatus();
     if (status) { status.style.display = 'block'; status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 0%'; }
-    // 看门狗：worker 卡死时 Promise 永不 settle 且 sdfEnsureJobs 占位——后续同档全挂
-    const watchdog = setTimeout(() => {
+    // 看门狗：worker 卡死时 Promise 永不 settle 且 sdfEnsureJobs 占位——后续同档全挂。
+    // 【2026-10-03 R2】与上传路径统一为活跃度看门狗：progress 在跳就重置 180s，任意
+    // 文件规模自适应；真卡死=进度停更 180s 才杀（原固定 180s 对 81920 三角实测 ~230s
+    // 必然误杀——CT 解剖壳普遍 10 万级三角）
+    let watchdog = setTimeout(() => {
       w.terminate();
       sdfEnsureJobs.delete(n);
-      if (status) status.textContent = '✗ 容器 SDF R' + R + ' 档计算超时（已终止 Worker）';
+      if (status) status.textContent = '✗ 容器 SDF R' + R + ' 档计算超时（进度停更 180s，已终止 Worker）';
       reject(new Error(`容器 SDF R${R} 档计算超时`));
     }, 180_000);
+    const feedWatchdog = () => { clearTimeout(watchdog); watchdog = setTimeout(() => {
+      w.terminate();
+      sdfEnsureJobs.delete(n);
+      if (status) status.textContent = '✗ 容器 SDF R' + R + ' 档计算超时（进度停更 180s，已终止 Worker）';
+      reject(new Error(`容器 SDF R${R} 档计算超时`));
+    }, 180_000); };
     w.onmessage = (ev: MessageEvent) => {
       const d = ev.data as { ok?: boolean; id?: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; volumePhys?: number; error?: string };
       if (d.id !== id) return;
       if (d.progress !== undefined) {
+        feedWatchdog();
         if (status) status.textContent = '⏳ 容器 SDF R' + R + ' 档计算中 ' + Math.round(d.progress * 100) + '%';
         return;
       }
@@ -769,16 +779,25 @@ function bindMeshContainer(): void {
       if (meshcontW) meshcontW.terminate();
       meshcontW = new Worker(new URL('./worker/meshcont-worker.ts', import.meta.url), { type: 'module' });
       const myId = ++meshcontWId;
-      const upWatchdog = setTimeout(() => {
+      // 【2026-10-03 R2 实测修正】固定 180s 对真实规模 STL 是硬墙（81920 三角 @62³ 实测
+      // ~230s+，CT 解剖壳更大）——改活跃度看门狗：每条 progress 消息重置 180s 计时，
+      // 进度在跳就永不大限（任意文件规模自适应）；真卡死=进度停更 180s 才杀
+      let upWatchdog = setTimeout(() => {
         if (myLoad !== meshcontLoadSeq) return;
         meshcontW?.terminate(); meshcontW = null;
-        status.textContent = '✗ ' + f.name + ' SDF 计算超时（已终止 Worker）';
+        status.textContent = '✗ ' + f.name + ' SDF 计算超时（进度停更 180s，已终止 Worker）';
       }, 180_000);
+      const feedWatchdog = () => { clearTimeout(upWatchdog); upWatchdog = setTimeout(() => {
+        if (myLoad !== meshcontLoadSeq) return;
+        meshcontW?.terminate(); meshcontW = null;
+        status.textContent = '✗ ' + f.name + ' SDF 计算超时（进度停更 180s，已终止 Worker）';
+      }, 180_000); };
       meshcontW.onmessage = (ev: MessageEvent) => {
         const d = ev.data as { ok: boolean; id: number; progress?: number; sdf?: Float32Array; domain?: { scale: number }; check?: { tris: number }; volumePhys?: number; error?: string };
         if (d.id !== myId) return;
         // B+ 协议 v2：进度消息不终结 Worker（最终消息无 progress 字段）
         if (d.progress !== undefined) {
+          feedWatchdog();
           status.textContent = '⏳ ' + f.name + ' SDF 计算中 ' + Math.round(d.progress * 100) + '%（Worker，' + (R0 + 1) + '³ 网格）';
           return;
         }
