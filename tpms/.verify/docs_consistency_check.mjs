@@ -95,9 +95,12 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     [/108 assertions|108-assertion/, 'schema 断言旧值英文形态 108（现 106）'],
     [/拦截器[^\n]{0,12}35 断言|35 断言[^\n]{0,8}拦截|自检[:：]?\s*35 断言/, '拦截器断言旧值 35（现 40）'],
     [/schema_check[^\n]{0,12}108 断言|108 断言[^\n]{0,6}(守卫|基线|对拍)|#\s*108 断言/, 'schema_check 断言旧值 108（现 106）'],
-    [/10 套 UI 回归|run_all[^\n]{0,8}10 套/, 'UI 回归旧值 10 套（现 17）'],
+    [/10 套 UI 回归|run_all[^\n]{0,8}10 套/, 'UI 回归旧值 10 套（现 18）'],
     [/three\.bundle\.js[^\n]{0,12}1\.3MB|1\.3MB[^\n]{0,10}three/, 'three.bundle 体积旧值 1.3MB（实测 ≈0.53MB）'],
     [/三十六章|36 chapters/, 'WORKFLOW_GUIDE 章数旧值 36（现 37）'],
+    // 2026-10-03 第十批：README 60 秒自证段自描述数字漂移（197/GUARD 180 实为 313/313——
+    // 讽刺点：教访客跑文档一致性门的命令行自己数字是错的；钉范围外漂移又一例）
+    [/docs_consistency[^\n]{0,24}197|19[78]\s*断言[^\n]{0,6}README↔代码|197\s*assertions?|guard\s*180|GUARD\s*180/, 'docs_consistency 断言旧值 197/下限 180（现基线 313=干净 clone 口径；本机另有 gitignored job_narrative.md 贡献 16 条）'],
   ];
   const scanList = targets.concat(optional.filter((rel) => existsSync(path.join(ROOT, rel))));
   for (const rel of scanList) {
@@ -106,6 +109,15 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     for (const [re, why] of banned) {
       re.test(src) ? bad(rel + ' 含禁句', why) : ok(rel + ' 无「' + why.slice(0, 12) + '…」');
     }
+  }
+  // 2026-10-03 第十批正向钉：README 60 秒自证段的自描述数字与干净 clone 实测值强绑定
+  // （禁句只防旧值回潮；正向钉防断言集变化时 README 忘同步——本门加断言必连带 README 双语。
+  // 口径：332=干净 clone 稳态（313 旧基线+本轮禁句扫描 14+正向钉 2-本机 job_narrative 差 16）；
+  // GUARD 下限仍 313（下限只防坍塌，不随加断言抬升））
+  {
+    const rdCn = read('README.md'); const rdEn = read('README_EN.md');
+    /332 断言/.test(rdCn) ? ok('README 自证段 docs 断言数=332（干净 clone 稳态同步）') : bad('README 自证段缺「332 断言」（本门断言集变化须连带 README 双语+此钉）');
+    /332 assertions/.test(rdEn) ? ok('README_EN 自证段 docs 断言数=332') : bad('README_EN 自证段缺「332 assertions」（本门断言集变化须连带）');
   }
   // 37/37 必须带 n=1 或 single/best-of 限定（防统计→确定）
   for (const rel of scanList) {
