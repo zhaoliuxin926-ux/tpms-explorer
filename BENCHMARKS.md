@@ -85,3 +85,9 @@
 - 孔隙率偏差为网格实测口径 vs 目标，含场离散项（exact 求解器已作割线校正）
 - 力学口径为 Gibson-Ashby 解析估算，非 FEA；压缩响应以 Abaqus 实跑为准
 - fcks 可产域=R120 k6 ∪ R128 k2（~9s，偏差 0.13pp）；k6 R48/R96/R128 薄壁自触拒产（旧「R128 >36 分钟」实为索引池溢出死循环，2026-09-10 已修；性能路径 2026-09-11 退役）
+
+## 6. 访客体验快照（Lighthouse·环境相关·人工复测节——生成器不重算，数字为标注日期的实测快照）
+
+- 2026-10-03 实测（Chrome 稳定版 · Pages 线上 · 落地页+platform × desktop+mobile 四轮）：Accessibility / Best Practices / SEO / Agentic Browsing 四类 **100/100**（落地页两轮各 40 项审计零失败；platform 两轮各 50 项零失败；分数有环境方差，以当日复测为准）
+- 关键时延（同日 Navigation Timing）：落地页 TTFB 194ms · FCP 1.06s · load 0.95s；platform 首开 load 4.7s · 传输 ~325KB（gzip；three.js 主包 277KB 见 GitHub 压缩产物口径）
+- 复测口径：chrome-devtools MCP `lighthouse_audit`（navigation，desktop/mobile）对两页各跑一轮；本节数字仅在人工复测后更新（生成器重跑 §1-§5 不触碰本节内容块以外的快照值）
