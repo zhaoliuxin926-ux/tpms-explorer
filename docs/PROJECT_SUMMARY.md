@@ -31,7 +31,7 @@
 ├── tpms/                      ← 工程工作区
 │   ├── tpms-platform/         ← 平台源码（TS + Vite + Three.js，零运行时依赖）
 │   │   └── src/{core,geometry,physics,export,measure,worker}/ + main.ts + index.html
-│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（17 套件）+ slicepv 冒烟
+│   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（18 套件）+ slicepv 冒烟
 │   ├── agent/                 ← Agent CLI（六命令 + NL 工具调用 + 闭环驱动器 + 三 Provider + 五件自检）
 │   ├── agent_memory/          ← context / progress / bugs 三件套（AI 协作记忆，gitignored）
 │   └── prototypes/            ← MATLAB 原型（归档）
@@ -134,7 +134,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 ## 五、门禁体系（45 项，run_ci_suite.mjs 调度，三平台矩阵）
 
 入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 39 道行为审计（含 experimental_fit 实验曲线反演 + conformal_fill 保形填充，v9.0 门 43/44）
-（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（17 套 UI 回归，含 slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟）+
+（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（18 套 UI 回归，含 slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）+
 agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 332 · redteam_matrix 100 ·
 custom_equation 73 · periodic_rve 88 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119 基线+真GPU ×2（万点对拍 0.00e+0）·

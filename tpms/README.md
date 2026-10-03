@@ -173,7 +173,7 @@ npm run dev      # 访问 http://localhost:5173
 
 ### 验证（一键全量）
 ```bash
-cd tpms/.verify && node run_all.mjs     # 17 套 UI 回归（需先起服务，见下）
+cd tpms/.verify && node run_all.mjs     # 18 套 UI 回归（需先起服务，见下）
 node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
 UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
