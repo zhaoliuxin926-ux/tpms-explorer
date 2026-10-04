@@ -12,8 +12,7 @@ import { segDist } from './strut-bcc';
 
 export const strutOctet: TpmsFunction = (mx: number, my: number, mz: number, w?: Weights) => {
   const r = (w && w[0] > 0 ? w[0] : 0.08);
-  const k = 3;
-  const cell = 2 / k;
+  const cell = 2; // mx 域单位 cell——cell 数自动=外部 k（与 strut-bcc 同款坐标域修正）
   const ci = Math.floor((mx + 1) / cell), cj = Math.floor((my + 1) / cell), cl = Math.floor((mz + 1) / cell);
   let d = 1e9;
   // 面心偏移（6 面：(½,½,0)(½,0,½)(0,½,½) 各正负）
@@ -24,7 +23,6 @@ export const strutOctet: TpmsFunction = (mx: number, my: number, mz: number, w?:
     for (let dj = -1; dj <= 1; dj++) {
       for (let dl = -1; dl <= 1; dl++) {
         const i = ci + di, j = cj + dj, l = cl + dl;
-        if (i < -1 || i > k || j < -1 || j > k || l < -1 || l > k) continue;
         // 该 cell 的 8 角
         const corners: number[][] = [];
         for (let vi = 0; vi < 2; vi++) for (let vj = 0; vj < 2; vj++) for (let vl = 0; vl < 2; vl++) {

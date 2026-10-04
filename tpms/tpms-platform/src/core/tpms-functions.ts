@@ -337,6 +337,8 @@ export function getWeightCount(type: TpmType): number {
 /** 获取某类型的默认权重 */
 export function getDefaultWeights(type: TpmType): Weights {
   const n = getWeightCount(type);
+  // strut 族 w[0]=杆半径：cell=2（mx 域单位）下 1/8 细长比合理默认；其余族=1
+  if (type === 'strutbcc' || type === 'strutoctet') return [0.25, 0, 0, 0] as Weights;
   return [n > 0 ? 1 : 0, n > 1 ? 1 : 0, n > 2 ? 1 : 0, n > 3 ? 1 : 0] as Weights;
 }
 

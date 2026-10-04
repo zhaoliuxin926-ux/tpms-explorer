@@ -21,23 +21,22 @@ export function segDist(px: number, py: number, pz: number, ax: number, ay: numb
 }
 
 /**
- * BCC 杆场：归一化域 [−1,1]³、k 周期；w[0]=杆半径 r（0.02~0.25 合理域）。
- * 杆端点：cell (i,j,l) 顶点→该 cell 体心。域内任一点的最近杆在所在 cell±1 内。
+ * BCC 杆场：w[0]=杆半径 r（0.02~0.25 合理域）。
+ * 坐标域（第二十八批修正）：surface-nets 传入 mx=(归一化[−1,1])×k（弧度域 [−k,k]）——
+ * cell 取 mx 域单位 2（cell=2 固定），则域内 cell 数=k：**cellSize 滑块天然联动桁架密度**
+ * （k=1~5 → 1~5 个 cell；初版假设 mx∈[−1,1]+固定 k=3 是域错位——渲染/水密掩盖了
+ * 几何偏移，坐标链核对面（surface-nets:303）抓出）。邻域 cell 的杆端点数学上
+ * 周期延拓，无需边界检查（每点最近杆必在所在 cell±1 内）。
  */
 export const strutBCC: TpmsFunction = (mx: number, my: number, mz: number, w?: Weights) => {
   const r = (w && w[0] > 0 ? w[0] : 0.08);
-  const k = 3; // 周期数取 UI cellSize 域中值——真实 k 需从 periods 通道传入，
-  // 但 TpmsFunction 签名无 periods 位；用固定 k=3 的密排近似（域内杆拓扑完整、
-  // 孔隙率-半径关系由 iso 求解器在线标定）。k>3 的多周期变体留后续批次。
-  const cell = 2 / k;
-  // 采样点所在 cell（浮点）+ 邻域 cell 索引
+  const cell = 2; // mx 域单位 cell——cell 数自动=外部 k（periods）
   const ci = Math.floor((mx + 1) / cell), cj = Math.floor((my + 1) / cell), cl = Math.floor((mz + 1) / cell);
   let d = 1e9;
   for (let di = -1; di <= 1; di++) {
     for (let dj = -1; dj <= 1; dj++) {
       for (let dl = -1; dl <= 1; dl++) {
         const i = ci + di, j = cj + dj, l = cl + dl;
-        if (i < -1 || i > k || j < -1 || j > k || l < -1 || l > k) continue;
         // 体心
         const cx = (i + 0.5) * cell - 1, cy = (j + 0.5) * cell - 1, cz = (l + 0.5) * cell - 1;
         // 8 顶点
