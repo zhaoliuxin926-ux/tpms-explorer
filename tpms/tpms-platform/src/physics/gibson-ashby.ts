@@ -29,7 +29,8 @@ const C1_MAP: Record<string, number> = {
   fs: 0.38, // C2 第六批：文献带内估值
   qstar: 0.38, // C2 第六批：文献带内估值
   ws: 0.38, // C2 第六批：文献带内估值
-  custom: 0.38,  // default to gyroid value
+  custom: 0.38,  // default to gyroid value,
+  strutbcc: 0.06, strutoctet: 1.2, // strut 族：bcc 弯曲主导（Deshpande 域）；octet 拉伸主导 E≈0.3ρ线性律——与 ρ² 框架形状律不适配，登记 ρ≈0.25 等效切线（精确值请走 FE）
 };
 
 // Gibson & Ashby (1997) 开孔泡沫塑性坍塌：σ*/σs ≈ 0.3·ρ^1.5（弯曲主导经典值，原书
@@ -73,6 +74,7 @@ const ANISOTROPY_MAP: Record<string, number> = {
   qstar: 1.2, // C2 第六批：非对称差角族粗估（未标定）
   ws: 1.0, // C2 第六批：各向同性下界估值（未标定）
   custom: 1.30,
+  strutbcc: 1.0, strutoctet: 1.0, // 立方对称桁架：[100] 三轴等价，各向同性近似
 };
 
 export function getAnisotropy(type: string): number {
