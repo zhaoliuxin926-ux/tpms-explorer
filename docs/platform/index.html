@@ -853,7 +853,7 @@ window.addEventListener('error', function(e) {
         <div class="loading" id="loading" role="status" aria-live="polite"><span class="sp"></span>重建曲面中…</div>
         <div class="stat-overlay" id="statbox">
           <button class="stat-summary" id="stat-toggle" title="展开 / 收起工程指标"><span id="stat-mini">孔隙率 <b id="stat-porosity">—</b> · 材料 <b id="stat-material">—</b></span><span class="stat-caret">▸</span></button>
-          <div class="stat-full" id="stats">顶点 <b id="stat-verts">—</b>　三角面 <b id="stat-tris">—</b><br>比表面积 <b id="stat-sv">—</b>　等效模量 <b id="stat-young">—</b><br>屈服强度 <b id="stat-sigma">—</b>　C1 <b id="stat-c1">—</b><br>渗透率 <b id="stat-perm">—</b>　平均孔径 <b id="stat-pore">—</b><br>迂曲度 <b id="stat-tort">—</b>　各向异性 <b id="stat-aniso">—</b><br>τ 几何 x/y/z <b id="stat-tort-xyz">—</b><br>Zener A · E(GPa) <b id="stat-zener">—</b><br>【动态 v4.0】SEA <b id="stat-sea">—</b>　εd <b id="stat-epsd">—</b>　f1 <b id="stat-f1">—</b></div>
+          <div class="stat-full" id="stats">顶点 <b id="stat-verts">—</b>　三角面 <b id="stat-tris">—</b><br>比表面积 <b id="stat-sv">—</b>　等效模量 <b id="stat-young">—</b><br>屈服强度 <b id="stat-sigma">—</b>　C1 <b id="stat-c1">—</b><br>渗透率 <b id="stat-perm">—</b>　平均孔径 <b id="stat-pore">—</b><br>迂曲度 <b id="stat-tort">—</b>　各向异性 <b id="stat-aniso">—</b><br>τ 几何 x/y/z <b id="stat-tort-xyz">—</b><br>Zener A · E(GPa) <b id="stat-zener">—</b><br>SEA <b id="stat-sea">—</b>　εd <b id="stat-epsd">—</b>　f1 <b id="stat-f1">—</b></div>
         </div>
         <div class="v-tools">
           <button class="tbtn on" id="btn-rotate" aria-label="自动旋转" title="自动旋转 (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
@@ -1170,7 +1170,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">隐式神经拓扑 (Generative INR) <span class="sect-tag">原型期 v7.0</span></summary>
+        <summary class="sect-h">隐式神经拓扑 (Generative INR)</summary>
         <div class="field">
           <div class="opt-row" style="grid-template-columns:1fr 1fr">
             <button class="opt" id="neural-enabled">启用神经场<span class="o-sub">SIREN</span></button>
@@ -1204,7 +1204,7 @@ window.addEventListener('error', function(e) {
       <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">9</span></div>
 
       <details class="sect">
-        <summary class="sect-h">弹塑性压溃仿真 <span class="sect-tag">原型期 v6.0</span></summary>
+        <summary class="sect-h">弹塑性压溃仿真</summary>
         <div class="field">
           <div class="field-note">全拉格朗日 StVK + J2 径向返回体素 FEM：位移加载压至 4% 应变，视口播放 von Mises 演化（蓝→红），并绘制工程 σ–ε 曲线。门禁 27 守能量漂移 ≤0.5%。</div>
           <button class="opt" id="btn-plasticity" style="width:100%;justify-content:center">▶ 运行弹塑性压溃仿真</button>
@@ -1214,7 +1214,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">试验曲线反演 <span class="sect-tag">原型期 v9.0</span></summary>
+        <summary class="sect-h">试验曲线反演</summary>
         <div class="field">
           <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
           <input type="file" id="expfit-file" accept=".csv,.txt,.tsv" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
@@ -1229,7 +1229,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">LPBF 打印工艺与残余应力 <span class="sect-tag">原型期 v6.0</span></summary>
+        <summary class="sect-h">LPBF 打印工艺与残余应力</summary>
         <div class="field">
           <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
           <div class="opt-row two" style="gap:6px">
@@ -1242,7 +1242,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">多轴屈服包络面（原型期 v7.0）</summary>
+        <summary class="sect-h">多轴屈服包络面</summary>
         <div class="field">
           <div class="field-note">主应力空间 (σ₁,σ₂,σ₃) 封闭凸失效包络：Hill-48 各向异性 / Tsai-Wu 拉压不对称 / Gurson 多孔压溃（q=孔隙率）/ Drucker-Prager 圆锥。强度参数由当前结构（相对密度+材料+方向模量）自动推导。</div>
           <select id="yield-criterion" style="width:100%;margin-top:4px;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
@@ -1264,7 +1264,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">声子能带与振动禁带（原型期 v7.0）</summary>
+        <summary class="sect-h">声子能带与振动禁带</summary>
         <div class="field">
           <div class="field-note">Bloch-Floquet 点阵动力学：单胞体素质点 + 26 邻域弹簧（κ 由长波动力矩阵精确标定），沿 Γ-X-M-R-Γ 求解能带色散，识别路径禁带与相对禁带宽度 BG%。</div>
           <button class="opt" id="btn-phonon" style="width:100%;justify-content:center">▶ 计算能带色散</button>
@@ -1274,7 +1274,7 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
-        <summary class="sect-h">组织长入 0~28 天（原型期 v7.0）</summary>
+        <summary class="sect-h">组织长入 0~28 天</summary>
         <div class="field">
           <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
           <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
@@ -1332,7 +1332,7 @@ window.addEventListener('error', function(e) {
       <section class="sgroup" id="grp-optimize"><div class="sgroup-h" data-target="grp-optimize" title="跳转到该组"><span class="t">主动优化</span><span class="n">1</span></div>
 
       <details class="sect">
-        <summary class="sect-h">水平集主动拓扑优化（原型期 v7.0）</summary>
+        <summary class="sect-h">水平集主动拓扑优化</summary>
         <div class="field">
           <div class="field-note">Hamilton-Jacobi 界面演化 + 拓扑导数敏感度：刚度项（弹性 VM fully-stressed）与流阻项（Darcy |∇p|）加权。以 TPMS 为初始构型，自动增厚高应力支柱、开凿低应力孔道。</div>
           <div class="opt-row two" style="gap:6px">
@@ -1442,7 +1442,7 @@ window.addEventListener('error', function(e) {
         <summary class="sect-h">GPU 加速 (WebGPU)</summary>
         <div class="field">
           <div class="opt-row" style="grid-template-columns:1fr 1fr">
-            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">v3.0 Compute</span></button>
+            <button class="opt" id="btn-gpu">场计算 GPU 加速<span class="o-sub">Compute Shader 加速</span></button>
           </div>
           <div class="field-note" id="gpu-status">探测中…</div>
           <div class="model-desc">WebGPU Compute Shader 并行填充体素场，网格化仍由 Worker CPU 管线完成；不支持的浏览器自动无感回退，GPU 与 CPU 场数学同源（webgpu_parity_audit ≤1e-6 门禁守护）。</div>
@@ -1560,7 +1560,7 @@ window.addEventListener('error', function(e) {
     }, 800);
   });
 })();
-</script>
+</script>
 
   <!-- AI 设计助手（v6.0 阶段 V） -->
   <button id="nl-fab" title="AI 设计助手" aria-label="AI 设计助手">💬</button>
