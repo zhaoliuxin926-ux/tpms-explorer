@@ -61,6 +61,9 @@ console.log('\n[B] 英文指令');
   check('单元尺寸 2.5', it2.patches.cellSize === 2.5, String(it2.patches.cellSize));
   check('壁厚 0.8', it2.patches.thickness === 0.8, String(it2.patches.thickness));
   check('梯度壳', it2.patches.structureMode === 'gradient_shell', String(it2.patches.structureMode));
+  // 「单元密度」=UI 滑块 aria-label 原词（用户照界面文案说话须可解析，2026-10-04 补钉）
+  const it2b = parseNL('单元密度 4');
+  check('单元密度同义词解析（UI aria-label 原词）', it2b.patches.cellSize === 4, String(it2b.patches.cellSize));
 }
 
 // ══ C. 边界与安全 ══

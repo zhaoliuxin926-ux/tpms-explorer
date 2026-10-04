@@ -151,9 +151,9 @@ export function parseNL(input: string): NLIntent {
     patches.endplateMm = ep !== null ? Math.max(0, Math.min(3.0, ep)) : 2;
     log.push({ field: '端板厚度', to: `${patches.endplateMm}mm` });
   }
-  // 单元尺寸
+  // 单元尺寸（「单元密度」=UI 滑块 aria-label 原词——用户照界面文案说话须可解析）
   const cs = firstNum(text, [
-    /单元尺寸\s*([0-9.]+)/i, /cellsize\s*[:：]?\s*([0-9.]+)/i, /([0-9.]+)\s*mm\s*单元/i,
+    /单元尺寸\s*([0-9.]+)/i, /单元密度\s*([0-9.]+)/i, /cellsize\s*[:：]?\s*([0-9.]+)/i, /([0-9.]+)\s*mm\s*单元/i,
   ]);
   if (cs !== null) {
     // 与 UI 单元密度滑块同域 [1,5]（曾 [1,8]）

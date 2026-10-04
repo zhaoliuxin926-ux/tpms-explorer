@@ -138,8 +138,12 @@ export function canUndo(): boolean { return historyIndex > 0; }
 export function canRedo(): boolean { return historyIndex < history.length - 1; }
 
 /** 从状态构建分享 URL */
+let _shareFormulaDropped = false;
+/** 上次 buildShareURL 是否因公式超长而丢弃 formula 参数（btn-share 据此 toast 披露） */
+export function shareFormulaDroppedLast(): boolean { return _shareFormulaDropped; }
 export function buildShareURL(): string {
   const s = _state;
+  _shareFormulaDropped = false;
   const params = new URLSearchParams({
     type: s.type,
     model: s.model,
@@ -200,7 +204,16 @@ export function buildShareURL(): string {
     params.set('igS', String(s.isoGrad.soft));
     params.set('igB', String(s.isoGrad.band));
   }
-  if (s.customFormula) params.set('formula', s.customFormula);
+  if (s.customFormula) {
+    // 公式超长防护（2026-10-04）：URL 请求行有基础设施上限（Node 默认 ~14KB，实测
+    // 14KB=200/29KB=431）——原样写入会生成对方打不开的链接。超 12KB（其余参数留
+    // 余量）跳过 formula 参数并置披露标志，调用方 toast 告知。
+    if (encodeURIComponent(s.customFormula).length <= 12_000) {
+      params.set('formula', s.customFormula);
+    } else {
+      _shareFormulaDropped = true;
+    }
+  }
   // 颜色与 GPU 只是渲染偏好，但也属于可复现实验配置；仅写非默认值，
   // 让旧链接保持短小并继续按默认行为加载。
   if (s.coloring !== 'none') params.set('color', s.coloring);

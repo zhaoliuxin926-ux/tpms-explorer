@@ -38,6 +38,7 @@ const {
   canUndo,
   canRedo,
   buildShareURL,
+  shareFormulaDroppedLast,
   parseURLParams,
 } = await import(pathToFileURL(bundle));
 
@@ -105,6 +106,24 @@ check('分享链接恢复 GPU 偏好', parsed.gpuAccelerate === false);
 check('分享链接恢复 manifold 全参数', parsed.manifold?.kind === 'metric'
   && parsed.manifold.radius === 18 && parsed.manifold.scale === 2.2 && parsed.manifold.axis === 'x');
 
+// 超长公式钳制（2026-10-04 补钉）：>12KB 公式写入 URL 会撞请求行基础设施上限
+//（Node 默认 ~14KB，probe_url_fuzz 实测 14KB=200/29KB=431=对方打不开）——生成侧
+// 须跳过 formula 参数并置披露标志（btn-share toast 告知）
+{
+  setState({ type: 'custom', customFormula: 'sin(x)*' + 'sin(y)*'.repeat(2000) + 'sin(z)' });
+  const share2 = buildShareURL();
+  const u2 = new URL(share2);
+  check('超长公式(>12KB)分享链接剔除 formula 参数', !u2.searchParams.has('formula'), 'formula 仍在 URL');
+  check('超长公式披露标志为真', shareFormulaDroppedLast() === true, String(shareFormulaDroppedLast()));
+  check('超长链接 URL 总长 <14KB 基建上限', share2.length < 14000, String(share2.length));
+  // 正常短公式不受影响（对照）
+  setState({ type: 'custom', customFormula: 'sin(x)+cos(y)' });
+  const share3 = buildShareURL();
+  const u3 = new URL(share3);
+  check('短公式正常保留 formula 参数（对照无回归）', u3.searchParams.get('formula') === 'sin(x)+cos(y)', u3.searchParams.get('formula') ?? '(null)');
+  check('短公式披露标志为假', shareFormulaDroppedLast() === false, String(shareFormulaDroppedLast()));
+}
+
 console.log(`\nRESULT: ${pass} PASS / ${fail} FAIL`);
-  if (pass < 12) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (pass < 17) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 17（恒真/集体跳过防护；2026-10-04 +5 超长公式钳制钉）'); process.exit(1); }
 if (fail) process.exit(1);

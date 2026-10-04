@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { MeshPhysicalMaterial } from 'three';
 import { initThree, type ThreeContext } from './three-setup';
-import { getState, setState, applyPreset, buildShareURL, pushHistory, resetHistory, undo, redo } from './state';
+import { getState, setState, applyPreset, buildShareURL, shareFormulaDroppedLast, pushHistory, resetHistory, undo, redo } from './state';
 import { initStateFromURL } from './url-params';
 import { WorkerBridge, WorkerRequestSupersededError } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
@@ -3050,11 +3050,14 @@ function bindShareAndExport(): void { // 分享链接与 URL
 
   document.getElementById('btn-share')?.addEventListener('click', () => {
     const url = buildShareURL();
+    const formulaDropped = shareFormulaDroppedLast();
     // 无 clipboard-write 权限的环境（Firefox/失焦标签/沙箱 iframe）会 reject，回退到手动复制
     navigator.clipboard.writeText(url).then(() => {
       flashToast('分享链接已复制到剪贴板');
     }).catch(() => {
       window.prompt('复制失败，请手动复制分享链接：', url);
+    }).finally(() => {
+      if (formulaDropped) flashToast('⚠ 公式过长（>12KB URL 上限防护），分享链接未包含自定义公式');
     });
   });
 
