@@ -17,7 +17,7 @@ const args = process.argv.slice(2);
 const mdPath = args.includes('--md') ? args[args.indexOf('--md') + 1] : null;
 const jsonPath = args.includes('--json') ? args[args.indexOf('--json') + 1] : join(HERE, 'benchmarks-latest.json');
 const quick = args.includes('--quick');
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws', 'strutbcc', 'strutoctet'];
 const RS = quick ? [48] : [48, 96];
 const P = 0.6;
 
@@ -78,6 +78,8 @@ if (mdPath) {
         : t === 'dprime' || t === 'cdd' ? '低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48）'
         : t === 'dg' ? '求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 ~8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），R96 可产；k6 下 p≥0.75 各分辨率拒产、升分辨率非单调（R128 p0.65 交错拒产，2026-10-04 实测）；高孔隙率需求建议 periods=3（实测全 p 可产）'
         : t === 'gprime' ? '默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产'
+        : t === 'strutbcc' ? '桁架杆网络 SDF（弯曲主导 E∝ρ²）；k 固定=3（cellSize 暂不联动）；C1 代理未标定走 fallback（标定留档）'
+        : t === 'strutoctet' ? '桁架拉伸主导（E∝ρ，Deshpande-Fleck）；k 固定=3；C1 未标定；与 strutbcc 构成 strut 力学谱'
         : ['frd', 'lidinoid', 'fks', 'fky'].includes(t) ? '低分辨率薄壁自触 fail-closed，R96 可产' : '';
       return `| ${t} | ${g(48)} | ${g(96)} | ${note} |`;
     }), '',
