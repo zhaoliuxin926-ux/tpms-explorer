@@ -76,7 +76,7 @@ if (mdPath) {
       const g = (R) => { const r = rows.find((x) => x.type === t && x.R === R); return r?.watertight ? '✅' : '⛔'; };
       const note = t === 'fcks' ? '谐波 3×：可产域=R120 k6（p0.5-0.7 nm=0）∪ R128 k2（nm=0，偏差 0.13pp，~9s）；k6 R48/R96/R128 薄壁自触 fail-closed——降周期数可避'
         : t === 'dprime' || t === 'cdd' ? '低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48）'
-        : t === 'dg' ? '求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 ~8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），升分辨率可产'
+        : t === 'dg' ? '求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 ~8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），R96 可产；k6 下 p≥0.75 各分辨率拒产、升分辨率非单调（R128 p0.65 交错拒产，2026-10-04 实测）；高孔隙率需求建议 periods=3（实测全 p 可产）'
         : t === 'gprime' ? '默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产'
         : ['frd', 'lidinoid', 'fks', 'fky'].includes(t) ? '低分辨率薄壁自触 fail-closed，R96 可产' : '';
       return `| ${t} | ${g(48)} | ${g(96)} | ${note} |`;
