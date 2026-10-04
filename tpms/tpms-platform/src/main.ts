@@ -24,7 +24,7 @@ import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './g
 import { analyzeSection, analyzeIslands3D, isSolidAt, analyticFieldValue, type SectionAnalysisParams } from './physics/percolation-analysis';
 import { mapGeometry } from './core/manifold-mapping';
 import type { PhysicsMetrics } from './types';
-import { getCompiledCustomFormula, getTpmsFunction } from './core/tpms-functions';
+import { getCompiledCustomFormula, getTpmsFunction, TPMS_FUNCTIONS } from './core/tpms-functions';
 import { solveIsoAnalytic } from './core/porosity-solver';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
@@ -41,6 +41,8 @@ import type { YieldViewer } from './viewers/yield-viewer';
 import type { PhononicResult } from './physics/phononic-bandgap';
 import type { TissueResult } from './physics/tissue-growth';
 import type { InverseReport, DesignTargets } from './physics/inverse-design';
+import { forwardModel } from './physics/inverse-design';
+import { paretoFront } from './physics/ml-surrogate';
 import { DEFAULT_STATE } from './types';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
@@ -665,6 +667,124 @@ function bindExperimentalFit(): void {
   });
 }
 bindExperimentalFit();
+
+// ── 多目标 Pareto 前沿探索器（2026-10-04 第二十四批）：解析代理扫 24 族 × 参数域 →
+//    非支配前沿（E 力学 × κ 传质 × Sv 生物活性）→ 点击前沿点写回设计参数。
+//    内核复用：paretoFront（ml-surrogate）+ forwardModel（inverse-design，与逆向求解器
+//    同源公式——代理一致性由同一数学来源保证，无需独立校准）。
+function bindParetoCard(): void {
+  const btnGen = document.getElementById('btn-pareto-gen') as HTMLButtonElement | null;
+  const btnClear = document.getElementById('btn-pareto-clear') as HTMLButtonElement | null;
+  const canvas = document.getElementById('pareto-canvas') as HTMLCanvasElement | null;
+  const note = document.getElementById('pareto-note');
+  if (!btnGen || !btnClear || !canvas || !note) return;
+  const ctx2d = canvas.getContext('2d');
+  if (!ctx2d) return;
+  type P = { E: number; kappa: number; sea: number; type: import('./types').TpmType; porosity: number; cellSize: number };
+  let points: P[] = [];
+  let front: P[] = [];
+  let hoverIdx = -1;
+  const M = { l: 56, r: 14, t: 14, b: 34 };
+  const sx = (E: number) => M.l + (Math.log10(E) - xDom[0]) / (xDom[1] - xDom[0]) * (canvas.width - M.l - M.r);
+  const sy = (k: number) => canvas.height - M.b - (Math.log10(k) - yDom[0]) / (yDom[1] - yDom[0]) * (canvas.height - M.t - M.b);
+  let xDom = [0, 1]; let yDom = [0, 1];
+  const svColor = (sv: number, lo: number, hi: number) => {
+    const t = Math.max(0, Math.min(1, (sv - lo) / Math.max(1e-9, hi - lo)));
+    // 蓝(低) → 黄(高)：HSL 220→50
+    const h = 220 - t * 170;
+    return `hsl(${h.toFixed(0)},75%,55%)`;
+  };
+  const draw = () => {
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    ctx2d.fillStyle = '#0d1220'; ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+    // 网格与轴
+    ctx2d.strokeStyle = '#232c48'; ctx2d.fillStyle = '#8892b0'; ctx2d.font = '10px system-ui';
+    for (let d = Math.ceil(xDom[0]); d <= Math.floor(xDom[1]); d++) {
+      const x = sx(Math.pow(10, d));
+      ctx2d.beginPath(); ctx2d.moveTo(x, M.t); ctx2d.lineTo(x, canvas.height - M.b); ctx2d.stroke();
+      ctx2d.fillText('1e' + d, x - 8, canvas.height - M.b + 14);
+    }
+    for (let d = Math.ceil(yDom[0]); d <= Math.floor(yDom[1]); d++) {
+      const y = sy(Math.pow(10, d));
+      ctx2d.beginPath(); ctx2d.moveTo(M.l, y); ctx2d.lineTo(canvas.width - M.r, y); ctx2d.stroke();
+      ctx2d.fillText('1e' + d, 8, y + 3);
+    }
+    ctx2d.fillText('E (GPa, log)', canvas.width - 90, canvas.height - 6);
+    ctx2d.save(); ctx2d.translate(11, 108); ctx2d.rotate(-Math.PI / 2); ctx2d.fillText('κ (m², log)', 0, 0); ctx2d.restore();
+    if (!points.length) return;
+    const svs = points.map((p) => p.sea);
+    const [svLo, svHi] = [Math.min(...svs), Math.max(...svs)];
+    // 被支配点（小灰点）
+    ctx2d.fillStyle = 'rgba(120,130,160,0.35)';
+    for (const p of points) {
+      const f = front.find((q) => q === p);
+      if (f) continue;
+      ctx2d.fillRect(sx(p.E) - 1.5, sy(p.kappa) - 1.5, 3, 3);
+    }
+    // 前沿点（彩色空心圆）
+    for (let i = 0; i < front.length; i++) {
+      const p = front[i];
+      ctx2d.beginPath();
+      ctx2d.arc(sx(p.E), sy(p.kappa), i === hoverIdx ? 7 : 5, 0, Math.PI * 2);
+      ctx2d.strokeStyle = svColor(p.sea, svLo, svHi);
+      ctx2d.lineWidth = i === hoverIdx ? 3 : 1.6;
+      ctx2d.stroke();
+      if (i === hoverIdx) {
+        ctx2d.fillStyle = '#dde6ff'; ctx2d.font = '11px system-ui';
+        const label = `${p.type} p=${(p.porosity * 100).toFixed(0)}% k=${p.cellSize} · E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`;
+        const w = ctx2d.measureText(label).width;
+        const lx = Math.min(sx(p.E) + 10, canvas.width - w - 12);
+        ctx2d.fillText(label, lx, Math.max(M.t + 10, sy(p.kappa) - 10));
+      }
+    }
+    ctx2d.fillStyle = '#8892b0'; ctx2d.font = '10px system-ui';
+    ctx2d.fillText(`前沿 ${front.length} / ${points.length} 点`, M.l + 6, M.t + 10);
+  };
+  btnGen.addEventListener('click', () => {
+    const types = Object.keys(TPMS_FUNCTIONS) as never[];
+    const grid: P[] = [];
+    for (const ty of types) {
+      for (let po = 0.55; po <= 0.905; po += 0.05) {
+        for (const cs of [2, 3, 4, 5]) {
+          const f = forwardModel(ty as never, po, cs, 1);
+          if (f.EGPa > 0 && f.kappaM2 > 0) grid.push({ E: f.EGPa, kappa: f.kappaM2, sea: f.svRatio, type: ty, porosity: po, cellSize: cs });
+        }
+      }
+    }
+    points = grid;
+    front = paretoFront(grid);
+    // 域适配（log）
+    const es = points.map((p) => Math.log10(p.E));
+    const ks = points.map((p) => Math.log10(p.kappa));
+    xDom = [Math.floor(Math.min(...es)) - 0.1, Math.ceil(Math.max(...es)) + 0.1];
+    yDom = [Math.floor(Math.min(...ks)) - 0.1, Math.ceil(Math.max(...ks)) + 0.1];
+    draw();
+    note!.textContent = `扫描完成：${points.length} 设计点 → 非支配前沿 ${front.length} 点（三目标：E↑ 力学 · κ↑ 传质 · Sv↑ 生物活性；解析代理与逆向求解器同源）。点击前沿点写回参数；hover 显示读数。`;
+  });
+  btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; draw(); });
+  canvas.addEventListener('mousemove', (ev) => {
+    if (!front.length) return;
+    const r = canvas.getBoundingClientRect();
+    const mx = (ev.clientX - r.left) * (canvas.width / r.width);
+    const my = (ev.clientY - r.top) * (canvas.height / r.height);
+    let best = -1; let bd = 1e9;
+    for (let i = 0; i < front.length; i++) {
+      const d = (sx(front[i].E) - mx) ** 2 + (sy(front[i].kappa) - my) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (bd < 400) { if (hoverIdx !== best) { hoverIdx = best; draw(); } }
+    else if (hoverIdx !== -1) { hoverIdx = -1; draw(); }
+  });
+  canvas.addEventListener('click', () => {
+    if (hoverIdx < 0 || !front[hoverIdx]) return;
+    const p = front[hoverIdx];
+    setState({ type: p.type as never, porosity: Math.round(p.porosity * 100), cellSize: p.cellSize, customFormula: '' });
+    syncUI(getState());
+    scheduleRebuild(false);
+    flashToast(`已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单元密度 ${p.cellSize}（E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm）`);
+  });
+}
+bindParetoCard();
 
 // ── C5 v9.0 外部 STL 保形容器（UI 摄入：文件 → SDF → buildParams 注入）──
 let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number; volumePhys: number } | null = null;
