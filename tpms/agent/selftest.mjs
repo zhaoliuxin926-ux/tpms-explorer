@@ -57,7 +57,7 @@ p5 ? ok('Schwarz P = cos x + cos y + cos z（3 点 1e-12）') : bad('Schwarz P �
 
 // ── 6. list：24 内置曲面（C2 一~五批 +16、第六批 slotp/fs/qstar/ws +4）+ 材料表字段完整 ──
 const rl = JSON.parse(run('list', '--json').stdout);
-rl.types.length === 25 && rl.types.every((t) => t.C1 > 0 && t.anisotropy >= 1) && rl.materials.tc4.modulusGPa === 110
+rl.types.length === 26 && rl.types.every((t) => t.C1 > 0 && t.anisotropy >= 1) && rl.materials.tc4.modulusGPa === 110
   ? ok('list 含 24 曲面且常数/材料表完整') : bad('list', JSON.stringify(rl.types?.length));
 
 // ── 7. 拒绝语义：非法输入必须非零退出（不臆造）──

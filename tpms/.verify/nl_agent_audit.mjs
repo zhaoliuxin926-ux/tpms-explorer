@@ -64,6 +64,8 @@ console.log('\n[B] 英文指令');
   // strutbcc 桁架族词表钉（2026-10-04 第二十七批）
   const itStrut = parseNL('BCC 桁架 孔隙率 85%');
   check('strutbcc 桁架词解析', itStrut.patches.type === 'strutbcc', String(itStrut.patches.type));
+  const itOct = parseNL('Octet 桁架 孔隙率 80%');
+  check('strutoctet 词解析（octet/fcc）', itOct.patches.type === 'strutoctet', String(itOct.patches.type));
   // 「单元密度」=UI 滑块 aria-label 原词（用户照界面文案说话须可解析，2026-10-04 补钉）
   const it2b = parseNL('单元密度 4');
   check('单元密度同义词解析（UI aria-label 原词）', it2b.patches.cellSize === 4, String(it2b.patches.cellSize));

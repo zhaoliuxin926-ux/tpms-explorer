@@ -221,7 +221,7 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   const r = spawnSync(process.execPath, [join(HERE, 'tpms.mjs'), 'list', '--json'], { encoding: 'utf8' });
   let j = null;
   try { j = JSON.parse(r.stdout); } catch { /* */ }
-  ok('CLI list exit=0 且 25 族', r.status === 0 && j?.types?.length === 25, `exit=${r.status} types=${j?.types?.length}`);
+  ok('CLI list exit=0 且 26 族', r.status === 0 && j?.types?.length === 26, `exit=${r.status} types=${j?.types?.length}`);
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);

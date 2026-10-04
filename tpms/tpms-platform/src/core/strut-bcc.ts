@@ -12,8 +12,8 @@
  */
 import type { TpmsFunction, Weights } from './tpms-functions';
 
-/** 点到线段最短距离（胶囊 SDF 的核） */
-function segDist(px: number, py: number, pz: number, ax: number, ay: number, az: number, bx: number, by: number, bz: number): number {
+/** 点到线段最短距离（胶囊 SDF 的核）——octet 族复用 */
+export function segDist(px: number, py: number, pz: number, ax: number, ay: number, az: number, bx: number, by: number, bz: number): number {
   const abx = bx - ax, aby = by - ay, abz = bz - az;
   const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby + (pz - az) * abz) / (abx * abx + aby * aby + abz * abz)));
   const dx = px - (ax + t * abx), dy = py - (ay + t * aby), dz = pz - (az + t * abz);

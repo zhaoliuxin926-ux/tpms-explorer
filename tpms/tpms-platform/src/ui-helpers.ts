@@ -31,6 +31,7 @@ export const LABEL: Record<string, string> = {
   qstar: 'Q*',
   ws: 'W',
   strutbcc: 'BCC 桁架',
+  strutoctet: 'Octet 桁架',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -65,7 +66,8 @@ export const FORMULA: Record<string, string> = {
   fs: 'cos x cos y cos z',
   qstar: '(cos x − 2 cos y)cos z − √3 sin z (cos(x−y) − cos x) + cos(x−y)cos z',
   ws: '(cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)',
-  strutbcc: 'BCC 杆网络 SDF：‖p−seg(v,c)‖min − r（v=cell 顶点，c=体心；非三角函数场）'
+  strutbcc: 'BCC 杆网络 SDF：‖p−seg(v,c)‖min − r（v=cell 顶点，c=体心；非三角函数场）',
+  strutoctet: 'Octet(FCC) 杆网络 SDF：角↔面心 12 杆+面心对角 6 杆/cell（拉伸主导构型）'
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {

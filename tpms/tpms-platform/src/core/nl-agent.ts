@@ -66,6 +66,7 @@ const TYPE_WORDS: Array<[RegExp, string, string]> = [
   [/\bfs\b|fischer.?s\b/i, 'fs', 'F-S'],
   [/q-?star|q\*|星q/i, 'qstar', 'Q*'],
   [/\bws\b|w-?s\b/i, 'ws', 'W-S'],
+  [/strut.?octet|octet|fcc 桁架|八面体桁架|拉伸桁架/i, 'strutoctet', 'Octet 桁架'],
   [/strut.?bcc|bcc 桁架|桁架|杆网络/i, 'strutbcc', 'BCC 桁架'],
 ];
 
