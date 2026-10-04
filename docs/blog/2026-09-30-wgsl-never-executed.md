@@ -1,7 +1,6 @@
 # 你的 WGSL 从未被执行过——一个 secure context 静默陷阱的排查实录
 
-> 初稿（2026-09-30）。定稿后升级到 `docs/blog/` 顶层并跑 `sync-publish` 生成粘贴版。
-> 数字与命令均可在本仓库复现：CI run 36539049138 的 ubuntu artifact（1.89e-4 的原始取证）与 36542586368（修复后三平台绿），门禁 `webgpu_parity_audit.mjs` [I] 段。
+> 数字与命令均可在本仓库复现：CI run 36539049138 的 ubuntu artifact（1.89e-4 的原始取证）与 36542586368（修复后三平台绿），门禁 `webgpu_parity_audit.mjs` [I] 段。本文粘贴版在 `docs/blog/publish/` 同名镜像（`node tpms/agent/sync-publish.mjs --check` 校验零漂移）。
 
 ## 起点：一个"从未被执行"的挂账
 
@@ -18,7 +17,7 @@ TPMS Explorer 有 46 道 CI 门禁，其中一道叫"WebGPU 数学同源审计"�
 ```text
 --enable-unsafe-webgpu --use-angle=swiftshader --enable-unsafe-swiftshader → adapter:null
 --enable-unsafe-webgpu --use-webgpu-adapter=swiftshader --enable-unsafe-swiftshader → adapter:null
-（另两组略）→ NO COMBO WORKED
+（另两组同样失败）→ 四组 flag 全军覆没
 ```
 
 自然的归因：headless 限制、SwiftShader 没启用、playwright 默认参数里有 `--disable-gpu`。逐一排除——显式剔除默认 flag、换自带 chromium、甚至非 headless 模式：全部 `adapter:null`。
