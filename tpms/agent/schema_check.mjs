@@ -41,7 +41,7 @@ for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_ver
 const props = tool('tpms_mesh').parameters.properties;
 const typeEnum = JSON.stringify(props.type.enum.slice().sort());
 const j = (out) => { try { return JSON.parse(out); } catch { return null; } };
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws'];
+const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws', 'strutbcc'];
 
 // 几何探针（spawn mesh 构建 R48–R128）—— --fast 跳过，契约/拒收仍跑
 if (!FAST) {

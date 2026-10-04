@@ -404,6 +404,11 @@ function emitBuiltin(b: IrBuilder, type: Exclude<TpmType, 'custom'>, w: number[]
       const rev = sumChain(b, [mulChain(b, [cos(mx), cos2(b, my)]), mulChain(b, [cos(my), cos2(b, mz)]), mulChain(b, [cos(mz), cos2(b, mx)])]);
       return mulChain(b, [wreg(0), b.binary('sub', fwd, rev)]);
     }
+    // strut 桁架族：非三角函数场（线段 SDF 组合）——GPU IR 不发射，走 CPU 回退。
+    // 抛错由上游 GPU 可用性判定捕获（evaluateField 的 fallback 链），与 custom
+    // 公式含不支持的函数时同语义。
+    case 'strutbcc':
+      throw new Error('strutbcc 为 SDF 杆场，无 GPU IR——请走 CPU 管线');
   }
 }
 

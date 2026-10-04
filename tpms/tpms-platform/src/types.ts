@@ -4,7 +4,7 @@
  */
 
 /** 支持的 TPMS 曲面类型（C2 第一批：+octo/karcher/fks/fky/gprime；第三批：+dprime/dp/dd/dg；第四批：+fcky；第五批：+cdd，对标 MiniSurf；第六批（2026-09-15）：+slotp/fs/qstar/ws，对标 jwf23/Equation-Based-Lattice-Structure-Dataset（CC BY，27 曲面 low-order Fourier fit）） */
-export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'fcks' | 'dprime' | 'dp' | 'dd' | 'dg' | 'fcky' | 'cdd' | 'slotp' | 'fs' | 'qstar' | 'ws' | 'custom';
+export type TpmType = 'gyroid' | 'diamond' | 'schwarz' | 'neovius' | 'iwp' | 'frd' | 'lidinoid' | 'splitp' | 'octo' | 'karcher' | 'fks' | 'fky' | 'gprime' | 'fcks' | 'dprime' | 'dp' | 'dd' | 'dg' | 'fcky' | 'cdd' | 'slotp' | 'fs' | 'qstar' | 'ws' | 'strutbcc' | 'custom';
 
 /** 渲染模式 */
 export type RenderModel = 'surface' | 'strut' | 'solid';
@@ -346,6 +346,7 @@ export const TYPE_COLORS: Record<TpmType, string> = {
   fs: '#38bdf8',
   qstar: '#fbbf24',
   ws: '#2dd4bf',
+  strutbcc: '#a3e635',
   custom: '#6b7280',
 };
 

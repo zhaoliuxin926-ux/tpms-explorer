@@ -30,6 +30,7 @@ export const LABEL: Record<string, string> = {
   fs: 'F',
   qstar: 'Q*',
   ws: 'W',
+  strutbcc: 'BCC 桁架',
 };
 
 export const MATERIAL_LABEL: Record<string, string> = {
@@ -63,7 +64,8 @@ export const FORMULA: Record<string, string> = {
   slotp: '−2(cos x cos y + cos y cos z + cos z cos x) − 2(cos 2x + cos 2y + cos 2z) + (cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)',
   fs: 'cos x cos y cos z',
   qstar: '(cos x − 2 cos y)cos z − √3 sin z (cos(x−y) − cos x) + cos(x−y)cos z',
-  ws: '(cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)'
+  ws: '(cos 2x cos y + cos 2y cos z + cos 2z cos x) − (cos x cos 2y + cos y cos 2z + cos z cos 2x)',
+  strutbcc: 'BCC 杆网络 SDF：‖p−seg(v,c)‖min − r（v=cell 顶点，c=体心；非三角函数场）'
 };
 
 export const WEIGHT_TERMS: Record<string, [string, string, number][]> = {

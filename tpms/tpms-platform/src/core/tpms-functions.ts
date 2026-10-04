@@ -6,6 +6,7 @@
  */
 
 import type { TpmType } from '../types';
+import { strutBCC } from './strut-bcc';
 import { compileEquation, DEFAULT_PARAMS, validateEquation, type EquationParams } from './equation-parser';
 
 /** 权重数组，最多 4 项 */
@@ -309,7 +310,7 @@ const ws: TpmsFunction = (mx, my, mz, w) => {
 /** 曲面类型 → 函数映射 */
 export const TPMS_FUNCTIONS: Record<Exclude<TpmType, 'custom'>, TpmsFunction> = {
   gyroid, diamond, schwarz, neovius, iwp, frd, lidinoid, splitp, octo, karcher, fks, fky, gprime, fcks,
-  dprime, dp, dd, dg, fcky, cdd, slotp, fs, qstar, ws,
+  dprime, dp, dd, dg, fcky, cdd, slotp, fs, qstar, ws, strutbcc: strutBCC,
 };
 
 /** 根据类型获取有效权重项数 */
@@ -326,6 +327,7 @@ export function getWeightCount(type: TpmType): number {
     case 'fky': case 'fcky': return 2; // 低频 (ccc+sss) + 2 倍频组，各乘一个权重
     case 'cdd': return 1;
     case 'slotp': case 'fs': case 'qstar': case 'ws': return 1;
+    case 'strutbcc': return 1; // 杆半径 r（0.02~0.25）
     case 'custom': return 4;
     default: return 3;
   }
