@@ -805,7 +805,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-D0D6eYD9.js"></script>
+  <script type="module" crossorigin src="./assets/index-DW2F3gQx.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/equation-parser-DxqkiKK5.js">
   <link rel="modulepreload" crossorigin href="./assets/three-YnqW-sWg.js">
 </head>
@@ -1345,6 +1345,11 @@ window.addEventListener('error', function(e) {
           <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:4px">
             <button class="opt" id="btn-pareto-filter">应用约束重算前沿<span class="o-sub">可行子集</span></button>
             <button class="opt" id="btn-pareto-csv">导出前沿 CSV<span class="o-sub">当前视图</span></button>
+          </div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr auto;gap:4px;margin-top:4px;align-items:center">
+            <select id="pareto-hy-a" style="background:#0d1220;border:1px solid #2a3350;border-radius:4px;color:#dde6ff;font-size:11px;padding:3px 4px"></select>
+            <select id="pareto-hy-b" style="background:#0d1220;border:1px solid #2a3350;border-radius:4px;color:#dde6ff;font-size:11px;padding:3px 4px"></select>
+            <button class="opt" id="btn-pareto-hy" style="white-space:nowrap">hybrid 扫描<span class="o-sub">b=0.25/0.5/0.75</span></button>
           </div>
           <canvas id="pareto-canvas" width="640" height="360" style="width:100%;border:1px solid #2a3350;border-radius:6px;margin-top:6px;background:#0d1220"></canvas>
           <div class="field-note" id="pareto-note">三目标非支配前沿：等效模量 E（力学支撑，越大越好）× 渗透率 κ（传质输送，越大越好）× 比表面积 Sv（细胞附着面积，越大越好）——骨支架设计的三难权衡。解析代理（Gibson-Ashby × Kozeny-Carman，与逆向求解器同源公式）毫秒级扫描 24 族 × 孔隙率 × 单元密度；<b>点击前沿点</b>将该设计写回主界面参数。约束过滤在<b>可行子集上重算</b>非支配前沿（被支配点在支配者被约束剔除后可能浮出）。log-log 坐标；颜色=Sv（黄高蓝低）；○=前沿点 ·=被支配点。</div>

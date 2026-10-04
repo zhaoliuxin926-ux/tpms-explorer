@@ -25,13 +25,14 @@ const BUNDLE = join(tmpdir(), 'tpms_ml_audit_bundle.mjs');
   const entry = join(tmpdir(), 'tpms_ml_audit_entry.ts');
   writeFileSync(entry, [
     `export { createMLP, mlpForward, trainMLP, paretoFront } from ${JSON.stringify(join(PLATFORM, 'src/physics/ml-surrogate.ts'))};`,
+    `export { forwardModel, forwardModelHybrid } from ${JSON.stringify(join(PLATFORM, 'src/physics/inverse-design.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { createMLP, mlpForward, trainMLP, paretoFront } = await import(pathToFileURL(BUNDLE));
+const { createMLP, mlpForward, trainMLP, paretoFront, forwardModel, forwardModelHybrid } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -97,8 +98,24 @@ console.log('\n[C-D] Pareto 非支配排序');
   check('被支配点已排除', front.length < pts.length);
 }
 
+// ── E. hybrid 混合律代理退化锚（2026-10-04 Pareto hybrid 扫描钉）──
+console.log('\n[E] forwardModelHybrid 退化锚');
+{
+  const fA = forwardModel('gyroid', 0.7, 3, 1);
+  const fB = forwardModel('iwp', 0.7, 3, 1);
+  const h0 = forwardModelHybrid('gyroid', 'iwp', 0, 0.7, 3);
+  const h1 = forwardModelHybrid('gyroid', 'iwp', 1, 0.7, 3);
+  const hMid = forwardModelHybrid('gyroid', 'iwp', 0.5, 0.7, 3);
+  check('b=0 严格退化 ≡ 族 A（E/Sv/κ 逐位）', h0.EGPa === fA.EGPa && h0.svRatio === fA.svRatio && h0.kappaM2 === fA.kappaM2);
+  check('b=1 严格退化 ≡ 族 B（E/Sv/κ 逐位）', h1.EGPa === fB.EGPa && h1.svRatio === fB.svRatio && h1.kappaM2 === fB.kappaM2);
+  const svMid = (fA.svRatio + fB.svRatio) / 2;
+  const kcMid = Math.pow(0.7, 3) / (5 * svMid * svMid) * 1e-6;
+  check('κ 以混合 Sv 经 Kozeny-Carman 重算（中点自洽）', Math.abs(hMid.kappaM2 - kcMid) < 1e-18, `${hMid.kappaM2.toExponential(3)} vs ${kcMid.toExponential(3)}`);
+  check('E 线性凸组合（中点=均值）', Math.abs(hMid.EGPa - (fA.EGPa + fB.EGPa) / 2) < 1e-12);
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 5) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 5（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 9) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 9（恒真/集体跳过防护；2026-10-04 +4 hybrid 退化锚）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

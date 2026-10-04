@@ -91,6 +91,21 @@ export function forwardModel(type: TpmType, porosity: number, cellSize: number, 
   return { EGPa: eGPa, kappaM2, porosity: eps, svRatio: sv };
 }
 
+/** 双族凸组合的混合律代理（2026-10-04 Pareto hybrid 扫描，对齐 hybrid TPMS 逆设计
+ * 的连续参数化形态）：E/Sv 线性凸组合（场本身是线性凸组合 F=(1−b)F_A+bF_B 的一阶
+ * 响应近似——代理假设，非 FE 精确，field-note 披露）；κ 不插值而以混合 Sv 经
+ * Kozeny-Carman 重算（κ 对 Sv 二次敏感，直接插值两端 κ 会破坏 KC 自洽）。
+ * b=0/1 严格退化为单族（ml_pareto_audit 退化锚守护）。 */
+export function forwardModelHybrid(typeA: TpmType, typeB: TpmType, blend: number, porosity: number, cellSize: number, anisotropy = 1): ForwardPrediction {
+  const fA = forwardModel(typeA, porosity, cellSize, anisotropy);
+  const fB = forwardModel(typeB, porosity, cellSize, anisotropy);
+  const b = Math.min(1, Math.max(0, blend));
+  const eps = Math.min(0.99, Math.max(0.02, porosity));
+  const sv = (1 - b) * fA.svRatio + b * fB.svRatio;
+  const kappaM2 = Math.pow(eps, 3) / (KOZENY_C * sv * sv) * 1e-6;
+  return { EGPa: (1 - b) * fA.EGPa + b * fB.EGPa, kappaM2, porosity: eps, svRatio: sv };
+}
+
 /** 目标泛函 J(p)：加权相对残差平方和 */
 export function objective(t: DesignTargets, f: ForwardPrediction): number {
   let j = 0;

@@ -41,7 +41,7 @@ import type { YieldViewer } from './viewers/yield-viewer';
 import type { PhononicResult } from './physics/phononic-bandgap';
 import type { TissueResult } from './physics/tissue-growth';
 import type { InverseReport, DesignTargets } from './physics/inverse-design';
-import { forwardModel } from './physics/inverse-design';
+import { forwardModel, forwardModelHybrid } from './physics/inverse-design';
 import { paretoFront } from './physics/ml-surrogate';
 import { DEFAULT_STATE } from './types';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
@@ -780,7 +780,7 @@ function bindParetoCard(): void {
     draw();
     note!.textContent = `约束过滤（${hasE ? `E≥${eMin}GPa ` : ''}${hasK ? `κ≥${kMin.toExponential(1)}m² ` : ''}）：可行 ${feasible.length}/${points.length} 点 → 可行前沿 ${front.length} 点（在可行子集上重算非支配——新浮出点=原支配者被约束剔除）。点击前沿点写回参数。`;
   });
-  // 前沿 CSV 导出（当前视图的 front；复现/论文用）
+  // CSV 导出（当前视图的 front；复现/论文用）
   document.getElementById('btn-pareto-csv')?.addEventListener('click', () => {
     if (!front.length) { flashToast('先扫描生成前沿'); return; }
     const rows = ['type,porosity,cellSize,E_GPa,kappa_m2,Sv_per_mm'];
@@ -788,6 +788,44 @@ function bindParetoCard(): void {
     downloadText(rows.join('\n') + '\n', 'tpms-pareto-front.csv', 'text/csv');
     flashToast(`已导出前沿 CSV（${front.length} 点）`);
   });
+  // hybrid 双族连续参数化扫描（对齐 hybrid TPMS 逆设计的连续形态）：混合律代理
+  // forwardModelHybrid（E/Sv 凸组合+κ 以混合 Sv 经 KC 重算——b=0/1 严格退化单族，
+  // ml_pareto_audit 退化锚守护）；三档 blend × 8 孔隙率 × 4 密度=96 点并入点集
+  const hyA = document.getElementById('pareto-hy-a') as HTMLSelectElement | null;
+  const hyB = document.getElementById('pareto-hy-b') as HTMLSelectElement | null;
+  if (hyA && hyB) {
+    const keys = Object.keys(TPMS_FUNCTIONS);
+    for (const sel of [hyA, hyB]) {
+      for (const k of keys) {
+        const o = document.createElement('option');
+        o.value = k; o.textContent = k;
+        sel.appendChild(o);
+      }
+    }
+    hyA.value = 'gyroid'; hyB.value = 'diamond';
+    document.getElementById('btn-pareto-hy')?.addEventListener('click', () => {
+      const ta = hyA.value as never, tb = hyB.value as never;
+      if (ta === tb) { flashToast('请选择两个不同曲面族'); return; }
+      const added: typeof points = [];
+      for (let b = 0.25; b <= 0.76; b += 0.25) {
+        for (let po = 0.55; po <= 0.905; po += 0.05) {
+          for (const cs of [2, 3, 4, 5]) {
+            const f = forwardModelHybrid(ta, tb, b, po, cs);
+            if (f.EGPa > 0 && f.kappaM2 > 0) added.push({ E: f.EGPa, kappa: f.kappaM2, sea: f.svRatio, type: `${ta}×${tb}@${b.toFixed(2)}` as never, porosity: po, cellSize: cs });
+          }
+        }
+      }
+      points = points.concat(added);
+      front = paretoFront(points);
+      hoverIdx = -1;
+      const es = points.map((q) => Math.log10(q.E));
+      const ks = points.map((q) => Math.log10(q.kappa));
+      xDom = [Math.floor(Math.min(...es)) - 0.1, Math.ceil(Math.max(...es)) + 0.1];
+      yDom = [Math.floor(Math.min(...ks)) - 0.1, Math.ceil(Math.max(...ks)) + 0.1];
+      draw();
+      note!.textContent = `hybrid 扫描并入：${ta}×${tb} 三档 blend 新增 ${added.length} 点 → 总 ${points.length} 点、前沿 ${front.length} 点。混合律代理：E/Sv 凸组合（一阶近似）+κ 以混合 Sv 经 Kozeny-Carman 重算——代理假设非 FE 精确；hybrid 点点击写回将设置 type=${ta}（blend/第二族需在主界面 hybrid 面板手动对齐）。`;
+    });
+  }
   canvas.addEventListener('mousemove', (ev) => {
     if (!front.length) return;
     const r = canvas.getBoundingClientRect();
@@ -804,10 +842,16 @@ function bindParetoCard(): void {
   canvas.addEventListener('click', () => {
     if (hoverIdx < 0 || !front[hoverIdx]) return;
     const p = front[hoverIdx];
-    setState({ type: p.type as never, porosity: Math.round(p.porosity * 100), cellSize: p.cellSize, customFormula: '' });
+    // hybrid 复合点（type 含 '×@'）：UI hybrid 是空间分区混合（blendCenter=波前坐标），
+    // 无「均匀混合比 b」参数可直接写回——部分写回（族 A/孔隙率/密度）+指引手动配 hybrid
+    const isHybrid = p.type.includes('×');
+    const baseType = (isHybrid ? p.type.split('×')[0] : p.type) as never;
+    setState({ type: baseType, porosity: Math.round(p.porosity * 100), cellSize: p.cellSize, customFormula: '' });
     syncUI(getState());
     scheduleRebuild(false);
-    flashToast(`已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单元密度 ${p.cellSize}（E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm）`);
+    flashToast(isHybrid
+      ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · k=${p.cellSize}）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
+      : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单元密度 ${p.cellSize}（E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm）`);
   });
 }
 bindParetoCard();
