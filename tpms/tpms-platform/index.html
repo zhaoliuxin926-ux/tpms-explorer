@@ -1333,8 +1333,18 @@ window.addEventListener('error', function(e) {
             <button class="opt" id="btn-pareto-gen">扫描 24 族 × 参数域<span class="o-sub">解析代理</span></button>
             <button class="opt" id="btn-pareto-clear">清除<span class="o-sub">Reset</span></button>
           </div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-top:4px;align-items:center">
+            <label for="pareto-emin" style="font-size:11px;color:#8892b0">E ≥</label>
+            <input id="pareto-emin" type="number" step="0.5" min="0" placeholder="GPa" style="width:100%;background:#0d1220;border:1px solid #2a3350;border-radius:4px;color:#dde6ff;font-size:11px;padding:3px 5px" />
+            <label for="pareto-kmin" style="font-size:11px;color:#8892b0">κ ≥</label>
+            <input id="pareto-kmin" type="number" step="1" min="0" placeholder="×10⁻⁹ m²" style="width:100%;background:#0d1220;border:1px solid #2a3350;border-radius:4px;color:#dde6ff;font-size:11px;padding:3px 5px" />
+          </div>
+          <div class="opt-row" style="grid-template-columns:1fr 1fr;margin-top:4px">
+            <button class="opt" id="btn-pareto-filter">应用约束重算前沿<span class="o-sub">可行子集</span></button>
+            <button class="opt" id="btn-pareto-csv">导出前沿 CSV<span class="o-sub">当前视图</span></button>
+          </div>
           <canvas id="pareto-canvas" width="640" height="360" style="width:100%;border:1px solid #2a3350;border-radius:6px;margin-top:6px;background:#0d1220"></canvas>
-          <div class="field-note" id="pareto-note">三目标非支配前沿：等效模量 E（力学支撑，越大越好）× 渗透率 κ（传质输送，越大越好）× 比表面积 Sv（细胞附着面积，越大越好）——骨支架设计的三难权衡。解析代理（Gibson-Ashby × Kozeny-Carman，与逆向求解器同源公式）毫秒级扫描 24 族 × 孔隙率 × 单元密度；<b>点击前沿点</b>将该设计写回主界面参数。log-log 坐标；颜色=Sv（黄高蓝低）；○=前沿点 ·=被支配点。</div>
+          <div class="field-note" id="pareto-note">三目标非支配前沿：等效模量 E（力学支撑，越大越好）× 渗透率 κ（传质输送，越大越好）× 比表面积 Sv（细胞附着面积，越大越好）——骨支架设计的三难权衡。解析代理（Gibson-Ashby × Kozeny-Carman，与逆向求解器同源公式）毫秒级扫描 24 族 × 孔隙率 × 单元密度；<b>点击前沿点</b>将该设计写回主界面参数。约束过滤在<b>可行子集上重算</b>非支配前沿（被支配点在支配者被约束剔除后可能浮出）。log-log 坐标；颜色=Sv（黄高蓝低）；○=前沿点 ·=被支配点。</div>
         </div>
       </details>
       </section>

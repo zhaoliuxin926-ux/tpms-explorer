@@ -762,6 +762,32 @@ function bindParetoCard(): void {
     note!.textContent = `扫描完成：${points.length} 设计点 → 非支配前沿 ${front.length} 点（三目标：E↑ 力学 · κ↑ 传质 · Sv↑ 生物活性；解析代理与逆向求解器同源）。点击前沿点写回参数；hover 显示读数。`;
   });
   btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; draw(); });
+  // 约束过滤：在可行子集上重算非支配前沿（被支配点在支配者被约束剔除后可能浮出——
+  // 不能简单筛原前沿）。κ 输入单位 ×10⁻⁹ m²（骨支架典型量级 1e-10~1e-8）
+  const eMinEl = document.getElementById('pareto-emin') as HTMLInputElement | null;
+  const kMinEl = document.getElementById('pareto-kmin') as HTMLInputElement | null;
+  document.getElementById('btn-pareto-filter')?.addEventListener('click', () => {
+    if (!points.length) { flashToast('先扫描生成设计点'); return; }
+    const eMin = eMinEl ? parseFloat(eMinEl.value) : NaN;
+    const kMin = kMinEl ? parseFloat(kMinEl.value) * 1e-9 : NaN;
+    const hasE = Number.isFinite(eMin) && eMin > 0;
+    const hasK = Number.isFinite(kMin) && kMin > 0;
+    if (!hasE && !hasK) { flashToast('请至少填写一个约束（E ≥ GPa 或 κ ≥ ×10⁻⁹ m²）'); return; }
+    const feasible = points.filter((p) => (!hasE || p.E >= eMin) && (!hasK || p.kappa >= kMin));
+    if (!feasible.length) { flashToast('约束过强：无可行设计点，请放宽'); return; }
+    front = paretoFront(feasible);
+    hoverIdx = -1;
+    draw();
+    note!.textContent = `约束过滤（${hasE ? `E≥${eMin}GPa ` : ''}${hasK ? `κ≥${kMin.toExponential(1)}m² ` : ''}）：可行 ${feasible.length}/${points.length} 点 → 可行前沿 ${front.length} 点（在可行子集上重算非支配——新浮出点=原支配者被约束剔除）。点击前沿点写回参数。`;
+  });
+  // 前沿 CSV 导出（当前视图的 front；复现/论文用）
+  document.getElementById('btn-pareto-csv')?.addEventListener('click', () => {
+    if (!front.length) { flashToast('先扫描生成前沿'); return; }
+    const rows = ['type,porosity,cellSize,E_GPa,kappa_m2,Sv_per_mm'];
+    for (const p of front) rows.push([p.type, p.porosity.toFixed(3), p.cellSize, p.E.toFixed(4), p.kappa.toExponential(6), p.sea.toFixed(3)].join(','));
+    downloadText(rows.join('\n') + '\n', 'tpms-pareto-front.csv', 'text/csv');
+    flashToast(`已导出前沿 CSV（${front.length} 点）`);
+  });
   canvas.addEventListener('mousemove', (ev) => {
     if (!front.length) return;
     const r = canvas.getBoundingClientRect();
