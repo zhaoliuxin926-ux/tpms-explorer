@@ -45,6 +45,10 @@ const CASES = [
   { name: 'B4 dd 双菱', instr: '用 Double Diamond 建一个孔隙率 50% 的支架', expect: { tool: 'tpms_mesh', type: 'dd', porosity: 50 } },
   { name: 'B5 fcks 新域', instr: 'Fisher-Koch C(S) 曲面，孔隙率 60%', expect: { tool: 'tpms_mesh', type: 'fcks' } },
   { name: 'B6 gprime', instr: "G' prime surface at 60% porosity", expect: { tool: 'tpms_mesh', type: 'gprime', porosity: 60 } },
+  // ── strut 桁架双族+词表新词（2026-10-05 第二十七~二十八批产品线）──
+  { name: 'B7 strutbcc CN', instr: 'BCC 桁架杆网络支架，孔隙率 80%', expect: { tool: 'tpms_mesh', type: 'strutbcc' } },
+  { name: 'B8 strutoctet EN', instr: 'Octet truss scaffold at 75% porosity', expect: { tool: 'tpms_mesh', type: 'strutoctet' } },
+  { name: 'C8 单元密度同义词', instr: '单元密度 4 的 gyroid 支架', expect: { tool: 'tpms_mesh', type: 'gyroid', periods: 4 } },
   // ── C. 参数槽位 ──
   { name: 'C1 periods', instr: '周期数 4、孔隙率 60% 的 gyroid', expect: { tool: 'tpms_mesh', type: 'gyroid', periods: 4 } },
   { name: 'C2 resolution EN', instr: 'High-resolution (resolution 96) diamond at 60% porosity', expect: { tool: 'tpms_mesh', type: 'diamond', resolution: 96 } },
