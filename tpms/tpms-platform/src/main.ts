@@ -668,7 +668,7 @@ function bindExperimentalFit(): void {
 }
 bindExperimentalFit();
 
-// ── 多目标 Pareto 前沿探索器（2026-10-04 第二十四批）：解析代理扫 24 族 × 参数域 →
+// ── 多目标 Pareto 前沿探索器（2026-10-04 第二十四批）：解析代理扫 26 族 × 参数域 →
 //    非支配前沿（E 力学 × κ 传质 × Sv 生物活性）→ 点击前沿点写回设计参数。
 //    内核复用：paretoFront（ml-surrogate）+ forwardModel（inverse-design，与逆向求解器
 //    同源公式——代理一致性由同一数学来源保证，无需独立校准）。
