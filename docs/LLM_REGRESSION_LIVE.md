@@ -61,3 +61,16 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
 - **declare_unreachable 路径**：design=diamond+cylinder p0.6 R96（在案拒产域）→ verify exit 3 water_tightness → glm-5.3 在有界菜单选择 `declare_unreachable`，理由与 bugs.md 人类定案一致（"该 (曲面族,容器) 组合结构不可达、避免无效修补"）——诚实宣告而非盲目打补丁。
 - **patch_design 路径**：design type=`gyr0id`（拼写错误）→ paramErrors → 选择 `patch_design {"type":"gyroid"}`，理由体现最小修补原则（仅改 type、无关参数保持原值）→ 第 2 轮 verify pass，产出 `tpms-gyroid-verified.stl`（水密）。
 - 层间语义注记：resolution 200 在 verify 层被钳制直过（拦截器拒 LLM 越界输出 ≠ design 文件越界值被拒，两语义并存为设计口径）。
+
+## 2026-10-05 strut 双族+词表新词入回归：40 条满贯矩阵（本会话 LLM 线收官）
+
+- **回归集 37→40**：+B7 strutbcc（中文"BCC 桁架杆网络支架"）/+B8 strutoctet（英文"Octet truss scaffold"）/+C8 单元密度同义词（"单元密度 4"）——本会话 NL 词表三改动全部纳入真实回归永久覆盖。
+- **满贯矩阵 6/6**（本会话实测，plan key 三端点全通背景下）：{anthropic, coding-openai} × {glm-5.3-flash, glm-5.3} **全 37/37**（5.3 满血历史 36/37→37/37）；glm-4-flash 免费档 33/37（paas/v4，失败项与历史画像同形态=模型能力）；**40 条版 glm-5.3-flash（anthropic）40/40**。
+- **端点知识（官方 quick-start 核验+实测）**：plan key 三专用端点（Anthropic `/api/anthropic` · OpenAI 兼容 `/api/coding/paas/v4` · Responses `/api/v1`）全通；paas/v4 报 1113 是通道错非余额问题。**合规边界（FAQ 原文）**：自建程序长期集成应走标准 API（paas/v4）按量计费，套餐额度仅限官方指定工具——本仓库回归脚本按需临时切 plan 端点验证，不写入默认配置。
+- Responses 端点（/api/v1）tool-calling 实测可用但协议独立（object: response），裁决不加第三 provider（无消费者抽象）。
+- 错误链实证 +2：无效 key 401 / 无效模型 1211（anthropic 通道结构化返回）。
+- 复现（当前推荐档 glm-5.3-flash，40 条）：
+```bash
+TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic \
+  node tpms/agent/llm_regression.mjs --model glm-5.3-flash
+```
