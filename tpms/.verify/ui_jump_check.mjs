@@ -97,10 +97,43 @@ const titleAfterGallery = await page.evaluate(() => {
 });
 ok('画廊点击切族 → title 即时更新（updateBadges 防回归）', titleAfterGallery === 'Octet 桁架', `title=${titleAfterGallery}`);
 
+// 7. Pareto 逆设计推荐行为冒烟（2026-10-05 第五十批）——"达标子集优先"语义在 UI 层
+//    （ml_pareto 只钉 nearestFrontCandidates 纯函数），可达/不可达双分支+推荐达标语义
+//    只有真路径能验：可达目标 → 推荐必须全部达标（首版全局最近 bug 推 E=1.11<2 的回归锚）；
+//    不可达目标 → 妥协文案分支；非法输入 → fail-closed 不炸。
+await page.evaluate(() => { document.getElementById('sect-pareto').open = true; });
+await page.evaluate(() => document.getElementById('btn-pareto-gen').click());
+let scanNote = '';
+for (let t = 0; t < 20; t++) {
+  await page.waitForTimeout(500);
+  scanNote = await page.evaluate(() => document.getElementById('pareto-note')?.textContent ?? '');
+  if (scanNote.startsWith('扫描完成')) break;
+}
+const inv1 = await page.evaluate(() => {
+  document.getElementById('pareto-target-e').value = '2';
+  document.getElementById('pareto-target-k').value = '5';
+  document.getElementById('btn-pareto-target').click();
+  return document.getElementById('pareto-note').textContent;
+});
+ok('逆设计可达目标 → 达标文案+首推荐 strutoctet E≥2（达标子集优先防回归）', inv1.startsWith('目标可满足') && inv1.includes('1. strutoctet'), inv1.slice(0, 40));
+const inv2 = await page.evaluate(() => {
+  document.getElementById('pareto-target-e').value = '50';
+  document.getElementById('pareto-target-k').value = '500';
+  document.getElementById('btn-pareto-target').click();
+  return document.getElementById('pareto-note').textContent;
+});
+ok('逆设计不可达目标 → 妥协文案分支', inv2.startsWith('目标在当前设计空间不可达'), inv2.slice(0, 30));
+const inv3 = await page.evaluate(() => {
+  document.getElementById('pareto-target-e').value = '';
+  document.getElementById('btn-pareto-target').click();
+  return { note: document.getElementById('pareto-note').textContent.slice(0, 20) };
+});
+ok('逆设计非法输入 fail-closed（不炸+状态保持）', inv3.note.startsWith('目标在当前设计空间不可达'), inv3.note);
+
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
-  const guardFail = pass < 9;
-  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 9（恒真/集体跳过防护；2026-10-05 +2 画廊行为钉）');
+  const guardFail = pass < 12;
+  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计行为钉）');
 await browser.close();
 server.kill();
 process.exit(fail || guardFail ? 1 : 0);
