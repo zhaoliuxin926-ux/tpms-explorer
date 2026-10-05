@@ -20,9 +20,9 @@
 
 | 事项 | 依赖 |
 |---|---|
-| 博客二/三/四发布（二、三粘贴版已就绪，四=strut 全链待撰稿） | 用户侧发布动作 |
+| 博客二/三/四发布（二、三粘贴版已就绪，四=strut 全链工作稿待审阅） | 用户侧发布动作 |
 | 真机压缩试验 CSV → `fit-batch` 反演复核（32 件，含 S7/S8 桁架对照组） | 用户侧上机 |
-| v9.3.0 发版拍板（226 commits 积累，RELEASE_NOTES 草稿已就绪待审） | 用户拍板 |
+| ~~v9.3.0 发版~~ → **✅ 已发布（2026-10-06）**：双 tag `v9.3.0-strut-pareto`+`v1.1.0`（附注 @f34dcdb，CI 46 门三平台 SUCCESS 后打）+ [Release](https://github.com/zhaoliuxin926-ux/tpms-explorer/releases/tag/v9.3.0-strut-pareto) | 完成 |
 | SoftwareX 投稿 | 未拍板，不启动 |
 
 ## 中期（工程，已定案方向）
