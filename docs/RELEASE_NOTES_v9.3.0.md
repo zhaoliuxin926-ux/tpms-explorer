@@ -4,7 +4,7 @@
 >
 > **产品号同步 v1.1.0**（语义化 minor，见 [RELEASE_NOTES_v1.1.0.md](RELEASE_NOTES_v1.1.0.md)）。
 
-**版本代号（提案）**：`v9.3.0-strut-pareto`（自 v9.2.0-24families-hardened，219 commits）
+**版本代号（提案）**：`v9.3.0-strut-pareto`（自 v9.2.0-24families-hardened，224 commits）
 
 本版本把曲面库扩到 **26 族**（+strut 桁架双族：BCC 弯曲主导 / Octet 拉伸主导——点阵力学谱系两极首次进平台），交付 **Pareto 多目标探索器全家族**（前沿浏览→约束过滤→hybrid 混合→**逆设计推荐**），把**真实大 STL 上传链从必然失败变可用**（82k 三角级），并把 LLM 回归升到 **40 条 n=2 双轮满贯**（智谱三端点接入矩阵 6/6）。
 
