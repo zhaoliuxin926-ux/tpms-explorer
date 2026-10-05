@@ -35,6 +35,10 @@ const MATRIX = [
   { id: 'S4_D75', type: 'diamond', porosity: 0.75 },
   { id: 'S5_FK60', type: 'fcky', porosity: 0.6 },
   { id: 'S6_FK75', type: 'fcky', porosity: 0.75 },
+  // strut 对照组（2026-10-05 第四十四批）：桁架 vs TPMS 力学对照（文献经典命题）；
+  // BCC 实测 E 可直接检验标定批 C1=0.06 的真实性。k8 R96 水密实测通过（23~25MB）。
+  { id: 'S7_B65', type: 'strutbcc', porosity: 0.65 },
+  { id: 'S8_O65', type: 'strutoctet', porosity: 0.65 },
 ];
 const REPS = ONCE ? [1] : [1, 2, 3];
 
