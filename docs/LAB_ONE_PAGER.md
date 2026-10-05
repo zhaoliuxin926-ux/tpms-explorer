@@ -1,6 +1,6 @@
 # 上机操作卡（一页）
 
-> 配套 `PHYSICAL_TESTING_PROTOCOL.md` 全文；本卡供打印工位使用。产品 **v1.0.3**。
+> 配套 `PHYSICAL_TESTING_PROTOCOL.md` 全文；本卡供打印工位使用。产品 **v1.1.0**。
 
 ## 打印
 

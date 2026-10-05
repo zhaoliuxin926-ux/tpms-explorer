@@ -210,9 +210,9 @@ console.log('\n[C2] 调色预设结构');
     'tpms/tpms-platform/src/export/verification-suite.ts',
   ].map((f) => read(f)).join('\n');
   /Explorer v(?:0|2|3|4|5|6|7|8|9)\./.test(expHeaders)
-    ? bad('导出物仍自称 v0/v2–v9', '应 v1.0.3')
-    : ok('导出物产品号 v1.0.3');
-  /Explorer v1\.0\./.test(expHeaders) ? ok('导出物含 v1.0.x') : bad('导出物缺 v1.0.x');
+    ? bad('导出物仍自称 v0/v2–v9', '应 v1.1.0')
+    : ok('导出物产品号 v1.x（当前 v1.1.0）');
+  /Explorer v1\.\d+\./.test(expHeaders) ? ok('导出物含 v1.x 版本头') : bad('导出物缺 v1.x 版本头');
   const landing = read('docs/index.html');
   /style="color:#[0-9a-f]+">v[0-9]+\.[0-9]</.test(landing)
     ? bad('落地页裸版本 chip', '须带「原型期」')
@@ -280,14 +280,19 @@ console.log('\n[C2] 调色预设结构');
 // ── 4. 版本徽章 ↔ 最新 tag ──
 console.log('\n[D] 版本徽章 ↔ 最新 tag');
 {
+  // 双轨版本体系（2026-10-06 v1.1.0 起）：产品号 tag（v1.x，徽章口径）与功能引入 tag
+  // （vN.x-name）并行——断言只对产品号 tag（git describe 会取到功能 tag，如
+  // v9.3.0-strut-pareto，与徽章 v1.1.0 恒不等 → 单轨断言在双轨下必假红）
   let tag = 'v1.0.3';
   try {
-    tag = execSync('git describe --tags --abbrev=0', { cwd: ROOT, encoding: 'utf8' }).trim();
+    const v1tags = execSync("git tag -l 'v1.*' --sort=-creatordate", { cwd: ROOT, encoding: 'utf8' })
+      .split('\n').map((s) => s.trim()).filter(Boolean);
+    if (v1tags.length) tag = v1tags[0];
   } catch { /* 无 git 时用默认 */ }
   const readme = read('README.md');
   readme.includes(`release-${tag}`) || readme.includes(tag)
-    ? ok('README 徽章/正文含最新 tag ' + tag)
-    : bad('README 徽章未对齐最新 tag', `期望 ${tag}`);
+    ? ok('README 徽章/正文含最新产品号 tag ' + tag)
+    : bad('README 徽章未对齐最新产品号 tag', `期望 ${tag}`);
 }
 
 // ── 5b. SEO 三件哨兵（2026-10-02 审查 H1：robots/sitemap/canonical/og 此前零门禁，

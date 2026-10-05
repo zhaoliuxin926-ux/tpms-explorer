@@ -1,6 +1,6 @@
 # 文献带 vs 平台 · 一键偏差卡
 
-> 产品 **v1.0.3** · 与 `BENCHMARKS.md`「与文献实验数据的对照」同源  
+> 产品 **v1.1.0** · 与 `BENCHMARKS.md`「与文献实验数据的对照」同源  
 > 复现：`node tpms/agent/lit-band-card.mjs`（默认孔隙率 60%）  
 > **口径**：Gibson–Ashby 解析工程估算，**非 FEA**；打印件绝对值受工艺缺陷影响低于解析预测。
 

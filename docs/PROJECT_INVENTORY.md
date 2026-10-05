@@ -1,6 +1,6 @@
 # 项目总览（PROJECT INVENTORY）
 
-> 生成：2026-09-23 · 产品版本 **v1.0.3**（稳定序列）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
+> 生成：2026-09-23 · 产品版本 **v1.1.0**（稳定序列，2026-10-06 刷新）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
 > 口径：功能标签写「原型期 vN」；产品自称只用 v1.0.x。
 
 ---
@@ -81,7 +81,7 @@ tpms-explorer/
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |
 | 博客同源 | `sync-publish.mjs --check` | 粘贴版漂移 exit 1 |
-| 版本哨兵 | 导出物 v1.0.3 / 落地页「原型期」/ fcky / fit 诚实 | docs 门禁内 |
+| 版本哨兵 | 导出物 v1.1.0 / 落地页「原型期」/ fcky / fit 诚实 | docs 门禁内 |
 
 **宣称纪律**：命令可指认；性能 grep 调用点；数字以 SCHEDULE/GUARD 为准（见 CONTRIBUTING）。
 

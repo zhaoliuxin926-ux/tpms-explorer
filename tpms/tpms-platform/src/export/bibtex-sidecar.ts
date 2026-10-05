@@ -133,7 +133,7 @@ export function generateJSONSidecar(
     } : null,
     meshHash,
     reproducibility: {
-      platform: 'TPMS Explorer v1.0.3',
+      platform: 'TPMS Explorer v1.1.0',
       url: window.location.href,
     },
   }, null, 2);
