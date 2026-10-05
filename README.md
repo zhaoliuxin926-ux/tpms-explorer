@@ -55,7 +55,7 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 24 族 TPMS 曲面 | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等），可用域与文献对照见 BENCHMARKS.md | parity_math 332 断言四方同源 + mesh_audit 34 案例 |
+| 🧬 26 族曲面（24 TPMS + 2 桁架） | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等）+ **strut 桁架双族**（BCC 弯曲主导 / Octet 拉伸主导，杆=胶囊 SDF 周期场——桁架侧力学谱），可用域与文献对照见 BENCHMARKS.md | parity_math 332 断言四方同源 + mesh_audit 34 案例 |
 | 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 34 案例审计门（29 几何 + 5 拒产/RT 哨兵），几何案例开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
@@ -64,12 +64,13 @@
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **46 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 46/46 |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 37 条中英指令真实模型回归（glm-5.3-flash 多轮 37/37 推荐（n≥2，勿称确定性），四档画像在案）+ llm_provider_selftest 40 断言（GUARD 37，+null 元素钉 2026-10-02） |
+| 🎯 Pareto 多目标前沿 | 骨支架三难权衡（E↑力学×κ↑传质×Sv↑生物活性）可视化：26 族×孔隙率×密度毫秒级解析代理扫描 → 非支配前沿 log-log 散点 → hover 读数 → **点击写回设计参数**；约束过滤（可行子集重算）+ 前沿 CSV 导出 + 双族混合律扫描（E/Sv 凸组合+κ KC 重算） | ml_pareto_audit 9 断言（hybrid b=0/1 退化锚 + 非支配性） |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 40 条中英指令真实模型回归（glm-5.3-flash 满贯 40/40×2 轮 n=2（勿称确定性），6/6 端点×模型矩阵在案）+ llm_provider_selftest 40 断言（GUARD 37，+null 元素钉 2026-10-02） |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
 | 🔥 LPBF 热-力耦合 | 高斯体热源瞬态场 + 冷却速率 G×R + 残余应力/翘曲 + 工艺窗口（v6.0） | lpbf_thermo_mechanical_audit 18 断言 |
-| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界拒绝不臆造（v6.0） | nl_agent_audit 45 断言 |
+| 💬 自然语言 CAD 代理 | 中英双语意图解析 → 参数补丁/导出/仿真，越界拒绝不臆造（v6.0） | nl_agent_audit 48 断言 |
 | 🧠 隐式神经场生成拓扑 | SIREN 四层正弦 MLP（精确 2π 周期）+ 5 专家蒸馏 + 8 维潜在空间流形插值（v7.0） | neural_implicit_audit 43 断言 |
 | ⚖️ 多轴屈服包络面 | Hill-48/Tsai-Wu/Gurson/Drucker-Prager 统一射线距离 + 3D 交互视口 + 安全系数（v7.0） | yield_surface_audit 35 断言 |
 | 📡 声子晶体能带 | Bloch-Floquet 点阵动力学 + 两轮 deflate-Lanczos + Γ 三零模态 + 路径禁带 BG%（v7.0） | phononic_bandgap_audit 18 断言 |
