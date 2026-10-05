@@ -73,10 +73,34 @@ await page.waitForTimeout(700);
 const onView = await page.evaluate(() => document.querySelector('.ls-jump button.on')?.textContent?.trim());
 ok('分组头点击 → 视图高亮', onView === '视图', `on=${onView}`);
 
+// 6. 26 族画廊行为冒烟（2026-10-05 第五十一批权重污染级 bug 的行为钉——结构断言抓不住，
+//    只有真路径能抓）：先点 strut 按钮污染 state.weights（切族重置为 [0.25,0,0,0]——
+//    旧代码此场景画廊退化 21/26），再生成必须 26/26；点击缩略 → title 即时切（updateBadges）。
+await page.evaluate(() => {
+  document.querySelector('button[data-type="strutoctet"]')?.click();
+  document.getElementById('sect-gallery').open = true;
+  document.getElementById('btn-gallery-gen').click();
+});
+let galNote = '';
+for (let t = 0; t < 40; t++) {
+  await page.waitForTimeout(1000);
+  galNote = await page.evaluate(() => document.getElementById('gallery-note')?.textContent ?? '');
+  if (galNote.startsWith('画廊完成')) break;
+}
+const galImgs = await page.evaluate(() => document.querySelectorAll('#gallery-grid img').length);
+ok('画廊 strutoctet 预污染后生成 26/26（getDefaultWeights 根修防回归）', galNote.startsWith('画廊完成：26/26') && galImgs === 26, `note=${galNote.slice(0, 22)} imgs=${galImgs}`);
+const titleAfterGallery = await page.evaluate(() => {
+  const cells = [...document.querySelectorAll('#gallery-grid > div')];
+  const oct = cells.find((c) => c.textContent.includes('Octet'));
+  oct?.click();
+  return document.title.split('·')[0].trim();
+});
+ok('画廊点击切族 → title 即时更新（updateBadges 防回归）', titleAfterGallery === 'Octet 桁架', `title=${titleAfterGallery}`);
+
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
-  const guardFail = pass < 7;
-  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 7（恒真/集体跳过防护，2026-09-04 审查纳管）');
+  const guardFail = pass < 9;
+  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 9（恒真/集体跳过防护；2026-10-05 +2 画廊行为钉）');
 await browser.close();
 server.kill();
 process.exit(fail || guardFail ? 1 : 0);
