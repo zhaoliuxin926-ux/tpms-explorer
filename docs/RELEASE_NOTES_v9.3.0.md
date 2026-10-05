@@ -2,7 +2,7 @@
 
 > 本文件为**发布时点快照**（含当轮门禁数/断言数，不得当现态引用）；现态以 `run_ci_suite.mjs` SCHEDULE 与 README 为准。
 >
-> **状态：DRAFT——发版拍板项（版本号/代号/时机待用户确认；CI 绿后打 tag@tip）。产品号建议同步升 v1.1.0（语义化 minor：新功能）。**
+> **产品号同步 v1.1.0**（语义化 minor，见 [RELEASE_NOTES_v1.1.0.md](RELEASE_NOTES_v1.1.0.md)）。
 
 **版本代号（提案）**：`v9.3.0-strut-pareto`（自 v9.2.0-24families-hardened，219 commits）
 

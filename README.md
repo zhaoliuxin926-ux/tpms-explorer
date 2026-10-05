@@ -2,7 +2,7 @@
 
 > **中文** · [English](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v1.0.3-2563eb)
+![release](https://img.shields.io/badge/release-v1.1.0-2563eb)
 ![ci](https://img.shields.io/badge/CI-46%2F46%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -17,7 +17,7 @@
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
-| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.0.3.md](docs/RELEASE_NOTES_v1.0.3.md)（当前）｜[v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
+| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.1.0.md](docs/RELEASE_NOTES_v1.1.0.md)（当前）｜[v1.0.3](docs/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
@@ -51,7 +51,7 @@
     └── agent_memory/  项目记忆（gitignored）
 ```
 
-### 科研与增材制造特性矩阵（v1.0.3 · 稳定序列）
+### 科研与增材制造特性矩阵（v1.1.0 · 稳定序列）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
