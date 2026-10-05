@@ -74,3 +74,10 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
 TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic \
   node tpms/agent/llm_regression.mjs --model glm-5.3-flash
 ```
+
+## 2026-10-05 40 条 n=2 基线落定：双轮 40/40×2（glm-5.3-flash · anthropic 通道）
+
+- **R1 40/40 · R2 40/40 背靠背**——零失败、零轮换（历史口径"temp=0 下失败项轮换"在 5.3-flash 档 40 条上未出现：满贯形态稳定）。
+- 三新词用例（B7 BCC 桁架 / B8 Octet truss / C8 单元密度）两轮全 PASS——strut 双族 NL 语义在真实模型链路的稳定性达到 n=2 证据标准。
+- 历史口径遵守：n=2 仍不称确定性；失败项轮换是历史 4-flash 档的观察（33/37 档），5.3-flash 满贯档无需该豁免。
+- 本节与 2026-10-05 上节（端点知识/合规边界/6/6 矩阵）共同构成本会话 LLM 线终态。
