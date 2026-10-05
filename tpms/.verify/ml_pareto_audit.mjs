@@ -24,7 +24,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ml_audit_bundle.mjs');
 {
   const entry = join(tmpdir(), 'tpms_ml_audit_entry.ts');
   writeFileSync(entry, [
-    `export { createMLP, mlpForward, trainMLP, paretoFront } from ${JSON.stringify(join(PLATFORM, 'src/physics/ml-surrogate.ts'))};`,
+    `export { createMLP, mlpForward, trainMLP, paretoFront, nearestFrontCandidates } from ${JSON.stringify(join(PLATFORM, 'src/physics/ml-surrogate.ts'))};`,
     `export { forwardModel, forwardModelHybrid } from ${JSON.stringify(join(PLATFORM, 'src/physics/inverse-design.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
@@ -32,7 +32,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ml_audit_bundle.mjs');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { createMLP, mlpForward, trainMLP, paretoFront, forwardModel, forwardModelHybrid } = await import(pathToFileURL(BUNDLE));
+const { createMLP, mlpForward, trainMLP, paretoFront, nearestFrontCandidates, forwardModel, forwardModelHybrid } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -114,8 +114,43 @@ console.log('\n[E] forwardModelHybrid 退化锚');
   check('E 线性凸组合（中点=均值）', Math.abs(hMid.EGPa - (fA.EGPa + fB.EGPa) / 2) < 1e-12);
 }
 
+// ── F. 逆设计推荐 nearestFrontCandidates（2026-10-05 Pareto 逆设计入口钉）──
+console.log('\n[F] nearestFrontCandidates 逆设计推荐');
+{
+  const pts = [
+    { E: 1, kappa: 5e-9, sea: 10, type: 'gyroid', porosity: 0.85, cellSize: 2 },
+    { E: 2, kappa: 2e-9, sea: 12, type: 'diamond', porosity: 0.8, cellSize: 2 },
+    { E: 4, kappa: 8e-10, sea: 15, type: 'iwp', porosity: 0.75, cellSize: 2 },
+    { E: 3, kappa: 0.2, sea: 15, type: 'iwp', porosity: 0.75, cellSize: 3 },
+  ];
+  const front = paretoFront(pts);
+  check('fixture 前沿非空', front.length > 0);
+  // 退化锚：目标=某前沿点坐标 → 第一推荐=该点且 dist≈0
+  const anchor = front[0];
+  const r0 = nearestFrontCandidates(front, anchor.E, anchor.kappa, 3);
+  check('退化锚：目标=前沿点自身 → 第一推荐=该点（dist≈0）',
+    r0.length > 0 && r0[0].point === anchor && Math.abs(r0[0].dist) < 1e-12);
+  // 距离公式手算对拍：目标(10, 1e-8) 对 anchor 的 log10 欧氏距离
+  const r1 = nearestFrontCandidates(front, 10, 1e-8, 3);
+  const expect = Math.hypot(Math.log10(anchor.E) - 1, Math.log10(anchor.kappa) - (-8));
+  const hit = r1.find((t) => t.point === anchor);
+  check('距离=log10 双目标欧氏（手算对拍）', !!hit && Math.abs(hit.dist - expect) < 1e-12,
+    `${hit ? hit.dist.toExponential(3) : '未命中'} vs ${expect.toExponential(3)}`);
+  // 距离序单调非降 + k 截断
+  const mono = r1.every((t, i) => i === 0 || r1[i - 1].dist <= t.dist + 1e-12);
+  check('返回按距离单调非降', r1.length > 1 && mono);
+  check('k=3 截断（≤3 且 ≤front 数）', r1.length <= 3 && r1.length <= front.length);
+  check('k=1 返回单候选', nearestFrontCandidates(front, 10, 1e-8, 1).length === 1);
+  // fail-closed：非法目标（NaN/0/负/Infinity）→ 空数组
+  check('非法目标 fail-closed：NaN/0/负/∞ → []',
+    nearestFrontCandidates(front, NaN, 1e-9).length === 0 &&
+    nearestFrontCandidates(front, 0, 1e-9).length === 0 &&
+    nearestFrontCandidates(front, 2, -1e-9).length === 0 &&
+    nearestFrontCandidates(front, Infinity, 1e-9).length === 0);
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 9) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 9（恒真/集体跳过防护；2026-10-04 +4 hybrid 退化锚）'); process.exit(1); }
+  if (passCount < 16) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 16（恒真/集体跳过防护；2026-10-04 +4 hybrid 退化锚；2026-10-05 +7 逆设计推荐）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

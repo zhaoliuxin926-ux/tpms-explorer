@@ -110,3 +110,21 @@ export function paretoFront(points: ParetoPoint[]): ParetoPoint[] {
   }
   return points.filter((_, i) => !dominated.has(i));
 }
+
+/** 逆设计推荐：给定性能愿望点（E GPa / κ m²），返回前沿上 log 空间距离最近的 top-k 候选。
+ * 愿望点通常严格优于全前沿（不可达）——最近候选即可行前沿上的最优妥协；
+ * 若目标可满足（存在点支配目标），返回的是最接近目标的达标点。距离=log10 双目标
+ * 欧氏；目标非法（非有限/非正）返回空数组（fail-closed，UI 层提示）。 */
+export function nearestFrontCandidates(
+  front: ParetoPoint[],
+  targetE: number,
+  targetKappa: number,
+  k = 3,
+): { point: ParetoPoint; dist: number }[] {
+  if (!Number.isFinite(targetE) || targetE <= 0 || !Number.isFinite(targetKappa) || targetKappa <= 0) return [];
+  const tl = Math.log10(targetE), tk = Math.log10(targetKappa);
+  return front
+    .map((p) => ({ point: p, dist: Math.hypot(Math.log10(p.E) - tl, Math.log10(p.kappa) - tk) }))
+    .sort((a, b) => a.dist - b.dist || b.point.E - a.point.E)
+    .slice(0, Math.max(0, k));
+}

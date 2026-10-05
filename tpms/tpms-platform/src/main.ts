@@ -42,7 +42,7 @@ import type { PhononicResult } from './physics/phononic-bandgap';
 import type { TissueResult } from './physics/tissue-growth';
 import type { InverseReport, DesignTargets } from './physics/inverse-design';
 import { forwardModel, forwardModelHybrid } from './physics/inverse-design';
-import { paretoFront } from './physics/ml-surrogate';
+import { paretoFront, nearestFrontCandidates } from './physics/ml-surrogate';
 import { DEFAULT_STATE } from './types';
 import { BoundingBoxAnnotation } from './measure/bounding-box-annotation';
 import { CaliperTool } from './measure/caliper';
@@ -684,6 +684,9 @@ function bindParetoCard(): void {
   let points: P[] = [];
   let front: P[] = [];
   let hoverIdx = -1;
+  // 逆设计状态：目标愿望点 ★ + log 空间最近 top-3 候选（front 重算处一并失效）
+  let targetStar: { E: number; kappa: number } | null = null;
+  let targetTop: { point: P; dist: number }[] = [];
   const M = { l: 56, r: 14, t: 14, b: 34 };
   const sx = (E: number) => M.l + (Math.log10(E) - xDom[0]) / (xDom[1] - xDom[0]) * (canvas.width - M.l - M.r);
   const sy = (k: number) => canvas.height - M.b - (Math.log10(k) - yDom[0]) / (yDom[1] - yDom[0]) * (canvas.height - M.t - M.b);
@@ -739,6 +742,31 @@ function bindParetoCard(): void {
     }
     ctx2d.fillStyle = '#8892b0'; ctx2d.font = '10px system-ui';
     ctx2d.fillText(`前沿 ${front.length} / ${points.length} 点`, M.l + 6, M.t + 10);
+    // 逆设计：目标愿望点 ★（金色）+ 最近 top-3 候选（金色实圈+序号）
+    if (targetStar) {
+      const tx = sx(targetStar.E), ty = sy(targetStar.kappa);
+      ctx2d.strokeStyle = '#ffd166'; ctx2d.lineWidth = 1.4;
+      ctx2d.beginPath();
+      for (let a = 0; a < 10; a++) {
+        const r = a % 2 === 0 ? 9 : 4;
+        const th = -Math.PI / 2 + (a * Math.PI) / 5;
+        const px = tx + r * Math.cos(th), py = ty + r * Math.sin(th);
+        if (a === 0) ctx2d.moveTo(px, py); else ctx2d.lineTo(px, py);
+      }
+      ctx2d.closePath(); ctx2d.stroke();
+      ctx2d.fillStyle = '#ffd166'; ctx2d.font = '10px system-ui';
+      ctx2d.fillText('目标', tx + 12, ty + 3);
+    }
+    for (let ti = 0; ti < targetTop.length; ti++) {
+      const fi = front.indexOf(targetTop[ti].point);
+      if (fi < 0) continue;
+      const p = front[fi];
+      ctx2d.beginPath();
+      ctx2d.arc(sx(p.E), sy(p.kappa), 4.5, 0, Math.PI * 2);
+      ctx2d.strokeStyle = '#ffd166'; ctx2d.lineWidth = 2; ctx2d.stroke();
+      ctx2d.fillStyle = '#ffd166'; ctx2d.font = 'bold 10px system-ui';
+      ctx2d.fillText(String(ti + 1), sx(p.E) + 8, sy(p.kappa) - 8);
+    }
   };
   btnGen.addEventListener('click', () => {
     const types = Object.keys(TPMS_FUNCTIONS) as never[];
@@ -751,8 +779,9 @@ function bindParetoCard(): void {
         }
       }
     }
-    points = grid;
-    front = paretoFront(grid);
+      points = grid;
+      front = paretoFront(grid);
+      targetStar = null; targetTop = [];
     // 域适配（log）
     const es = points.map((p) => Math.log10(p.E));
     const ks = points.map((p) => Math.log10(p.kappa));
@@ -761,7 +790,7 @@ function bindParetoCard(): void {
     draw();
     note!.textContent = `扫描完成：${points.length} 设计点 → 非支配前沿 ${front.length} 点（三目标：E↑ 力学 · κ↑ 传质 · Sv↑ 生物活性；解析代理与逆向求解器同源）。点击前沿点写回参数；hover 显示读数。`;
   });
-  btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; draw(); });
+  btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; targetStar = null; targetTop = []; draw(); });
   // 约束过滤：在可行子集上重算非支配前沿（被支配点在支配者被约束剔除后可能浮出——
   // 不能简单筛原前沿）。κ 输入单位 ×10⁻⁹ m²（骨支架典型量级 1e-10~1e-8）
   const eMinEl = document.getElementById('pareto-emin') as HTMLInputElement | null;
@@ -776,7 +805,7 @@ function bindParetoCard(): void {
     const feasible = points.filter((p) => (!hasE || p.E >= eMin) && (!hasK || p.kappa >= kMin));
     if (!feasible.length) { flashToast('约束过强：无可行设计点，请放宽'); return; }
     front = paretoFront(feasible);
-    hoverIdx = -1;
+    hoverIdx = -1; targetStar = null; targetTop = [];
     draw();
     note!.textContent = `约束过滤（${hasE ? `E≥${eMin}GPa ` : ''}${hasK ? `κ≥${kMin.toExponential(1)}m² ` : ''}）：可行 ${feasible.length}/${points.length} 点 → 可行前沿 ${front.length} 点（在可行子集上重算非支配——新浮出点=原支配者被约束剔除）。点击前沿点写回参数。`;
   });
@@ -817,7 +846,7 @@ function bindParetoCard(): void {
       }
       points = points.concat(added);
       front = paretoFront(points);
-      hoverIdx = -1;
+      hoverIdx = -1; targetStar = null; targetTop = [];
       const es = points.map((q) => Math.log10(q.E));
       const ks = points.map((q) => Math.log10(q.kappa));
       xDom = [Math.floor(Math.min(...es)) - 0.1, Math.ceil(Math.max(...es)) + 0.1];
@@ -852,6 +881,32 @@ function bindParetoCard(): void {
     flashToast(isHybrid
       ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · k=${p.cellSize}）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
       : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单元密度 ${p.cellSize}（E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm）`);
+  });
+  // 逆设计入口：性能愿望点（E/κ）→ 前沿上 log10 空间最近的 top-3 候选。
+  // 愿望通常严格优于全前沿（不可达）——最近候选即可行最优妥协；目标可达时
+  // 返回最接近目标的达标点。κ 输入单位与约束过滤一致（×10⁻⁹ m²）。
+  const tgtEEl = document.getElementById('pareto-target-e') as HTMLInputElement | null;
+  const tgtKEl = document.getElementById('pareto-target-k') as HTMLInputElement | null;
+  document.getElementById('btn-pareto-target')?.addEventListener('click', () => {
+    if (!front.length) { flashToast('先扫描生成设计点'); return; }
+    const eV = tgtEEl ? parseFloat(tgtEEl.value) : NaN;
+    const kV = tgtKEl ? parseFloat(tgtKEl.value) : NaN;
+    if (!Number.isFinite(eV) || eV <= 0 || !Number.isFinite(kV) || kV <= 0) {
+      flashToast('目标 E 与 κ 需为正数（κ 单位 ×10⁻⁹ m²）'); return;
+    }
+    const kappaM2 = kV * 1e-9;
+    targetStar = { E: eV, kappa: kappaM2 };
+    // 目标可达 → 在达标子集（E/κ 双维 ≥ 目标）上找最近（=最小超标的达标点）；
+    // 不可达 → 全前沿最近妥协。避免"声称可满足却推荐不达标点"的语义矛盾。
+    const feasible = front.filter((q) => q.E >= eV && q.kappa >= kappaM2);
+    const reachable = feasible.length > 0;
+    targetTop = nearestFrontCandidates(reachable ? feasible : front, eV, kappaM2, 3);
+    const lines = targetTop.map((t, i) =>
+      `${i + 1}. ${String(t.point.type)} p=${(t.point.porosity * 100).toFixed(0)}% k=${t.point.cellSize} · E=${t.point.E.toFixed(2)}GPa κ=${t.point.kappa.toExponential(1)} · 距目标 ${t.dist.toFixed(2)} log10`);
+    note!.textContent = reachable
+      ? `目标可满足（存在达标前沿点）——最接近目标的 top-3 已金色标注（★=愿望点，序号=推荐顺位）：\n${lines.join('　')}\n点击前沿圆点写回该设计参数。`
+      : `目标在当前设计空间不可达——最近的可行妥协 top-3 已金色标注（★=愿望点，序号=推荐顺位，log10 距离越小越接近）：\n${lines.join('　')}\n逆设计=愿望与可行前沿的协商；解析代理非 FE 精确，采用后可在主界面网格级复核。`;
+    draw();
   });
 }
 bindParetoCard();
