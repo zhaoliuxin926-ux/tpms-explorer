@@ -974,6 +974,15 @@ window.addEventListener('error', function(e) {
         <div class="field-note" style="margin-top:8px">一次性 MT 构型（径向梯度 / 双族分区）入口：<a href="#" id="jump-engview" style="color:#4fc3f7">径向梯度 M(r) · 双族分区 region ›</a></div>
       </details>
 
+      <details class="sect" id="sect-gallery">
+        <summary class="sect-h">26 族画廊（同参数对比）</summary>
+        <div class="field">
+          <button class="opt" id="btn-gallery-gen" style="width:100%">生成族画廊<span class="o-sub">R24 缩略 · 零等值面+各族默认权重 · k=2</span></button>
+          <div class="field-note" id="gallery-note">一屏对比 26 族形态差异；点击缩略图将该族写回主视图。每族渲染零等值面 + 该族默认权重（教科书形态，孔隙率差异如实呈现——不按目标孔隙率对齐；桁架杆径由默认权重 w₀=0.25 承载）。逐族后台重建（R24），约 3-8 秒。</div>
+          <div id="gallery-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px"></div>
+        </div>
+      </details>
+
       <details class="sect">
         <summary class="sect-h">渐变支架（C1）</summary>
         <div class="field">

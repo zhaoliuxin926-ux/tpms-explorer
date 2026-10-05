@@ -24,7 +24,7 @@ import { evaluateFieldGPU, probeGpuAvailability, type GpuFieldConfig } from './g
 import { analyzeSection, analyzeIslands3D, isSolidAt, analyticFieldValue, type SectionAnalysisParams } from './physics/percolation-analysis';
 import { mapGeometry } from './core/manifold-mapping';
 import type { PhysicsMetrics } from './types';
-import { getCompiledCustomFormula, getTpmsFunction, TPMS_FUNCTIONS } from './core/tpms-functions';
+import { getCompiledCustomFormula, getTpmsFunction, TPMS_FUNCTIONS, getDefaultWeights } from './core/tpms-functions';
 import { solveIsoAnalytic } from './core/porosity-solver';
 import { analyzeHierarchical } from './core/hierarchical-functions';
 import { computeCrush, computeModal } from './physics/impact-energy';
@@ -58,6 +58,7 @@ import {
   initOnboard,
   refreshWeightUI,
   MATERIAL_LABEL,
+  LABEL,
   initTipToggle,
 } from './ui-helpers';
 
@@ -877,6 +878,8 @@ function bindParetoCard(): void {
     const baseType = (isHybrid ? p.type.split('×')[0] : p.type) as never;
     setState({ type: baseType, porosity: Math.round(p.porosity * 100), cellSize: p.cellSize, customFormula: '' });
     syncUI(getState());
+    // 徽标/title 与族按钮路径对齐（第十九批 NL 同型教训：漏 updateBadges → title 滞留旧族名）
+    { const sb = getState(); updateBadges(sb.type, sb.model, sb.material, sb.structureMode); }
     scheduleRebuild(false);
     flashToast(isHybrid
       ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · k=${p.cellSize}）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
@@ -910,6 +913,120 @@ function bindParetoCard(): void {
   });
 }
 bindParetoCard();
+
+// ── 26 族画廊（同参数对比缩略 + 点击切族）──
+// 口径：26 族统一零等值面 iso=0 + 各族默认权重（教科书形态）；桁架杆径由其默认
+// 权重 w[0]=0.25 承载。逐族 buildSurface R24 同步提取 + rAF 让步分帧；
+// three 离屏 128px 渲染缩略。
+function bindGalleryCard(): void {
+  const btn = document.getElementById('btn-gallery-gen') as HTMLButtonElement | null;
+  const grid = document.getElementById('gallery-grid');
+  const note = document.getElementById('gallery-note');
+  if (!btn || !grid || !note) return;
+  let busy = false;
+  btn.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    btn.disabled = true;
+    grid.textContent = '';
+    const s = getState();
+    const types = Object.keys(TPMS_FUNCTIONS) as import('./types').TpmType[];
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(128, 128, false);
+    } catch {
+      note.textContent = '缩略渲染不可用（WebGL 上下文创建失败）——画廊需 WebGL 支持。';
+      busy = false; btn.disabled = false; return;
+    }
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0d1220');
+    const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+    cam.position.set(2.6, 1.9, 2.6); cam.lookAt(0, 0, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const key = new THREE.DirectionalLight(0xffffff, 1.1);
+    key.position.set(3, 5, 2); scene.add(key);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x7ec8e3 });
+    const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+    let okCount = 0;
+    for (let i = 0; i < types.length; i++) {
+      const ty = types[i];
+      note.textContent = `画廊生成中 ${i + 1}/${types.length}（${LABEL[ty] ?? ty}）…`;
+      await raf();
+      // 权重用每族自己的默认（教科书形态），与当前 state 解耦——切族会把 state.weights
+      // 重置为该族形态（如 strut 的 [0.25,0,0,0]），抄 s.weights 会让权重多维族
+      // （lidinoid/octo/gprime 等 w[1..]=0）场函数项消失 → 空网格（实测 21/26 退化）。
+      // iso 统一 0：TPMS=零等值面天然形态；strut 杆径由 getDefaultWeights 的 w[0]=0.25 承载。
+      const params: BuildParams = {
+        type: ty,
+        iso: 0,
+        periods: 2,
+        resolution: 24,
+        targetPorosity: undefined as unknown as number,
+        weights: getDefaultWeights(ty),
+        structureMode: 'solid_network',
+        containerShape: 'cube',
+        thickness: s.thickness,
+        gradientDir: s.gradientDir,
+        hybrid: s.hybrid,
+        customFormula: '',
+        preview: false,
+      };
+      const cell = document.createElement('div');
+      cell.style.cssText = 'text-align:center;font-size:9px;color:#8892b0;line-height:1.25';
+      const cap = document.createElement('div');
+      cap.textContent = LABEL[ty] ?? ty;
+      cap.style.marginTop = '2px';
+      cell.appendChild(cap);
+      try {
+        const res = buildSurface(params);
+        if (res.type === 'result' && res.positions && res.normals && res.indices && res.vertCount > 0) {
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(res.positions), 3));
+          geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(res.normals), 3));
+          geo.setIndex(new THREE.BufferAttribute(new Uint32Array(res.indices), 1));
+          const mesh = new THREE.Mesh(geo, mat);
+          scene.add(mesh);
+          renderer.render(scene, cam);
+          const url = renderer.domElement.toDataURL();
+          scene.remove(mesh);
+          geo.dispose();
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = LABEL[ty] ?? ty;
+          img.style.cssText = 'width:100%;border:1px solid #2a3350;border-radius:4px;display:block';
+          cell.insertBefore(img, cap);
+          cell.addEventListener('click', () => {
+            setState({ type: ty, customFormula: '' });
+            syncUI(getState());
+            // 徽标/title 与族按钮路径对齐（漏 updateBadges → title 滞留旧族名，同 Pareto 写回同型缺）
+            const sb = getState();
+            updateBadges(sb.type, sb.model, sb.material, sb.structureMode);
+            scheduleRebuild(false);
+            flashToast(`已切换到 ${LABEL[ty] ?? ty}（画廊写回）`);
+          });
+          okCount++;
+        } else {
+          const na = document.createElement('div');
+          na.textContent = '（R24 无网格·如实）';
+          na.style.color = '#5a6480';
+          cell.appendChild(na);
+        }
+      } catch {
+        const bad = document.createElement('div');
+        bad.textContent = '（构建失败）';
+        bad.style.color = '#5a6480';
+        cell.appendChild(bad);
+      }
+      grid.appendChild(cell);
+    }
+    renderer.dispose();
+    note.textContent = `画廊完成：${okCount}/${types.length} 族渲染成功（各族=零等值面 iso=0 + 默认权重（桁架杆径 w₀=0.25）· k=2 · R24 缩略）。点击缩略图切换主视图到该族；生成与当前族选择无关（每族固定教科书形态），再点「生成」可刷新。`;
+    busy = false;
+    btn.disabled = false;
+  });
+}
+bindGalleryCard();
 
 // ── C5 v9.0 外部 STL 保形容器（UI 摄入：文件 → SDF → buildParams 注入）──
 let meshCont: { ab: ArrayBuffer; sdfCache: Map<number, Float32Array>; blend: number; name: string; scale: number; tris: number; volumePhys: number } | null = null;
