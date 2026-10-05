@@ -16,7 +16,7 @@ Personal, independently maintained open-source project.
 | Install | None — open `index.html`, works offline | `npm install && npm run dev` (Vite 8 + TS + Three.js + WebGPU) |
 | Audience | Teaching, demos, quick exploration | Research, batch generation, CAE export, CLI automation |
 | Status | **Feature-frozen teaching edition** (consistency/security fixes only; the only `file://` double-click build) | Active development — all v7+ capabilities live here |
-| Surface families | 8 canonical | **24** (canonical + C2: Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W …) |
+| Surface families | 8 canonical | **26** (canonical + C2: Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W … + strut trusses BCC/Octet) |
 | Export | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / 3MF / GLB / Abaqus INP / OpenFOAM polyMesh / Python (PyVista) / MATLAB scripts |
 ### Three-screen tour (live)
 
@@ -40,7 +40,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 | Acceptance | Result |
 |---|---|
-| 37 bilingual instructions | **glm-5.3-flash multi-round 37/37** (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic) (five-tier matrix 2026-10-01: 4-flash 34/37×2 · 5.3-flash 37/37×2 · 5.3 37/37×2) |
+| 40 bilingual instructions | **glm-5.3-flash 40/40 ×2 rounds** (n=2, not claimed deterministic; 6/6 endpoint×model matrix on record; three strut/density cases added 2026-10-05) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
 | The interceptor itself | 39 offline deterministic assertions (guard 37; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
@@ -51,16 +51,17 @@ Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, se
 
 ## Highlights
 
-- **24 TPMS families** (engineering): 8 canonical + C2 extensions (O,C-TO, Karcher, Fischer-Koch S/Y/C(S)/C(Y), G′, D′, Double P/D/G, Complementary D, Slotted P/F/Q*/W from the jwf23 equation dataset) with four-way formula parity and a public [BENCHMARKS](BENCHMARKS.md) usable-domain matrix. Teaching edition keeps the 8 canonical families for focus. **The teaching edition is feature-frozen** (since v9.2): it receives consistency/security fixes only, while all new capabilities land in the engineering edition.
+- **26 families** (engineering): 24 TPMS (8 canonical + C2 extensions (O,C-TO, Karcher, Fischer-Koch S/Y/C(S)/C(Y), G′, D′, Double P/D/G, Complementary D, Slotted P/F/Q*/W from the jwf23 equation dataset)) + **2 strut-truss families** (BCC bending-dominated / Octet stretch-dominated — struts as capsule-SDF periodic fields, zero architecture change downstream), with four-way formula parity and a public [BENCHMARKS](BENCHMARKS.md) usable-domain matrix. Teaching edition keeps the 8 canonical families for focus. **The teaching edition is feature-frozen** (since v9.2): it receives consistency/security fixes only, while all new capabilities land in the engineering edition.
 - **Exact porosity solver** (CLI): root finding on the analytic surface via deterministic seeded Monte-Carlo integration + mesh-measured secant validation. Measured deviation **0.13 pp @ R96** (diamond, 60 % target).
 - **Watertight meshing pipeline**: edge-crossing Surface Nets with global orientation propagation — open edges, non-manifold and degenerate triangles are hard-failed before any STL is written.
 - **Physics suite**: Gibson-Ashby stiffness/yield, permeability, tortuosity, homogenization (Voigt–Reuss bounds), phononic band gaps (Bloch–Floquet), tissue ingrowth (reaction–diffusion), LPBF thermo-mechanical, topology optimization, ML surrogate Pareto.
+- **Pareto front explorer** (2026-10-04): the bone-scaffold trilemma (E↑ mechanics × κ↑ transport × Sv↑ bioactivity) — millisecond analytical-proxy scan over 26 families × porosity × density → non-dominated front on a log-log canvas → hover readouts → **click to write design parameters back**; constraint filtering (front recomputed on the feasible subset, not a naive filter) + front CSV export + dual-family hybrid blending (E/Sv convex combination, κ recomputed via Kozeny–Carman; b=0/1 degenerates to single families). Gate: ml_pareto_audit 9 assertions.
 - **CAE direct-pass**: Abaqus INP (C3D8 + load steps + RF/U history output) and **runnable OpenFOAM cases** (SIMPLE steady dict set, embedded dP/WSS probes) straight from the browser — no snappyHexMesh. `cfd-post` turns two flow-rate runs into a Forchheimer separation: intrinsic permeability K_int = 2.34×10⁻⁹ m² (measured, in the bone-scaffold literature band) with a wall-shear mineralization-window check.
 - **Bimodal region blending** (2026-09-17): two TPMS families in one domain (e.g. gyroid shell + diamond core) joined by a smoothstep convex combination; family zero-level-set reconnection is structurally non-manifold for Surface Nets (measured nm 20-52, blend-independent) → extracted via the Marching Tetrahedra pipeline (same rationale as radial-grad); one-shot UI card bit-identical to `mesh --region-inner`, with endpoint rSplit serving as byte-level single-family anchors (probe: 10 assertions; CLI matrix 8/8 watertight).
 - **Dual mesh extractors** (v9.1): Surface Nets for smooth fields + **Marching Tetrahedra** for non-smooth fields — ships a **one-shot UI card** (MT preview at R48 + HD STL export at R96 behind a built-in watertight audit gate, bit-identical to the CLI) for the **radial-grad family** (center-dilated K / edge-1 metric remap with wall-thickness compensation, K∈[1,3], K=1.5 measured design density ≈54.7 % (192,784 tris, v9.2 bit-exact wording)) to ship watertight STL across K = 1…2 (sphere anchor 4π/3 deviation 0.13 %).
 - **Printability audit** (v9.1): overhang area statistics (α = arccos(−N·b) industrial convention) + deterministic Fibonacci-sphere build-orientation search. Measured: TPMS lattices are near-isotropic — orientation gain ≈ ±1 pp, a quantitative basis for leaving support control to the slicer.
 - **Direct implicit slicing** (v9.0+): scan-line interval method → SVG layer paths + **CLI Common-Layer-Interface** industrial format (hatch-volume fidelity ≤0.1 %), container clipping included.
-- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 37-case real-model regression (glm-5.3-flash multi-round 37/37 recommended; C3 mitigated n≥2, not deterministic; four-tier model profile on record).
+- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 40-case real-model regression (glm-5.3-flash 40/40 ×2 rounds, n=2, not claimed deterministic; 6/6 endpoint×model matrix on record).
 
 ## Quick start
 
