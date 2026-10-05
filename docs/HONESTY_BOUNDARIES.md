@@ -1,6 +1,6 @@
 # 诚实边界表（自动生成）
 
-> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-09-24）。
+> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-10-05）。
 > **改边界只改 bugs.md 定案，再跑本脚本**；禁止手改本表导致双源漂移。
 
 | # | 边界 | 说明（摘要） |
@@ -18,5 +18,6 @@
 | 11 | 切片/医学影像诚实边界（战役三后合并表述） | 直接层切链（slice 命令）已交付扫描线区间填充（vs mesh 发散 ≤0.4%）+容器裁剪+CLI 工业格式（hatch 保真 ≤0.1%）+悬垂/摆盘审计（overhang 命令）——体积偏差 10–20% 的旧「单壁轮廓」限制由该… |
 | 12 | UI 口径 / 二分目标偏差（2026-08-27 定案不修） | targetPorosity→iso 二分格点分位偏差 k=1 时最大 1.5pp（Halton 序列可压但倍频曲面无收益）；UI 已双读数披露（目标/实测）。 |
 | 14 | 弹塑性压溃求解域（2026-09-20 第三批收窄后仍存） | 三连修（σy/E 单位×1000、孤岛 BFS 剪除、R6→8）+ 收敛性双修（深回溯线搜索 α→1/512 + 非单调接受 ≤1.5×）+ 体素化解析化（6 解析族走 isSolidAt 同源 analyticFieldValue，查表插… |
+| 16 | strut 桁架族标定边界（2026-10-05 标定批定案） | strutbcc C1=0.06 落 Despande-Fleck BCC 弯曲主导文献域中值，ρ² 律形状完全适配；strutoctet 拉伸主导（E∝ρ 线性律）与 Gibson-Ashby ρ² 框架**形状律不适配**——C1=1.… |
 
-共 **13** 条已定案边界。
+共 **14** 条已定案边界。
