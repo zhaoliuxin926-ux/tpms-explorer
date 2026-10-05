@@ -11,7 +11,7 @@
 
 **TPMS Explorer — 浏览器端三维曲面设计平台 + LLM Agent 闭环**（个人项目，2026.07–至今）
 
-用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：24 族 level-set（经典解析式 + 文献/数据集系数转录）、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 原生切片已进导出中心（单壁+扫描填充，非工业全特征切片））；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 37 条，glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2；缓解前 36/37 与 37/37 并存，勿称确定性）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 106 断言（GUARD 98）契约对拍门禁 + 退出码分层契约。全仓 46 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
+用 TypeScript/three.js 构建三周期极小曲面（TPMS）生成式设计平台：26 族构型（24 族 level-set 曲面（经典解析式 + 文献/数据集系数转录）+ 2 族桁架（BCC/Octet，杆=胶囊 SDF 周期场，覆盖弯曲/拉伸主导力学谱两极））、实时 WebGL 渲染、一键交付水密 STL / Abaqus / OpenFOAM 工业文件（G-code 原生切片已进导出中心（单壁+扫描填充，非工业全特征切片））、Pareto 多目标前沿探索器（骨支架三难权衡 26 族×孔隙率×密度扫描→非支配前沿→点击写回设计参数）；为平台构建 LLM Agent 闭环——自然语言进入可验证交付链（dry-run 槽位回归 40 条，glm-5.3-flash 双轮 40/40×2（n=2，勿称确定性；端点×模型矩阵 6/6 在案）；端到端另有 Mock 6/6 + 真实抽测 2/2），核心是自研 tool-calling 安全层：JSON Schema 逐槽位校验拦截器（越界拒绝，非钳制）+ 108 断言（GUARD 98）契约对拍门禁 + 退出码分层契约。全仓 46 道 CI 门禁（1000+ 断言、三平台矩阵）。多轮真机走查+红队审查：v2 轮曾抓出 5 Critical+20 Major、寿极 v3 轮 0C+10M+20m，均按轮次入账修复；当前发布态无未关闭 Critical。
 
 ### 中文 · 两句版（多项目简历/一句话场合）
 
@@ -19,7 +19,7 @@
 
 ### English · one-paragraph (for English resume)
 
-**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (24 level-set families — classical closed forms + transcribed literature/dataset coefficients; real-time WebGL; watertight STL / Abaqus / OpenFOAM export) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 37 cases, multi-round 37/37 on GLM-5.3-flash (C3 mitigated, n≥2; pre-mitigation 36/37 and 37/37 both on record; not deterministic); end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 106-assertion (guard 98) contract-parity gate, and exit-code-tiered rejection semantics — inside a 46-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
+**TPMS Explorer — Browser-based TPMS design platform with an LLM agent loop** (personal project, Jul 2026 – present). Built a generative-design platform for triply periodic minimal surfaces (26 families — 24 level-set TPMS (classical closed forms + transcribed literature/dataset coefficients) + 2 strut trusses (BCC/Octet as capsule-SDF periodic fields, covering both ends of the bending/stretch-dominated mechanics spectrum); real-time WebGL; watertight STL / Abaqus / OpenFOAM export; a Pareto front explorer for the bone-scaffold trilemma with click-to-write-back design parameters) in TypeScript + three.js, plus an LLM agent that turns natural language into a verifiable delivery chain (dry-run slot-level regression 40 cases, two-round 40/40×2 on GLM-5.3-flash (n=2, not deterministic; 6/6 endpoint×model matrix on record); end-to-end separately Mock 6/6 + real-model spot checks 2/2). Core contribution: a tool-calling safety layer — per-slot JSON-Schema validating interceptor (out-of-range is rejected, not clamped), a 108-assertion (guard 98) contract-parity gate, and exit-code-tiered rejection semantics — inside a 46-gate, 1000+-assertion, 3-platform CI matrix. Multi-round walkthrough + adversarial review tallied per round (v2 once found 5 Critical + 20 Major, all fixed; later round 0C+10M+20m); no open Critical at release.
 
 ### English · two-sentence (multi-project resume)
 
@@ -32,7 +32,7 @@ Built an LLM-agent safety layer for a research-grade geometry platform (per-slot
 
 ### Q1 "LLM 应用怎么保证不乱来？"（必问，主线故事）
 
-要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 校验（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层；越界是拒绝不是钳制）→ schema 与 CLI 实际校验由 106 断言（GUARD 98）门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、37 条 dry-run 槽位回归保证"好的能通过"（统计性，glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2，勿称确定性））、对抗指令四模型零**非法执行**（三形态：平台拒绝/模型拒绝/模型改发合法值；拦截器动作由离线 40 断言单独计量，不把模型自觉算进护栏战果）。
+要点链：**LLM 产出 = 不可信用户输入** → tool call 逐槽位过 schema 校验（enum/min/max/未知属性/未知工具/缺必填，任一命中 exit 2 不达执行层；越界是拒绝不是钳制）→ schema 与 CLI 实际校验由 108 断言（GUARD 98）门禁逐项对拍（防两份清单漂移）→ 真机回归分三层语义：拦截器保证"错的不执行"（确定性）、40 条 dry-run 槽位回归保证"好的能通过"（统计性，glm-5.3-flash 双轮 40/40×2（n=2，勿称确定性））、对抗指令四模型零**非法执行**（三形态：平台拒绝/模型拒绝/模型改发合法值；拦截器动作由离线 40 断言单独计量，不把模型自觉算进护栏战果）。
 杀手锏补充：**Agent 面红队两轮（实录 2H+7M+5L），下为六个代表性打穿**——路径穿越正则首字符放行整串 `..`；崩溃被错误处理包装成"结构化拒绝"（语义污染）；校验函数存在但不在执行路径（校验死代码）；同一槽位两份 schema 口径分裂致链路中断；`in` 原型链键误判（应 `Object.hasOwn`）；JSON 解析失败分支曾 exit 0。**没有一条是 LLM 骗过了系统，全是确定性代码自己的缝**——LLM 只是高频模糊测试器。
 证据：`node tpms/agent/llm_provider_selftest.mjs`（40 断言离线可跑）+ 博客二。
 
@@ -65,7 +65,13 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 - 为什么 TPMS 适合骨支架：孔隙连通（营养输送）、比表面积、Gibson-Ashby 标度律 ρ̄² 可解析预测力学响应。
 - 目标孔隙率 vs 实测偏差：iso 二分格点分位与发散体积口径差，随分辨率收敛（gyroid 口径 R48 5.4pp→R96 1.0pp（iso 二分格点分位 vs 发散体积的口径差，非 BENCHMARKS 目标偏差）；倍频谐波族 R48 可达 24–28pp 为已登记可用域事实），CLI 如实披露双口径——**不粉饰口径差本身就是可信度卖点**。
-- 24 族曲线怎么来的：经典文献解析式 + CC BY 数据集系数（含 Fourier fit）逐字转录。**两层保真分开讲**：①实现保真＝四方互拍（TS/Python/MATLAB/GPU IR，容差 1e-9~1e-12；GPU f32 另门口径 ≤1e-6）防转录/移植错——注意这只证明四份实现一致（Q2 金句「共享原语对拍是假对拍」的反面教材：故互拍之外还有解析锚点/文献基准）；②模型保真＝与文献基准、解析特例、BENCHMARKS 对账。
+- 26 族怎么来的：24 族 TPMS 曲面=经典文献解析式 + CC BY 数据集系数（含 Fourier fit）逐字转录（另 2 族桁架为胶囊 SDF 杆阵，无转录问题）。**两层保真分开讲**：①实现保真＝四方互拍（TS/Python/MATLAB/GPU IR，容差 1e-9~1e-12；GPU f32 另门口径 ≤1e-6）防转录/移植错——注意这只证明四份实现一致（Q2 金句「共享原语对拍是假对拍」的反面教材：故互拍之外还有解析锚点/文献基准）；②模型保真＝与文献基准、解析特例、BENCHMARKS 对账。
+
+### Q8 "最近新增的大功能？"（2026-10 双功能批：桁架双族 + Pareto 前沿探索器）
+
+桁架线一句话：**标量场是最低公约数接口**——杆写成胶囊 SDF 周期场后，求解器/重建/导出/NL 全链零架构改动自动支持；但交付前复查抓到**水密掩盖的几何错位**（杆端点表用了几何域坐标而场函数给的是弧度域——错位后依然是"一坨自洽、水密、可渲染的某种结构"；这是本项目第三次撞上"水密 ≠ 几何正确"）——正解顺带解锁 cellSize 联动。标定线的诚实点：Octet 桁架是拉伸主导（E\*∝ρ̄ 线性律），硬套 Gibson-Ashby ρ² 框架只能得到单点等效切线——平台**不做假装适配的硬拟合**，源码披露漂移边界；后来 M5 工业链实测 E\*=16.17GPa 超文献带，正是预埋披露解释了偏差（形状律偏差现形，不是惊喜也不是事故）。
+Pareto 线一句话：骨支架三难权衡（E↑力学×κ↑传质×Sv↑生物活性）——26 族×孔隙率×密度毫秒级解析代理扫描→非支配前沿→点击写回；约束过滤的数学坑：**必须在可行子集上重算前沿**（简单筛原前沿是错的——被支配者在支配者被剔除后可能浮出）。
+证据：`node tpms/agent/tpms.mjs mesh --type strutoctet --porosity 0.7 --out o.stl --json`（167,760 三角水密）+ `estimate --type strutbcc`（C1=0.06 Deshpande-Fleck 文献域中值）+ ml_pareto_audit 9 断言 + 博客四（drafts/ 待定稿）。
 
 ---
 
@@ -73,11 +79,11 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 
 ### 2 分钟版（开场自我介绍后）
 
-"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：24 族 level-set 曲面，实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，46 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 多轮 37/37（C3 缓解后 n≥2，勿称确定性）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 106 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
+"我最重要的个人项目是 TPMS Explorer——一个浏览器端的三维曲面设计平台，面向骨支架和增材制造场景：26 族构型（24 族 TPMS level-set 曲面 + 2 族桁架），实时渲染，一键交付可打印的水密 STL 和 Abaqus/OpenFOAM 文件。工程上两条主线：一是**验证体系**，46 道 CI 门禁、三平台、1000 多条断言，核心是行为级断言和 fail-closed 交付门；二是 **LLM Agent 闭环**——自然语言进入可验证交付链，dry-run 槽位回归 glm-5.3-flash 双轮 40/40×2（n=2，勿称确定性）。Agent 这条线我最有心得的是安全问题：LLM 产出按不可信输入处理，自研了 schema 逐槽位校验拦截器（越界拒绝）和 108 断言契约对拍门禁，Agent 面红队两轮、六个代表性打穿全修；项目多轮红队按轮入账（含 v2 轮 5C+20M 全修），当前发布态无未关闭 Critical。关键工程数字都附复现命令。"
 
 ### 2-minute English (after the opener)
 
-"My most important personal project is TPMS Explorer — a browser-based 3D surface design platform for bone-scaffold and additive manufacturing: 24 level-set families, real-time rendering, one-click watertight STL and Abaqus/OpenFOAM export. Two engineering tracks: first, a **verification system** — 46 CI gates, 3 platforms, 1000+ assertions, centered on behavior-level checks and a fail-closed delivery gate; second, an **LLM agent loop** — natural language into a verifiable delivery chain, dry-run slot regression multi-round 37/37 on GLM-5.3-flash (C3 mitigated, n≥2; not deterministic). On the agent side I care most about safety: treat LLM output as untrusted input. I built a per-slot JSON-Schema validating interceptor (reject, not clamp) and a 106-assertion contract-parity gate; two agent-face red-team rounds produced six representative breaches, all fixed. Project-wide reviews are tallied per round (v2 once 5 Critical + 20 Major, all fixed); no open Critical at release. Every engineering number I cite has a reproduce command."
+"My most important personal project is TPMS Explorer — a browser-based 3D surface design platform for bone-scaffold and additive manufacturing: 26 families (24 TPMS level-set surfaces + 2 strut trusses), real-time rendering, one-click watertight STL and Abaqus/OpenFOAM export. Two engineering tracks: first, a **verification system** — 46 CI gates, 3 platforms, 1000+ assertions, centered on behavior-level checks and a fail-closed delivery gate; second, an **LLM agent loop** — natural language into a verifiable delivery chain, dry-run slot regression two-round 40/40×2 on GLM-5.3-flash (n=2; not deterministic). On the agent side I care most about safety: treat LLM output as untrusted input. I built a per-slot JSON-Schema validating interceptor (reject, not clamp) and a 108-assertion contract-parity gate; two agent-face red-team rounds produced six representative breaches, all fixed. Project-wide reviews are tallied per round (v2 once 5 Critical + 20 Major, all fixed); no open Critical at release. Every engineering number I cite has a reproduce command."
 
 ### 5 分钟版追加（按面试官兴趣展开）
 
@@ -95,11 +101,11 @@ AI 结对为主力（生成/重构/探针），但配套两条纪律：**功能�
 node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收（GUARD 40）（跳过几何探针）
 node tpms/agent/selftest.mjs              # 50 断言
 node tpms/agent/llm_provider_selftest.mjs # 40 断言（离线，GUARD 37）
-node tpms/agent/tpms.mjs list --json      # 24 族
+node tpms/agent/tpms.mjs list --json      # 26 族（24 TPMS + 2 桁架）
 node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 332（秒级，GUARD 313）
 
 # 完整几何对拍（含 R48–R128 探针，约 5–10 min）——展示/归档用，不必临场
-node tpms/agent/schema_check.mjs          # 106 断言（守卫基线 98）
+node tpms/agent/schema_check.mjs          # 108 断言（守卫基线 98）
 cd tpms/tpms-platform && npm run test:all   # 46 门本地全量（三平台矩阵在 GitHub Actions）
 ```
 
