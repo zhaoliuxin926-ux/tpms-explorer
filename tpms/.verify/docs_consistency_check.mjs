@@ -115,12 +115,13 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
   }
   // 2026-10-03 第十批正向钉：README 60 秒自证段的自描述数字与干净 clone 实测值强绑定
   // （禁句只防旧值回潮；正向钉防断言集变化时 README 忘同步——本门加断言必连带 README 双语。
-  // 口径：332=干净 clone 稳态（313 旧基线+本轮禁句扫描 14+正向钉 2-本机 job_narrative 差 16）；
-  // GUARD 下限仍 313（下限只防坍塌，不随加断言抬升））
+  // 口径：331=干净 clone 稳态（2026-10-06 红队 C 干净 clone 实测；348-本机 17 个 gitignored md
+  // 差源精确对账；旧 332 因哨兵翻转批断言集变动过期）；GUARD 下限仍 313（下限只防坍塌））
   {
     const rdCn = read('README.md'); const rdEn = read('README_EN.md');
-    /332 断言/.test(rdCn) ? ok('README 自证段 docs 断言数=332（干净 clone 稳态同步）') : bad('README 自证段缺「332 断言」（本门断言集变化须连带 README 双语+此钉）');
-    /332 assertions/.test(rdEn) ? ok('README_EN 自证段 docs 断言数=332') : bad('README_EN 自证段缺「332 assertions」（本门断言集变化须连带）');
+    /331 断言/.test(rdCn) ? ok('README 自证段 docs 断言数=331（干净 clone 稳态同步）') : bad('README 自证段缺「331 断言」（本门断言集变化须连带 README 双语+此钉）');
+    /331 assertions/.test(rdEn) ? ok('README_EN 自证段 docs 断言数=331') : bad('README_EN 自证段缺「331 assertions」（本门断言集变化须连带）');
+    /332 断言（README/.test(rdCn) || /332 assertions/.test(rdEn) ? bad('README 自证段残留旧值 332', '干净 clone 实测 331（2026-10-06）') : ok('README 双语无 332 旧值残留');
   }
   // 37/37 必须带 n=1 或 single/best-of 限定（防统计→确定）
   for (const rel of scanList) {

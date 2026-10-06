@@ -90,7 +90,7 @@ node ../agent/tpms.mjs estimate --type gyroid --porosity 0.65 --material tc4
 ```bash
 git clone --depth 1 https://github.com/zhaoliuxin926-ux/tpms-explorer && cd tpms-explorer
 node tpms/.verify/guard_audit.mjs            # meta-gate: audits the gates themselves (~2s)
-node tpms/.verify/docs_consistency_check.mjs # doc-number consistency, 332 assertions (~10s)
+node tpms/.verify/docs_consistency_check.mjs # doc-number consistency, 331 assertions (~10s)
 ```
 
 The 46-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
@@ -111,7 +111,7 @@ The 46-gate badge is not a claim — these two commands let you watch the gate s
 ```bash
 # Fast checks (seconds — pre-commit / pre-interview)
 node tpms/agent/schema_check.mjs --fast           # contract/static/reject (GUARD 40)
-node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 332 assertions (guard 313)
+node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 331 assertions (guard 313)
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)

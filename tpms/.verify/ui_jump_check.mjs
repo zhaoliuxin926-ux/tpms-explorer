@@ -130,10 +130,36 @@ const inv3 = await page.evaluate(() => {
 });
 ok('逆设计非法输入 fail-closed（不炸+状态保持）', inv3.note.startsWith('目标在当前设计空间不可达'), inv3.note);
 
+// 8. 画廊 hybrid 隔离钉（2026-10-06 红队 A2：主界面开 hybrid 后抄 s.hybrid 会把 26 族
+//    缩略全污染成混合场——修复=画廊 params 与 state 全解耦教科书形态。回归锚：
+//    hybrid 开启 → 生成 → 26/26，且两次生成首图 dataURL 确定性一致）
+await page.evaluate(() => document.getElementById('hybrid-enabled')?.click());
+await page.waitForTimeout(2500);
+const hyGal = await page.evaluate(async () => {
+  document.getElementById('sect-gallery').open = true;
+  document.getElementById('btn-gallery-gen').click();
+  const t1 = performance.now();
+  while (performance.now() - t1 < 25000) {
+    await new Promise((r) => setTimeout(r, 700));
+    if ((document.getElementById('gallery-note')?.textContent ?? '').startsWith('画廊完成')) break;
+  }
+  const n1 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
+  document.getElementById('btn-gallery-gen').click();
+  const t2 = performance.now();
+  while (performance.now() - t2 < 25000) {
+    await new Promise((r) => setTimeout(r, 700));
+    if ((document.getElementById('gallery-note')?.textContent ?? '').startsWith('画廊完成')) break;
+  }
+  const n2 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
+  return { imgs: document.querySelectorAll('#gallery-grid img').length, n1, n2, note: document.getElementById('gallery-note').textContent.slice(0, 12) };
+});
+ok('画廊 hybrid 开启下 26/26 且两次生成确定（state 解耦防回归）', hyGal.imgs === 26 && hyGal.n1 === hyGal.n2 && hyGal.n1 > 0, `imgs=${hyGal.imgs} n1=${hyGal.n1} n2=${hyGal.n2}`);
+await page.evaluate(() => document.getElementById('hybrid-enabled')?.click()); // 还原关闭
+
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
-  const guardFail = pass < 12;
-  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计行为钉）');
+  const guardFail = pass < 13;
+  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 13（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计；2026-10-06 +1 hybrid 隔离）');
 await browser.close();
 server.kill();
 process.exit(fail || guardFail ? 1 : 0);

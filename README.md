@@ -108,13 +108,13 @@
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 46/46（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `guard_audit` 元门）。
-- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 332 断言（基线），GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
+- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 331 断言（干净 clone 口径），GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 - **60 秒自证（访客/面试官，无需 npm install——以下两门纯 node:fs 零依赖）**：
 
   ```bash
   git clone --depth 1 https://github.com/zhaoliuxin926-ux/tpms-explorer && cd tpms-explorer
   node tpms/.verify/guard_audit.mjs            # 元门：审计门禁自体（恒真扫描+GUARD 账实，~2s）
-  node tpms/.verify/docs_consistency_check.mjs # 文档数字一致性 332 断言（README↔代码↔GUARD 对拍，~10s）
+  node tpms/.verify/docs_consistency_check.mjs # 文档数字一致性 331 断言（README↔代码↔GUARD 对拍，~10s）
   ```
 
   46 门不是徽章嘴说的——这两条命令让你亲眼看到门禁在审计门禁自己。

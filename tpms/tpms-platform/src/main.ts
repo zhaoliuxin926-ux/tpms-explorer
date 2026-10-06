@@ -929,7 +929,6 @@ function bindGalleryCard(): void {
     busy = true;
     btn.disabled = true;
     grid.textContent = '';
-    const s = getState();
     const types = Object.keys(TPMS_FUNCTIONS) as import('./types').TpmType[];
     let renderer: THREE.WebGLRenderer;
     try {
@@ -966,9 +965,12 @@ function bindGalleryCard(): void {
         weights: getDefaultWeights(ty),
         structureMode: 'solid_network',
         containerShape: 'cube',
-        thickness: s.thickness,
-        gradientDir: s.gradientDir,
-        hybrid: s.hybrid,
+        thickness: 0.3,
+        gradientDir: 'z',
+        // hybrid 与 state 解耦（红队 A2 实测：主界面开 hybrid 后抄 s.hybrid 会把全部
+        // 26 族缩略污染成混合场——gyroid 顶点 6104→6792 实证；画廊=教科书形态，
+        // thickness/gradientDir 同理固定，不随当前 state 波动）
+        hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 0.4, axis: 'z' },
         customFormula: '',
         preview: false,
       };
