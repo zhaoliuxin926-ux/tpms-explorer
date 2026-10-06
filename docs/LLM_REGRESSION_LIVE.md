@@ -75,6 +75,12 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
   node tpms/agent/llm_regression.mjs --model glm-5.3-flash
 ```
 
+## 2026-10-06（二）42 条口径满贯矩阵 4/4：{anthropic, coding-openai} × {5.3-flash, 5.3 满血}
+
+- 新 key 全格刷新：anthropic×flash=**42/42×2**（n=2，推荐档）｜anthropic×满血=42/42｜coding-openai×flash=42/42｜coding-openai×满血=42/42——**四主力格零失败零轮换**
+- 4-flash 免费档两格不刷（历史定案：能力画像非管线验证，33/37 失败轮换形态在案）；历史 6/6 矩阵为 37 条口径，保留"在案"事实
+- 满血档观察：42 条全程快于 flash（推理直答形态，与 37 条时代画像一致）
+
 ## 2026-10-06 42 条 n=2 基线落定：双轮 42/42×2（glm-5.3-flash · anthropic 通道 · 新 key）
 
 - 用户新 key（2026-10-06，只经 env）；R1/R2 背靠背 **42/42×2 零失败零轮换**
