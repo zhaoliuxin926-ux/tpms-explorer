@@ -73,22 +73,28 @@ await page.waitForTimeout(700);
 const onView = await page.evaluate(() => document.querySelector('.ls-jump button.on')?.textContent?.trim());
 ok('分组头点击 → 视图高亮', onView === '视图', `on=${onView}`);
 
-// 6. 26 族画廊行为冒烟（2026-10-05 第五十一批权重污染级 bug 的行为钉——结构断言抓不住，
-//    只有真路径能抓）：先点 strut 按钮污染 state.weights（切族重置为 [0.25,0,0,0]——
-//    旧代码此场景画廊退化 21/26），再生成必须 26/26；点击缩略 → title 即时切（updateBadges）。
+// 6. 26 族画廊行为冒烟（2026-10-05 第五十一批权重污染 + 2026-10-06 红队 A2 hybrid 污染——
+//    两钉合并为一轮生成：固定窗口思路在慢 runner 三连红（469→492→552s 门内画廊单轮可超
+//    任意窗口），改为双污染一次注入）：①点 strut 按钮污染 state.weights（[0.25,0,0,0]——
+//    旧代码画廊退化 21/26）②点 hybrid 开关污染 s.hybrid（旧代码 26 族缩略全混合场化，
+//    gyroid 6104→6792 实证）→一次生成必须 26/26（params 与 state 全解耦的双重防回归）。
 await page.evaluate(() => {
   document.querySelector('button[data-type="strutoctet"]')?.click();
+  document.getElementById('hybrid-enabled')?.click();
+});
+await page.waitForTimeout(6000); // hybrid 开启触发主视图重建，慢 runner 余量
+await page.evaluate(() => {
   document.getElementById('sect-gallery').open = true;
   document.getElementById('btn-gallery-gen').click();
 });
 let galNote = '';
-for (let t = 0; t < 90; t++) { // 90s：慢 runner（ubuntu 469s 门）画廊单轮可 >40s
+for (let t = 0; t < 150; t++) { // 150s 终窗：一次生成是全门唯一画廊跑（无第二次叠加）
   await page.waitForTimeout(1000);
   galNote = await page.evaluate(() => document.getElementById('gallery-note')?.textContent ?? '');
   if (galNote.startsWith('画廊完成')) break;
 }
 const galImgs = await page.evaluate(() => document.querySelectorAll('#gallery-grid img').length);
-ok('画廊 strutoctet 预污染后生成 26/26（getDefaultWeights 根修防回归）', galNote.startsWith('画廊完成：26/26') && galImgs === 26, `note=${galNote.slice(0, 22)} imgs=${galImgs}`);
+ok('画廊双重预污染（strut 权重+hybrid）生成 26/26（params 全解耦防回归）', galNote.startsWith('画廊完成：26/26') && galImgs === 26, `note=${galNote.slice(0, 22)} imgs=${galImgs}`);
 const titleAfterGallery = await page.evaluate(() => {
   const cells = [...document.querySelectorAll('#gallery-grid > div')];
   const oct = cells.find((c) => c.textContent.includes('Octet'));
@@ -130,52 +136,13 @@ const inv3 = await page.evaluate(() => {
 });
 ok('逆设计非法输入 fail-closed（不炸+状态保持）', inv3.note.startsWith('目标在当前设计空间不可达'), inv3.note);
 
-// 8. 画廊 hybrid 隔离钉（2026-10-06 红队 A2：主界面开 hybrid 后抄 s.hybrid 会把 26 族
-//    缩略全污染成混合场——修复=画廊 params 与 state 全解耦教科书形态。回归锚：
-//    hybrid 开启 → 生成 → 26/26。
-//    CI 时序两轮校准史（ubuntu 469→492s）：双跑确定性判据在慢 runner 下第一轮 90s 仍可能
-//    超时（d1=false），第二轮恢复——改为「任一轮完成即采样，26/26 为核心判据；双跑一致
-//    作为加分信息不作硬门」（慢 runner 时序断言按最慢平台校准第三例）
-await page.evaluate(() => document.getElementById('hybrid-enabled')?.click());
-await page.waitForTimeout(6000); // hybrid 开启触发主视图重建——慢 runner 2.5s 不够
-const hyGal = await page.evaluate(async () => {
-  const waitGalleryDone = async () => {
-    const t = performance.now();
-    while (performance.now() - t < 120000) {
-      await new Promise((r) => setTimeout(r, 800));
-      const n = document.getElementById('gallery-note')?.textContent ?? '';
-      if (n.startsWith('画廊完成')) {
-        for (let k = 0; k < 10; k++) {
-          await new Promise((r) => setTimeout(r, 400));
-          const c = document.querySelectorAll('#gallery-grid > div').length;
-          const im = document.querySelectorAll('#gallery-grid img').length;
-          if (c === 26 && im === 26) break;
-        }
-        return true;
-      }
-    }
-    return false;
-  };
-  document.getElementById('sect-gallery').open = true;
-  document.getElementById('btn-gallery-gen').click();
-  const d1 = await waitGalleryDone();
-  const n1 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
-  let n2 = n1;
-  if (d1) { // 第一轮成功才做第二跑确定性对照（d1 超时时省 120s——CI 总时长已 492s 顶格）
-    document.getElementById('btn-gallery-gen').click();
-    const d2 = await waitGalleryDone();
-    n2 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
-    return { d1, d2, imgs: document.querySelectorAll('#gallery-grid img').length, n1, n2 };
-  }
-  return { d1, d2: null, imgs: document.querySelectorAll('#gallery-grid img').length, n1, n2 };
-});
-ok('画廊 hybrid 开启下 26/26（state 解耦防回归）', hyGal.imgs === 26 && hyGal.n1 > 0 && (hyGal.d1 || hyGal.d2), `imgs=${hyGal.imgs} n1=${hyGal.n1} n2=${hyGal.n2}`);
-await page.evaluate(() => document.getElementById('hybrid-enabled')?.click()); // 还原关闭
+// （原第 8 节 hybrid 隔离钉已合并进第 6 节双污染序列——固定窗口三次校准史 469→492→552s
+//  证明任何独立第二跑都会把门推过 STEP_TIMEOUT，合并后全门唯一一次画廊生成）
 
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
-  const guardFail = pass < 13;
-  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 13（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计；2026-10-06 +1 hybrid 隔离）');
+  const guardFail = pass < 12;
+  if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计；2026-10-06 双污染合并仍 12）');
 await browser.close();
 server.kill();
 process.exit(fail || guardFail ? 1 : 0);
