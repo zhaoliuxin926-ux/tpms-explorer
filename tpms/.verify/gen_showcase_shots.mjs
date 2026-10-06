@@ -25,6 +25,18 @@ const GATE_COUNT = (() => {
   return m.length;
 })();
 
+// 【2026-10-06 注入式根治第二例】族数从 tpms-functions.ts 注册表唯一真源动态解析
+// （24→26 漂移在图内复发——"数字进图必漂移"教训的族数版）
+const FAMILY_COUNT = (() => {
+  const s = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../tpms-platform/src/core/tpms-functions.ts'), 'utf8');
+  const blk = s.match(/export const TPMS_FUNCTIONS[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!blk) throw new Error('TPMS_FUNCTIONS 块未找到');
+  // 成员形态两种：`gyroid, diamond, …` 简写与 `strutbcc: strutBCC` 显式——按逗号切分计数
+  const members = blk[1].replace(/\n/g, ' ').split(',').map((x) => x.trim()).filter(Boolean);
+  if (members.length < 20) throw new Error('TPMS_FUNCTIONS 解析异常：' + members.length + ' 族（<20）');
+  return members.length;
+})();
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
 const OUT = path.join(REPO, 'docs/screenshots');
@@ -180,12 +192,12 @@ try {
         <h1>TPMS Explorer <span class="accent">· 骨支架生成式平台</span></h1>
         <p class="sub">浏览器里的三周期极小曲面：设计 → 验证 → 3D 打印文件，零后端</p>
         <div class="stats">
-          <div class="stat"><b>24</b><span>曲面族</span></div>
+          <div class="stat"><b>${FAMILY_COUNT}</b><span>曲面族</span></div>
           <div class="stat"><b>${GATE_COUNT} × 3</b><span>CI 门禁 × 平台</span></div>
           <div class="stat"><b>1000+</b><span>断言（带防中和守卫）</span></div>
           <div class="stat"><b>M0-M5</b><span>LLM Agent 闭环</span></div>
         </div>
-        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v1.0.x</div>
+        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v1.1.x</div>
       </div>
     </body></html>`;
     const tmp = path.join(OUT, '_social_tmp.html');
