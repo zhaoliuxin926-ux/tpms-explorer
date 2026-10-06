@@ -34,7 +34,7 @@
 |---|---|---|
 | ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
 
-🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，回归多轮 37/37（C3 缓解后 n≥2；缓解前 36/37 与 37/37 并存，勿称确定性）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，回归 40 条双轮 40/40×2（n=2，勿称确定性）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
