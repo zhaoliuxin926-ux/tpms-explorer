@@ -1,6 +1,6 @@
 # 快速开始 · 最短出件路径
 
-> 产品版本 **v1.1.0**。三条最短路径，任选其一；命令均在仓库根执行。
+> 产品版本 **v1.1.0**。四条最短路径，任选其一；命令均在仓库根执行。
 
 ## Demo 1 · 网页点选（最短）
 
@@ -19,6 +19,14 @@ node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.75 --resolution 64 --pe
 ```bash
 # 导出中心 UI 亦可；CLI 切片引擎（单壁+扫描填充，非工业全特征）
 # 见工程版侧栏「G-code 工艺」参数后从导出中心导出
+```
+
+## Demo 4 · 逆设计一行（性能愿望 → 设计参数，v9.3.0+）
+
+```bash
+node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5
+# "我要 E≥2GPa 且渗透率≥5×10⁻⁹ m²" → 26 族 832 点 Pareto 前沿 → top-3 设计
+# 目标可达给最小超标达标点；不可达给最近妥协+log10 距离。确认后走 Demo 2 构建首推荐。
 ```
 
 ## Demo 3 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）

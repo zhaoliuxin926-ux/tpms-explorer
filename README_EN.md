@@ -29,7 +29,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 ## AI Agent loop (M0-M5, fully wired)
 
-**Natural language → schema-validating interceptor (reject on violation) → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or validated by deterministic code:
+**Natural language → schema-validating interceptor (reject on violation) → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or validated by deterministic code. **Six tools** incl. `tpms_pareto` inverse design ("I need E≥2 GPa and κ≥5e-9 — which family?" → top-k designs; CLI: `node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`):
 
 ```
 "Design a 75%-porosity Gyroid bone scaffold"
