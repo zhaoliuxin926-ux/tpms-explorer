@@ -82,7 +82,7 @@ await page.evaluate(() => {
   document.getElementById('btn-gallery-gen').click();
 });
 let galNote = '';
-for (let t = 0; t < 40; t++) {
+for (let t = 0; t < 90; t++) { // 90s：慢 runner（ubuntu 469s 门）画廊单轮可 >40s
   await page.waitForTimeout(1000);
   galNote = await page.evaluate(() => document.getElementById('gallery-note')?.textContent ?? '');
   if (galNote.startsWith('画廊完成')) break;
@@ -132,28 +132,40 @@ ok('逆设计非法输入 fail-closed（不炸+状态保持）', inv3.note.start
 
 // 8. 画廊 hybrid 隔离钉（2026-10-06 红队 A2：主界面开 hybrid 后抄 s.hybrid 会把 26 族
 //    缩略全污染成混合场——修复=画廊 params 与 state 全解耦教科书形态。回归锚：
-//    hybrid 开启 → 生成 → 26/26，且两次生成首图 dataURL 确定性一致）
+//    hybrid 开启 → 生成 → 26/26，且两次生成首图 dataURL 确定性一致。
+//    CI 时序校准（ubuntu 实测 469s 门内画廊单轮可 >25s）：窗口 90s+必须等到"画廊完成"
+//    终态文案才采样（快机 5s/慢机 ~40s）；"生成中"中途态的 imgs 截断值不作判据）
 await page.evaluate(() => document.getElementById('hybrid-enabled')?.click());
-await page.waitForTimeout(2500);
+await page.waitForTimeout(6000); // hybrid 开启触发主视图重建——慢 runner 2.5s 不够，等 6s
 const hyGal = await page.evaluate(async () => {
+  const waitGalleryDone = async () => {
+    const t = performance.now();
+    while (performance.now() - t < 90000) {
+      await new Promise((r) => setTimeout(r, 800));
+      const n = document.getElementById('gallery-note')?.textContent ?? '';
+      if (n.startsWith('画廊完成')) {
+        // 完成文案已出，等 grid 渲染稳定（imgs 计数等于完成数）
+        for (let k = 0; k < 10; k++) {
+          await new Promise((r) => setTimeout(r, 400));
+          const c = document.querySelectorAll('#gallery-grid > div').length;
+          const im = document.querySelectorAll('#gallery-grid img').length;
+          if (c === 26 && im === 26) break;
+        }
+        return true;
+      }
+    }
+    return false;
+  };
   document.getElementById('sect-gallery').open = true;
   document.getElementById('btn-gallery-gen').click();
-  const t1 = performance.now();
-  while (performance.now() - t1 < 25000) {
-    await new Promise((r) => setTimeout(r, 700));
-    if ((document.getElementById('gallery-note')?.textContent ?? '').startsWith('画廊完成')) break;
-  }
+  const d1 = await waitGalleryDone();
   const n1 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
   document.getElementById('btn-gallery-gen').click();
-  const t2 = performance.now();
-  while (performance.now() - t2 < 25000) {
-    await new Promise((r) => setTimeout(r, 700));
-    if ((document.getElementById('gallery-note')?.textContent ?? '').startsWith('画廊完成')) break;
-  }
+  const d2 = await waitGalleryDone();
   const n2 = document.querySelectorAll('#gallery-grid img')[0]?.src.length ?? 0;
-  return { imgs: document.querySelectorAll('#gallery-grid img').length, n1, n2, note: document.getElementById('gallery-note').textContent.slice(0, 12) };
+  return { d1, d2, imgs: document.querySelectorAll('#gallery-grid img').length, n1, n2 };
 });
-ok('画廊 hybrid 开启下 26/26 且两次生成确定（state 解耦防回归）', hyGal.imgs === 26 && hyGal.n1 === hyGal.n2 && hyGal.n1 > 0, `imgs=${hyGal.imgs} n1=${hyGal.n1} n2=${hyGal.n2}`);
+ok('画廊 hybrid 开启下 26/26 且两次生成确定（state 解耦防回归）', hyGal.d1 && hyGal.d2 && hyGal.imgs === 26 && hyGal.n1 === hyGal.n2 && hyGal.n1 > 0, `d1=${hyGal.d1} d2=${hyGal.d2} imgs=${hyGal.imgs} n1=${hyGal.n1} n2=${hyGal.n2}`);
 await page.evaluate(() => document.getElementById('hybrid-enabled')?.click()); // 还原关闭
 
 ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
