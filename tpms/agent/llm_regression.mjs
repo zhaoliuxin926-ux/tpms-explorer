@@ -82,6 +82,9 @@ const CASES = [
   { name: 'G1 闭环意图 CN', instr: '设计一个孔隙率 65% 的 gyroid 支架，要求验证到通过后再交付', expect: { tool: 'tpms_design_verify', type: 'gyroid', porosity: 65 } },
   { name: 'G2 closed-loop EN', instr: 'Create a 60% porosity Diamond scaffold and run the verify closed loop until it passes', expect: { tool: 'tpms_design_verify', type: 'diamond', porosity: 60 } },
   { name: 'G3 可产性不确定', instr: '用 FKS 曲面做一个孔隙率 60% 的支架，不确定能不能生产出来，帮我自动修复到通过', expect: { tool: 'tpms_design_verify', type: 'fks', porosity: 60 } },
+  // ── H. 逆设计意图（tpms_pareto 第六工具，2026-10-06；性能愿望≠具体构型）──
+  { name: 'H1 逆设计 CN', instr: '我需要一个等效模量不低于 2GPa、渗透率不低于 5e-9 m² 的支架，推荐几个合适的设计', expect: { tool: 'tpms_pareto', target_e_gpa: 2 } },
+  { name: 'H2 逆设计 EN', instr: 'Recommend scaffold designs with E at least 2 GPa and permeability at least 5e-9 m²', expect: { tool: 'tpms_pareto', target_e_gpa: 2, target_k_nm2: 5 } },
 ];
 
 const normArgP = (calls, key) => {

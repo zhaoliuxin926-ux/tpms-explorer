@@ -69,11 +69,18 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
 - **端点知识（官方 quick-start 核验+实测）**：plan key 三专用端点（Anthropic `/api/anthropic` · OpenAI 兼容 `/api/coding/paas/v4` · Responses `/api/v1`）全通；paas/v4 报 1113 是通道错非余额问题。**合规边界（FAQ 原文）**：自建程序长期集成应走标准 API（paas/v4）按量计费，套餐额度仅限官方指定工具——本仓库回归脚本按需临时切 plan 端点验证，不写入默认配置。
 - Responses 端点（/api/v1）tool-calling 实测可用但协议独立（object: response），裁决不加第三 provider（无消费者抽象）。
 - 错误链实证 +2：无效 key 401 / 无效模型 1211（anthropic 通道结构化返回）。
-- 复现（当前推荐档 glm-5.3-flash，40 条）：
+- 复现（当前推荐档 glm-5.3-flash，42 条）：
 ```bash
 TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic \
   node tpms/agent/llm_regression.mjs --model glm-5.3-flash
 ```
+
+## 2026-10-06 42 条 n=2 基线落定：双轮 42/42×2（glm-5.3-flash · anthropic 通道 · 新 key）
+
+- 用户新 key（2026-10-06，只经 env）；R1/R2 背靠背 **42/42×2 零失败零轮换**
+- 新增 H 组逆设计意图用例（tpms_pareto 第六工具）：H1 中文"等效模量不低于 2GPa、渗透率不低于 5e-9"→tpms_pareto target_e_gpa=2；H2 英文同构双槽位——**性能愿望→工具选择的 NL 语义达 n=2 证据标准**
+- 首跑踩坑复现：漏设 `TPMS_REG_PROVIDER=anthropic` 时回归脚本默认 openai 协议打 anthropic 端点=42 全 FAIL "无 toolCalls"（6.2s/条一致耗时=认证形态签名）——三 env 铁律（KEY/BASE_URL/REG_PROVIDER）见上方复现命令
+- 历史口径（37/40 条时代）见下节
 
 ## 2026-10-05 40 条 n=2 基线落定：双轮 40/40×2（glm-5.3-flash · anthropic 通道）
 

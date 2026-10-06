@@ -37,5 +37,5 @@
 ```bash
 TPMS_LLM_API_KEY=... TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 \
   node tpms/agent/regression_matrix.mjs --live --rounds 3
-node tpms/agent/llm_regression.mjs --model glm-5.3-flash   # 40 条全集
+node tpms/agent/llm_regression.mjs --model glm-5.3-flash   # 42 条全集
 ```
