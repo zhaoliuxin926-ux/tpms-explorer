@@ -73,6 +73,9 @@ const CASES = [
   { name: 'E3 越界分辨率', instr: 'resolution 500 的 gyroid，孔隙率 60%', expectReject: true,
     sanitized: (out) => { const r = out.calls?.[0]?.arguments?.resolution; return r !== undefined && r <= 128; } },
   { name: 'E4 幻觉文件名 scenario', instr: '用 my_design_v1.json 方案交付一个 60% gyroid', expect: { tool: 'tpms_scenario', design: 'my_design_v1.json' } },
+  // E5 指代无上下文（2026-10-06 两步旅程对抗：单轮 agent 无会话状态，指代词无可解析对象
+  // →期望合法默认参数执行（模糊→默认设计）而非臆测具体所指；披露走模型备注通道）
+  { name: 'E5 指代无上下文', instr: '把第一个构建出来', expect: { tool: 'tpms_mesh' } },
   // ── F. 模糊/多目标 ──
   { name: 'F1 模糊意图', instr: '建一个骨支架', expect: { tool: 'tpms_mesh' } },
   { name: 'F2 多目标', instr: 'Gyroid 和 Diamond 各建一个孔隙率 60% 的支架', minCalls: 2 },

@@ -40,7 +40,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 | Acceptance | Result |
 |---|---|
-| 42 bilingual instructions | **glm-5.3-flash 42/42 ×2 rounds** (n=2, not claimed deterministic; 6/6 endpoint×model matrix on record; H-group inverse-design intents added 2026-10-06) |
+| 43 bilingual instructions | **glm-5.3-flash 43/43 ×2 rounds** (n=2, not claimed deterministic; 6/6 endpoint×model matrix on record; H-group inverse-design intents added 2026-10-06) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
 | The interceptor itself | 39 offline deterministic assertions (guard 37; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
@@ -61,7 +61,7 @@ Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, se
 - **Dual mesh extractors** (v9.1): Surface Nets for smooth fields + **Marching Tetrahedra** for non-smooth fields — ships a **one-shot UI card** (MT preview at R48 + HD STL export at R96 behind a built-in watertight audit gate, bit-identical to the CLI) for the **radial-grad family** (center-dilated K / edge-1 metric remap with wall-thickness compensation, K∈[1,3], K=1.5 measured design density ≈54.7 % (192,784 tris, v9.2 bit-exact wording)) to ship watertight STL across K = 1…2 (sphere anchor 4π/3 deviation 0.13 %).
 - **Printability audit** (v9.1): overhang area statistics (α = arccos(−N·b) industrial convention) + deterministic Fibonacci-sphere build-orientation search. Measured: TPMS lattices are near-isotropic — orientation gain ≈ ±1 pp, a quantitative basis for leaving support control to the slicer.
 - **Direct implicit slicing** (v9.0+): scan-line interval method → SVG layer paths + **CLI Common-Layer-Interface** industrial format (hatch-volume fidelity ≤0.1 %), container clipping included.
-- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 42-case real-model regression (glm-5.3-flash 42/42 ×2 rounds, n=2, not claimed deterministic; 6/6 endpoint×model matrix on record).
+- **AI-friendly**: a deterministic CLI (`tpms/agent/`) with machine-readable JSON output and an agentic roadmap ([ROADMAP](tpms/agent/ROADMAP.md)) — the LLM never writes numbers, the gates decide. 43-case real-model regression (glm-5.3-flash 43/43 ×2 rounds, n=2, not claimed deterministic; 6/6 endpoint×model matrix on record).
 
 ## Quick start
 

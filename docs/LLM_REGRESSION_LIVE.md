@@ -75,6 +75,12 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
   node tpms/agent/llm_regression.mjs --model glm-5.3-flash
 ```
 
+## 2026-10-06（三）回归集 43 条（+E5 指代无上下文）——两步旅程对抗修补轮
+
+- 对抗实测（两步旅程）："pareto 推荐→'把第一个构建出来'"——第二步无会话上下文，模型臆造默认参数（gyroid 70%）且无披露=误导面。三层修补：①系统提示词披露纪律（指代无可解析对象→默认处理+最终回复明示）；②**模型备注输出通道**（成功路径呈现 llmOut.raw 截断 300/JSON modelNote 字段——此前模型伴随文本无出口，provider 已捕获 anthropic text 块但主流程丢弃）；③E5 用例锁定行为（合法默认执行）
+- 43 条全量复验 43/43（提示词+输出改动零回归）；复现三 env 铁律同上
+- 通道判定顺带：新 key 在 paas/v4 报 1113=**Coding Plan 型**（三大专用端点活，与旧 key 同型——本项目回归用 plan 端点实测记录，生产长期绑定走 paas/v4 按量合规边界不变）
+
 ## 2026-10-06（二）42 条口径满贯矩阵 4/4：{anthropic, coding-openai} × {5.3-flash, 5.3 满血}
 
 - 新 key 全格刷新：anthropic×flash=**42/42×2**（n=2，推荐档）｜anthropic×满血=42/42｜coding-openai×flash=42/42｜coding-openai×满血=42/42——**四主力格零失败零轮换**

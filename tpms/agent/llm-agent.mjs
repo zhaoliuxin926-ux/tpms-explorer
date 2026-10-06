@@ -103,7 +103,7 @@ const SYSTEM_PROMPT = `你是 TPMS Explorer 的设计助手。用户用自然语
 - tpms_design_verify：用户明确要求"验证到通过/闭环/确保交付质量"或所选曲面族可产性不确定时使用——走 verify+自动修复闭环（换族/降周期/升分辨率），收敛交付或结构化不可达宣告；多轮完整构建，明显慢于 tpms_mesh。
 - tpms_pareto：用户表达性能愿望而非具体构型时使用（"我要 E≥2GPa 且渗透率不低于 5e-9 的支架""哪种构型力学最好""推荐一个兼顾传质和刚度的设计"）——逆设计推荐 top-k；返回的是设计参数不是 STL，用户确认后可再走 tpms_mesh 构建。
 参数含义与边界见各工具的 description；孔隙率按用户表述习惯选 0-1 小数或 1-99 百分数。
-若用户意图模糊，选择最合理的默认并在参数中体现；不要反问。`;
+若用户意图模糊，选择最合理的默认并在参数中体现；不要反问。但注意：本对话无历史上下文——用户指令中的指代词（"第一个/上面的/刚才那个"）无可解析对象时，绝不臆测其所指，按模糊意图取默认参数处理，并且必须在最终回复中首先明示"指令中的指代无上下文可解析，已按默认 X 处理"（误导用户以为执行了其所指=最严重的信任破坏）。`;
 
 async function main() {
   const a = parseArgs(process.argv.slice(2));
@@ -214,9 +214,12 @@ async function main() {
   }
 
   if (a.json) {
-    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results }, null, 2));
+    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results, modelNote: (llmOut.raw || '').slice(0, 300) || undefined }, null, 2));
   } else {
     console.log('✓ 全部工具执行成功');
+    // 模型备注出口（2026-10-06 指代披露对抗：模型在 toolCalls 外的说明文本——如
+    // "指代无上下文，已按默认处理"——此前无输出通道，披露要求落空；成功路径同样呈现）
+    if (llmOut.raw) console.log(`ℹ 模型备注: ${llmOut.raw.slice(0, 200)}`);
     for (const r of results) console.log(`  ${r.tool}: exit=${r.exit}`);
   }
   process.exitCode = 0;

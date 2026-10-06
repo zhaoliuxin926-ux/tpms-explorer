@@ -34,7 +34,7 @@
 |---|---|---|
 | ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
 
-🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，**六工具**含 `tpms_pareto` 逆设计推荐——"我要 E≥2GPa κ≥5×10⁻⁹ 的支架选什么构型"直达 top-k 设计参数（CLI：`node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`）；回归 42 条双轮 42/42×2（n=2，勿称确定性；含逆设计意图用例）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，**六工具**含 `tpms_pareto` 逆设计推荐——"我要 E≥2GPa κ≥5×10⁻⁹ 的支架选什么构型"直达 top-k 设计参数（CLI：`node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`）；回归 43 条双轮 43/43×2（n=2，勿称确定性；含逆设计意图用例）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
 
@@ -65,7 +65,7 @@
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **46 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 46/46 |
 | 🎯 Pareto 多目标前沿 | 骨支架三难权衡（E↑力学×κ↑传质×Sv↑生物活性）可视化：26 族×孔隙率×密度毫秒级解析代理扫描 → 非支配前沿 log-log 散点 → hover 读数 → **点击写回设计参数**；约束过滤（可行子集重算）+ 前沿 CSV 导出 + 双族混合律扫描（E/Sv 凸组合+κ KC 重算）+ **逆设计推荐**（输入目标 E/κ → 可达时给最小超标的达标点、不可达时给最近妥协，top-3 ★愿望点+log10 距离量化） | ml_pareto_audit 16 断言（hybrid b=0/1 退化锚+非支配性+逆设计距离序/fail-closed） |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 42 条中英指令真实模型回归（glm-5.3-flash 满贯 42/42×2 轮 n=2（勿称确定性，含 H 组逆设计意图），6/6 端点×模型矩阵在案）+ llm_provider_selftest 40 断言（GUARD 37，+null 元素钉 2026-10-02） |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 43 条中英指令真实模型回归（glm-5.3-flash 满贯 43/43×2 轮 n=2（勿称确定性，含 H 组逆设计意图），6/6 端点×模型矩阵在案）+ llm_provider_selftest 40 断言（GUARD 37，+null 元素钉 2026-10-02） |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |
