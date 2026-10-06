@@ -47,7 +47,7 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 
 Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, see [LLM_REGRESSION_LIVE](docs/LLM_REGRESSION_LIVE.md)): `TPMS_LLM_TIMEOUT_MS=170000 TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic node tpms/agent/llm-agent.mjs --provider anthropic --model glm-5.3 "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
 
-📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](docs/blog/2026-09-16-44-gates.md) (published: [Juejin](https://juejin.cn/post/7691244760439439414) | [Zhihu](https://zhuanlan.zhihu.com/p/2089373962224538897)) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](docs/blog/2026-09-17-agent-architecture.md) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
+📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](docs/blog/2026-09-16-44-gates.md) (published: [Juejin](https://juejin.cn/post/7691244760439439414) | [Zhihu](https://zhuanlan.zhihu.com/p/2089373962224538897)) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](docs/blog/2026-09-17-agent-architecture.md) (published: [Juejin](https://juejin.cn/post/7692881705648685097) | [Zhihu](https://zhuanlan.zhihu.com/p/2090752932518151852)) | [Your WGSL Was Never Executed](docs/blog/2026-09-30-wgsl-never-executed.md) (published: [Juejin](https://juejin.cn/post/7692977150127259711) | [Zhihu](https://zhuanlan.zhihu.com/p/2090753535692612246)) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
 
 ## Highlights
 
