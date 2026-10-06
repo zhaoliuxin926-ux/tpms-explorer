@@ -20,7 +20,9 @@ const outIdx = process.argv.indexOf('--out');
 const OUT = outIdx >= 0 ? process.argv[outIdx + 1] : 'specimens';
 const ONCE = process.argv.includes('--once');
 const toIdx = process.argv.indexOf('--timeout');
-const TIMEOUT_MS = toIdx >= 0 ? (Number(process.argv[toIdx + 1]) > 0 ? Number(process.argv[toIdx + 1]) : 300_000) : 300_000;
+// 默认墙 1200s（2026-10-06 整理批：strutoctet k8 R96 单件实测 8m13s——旧默认 300s 对
+// strut 组结构性不足，S8 三件+基件连续 ETIMEDOUT；20 分钟覆盖慢机余量）
+const TIMEOUT_MS = toIdx >= 0 && Number(process.argv[toIdx + 1]) > 0 ? Number(process.argv[toIdx + 1]) : 1_200_000;
 const outAbs = resolve(ROOT, OUT);
 const relOut = relative(ROOT, outAbs);
 if (isAbsolute(relOut) || relOut.startsWith('..' + sep) || relOut === '..') {
