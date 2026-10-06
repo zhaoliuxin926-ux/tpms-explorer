@@ -1,6 +1,6 @@
 # 水密 ≠ 正确：一根杆从胶囊 SDF 到 32 件上机试样的全链实录
 
-> 数字与命令均可在本仓库复现：`node tpms/agent/tpms.mjs <command>`（下文每条命令今天都真实跑过一遍）；门禁断言在 `tpms/.verify/`（schema_check 108 断言含 strut 双族枚举；nl_agent 48 断言含桁架词表；文档数字一致性门 348 断言守着本文这类宣称）。系列前三篇：《[44 道门禁](https://juejin.cn/post/7691244760439439414)》《[LLM Agent 的安全架构](https://juejin.cn/post/7692881705648685097)》《[WGSL 从未被执行过](https://juejin.cn/post/7692977150127259711)》——本篇是"验证方法论"在几何扩展上的一次完整落地。写作时平台为 v9.2.0（24 族）；发布时已升级 v9.3.0-strut-pareto（26 族+Pareto 逆设计+画廊），文中全部命令口径不变。
+> 数字与命令均可在本仓库复现：`node tpms/agent/tpms.mjs <command>`（下文每条命令今天都真实跑过一遍）；门禁断言在 `tpms/.verify/`（schema_check 113 断言含 strut 双族枚举；nl_agent 48 断言含桁架词表；文档数字一致性门 348 断言守着本文这类宣称）。系列前三篇：《[44 道门禁](https://juejin.cn/post/7691244760439439414)》《[LLM Agent 的安全架构](https://juejin.cn/post/7692881705648685097)》《[WGSL 从未被执行过](https://juejin.cn/post/7692977150127259711)》——本篇是"验证方法论"在几何扩展上的一次完整落地。写作时平台为 v9.2.0（24 族）；发布时已升级 v9.3.0-strut-pareto（26 族+Pareto 逆设计+画廊），文中全部命令口径不变。
 
 ## 起点：24 族曲面里没有一根直杆
 

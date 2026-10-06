@@ -23,7 +23,13 @@
 | 博客二/三/四发布（二、三粘贴版已就绪，四=strut 全链工作稿待审阅） | 用户侧发布动作 |
 | 真机压缩试验 CSV → `fit-batch` 反演复核（32 件，含 S7/S8 桁架对照组） | 用户侧上机 |
 | ~~v9.3.0 发版~~ → **✅ 已发布（2026-10-06）**：双 tag `v9.3.0-strut-pareto`+`v1.1.0`（附注 @f34dcdb，CI 46 门三平台 SUCCESS 后打）+ [Release](https://github.com/zhaoliuxin926-ux/tpms-explorer/releases/tag/v9.3.0-strut-pareto) | 完成 |
+| LLM 回归集 40→41 条（+tpms_pareto 逆设计用例："我要 E≥2 κ≥5 的设计"→tpms_pareto 调用） | 真实 key 会话（n=2 基线纪律） |
 | SoftwareX 投稿 | 未拍板，不启动 |
+
+## 深化拓展思考（2026-10-06 对抗审查中盘点，已实施与留档）
+
+- **✅ 已实施：tpms_pareto 第六工具（Agent 逆设计入口）**——审查发现 UI 有逆设计而 Agent 链路（CLI/schema/LLM）吃不到 = "不断完善 agent" 的最大单点缺口；CLI `pareto` 命令与 UI 同源（832 点扫描/前沿 199/达标子集优先逐位一致）+schema 第 6 工具+llm-agent cmdMap/slotMap 桥接+schema_check 5 断言+llm_provider_selftest 2 钉
+- 留档候选（裁决不急）：UI NL 面板多轮会话（需浏览器带 key=架构决策）；SDF 升档 Worker 切片并行（重开风暴触发面，ETA 已缓解）；web_search/MCP/Responses 协议（三十四/三十五批已裁决不做）
 
 ## 中期（工程，已定案方向）
 

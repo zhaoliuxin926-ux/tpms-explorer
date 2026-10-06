@@ -9,6 +9,7 @@
  * 运行: node llm_provider_selftest.mjs
  */
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -23,7 +24,7 @@ const schema = loadToolsSchema();
 const tools = schemaToOllamaTools(schema);
 
 // ── 1. schema 结构 ──
-ok('schema 含 5 工具', schema.tools.length === 5, `got ${schema.tools.length}`);
+ok('schema 含 6 工具（2026-10-06 +tpms_pareto 逆设计）', schema.tools.length === 6, `got ${schema.tools.length}`);
 ok('ollama tools 格式完整', tools.every((t) => t.type === 'function' && t.function.name && t.function.parameters));
 ok('ollama tools 名称与 schema 一致', tools.map((t) => t.function.name).join() === schema.tools.map((t) => t.name).join());
 
@@ -49,6 +50,15 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 {
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'diamond', porosity: 65, resolution: 64 }), schema);
   ok('porosity=65 百分数通过 schema（CLI 双口径）', v.ok === true, JSON.stringify(v.errors));
+}
+// 2b1b. tpms_pareto 槽位：schema 通过 + CLI kebab 桥接静态哨兵（2026-10-06 第六工具；
+// schema camelCase≠CLI kebab 映射断裂红队先例——runCli slotMap 必须钉）
+{
+  const v = validateToolCalls(mkCall('tpms_pareto', { target_e_gpa: 2, target_k_nm2: 5 }), schema);
+  ok('tpms_pareto 槽位通过 schema（E/κ 必填）', v.ok === true, JSON.stringify(v.errors));
+  const src = readFileSync(join(HERE, 'llm-agent.mjs'), 'utf8');
+  ok('llm-agent 桥接在位（cmdMap tpms_pareto + slotMap target_e_gpa→target-e）',
+    src.includes("['tpms_pareto', 'pareto']") && src.includes("['target_e_gpa', 'target-e']") && src.includes("['target_k_nm2', 'target-k']"));
 }
 // 2b2. 数量上限：65 个 toolCalls 拒绝（红队 D L-3 防批量 spawn DoS，2026-09-29 补钉）
 {

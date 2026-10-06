@@ -1250,6 +1250,70 @@ function cmdCfdPost(a, json) {
   if (wssDiag) console.log(`  WSS 诊断     ${wssDiag.wssMPa.toFixed(2)} mPa ${wssDiag.inMineralizationBand ? '∈' : '∉'} 促矿化带 [10, 30] mPa`);
 }
 
+// ── pareto：逆设计推荐（与 UI Pareto 卡同源内核——forwardModel 扫描 + nearestFrontCandidates）──
+// M-Agent 第六工具 tpms_pareto 的 CLI 面：给定性能愿望点（E GPa / κ ×10⁻⁹ m²），
+// 26 族×孔隙率×单元密度毫秒级解析代理扫描 → 可达时最小超标达标点 / 不可达时最近妥协 top-k。
+async function cmdPareto(a, json) {
+  const usage = '用法: node tpms.mjs pareto --target-e <GPa> --target-k <×10⁻⁹ m²> [--top 3] [--json]\n'
+    + '口径：κ 输入单位 ×10⁻⁹ m²（骨支架典型 1e-10~1e-8 m²）；代理=Gibson-Ashby×Kozeny-Carman 解析式（非 FE 精确）';
+  if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
+  const eV = Number(a['target-e']);
+  const kV = Number(a['target-k']);
+  const top = a.top === undefined ? 3 : Number(a.top);
+  if (!Number.isFinite(eV) || eV <= 0) die('--target-e 需为正数（GPa）', usage);
+  if (!Number.isFinite(kV) || kV <= 0) die('--target-k 需为正数（×10⁻⁹ m²）', usage);
+  if (!Number.isInteger(top) || top < 1 || top > 10) die('--top 需为 1..10 整数', usage);
+  const kappaM2 = kV * 1e-9;
+  // 物理层打包（ml_pareto_audit 同款 rolldown 管道；ml-surrogate 与 inverse-design 均为纯 TS 无副作用）
+  const { spawnSync } = await import('node:child_process');
+  const { tmpdir } = await import('node:os');
+  const { fileURLToPath: futp, pathToFileURL } = await import('node:url');
+  const { dirname: dname, join: pjoin } = await import('node:path');
+  const PLATFORM = futp(new URL('../tpms-platform', import.meta.url));
+  const bundle = pjoin(tmpdir(), 'tpms_cli_pareto_bundle.mjs');
+  const entry = pjoin(tmpdir(), 'tpms_cli_pareto_entry.ts');
+  writeFileSync(entry, [
+    `export { paretoFront, nearestFrontCandidates } from ${JSON.stringify(pjoin(PLATFORM, 'src/physics/ml-surrogate.ts'))};`,
+    `export { forwardModel } from ${JSON.stringify(pjoin(PLATFORM, 'src/physics/inverse-design.ts'))};`,
+  ].join('\n'));
+  const rolldown = pjoin(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
+  const rb = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${bundle}"`, { shell: true, encoding: 'utf8' });
+  if (rb.status !== 0) die('物理层打包失败: ' + (rb.stderr || '').slice(0, 200));
+  const { paretoFront, nearestFrontCandidates, forwardModel } = await import(pathToFileURL(bundle).href);
+  // 26 族 × 8 孔隙率 × 4 密度（UI 同款 832 点域）
+  const grid = [];
+  for (const ty of BUILTIN_TYPES) {
+    for (let po = 0.55; po <= 0.905; po += 0.05) {
+      for (const cs of [2, 3, 4, 5]) {
+        const f = forwardModel(ty, po, cs, 1);
+        if (f.EGPa > 0 && f.kappaM2 > 0) grid.push({ E: f.EGPa, kappa: f.kappaM2, sea: f.svRatio, type: ty, porosity: po, cellSize: cs });
+      }
+    }
+  }
+  const front = paretoFront(grid);
+  const feasible = front.filter((q) => q.E >= eV && q.kappa >= kappaM2);
+  const reachable = feasible.length > 0;
+  const recs = nearestFrontCandidates(reachable ? feasible : front, eV, kappaM2, top);
+  const out = {
+    command: 'pareto', targetE: eV, targetKappaM2: kappaM2, top,
+    scanned: grid.length, frontSize: front.length, reachable,
+    recommendations: recs.map((r) => ({
+      type: r.point.type, porosity: r.point.porosity, cellSize: r.point.cellSize,
+      E_GPa: r.point.E, kappa_m2: r.point.kappa, sv_per_mm: r.point.sea, dist_log10: r.dist,
+    })),
+    boundary: '可达=存在 E/κ 双维达标前沿点（推荐取最小超标达标点）；不可达=全前沿最近妥协。代理为解析近似（Gibson-Ashby×Kozeny-Carman，与逆向求解器同源公式），非 FE 精确——octet 桁架线性律等效切线漂移边界见 HONESTY_BOUNDARIES #16',
+  };
+  if (json) { console.log(JSON.stringify(out, null, 2)); return; }
+  console.log('TPMS 逆设计推荐（Pareto 前沿 × 愿望点）');
+  console.log(`  目标         E ≥ ${eV} GPa｜κ ≥ ${kV}×10⁻⁹ m²（愿望点 ${reachable ? '可达' : '不可达——以下为最近妥协'}）`);
+  console.log(`  设计空间     ${grid.length} 点 → 非支配前沿 ${front.length} 点（26 族 × 孔隙率 0.55~0.90 × 单元密度 2~5）`);
+  recs.forEach((r, i) => {
+    console.log(`  ${i + 1}. ${r.point.type} p=${(r.point.porosity * 100).toFixed(0)}% k=${r.point.cellSize} · E=${r.point.E.toFixed(2)}GPa κ=${r.point.kappa.toExponential(1)} Sv=${r.point.sea.toFixed(1)}/mm · 距目标 ${r.dist.toFixed(2)} log10`);
+  });
+  if (recs[0]) console.log(`  复现首推荐   node tpms.mjs estimate --type ${recs[0].point.type} --porosity ${(Math.round(recs[0].point.porosity * 20) / 20).toFixed(2)}`);
+  console.log('  边界         解析代理非 FE 精确；octet 桁架标定边界见 HONESTY_BOUNDARIES #16');
+}
+
 function cmdScenario(a, json) {
   const usage = '用法: node tpms.mjs scenario --design <方案.json> [--json]\n'
     + '方案 JSON: { type, porosity, material 必填; resolution/periods/container/mode/tolerance/\n'
@@ -1485,6 +1549,7 @@ const KNOWN_FLAGS = {
   slice: ['type', 'porosity', 'periods', 'resolution', 'layers', 'container', 'container-mesh', 'mode', 'format', 'out', 'json', 'help'],
   overhang: ['input', 'critical', 'search', 'json', 'help'],
   'cfd-post': ['q1', 'dp1', 'q2', 'dp2', 'mu', 'rho', 'kinematic', 'box-mm', 'length-mm', 'wss', 'json', 'help'],
+  pareto: ['target-e', 'target-k', 'top', 'json', 'help'],
 };
 
 const a = parseArgs(process.argv.slice(2));
@@ -1507,6 +1572,7 @@ else if (cmd === 'scenario') cmdScenario(a, json);
 else if (cmd === 'slice') cmdSlice(a, json);
 else if (cmd === 'overhang') cmdOverhang(a, json);
 else if (cmd === 'cfd-post') cmdCfdPost(a, json);
+else if (cmd === 'pareto') await cmdPareto(a, json);
 else {
   console.log('TPMS Agent CLI（M0 数学层 + M1 几何闭环 + M5 场景模板）');
   console.log('用法:');
@@ -1518,6 +1584,7 @@ else {
   console.log('  node tpms.mjs scenario --design 方案.json   # M5：一条指令 → STL+INP+验证报告');
   console.log('  node tpms.mjs overhang --input 模型.stl [--critical 45] [--search]   # 可打印性审计：悬垂角 + 最优摆盘');
   console.log('  node tpms.mjs cfd-post --q1 8.33e-9 --dp1 0.5 --q2 8.33e-8 --dp2 15  # Forchheimer 两点分离 → K_int/WSS 诊断');
+  console.log('  node tpms.mjs pareto --target-e 2 --target-k 5 [--top 3] [--json]  # 逆设计：性能愿望 → 最优设计 top-k');
   console.log(`曲面类型: ${BUILTIN_TYPES.join(' ')}`);
   console.log(`材料:     ${Object.keys(core.BASE_MODULUS).join(' ')}`);
   if (cmd !== undefined && cmd !== 'help') { console.error(`\n✗ 未知命令 "${cmd}"`); process.exit(2); }

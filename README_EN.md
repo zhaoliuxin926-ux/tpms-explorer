@@ -115,7 +115,7 @@ node tpms/.verify/docs_consistency_check.mjs      # docs number consistency, 331
 node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drifted
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
-node tpms/agent/schema_check.mjs                  # 108 assertions (guard baseline 98)
+node tpms/agent/schema_check.mjs                  # 113 assertions (guard baseline 98)
 cd tpms/tpms-platform && npm run test:all   # 46/46 gates, ~6–10 min
 ```
 

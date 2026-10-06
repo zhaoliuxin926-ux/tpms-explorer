@@ -103,7 +103,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | 组件 | 职责 |
 |---|---|
 | tpms.mjs | 九子命令 list/estimate/mesh/verify/solve/scenario/slice/overhang/cfd-post（JSON 输出；exact 孔隙率求解器 Diamond R96 0.13pp） |
-| tools.schema.json | **五工具**注册面（+tpms_design_verify 闭环入口），枚举/数值域/路径狱与 CLI 逐项对拍 |
+| tools.schema.json | **六工具**注册面（+tpms_design_verify 闭环入口+tpms_pareto 逆设计推荐），枚举/数值域/路径狱与 CLI 逐项对拍 |
 | llm-provider.mjs | 三 Provider（Ollama / OpenAI 兼容端点 / Mock）+ validateToolCalls 拦截器（逐槽位校验，越界拒绝） |
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |

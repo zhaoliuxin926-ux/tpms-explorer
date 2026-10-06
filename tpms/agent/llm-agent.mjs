@@ -43,11 +43,14 @@ function runCli(toolName, args, cliOpts = {}) {
   // M3→M4 桥接：tpms_design_verify 不走 tpms.mjs 子命令，直连 tpms-driver 闭环
   if (toolName === 'tpms_design_verify') return runDesignVerify(args, cliOpts);
   // tools.schema 工具名 → CLI 子命令映射（Map 防原型链键穿透，红队 D H-1 同源）
-  const cmdMap = new Map([['tpms_list', 'list'], ['tpms_estimate', 'estimate'], ['tpms_mesh', 'mesh'], ['tpms_scenario', 'scenario']]);
+  // tpms_pareto 槽位 snake_case → CLI kebab（schema camelCase≠CLI kebab 映射断裂先例，llm-toolcalling 红队清单）
+  const cmdMap = new Map([['tpms_list', 'list'], ['tpms_estimate', 'estimate'], ['tpms_mesh', 'mesh'], ['tpms_scenario', 'scenario'], ['tpms_pareto', 'pareto']]);
+  const slotMap = new Map([['target_e_gpa', 'target-e'], ['target_k_nm2', 'target-k']]);
   const cmd = cmdMap.get(toolName);
   if (!cmd) return { status: 2, stdout: '', stderr: `未知工具 ${toolName}` };
   const cliArgs = [TPMS, cmd];
-  for (const [k, v] of Object.entries(args)) {
+  for (const [k0, v] of Object.entries(args)) {
+    const k = slotMap.get(k0) ?? k0;
     if (k === 'isoGrad') {
       // schema 对象槽位 → CLI kebab flag "<v0,v1,...>[@band]"（band 缺省 0.4 与 CLI 同默认）
       if (v && typeof v === 'object') {
@@ -98,6 +101,7 @@ const SYSTEM_PROMPT = `你是 TPMS Explorer 的设计助手。用户用自然语
 - tpms_estimate：仅当用户只询力学/渗透估算、明确不需要交付文件时使用。
 - tpms_list：仅当用户要列曲面/材料清单时使用。
 - tpms_design_verify：用户明确要求"验证到通过/闭环/确保交付质量"或所选曲面族可产性不确定时使用——走 verify+自动修复闭环（换族/降周期/升分辨率），收敛交付或结构化不可达宣告；多轮完整构建，明显慢于 tpms_mesh。
+- tpms_pareto：用户表达性能愿望而非具体构型时使用（"我要 E≥2GPa 且渗透率不低于 5e-9 的支架""哪种构型力学最好""推荐一个兼顾传质和刚度的设计"）——逆设计推荐 top-k；返回的是设计参数不是 STL，用户确认后可再走 tpms_mesh 构建。
 参数含义与边界见各工具的 description；孔隙率按用户表述习惯选 0-1 小数或 1-99 百分数。
 若用户意图模糊，选择最合理的默认并在参数中体现；不要反问。`;
 

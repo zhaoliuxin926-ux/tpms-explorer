@@ -51,7 +51,7 @@ solver --- root finding with deterministic Monte-Carlo integration of the analyt
 deviation at resolution 96 --- and (vii) constructive global orientation propagation that reduces
 misoriented STL edges to zero by construction, replacing a per-triangle normal-voting scheme that
 degraded winding consistency five-fold. Version 8.0 adds (viii) an agentic verification layer:
-a five-operation deterministic tool schema consumed through LLM function calling under a per-slot
+a six-operation deterministic tool schema consumed through LLM function calling under a per-slot
 validating interceptor (enumeration, range, unknown-property, and path-traversal rejection), and a
 closed-loop design-verification driver in which the LLM selects repairs only from a bounded
 strategy menu while patch application, execution, and acceptance remain deterministic --- including
@@ -291,7 +291,7 @@ self-clamped; a four-tier model profile documents server-side variance as the re
 mode, never the pipeline); an offline mock-driven
 closed-loop self-test covering parameter-fix convergence, out-of-ladder resolution repair, period
 reduction, unreachable declaration, interceptor rejection, and round exhaustion with the original
-design file bit-identical; and a 108-assertion schema$\leftrightarrow$CLI cross-check gate that pins
+design file bit-identical; and a 113-assertion schema$\leftrightarrow$CLI cross-check gate that pins
 enumeration parity across tools, a static sentinel between the schema type enumeration and the
 driver's repair menu, and an offline end-to-end execution of the bridge. The LLM regression itself
 is key-gated and runs outside CI; correctness of the layer does not depend on it because the

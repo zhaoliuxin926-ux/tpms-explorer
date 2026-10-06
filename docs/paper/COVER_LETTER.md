@@ -50,7 +50,7 @@ separation, measured K_int = 2.34e-9 m2), and a dual-extractor meshing architect
    application, execution, and acceptance remain deterministic — validated by a 40-instruction
    bilingual production-LLM regression (two-round 40/40×2 on glm-5.3-flash, n=2, not deterministic; 6/6 endpoint×model
    matrix on record), an offline mock-driven closed-loop self-test, and
-   a 108-assertion schema↔CLI cross-check gate.
+   a 113-assertion schema↔CLI cross-check gate.
 4. **Honest-boundary engineering.** Known limitations (Voigt upper-bound shear estimates,
    LBM→FD-Darcy substitution, voxel-topology fail-closed parameter ranges) are disclosed and
    guard-railed in the repository rather than left undocumented.

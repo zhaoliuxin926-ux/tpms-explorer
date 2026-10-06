@@ -29,12 +29,29 @@ const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding:
 const tool = (n) => schema.tools.find((t) => t.name === n);
 
 // ── 1. schema 结构 ──
-schema.tools?.length === 5 && ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify'].every((n) => tool(n))
-  ? ok('schema 含五工具') : bad('schema 工具清单');
-for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify']) {
+schema.tools?.length === 6 && ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify', 'tpms_pareto'].every((n) => tool(n))
+  ? ok('schema 含六工具（2026-10-06 +tpms_pareto 逆设计）') : bad('schema 工具清单');
+for (const n of ['tpms_estimate', 'tpms_mesh', 'tpms_scenario', 'tpms_design_verify', 'tpms_pareto']) {
   const t = tool(n);
   t.parameters.additionalProperties === false && Array.isArray(t.parameters.required)
     ? ok(`${n} additionalProperties=false + required 声明`) : bad(`${n} 参数结构`);
+}
+// tpms_pareto 槽位约束 ↔ CLI 对拍（schema↔CLI 映射断裂红队先例：slotMap 桥接须钉）
+{
+  const pp = tool('tpms_pareto').parameters.properties;
+  pp.target_e_gpa?.minimum === 0.001 && pp.target_k_nm2?.minimum === 0.001 && pp.top?.default === 3
+    ? ok('tpms_pareto 槽位约束在位（E/κ 正数下界+top 默认 3）') : bad('tpms_pareto 槽位约束');
+  const r1 = run('pareto', '--target-e', '2', '--target-k', '5', '--json');
+  const j1 = JSON.parse(r1.stdout || '{}');
+  r1.status === 0 && j1.recommendations?.length === 3 && j1.recommendations[0]?.E_GPa >= 2 && j1.reachable === true
+    ? ok('pareto CLI 可达目标：top-3 全达标（达标子集优先与 UI 同源）') : bad('pareto CLI 可达分支', 'status=' + r1.status);
+  const r2 = run('pareto', '--target-e', '50', '--target-k', '500', '--json');
+  const j2 = JSON.parse(r2.stdout || '{}');
+  r2.status === 0 && j2.reachable === false && j2.recommendations?.length > 0
+    ? ok('pareto CLI 不可达目标：妥协分支+非空推荐') : bad('pareto CLI 不可达分支');
+  const r3 = run('pareto', '--target-e', '-1', '--target-k', '5');
+  r3.status === 2
+    ? ok('pareto CLI 非法目标 fail-closed exit2') : bad('pareto CLI fail-closed', 'status=' + r3.status);
 }
 
 // ── 2/3. schema 属性约束 ↔ CLI 行为对拍 ──

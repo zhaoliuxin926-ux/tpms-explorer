@@ -19,7 +19,7 @@
 - 边界：misorientedEdges（定向错）为 mesh_audit 容差项非硬门，CLI 内建自检未复刻该指标（与 mesh_audit ok 判定的三硬指标口径一致）
 
 ### M2 工具注册层 — ✅ 已完成（2026-09-05；本节 2026-09-12 状态修正，原"未开始"为过时口径）
-- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario / tpms_design_verify 五工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐；第五工具为 2026-09-12 M3→M4 桥接增补）+ `schema_check.mjs`（现 106 断言@2026-09-22 实测；GUARD 基线 98）
+- 交付：`tools.schema.json`（tpms_list / tpms_estimate / tpms_mesh / tpms_scenario / tpms_design_verify / tpms_pareto 六工具，枚举与数值钳制范围与 CLI 实际校验逐项对齐；第五工具 2026-09-12 M3→M4 桥接、第六工具 tpms_pareto 逆设计 2026-10-06 增补）+ `schema_check.mjs`（现 113 断言@2026-10-06 实测；GUARD 基线 98）
 - 验收：nl-agent 参数类意图 100% 覆盖；每个数值参数都有硬边界；schema_check+selftest 自 2026-09-10 起转正进 run_ci_suite 调度（39→41 门）。过程与口径详见下方 B-t2
 
 ### M3 LLM 接入 — ✅ 全线达成（2026-09-12 真实模型回归 34/34）
