@@ -302,9 +302,28 @@ export class AnthropicCompatProvider extends LLMProvider {
   }
 
   async complete(messages, tools) {
-    // OpenAI messages → anthropic：system 抽顶层，其余原样（content 兼容字符串与块数组）
+    // OpenAI messages → anthropic：system 抽顶层；assistant.tool_calls → tool_use 块；
+    // tool 角色（结果回填）→ user tool_result 块（tool_call_id 关联保留——批次 5 T2
+    // 工具历史兼容：多轮编排时结果按 ID 回到对应调用）
     const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
-    const msgs = messages.filter((m) => m.role !== 'system');
+    const msgs = [];
+    for (const m of messages) {
+      if (m.role === 'system') continue;
+      if (m.role === 'tool') {
+        msgs.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: m.tool_call_id ?? m.toolCallId ?? '', content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '') }] });
+      } else if (m.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length) {
+        const content = [];
+        if (m.content) content.push({ type: 'text', text: String(m.content) });
+        for (const tc of m.tool_calls) {
+          let input = {};
+          try { input = typeof tc.function?.arguments === 'string' ? JSON.parse(tc.function.arguments) : (tc.function?.arguments ?? {}); } catch { /* 畸形 JSON 由拦截器结构化拒绝 */ }
+          content.push({ type: 'tool_use', id: tc.id ?? '', name: tc.function?.name ?? '', input });
+        }
+        msgs.push({ role: 'assistant', content });
+      } else {
+        msgs.push({ role: m.role, content: m.content });
+      }
+    }
     const body = {
       model: this.model,
       max_tokens: this.maxTokens,
@@ -374,6 +393,13 @@ export class MockProvider extends LLMProvider {
     this.preset = preset;
   }
   async complete() {
+    // 轮次预设（批次 5 T2 离线编排回归）：preset.rounds=[{toolCalls,raw},...] 按调用序消耗，
+    // 末轮后恒返回末项（空 toolCalls=终轮）——供 --max-rounds 循环的确定性测试
+    if (Array.isArray(this.preset.rounds)) {
+      const r = this.preset.rounds[Math.min(this._round ?? 0, this.preset.rounds.length - 1)];
+      this._round = (this._round ?? 0) + 1;
+      return { toolCalls: r.toolCalls ?? [], raw: r.raw ?? '' };
+    }
     return { toolCalls: this.preset.toolCalls ?? [], raw: this.preset.raw ?? '' };
   }
 }

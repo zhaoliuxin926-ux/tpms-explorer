@@ -16,7 +16,7 @@
  * 运行：node llm_driver_selftest.mjs   （真实构建约 3~6 分钟）
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, readFileSync, rmSync, mkdtempSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -91,6 +91,27 @@ function drive(designObj, decisions, maxRounds = 6) {
     { function: { name: 'apply_repair', arguments: JSON.stringify({ action: 'patch_design', patches: { periods: 1 }, reason: '无效修补（反复）' }) } },
   ], 3);
   ok('6 轮数耗尽结构化报告（exit 4）', r.exit === 4 && r.report?.verdict === 'max_rounds' && r.untouched, `exit=${r.exit} verdict=${r.report?.verdict}`);
+}
+
+// 批次 5 T1/T3/T4：agent-pipeline 有界多步任务（推荐->选取->构建->验收->可打印性）
+{
+  const pipeDir = join(work, 'pipe');
+  mkdirSync(pipeDir, { recursive: true });
+  const PIPE = join(HERE, 'agent-pipeline.mjs');
+  const parse = (s) => { try { return JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); } catch { return null; } };
+  const rp = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--top', '3', '--pick', '2', '--out', pipeDir], { encoding: 'utf8', timeout: 600_000 });
+  const pr = parse(rp.stdout ?? '');
+  ok('7 管线成功链：推荐-构建(水密)-悬垂报告 exit0（三层口径分开）', rp.status === 0 && pr?.status === 'completed'
+    && pr?.layers?.proxyRecommendation?.candidates?.length >= 2 && pr?.layers?.meshAcceptance?.watertight === true
+    && pr?.layers?.printability?.criticalAreaRatio !== undefined,
+    'exit=' + rp.status + ' steps=' + (pr?.steps?.map((s) => s.step).join(',') ?? '?'));
+  ok('8 管线报告含预算用量与产物', pr?.budget?.used?.steps >= 3 && Array.isArray(pr?.artifacts) && pr.artifacts.some((f) => /pipeline-report[.]json$/.test(f)));
+  const rf = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--max-repairs', '0', '--out', pipeDir], { encoding: 'utf8', timeout: 600_000 });
+  const fr = parse(rf.stdout ?? '');
+  ok('9 管线不可达链：候选拒产 fail-closed exit3（已试 1/3+预算注记）', rf.status === 3 && fr?.status === 'unreachable' && /已试 1\/3/.test(fr?.failure?.reason ?? ''), 'exit=' + rf.status);
+  const rb = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--pick', '2', '--max-steps', '2', '--out', pipeDir], { encoding: 'utf8', timeout: 600_000 });
+  const br = parse(rb.stdout ?? '');
+  ok('10 管线预算耗尽链：exit4+已完成步骤+最后诊断', rb.status === 4 && br?.status === 'budget-exhausted' && br?.exhaustion?.completedSteps === 2 && br?.exhaustion?.lastDiagnosis !== null, 'exit=' + rb.status);
 }
 
 rmSync(work, { recursive: true, force: true });

@@ -34,6 +34,7 @@ function parseArgs(argv) {
     else if (s === '--dry-run') a.dryRun = true;
     else if (s === '--json') a.json = true;
     else if (s === '--session') a.session = argv[++i];
+    else if (s === '--max-rounds') a.maxRounds = Number(argv[++i]);
     else if (s.startsWith('--')) { console.error(`未知选项 ${s}`); process.exit(2); }
     else a._.push(s);
   }
@@ -219,66 +220,93 @@ async function main() {
     { role: 'user', content: userMsg },
   ];
 
-  let llmOut;
-  try {
-    llmOut = await provider.complete(messages, tools);
-  } catch (e) {
-    console.error(`✗ LLM 调用失败: ${e.message}`);
-    console.error('  提示: ollama 需已启动（ollama serve）且模型已拉取；openai 兼容端点需 TPMS_LLM_API_KEY/TPMS_LLM_BASE_URL 或对应 flag');
-    // 【2026-09-12】process.exit 在 undici async 句柄存活时触发 libuv win/async.c 断言（污染退出码）——
-    // 全部改 exitCode + return 自然排空（fetch 已完成、定时器已清、Connection: close 下排空即时）
-    process.exitCode = 2; return;
-  }
-
-  if (!llmOut.toolCalls?.length) {
-    console.error('✗ LLM 未返回 tool calls（仅文本回复）。指令可能过于模糊，或模型不支持 function calling。');
-    if (llmOut.raw) console.error(`  LLM 文本: ${llmOut.raw.slice(0, 200)}`);
-    process.exitCode = 2; return;
-  }
-
-  // 铁律：schema 拦截器逐槽位校验（越界拒绝）
-  const verdict = validateToolCalls(llmOut.toolCalls, schema);
-  if (!verdict.ok) {
-    console.error('✗ LLM 产出被 schema 拦截器拒绝:');
-    for (const e of verdict.errors) console.error(`  - ${e}`);
-    process.exitCode = 2; return;
-  }
-
+  // ── 有界多轮编排（批次 5 T2/T3）：--max-rounds N（默认 1=历史单轮行为完全不变）。
+  // 每轮：provider → schema 拦截器（逐轮校验）→ 执行 → 结果按 tool_call_id 回填历史
+  // → 下一轮；模型不再发 toolCalls（纯文本终答）或轮数耗尽即终。轮数硬帽 8。
+  const maxRounds = Math.min(8, Math.max(1, a.maxRounds ?? 1));
   const results = [];
-  for (const call of verdict.calls) {
-    if (a.dryRun) {
-      // dry-run 诊断走 stderr：--json 时 stdout 必须是纯 JSON（消费方契约）
-      console.error(`[dry-run] ${call.name} ${JSON.stringify(call.arguments)}`);
-      results.push({ tool: call.name, args: call.arguments, dryRun: true });
-      continue;
+  let verdict = null;
+  let llmOut = null;
+  let finalText = '';
+  for (let round = 1; round <= maxRounds; round++) {
+    let out;
+    try {
+      out = await provider.complete(messages, tools);
+    } catch (e) {
+      console.error(`✗ LLM 调用失败（第 ${round} 轮）: ${e.message}`);
+      console.error('  提示: ollama 需已启动（ollama serve）且模型已拉取；openai 兼容端点需 TPMS_LLM_API_KEY/TPMS_LLM_BASE_URL 或对应 flag');
+      // 【2026-09-12】process.exit 在 undici async 句柄存活时触发 libuv win/async.c 断言（污染退出码）——
+      // 全部改 exitCode + return 自然排空（fetch 已完成、定时器已清、Connection: close 下排空即时）
+      process.exitCode = 2; return;
     }
-    console.error(`→ 执行 ${call.name} ...`);
-    const r = runCli(call.name, call.arguments, { provider: a.provider, model: a.model, baseUrl: a.baseUrl, apiKey: a.apiKey });
-    let parsed = null;
-    try { parsed = JSON.parse(r.stdout); } catch { /* 非 JSON 输出 */ }
-    results.push({ tool: call.name, args: call.arguments, exit: r.status, result: parsed ?? r.stdout.slice(0, 500) });
-    // 会话模式：tpms_pareto 成功结果落推荐集（S1/S3——候选+代理口径快照）
-    if (session && r.status === 0 && call.name === 'tpms_pareto') {
-      const { recordPareto } = await import('./agent-session.mjs');
-      recordPareto(session, call.arguments, parsed);
+    llmOut = out;
+    if (!out.toolCalls?.length) {
+      if (round === 1) {
+        console.error('✗ LLM 未返回 tool calls（仅文本回复）。指令可能过于模糊，或模型不支持 function calling。');
+        if (out.raw) console.error(`  LLM 文本: ${out.raw.slice(0, 200)}`);
+        process.exitCode = 2; return;
+      }
+      finalText = out.raw || '';   // 编排终轮：模型给出总结文本，正常收束
+      break;
     }
-    if (r.status !== 0) {
-      console.error(`✗ ${call.name} exit=${r.status}`);
-      if (r.stderr) console.error(r.stderr.slice(0, 300));
-      if (a.json) console.log(JSON.stringify({ ok: false, calls: verdict.calls, results }, null, 2));
-      // 退出码透传：CLI 0/2/3；driver 另有 4=修复轮数耗尽（报告 JSON 内有 verdict 详情）
-      if (session) { const { saveSession } = await import('./agent-session.mjs'); saveSession(a.session, session); }
-      process.exitCode = r.status; return;
+
+    // 铁律：schema 拦截器逐槽位校验（每轮重新过——T2）
+    verdict = validateToolCalls(out.toolCalls, schema);
+    if (!verdict.ok) {
+      console.error(`✗ LLM 产出被 schema 拦截器拒绝（第 ${round} 轮）:`);
+      for (const e of verdict.errors) console.error(`  - ${e}`);
+      process.exitCode = 2; return;
+    }
+
+    const roundExecuted = [];
+    for (const call of verdict.calls) {
+      if (a.dryRun) {
+        // dry-run 诊断走 stderr：--json 时 stdout 必须是纯 JSON（消费方契约）
+        console.error(`[dry-run][r${round}] ${call.name} ${JSON.stringify(call.arguments)}`);
+        results.push({ tool: call.name, args: call.arguments, dryRun: true, round });
+        roundExecuted.push({ call, result: null });
+        continue;
+      }
+      console.error(`→ 执行 [r${round}] ${call.name} ...`);
+      const r = runCli(call.name, call.arguments, { provider: a.provider, model: a.model, baseUrl: a.baseUrl, apiKey: a.apiKey });
+      let parsed = null;
+      try { parsed = JSON.parse(r.stdout); } catch { /* 非 JSON 输出 */ }
+      results.push({ tool: call.name, args: call.arguments, exit: r.status, result: parsed ?? r.stdout.slice(0, 500), round });
+      roundExecuted.push({ call, result: parsed ?? r.stdout.slice(0, 500) });
+      // 会话模式：tpms_pareto 成功结果落推荐集（S1/S3——候选+代理口径快照）
+      if (session && r.status === 0 && call.name === 'tpms_pareto') {
+        const { recordPareto } = await import('./agent-session.mjs');
+        recordPareto(session, call.arguments, parsed);
+      }
+      if (r.status !== 0) {
+        console.error(`✗ ${call.name} exit=${r.status}`);
+        if (r.stderr) console.error(r.stderr.slice(0, 300));
+        if (a.json) console.log(JSON.stringify({ ok: false, calls: verdict.calls, results, rounds: round }, null, 2));
+        // 退出码透传：CLI 0/2/3；driver 另有 4=修复轮数耗尽（报告 JSON 内有 verdict 详情）
+        if (session) { const { saveSession } = await import('./agent-session.mjs'); saveSession(a.session, session); }
+        process.exitCode = r.status; return;
+      }
+    }
+
+    // 结果回填历史（T2：tool_call_id 关联保留——OpenAI/Ollama 原生形态；Anthropic
+    // provider 内做 tool_result 块映射）
+    messages.push({ role: 'assistant', content: out.raw || '', tool_calls: out.toolCalls });
+    for (const { call, result } of roundExecuted) {
+      messages.push({ role: 'tool', tool_call_id: call.id ?? call.function?.id ?? `r${round}-${results.length}`, content: JSON.stringify(result ?? {}).slice(0, 4000) });
+    }
+    if (round === maxRounds && maxRounds > 1) {
+      // 轮数耗尽：如实报告（不虚报"模型已完成"）——已执行结果保留在 results
+      finalText = `（编排轮数上限 ${maxRounds} 已用尽——以上为已完成的 ${results.length} 次调用结果）`;
     }
   }
 
   if (a.json) {
-    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results, modelNote: (llmOut.raw || '').slice(0, 300) || undefined }, null, 2));
+    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results, modelNote: (finalText || llmOut.raw || '').slice(0, 300) || undefined, rounds: maxRounds }, null, 2));
   } else {
     console.log('✓ 全部工具执行成功');
     // 模型备注出口（2026-10-06 指代披露对抗：模型在 toolCalls 外的说明文本——如
     // "指代无上下文，已按默认处理"——此前无输出通道，披露要求落空；成功路径同样呈现）
-    if (llmOut.raw) console.log(`ℹ 模型备注: ${llmOut.raw.slice(0, 200)}`);
+    if (finalText || llmOut.raw) console.log(`ℹ 模型备注: ${(finalText || llmOut.raw).slice(0, 200)}`);
     for (const r of results) console.log(`  ${r.tool}: exit=${r.exit}`);
   }
   // 会话模式：成功路径落盘（推荐集更新/幂等不重复记录）

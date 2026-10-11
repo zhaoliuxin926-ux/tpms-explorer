@@ -100,7 +100,7 @@ Pareto 线一句话：骨支架三难权衡（E↑力学×κ↑传质×Sv↑生�
 # 以下均在仓库根执行
 node tpms/agent/schema_check.mjs --fast   # 面试前 ~30s：契约/静态/拒收（GUARD 40）（跳过几何探针）
 node tpms/agent/selftest.mjs              # 50 断言
-node tpms/agent/llm_provider_selftest.mjs # 82 断言（离线，GUARD 82）
+node tpms/agent/llm_provider_selftest.mjs # 87 断言（离线，GUARD 87）
 node tpms/agent/tpms.mjs list --json      # 26 族（24 TPMS + 2 桁架）
 node tpms/.verify/docs_consistency_check.mjs  # 文档数字一致性 332（秒级，GUARD 313）
 

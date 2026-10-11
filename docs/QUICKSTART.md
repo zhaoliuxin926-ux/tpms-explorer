@@ -39,6 +39,16 @@ node tpms/agent/llm-agent.mjs --session work.json "把第一个构建出来"
 # 代理口径（解析近似非 FE）随候选快照落盘。key 走 TPMS_LLM_* env，绝不入会话文件。
 ```
 
+## Demo 6 · 一步到位管线（推荐→构建→验收→可打印性，2026-10-11+）
+
+```bash
+node tpms/agent/agent-pipeline.mjs --target-e 2 --target-k 5
+# 确定性串联 tpms_pareto → 候选选取（水密门失败按修复预算顺延）→ tpms_mesh（R96 水密验收）
+# → overhang 悬垂审计；输出 pipeline-report.json（每步输入/输出/产物/预算用量，
+# 代理推荐/网格验收/物理可打印性三层口径分开）。预算耗尽 exit4 如实报告已完成步骤；
+# 全候选拒产 exit3 fail-closed。LLM 编排轮见 llm-agent --max-rounds N。
+```
+
 ## Demo 3 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）
 
 ```bash

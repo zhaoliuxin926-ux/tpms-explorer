@@ -414,6 +414,58 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
     await new Promise((resolve) => server.close(resolve));
   }
 }
+
+// T2 工具历史兼容（批次 5）：Anthropic 通道 tool_call_id↔tool_result 关联 + 有界多轮编排
+{
+  const captured = [];
+  const srv = createServer((req, res) => {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      try { captured.push(JSON.parse(body)); } catch { /* */ }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content: [{ type: 'text', text: 'ok' }] }));
+    });
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const prov = new AnthropicCompatProvider({ baseUrl: `http://127.0.0.1:${srv.address().port}`, apiKey: 'local', timeoutMs: 5000 });
+    await prov.complete([
+      { role: 'system', content: 'sys' },
+      { role: 'user', content: '列清单' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'call_7', type: 'function', function: { name: 'tpms_list', arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'call_7', content: '{"types":26}' },
+    ], tools);
+    const body = captured[0];
+    const tu = body?.messages?.find((m) => m.role === 'assistant')?.content?.find((b) => b.type === 'tool_use');
+    const tr = body?.messages?.find((m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_result'))?.content?.find((b) => b.type === 'tool_result');
+    ok('Anthropic 工具历史映射：tool_use 块携带原 ID', tu?.id === 'call_7' && tu?.name === 'tpms_list');
+    ok('Anthropic 工具历史映射：tool_result 按 tool_use_id 关联', tr?.tool_use_id === 'call_7' && tr?.content === '{"types":26}');
+  } finally {
+    srv.closeAllConnections();
+    await new Promise((r) => srv.close(r));
+  }
+  const env2 = { ...process.env, TPMS_ALLOW_MOCK_EXEC: '1', TPMS_MOCK_TOOLCALLS: JSON.stringify({
+    rounds: [
+      { toolCalls: mkCall('tpms_list', {}), raw: '先看清单' },
+      { toolCalls: [], raw: '清单已确认，任务完成' },
+    ],
+  }) };
+  const rm2 = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--max-rounds', '3', '--json', '先列清单再总结'], { encoding: 'utf8', timeout: 60_000, env: env2 });
+  let jm2 = null; try { jm2 = JSON.parse(rm2.stdout); } catch { /* */ }
+  ok('T2 有界编排两轮收束（r1 执行→r2 纯文本终答 exit0）', rm2.status === 0 && jm2?.ok && jm2?.results?.length === 1 && jm2?.results?.[0]?.round === 1 && /任务完成/.test(jm2?.modelNote ?? ''), `exit=${rm2.status}`);
+  const env3 = { ...process.env, TPMS_ALLOW_MOCK_EXEC: '1', TPMS_MOCK_TOOLCALLS: JSON.stringify({
+    rounds: [
+      { toolCalls: mkCall('tpms_list', {}) },
+      { toolCalls: mkCall('tpms_list', {}) },
+    ],
+  }) };
+  const rm3 = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--max-rounds', '2', '--json', '一直列'], { encoding: 'utf8', timeout: 60_000, env: env3 });
+  let jm3 = null; try { jm3 = JSON.parse(rm3.stdout); } catch { /* */ }
+  ok('T3 轮数耗尽如实报告（不虚报完成，已完成结果保留）', rm3.status === 0 && jm3?.results?.length === 2 && /轮数上限 2 已用尽/.test(jm3?.modelNote ?? ''), `exit=${rm3.status} results=${jm3?.results?.length}`);
+  const rm1 = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--dry-run', '--json', '单轮回归'], { encoding: 'utf8', timeout: 30_000, env: { ...process.env, TPMS_MOCK_TOOLCALLS: JSON.stringify({ toolCalls: mkCall('tpms_list', {}) }) } });
+  ok('默认单轮行为完全不变（无 --max-rounds 兼容回归）', rm1.status === 0, `exit=${rm1.status}`);
+}
 // ── 3. MockProvider → runCli 链路（list 端到端）──
 {
   const mock = new MockProvider({ toolCalls: mkCall('tpms_list', {}) });
@@ -429,5 +481,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 82) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 82（69 + CLI 会话 13，2026-10-11 批次 4）`); process.exit(1); }
+if (pass < 87) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 87（82 + T2 工具历史/有界编排 5，2026-10-11 批次 5）`); process.exit(1); }
 process.exit(fail ? 1 : 0);
