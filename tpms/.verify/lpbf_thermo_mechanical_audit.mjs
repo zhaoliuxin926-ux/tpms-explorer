@@ -11,7 +11,7 @@
  * 运行：node lpbf_thermo_mechanical_audit.mjs
  */
 
-import { writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -105,6 +105,11 @@ console.log('\n[F] 网格无关性');
   check(`另一组尺度 dx40µm 换道 y=1/2/3 格（实测 ${lanes2.join('/')}）`, lanes2.join(',') === '1,2,3');
   const wrapped = m.laserLaneCells(16, 2, N);   // 32 格域回绕
   check('域宽回绕（pass16·2格 mod 32 = 0）', wrapped === 0);
+  // 接线哨兵（M5 变异验证教训 2026-10-11）：纯函数正确但 simulateLPBF 内联旧公式
+  // 曾漏抓——求解器必须实际调用 laserLaneCells（防旁路）
+  const lpbfSrc = readFileSync(join(PLATFORM, 'src/physics/lpbf-thermo-mechanical.ts'), 'utf8');
+  check('simulateLPBF 换道接线（实际调用 laserLaneCells·防内联旁路）',
+    /const yLaser = laserLaneCells\(pass, trackSpacing, N\) \* dx;/.test(lpbfSrc));
 }
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
   if (passCount < 21) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 21（+N3 换道量纲三锚，2026-10-11）'); process.exit(1); }

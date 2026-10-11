@@ -121,5 +121,63 @@
       "before": "button stays disabled and plasRunning stays true after rejection",
       "expected": "rejected call does not lock the next supported run"
     }
-  ]
+  ],
+  "postFix": {
+    "recordedOn": "2026-10-11",
+    "note": "G1-G5 修复后 S7 真场重生成（真 BCC 桁架；四件逐位确定）；S8 受阻于 Octet 12 杆结点非流形（S8_O65.err 存结构化拒收：nm=190656，无 STL）；旧嵌合体件归档 specimens/archive-chimera-2026-10-11/",
+    "affectedSpecimens": [
+      {
+        "path": "specimens/S7_B65.stl",
+        "sha256": "3d7d5ce3eb0c4afea3107a22ee524de6d3a7fb9817b5dbe3c3269f0a671b8a8f",
+        "bytes": 42927084,
+        "metadata": "specimens/S7_B65.json",
+        "type": "strutbcc",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6518903506759735,
+        "watertight": true,
+        "sourceVersion": "post-fix-true-bcc-2026-10-11"
+      },
+      {
+        "path": "specimens/S7_B65_r1.stl",
+        "sha256": "3d7d5ce3eb0c4afea3107a22ee524de6d3a7fb9817b5dbe3c3269f0a671b8a8f",
+        "bytes": 42927084,
+        "metadata": "specimens/S7_B65_r1.json",
+        "type": "strutbcc",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6518903506759735,
+        "watertight": true,
+        "sourceVersion": "post-fix-true-bcc-2026-10-11"
+      },
+      {
+        "path": "specimens/S7_B65_r2.stl",
+        "sha256": "3d7d5ce3eb0c4afea3107a22ee524de6d3a7fb9817b5dbe3c3269f0a671b8a8f",
+        "bytes": 42927084,
+        "metadata": "specimens/S7_B65_r2.json",
+        "type": "strutbcc",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6518903506759735,
+        "watertight": true,
+        "sourceVersion": "post-fix-true-bcc-2026-10-11"
+      },
+      {
+        "path": "specimens/S7_B65_r3.stl",
+        "sha256": "3d7d5ce3eb0c4afea3107a22ee524de6d3a7fb9817b5dbe3c3269f0a671b8a8f",
+        "bytes": 42927084,
+        "metadata": "specimens/S7_B65_r3.json",
+        "type": "strutbcc",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6518903506759735,
+        "watertight": true,
+        "sourceVersion": "post-fix-true-bcc-2026-10-11"
+      }
+    ]
+  }
 }

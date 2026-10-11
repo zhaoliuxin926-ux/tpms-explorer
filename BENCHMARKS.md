@@ -1,43 +1,38 @@
 # BENCHMARKS — TPMS Explorer 公开基准
 
-> 生成于 2026-10-04T15:16:40.593Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
+> 生成于 2026-10-11T07:29:14.570Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
 > 口径：目标孔隙率 60%｜exact 孔隙率求解器（解析积分求根 + 网格实测割线校正）｜水密三硬指标（开放边/非流形边/退化面）任一非零即 fail-closed 拒产——**拒产是平台的正确行为**，代表该 (曲面, 孔隙率, 分辨率) 组合的网格表示不可靠（亚体素薄壁自触，随分辨率收敛）。
 
 ## 1. 几何基准矩阵（可产性 / 水密 / 孔隙率偏差）
 
 | 曲面 | R48 | R96 |
 |---|---|---|
-| gyroid | ✓ dev 0.59pp / 2475ms | ✓ dev 0.09pp / 8644ms |
-| diamond | ✓ dev 0.06pp / 3074ms | ✓ dev 0.37pp / 6090ms |
-| schwarz | ✓ dev 0.02pp / 2070ms | ✓ dev 0.12pp / 4125ms |
-| neovius | ✓ dev 0.18pp / 2532ms | ✓ dev 0.27pp / 4703ms |
-| iwp | ✓ dev 0.22pp / 2695ms | ✓ dev 0.02pp / 9249ms |
-| frd | ✓ dev 4.08pp / 3977ms | ✓ dev 0.04pp / 11061ms |
-| lidinoid | ✓ dev 0.3pp / 5012ms | ✓ dev 0.09pp / 18890ms |
-| splitp | ✓ dev 0.59pp / 4635ms | ✓ dev 0.3pp / 15803ms |
-| octo | ✓ dev 6.95pp / 2834ms | ✓ dev 0.34pp / 8534ms |
-| karcher | ✓ dev 0.49pp / 3989ms | ✓ dev 0.22pp / 12199ms |
-| fks | 拒产 (nm 9504) / 3529ms | ✓ dev 0.17pp / 8949ms |
-| fky | 拒产 (nm 4752) / 3719ms | ✓ dev 0.57pp / 14931ms |
-| gprime | ✓ dev 1.11pp / 4673ms | 拒产 (nm 19080) / 7810ms |
-| fcks | 拒产 (nm 27720) / 4457ms | 拒产 (nm 10368) / 15546ms |
-| dprime | 拒产 (nm 18252) / 4796ms | ✓ dev 0.14pp / 15503ms |
-| dp | ✓ dev 2.92pp / 4078ms | ✓ dev 0.22pp / 8719ms |
-| dd | ✓ dev 1.26pp / 3360ms | ✓ dev 0.16pp / 6547ms |
-| dg | 拒产 (nm 18354) / 5491ms | ✓ dev 0.19pp / 13662ms |
-| fcky | ✓ dev 0.28pp / 3962ms | ✓ dev 0.2pp / 7727ms |
-| cdd | 拒产 (nm 18252) / 4007ms | ✓ dev 0.16pp / 19813ms |
-| slotp | ✓ dev 2.16pp / 3780ms | ✓ dev 0.2pp / 11879ms |
-| fs | ✓ dev 9.55pp / 2279ms | ✓ dev 0.07pp / 7369ms |
-| qstar | 拒产 (nm 792) / 2967ms | ✓ dev 0.18pp / 6486ms |
-| ws | ✓ dev 13.26pp / 3998ms | ✓ dev 0.15pp / 14600ms |
-| strutbcc | ✓ dev 2.65pp / 4227ms | ✓ dev 3.33pp / 6885ms |
-| strutoctet | ✓ dev 0.14pp / 14980ms | ✓ dev 1.06pp / 8197ms |
-
-> ⚠️ strut 双族上行数字为 **schwarz 嵌合体时代的时点快照**（提取场曾漏列查表分派，实测同参数
-> strutbcc/strutoctet/schwarz 三角数逐位相同——benchmarks-latest.json 铁证）。2026-10-11 G1-G5
-> 修复后的现态：strutbcc 真场 dev 0.19pp@R64 水密；strutoctet 真拓扑 STL 出口 fail-closed
-> （§2）。全表待 V1 批次以真场重跑刷新。
+| gyroid | ✓ dev 0.59pp / 2424ms | ✓ dev 0.09pp / 7641ms |
+| diamond | ✓ dev 0.06pp / 2420ms | ✓ dev 0.37pp / 6325ms |
+| schwarz | ✓ dev 0.02pp / 1449ms | ✓ dev 0.12pp / 4031ms |
+| neovius | ✓ dev 0.18pp / 1857ms | ✓ dev 0.27pp / 4723ms |
+| iwp | ✓ dev 0.22pp / 2974ms | ✓ dev 0.02pp / 10172ms |
+| frd | ✓ dev 4.08pp / 3717ms | ✓ dev 0.04pp / 12515ms |
+| lidinoid | ✓ dev 0.3pp / 5165ms | ✓ dev 0.09pp / 19201ms |
+| splitp | ✓ dev 0.59pp / 4650ms | ✓ dev 0.3pp / 17836ms |
+| octo | ✓ dev 6.95pp / 2573ms | ✓ dev 0.34pp / 9557ms |
+| karcher | ✓ dev 0.49pp / 3728ms | ✓ dev 0.22pp / 12853ms |
+| fks | 拒产 (nm 9504) / 3922ms | ✓ dev 0.17pp / 9530ms |
+| fky | 拒产 (nm 4752) / 3503ms | ✓ dev 0.57pp / 15770ms |
+| gprime | ✓ dev 1.11pp / 4353ms | 拒产 (nm 19080) / 8594ms |
+| fcks | 拒产 (nm 27720) / 4335ms | 拒产 (nm 10368) / 16830ms |
+| dprime | 拒产 (nm 18252) / 4048ms | ✓ dev 0.14pp / 18372ms |
+| dp | ✓ dev 2.92pp / 4401ms | ✓ dev 0.22pp / 9580ms |
+| dd | ✓ dev 1.26pp / 3503ms | ✓ dev 0.16pp / 7577ms |
+| dg | 拒产 (nm 18354) / 4572ms | ✓ dev 0.19pp / 13805ms |
+| fcky | ✓ dev 0.28pp / 3117ms | ✓ dev 0.2pp / 6575ms |
+| cdd | 拒产 (nm 18252) / 3075ms | ✓ dev 0.16pp / 20777ms |
+| slotp | ✓ dev 2.16pp / 3889ms | ✓ dev 0.2pp / 12700ms |
+| fs | ✓ dev 9.55pp / 2152ms | ✓ dev 0.07pp / 7882ms |
+| qstar | 拒产 (nm 792) / 3051ms | ✓ dev 0.18pp / 6762ms |
+| ws | ✓ dev 13.26pp / 3491ms | ✓ dev 0.15pp / 15013ms |
+| strutbcc | ✓ dev 0.56pp / 5582ms | ✓ dev 0.25pp / 13050ms |
+| strutoctet | 拒产 (nm 17424) / 22014ms | 拒产 (nm 38160) / 112555ms |
 
 ## 2. 可用域速查（LLM/用户选择曲面时的决策表）
 

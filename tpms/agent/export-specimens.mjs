@@ -19,6 +19,10 @@ const CLI = join(HERE, 'tpms.mjs');
 const outIdx = process.argv.indexOf('--out');
 const OUT = outIdx >= 0 ? process.argv[outIdx + 1] : 'specimens';
 const ONCE = process.argv.includes('--once');
+// --only <子串>：只跑 MATRIX id 含该子串的构型（V1 批次定点重生成——S1-S6 经典族
+// 已证逐位不变，无需全矩阵重跑；S7 真场重生成/S8 受阻标记各自定点）
+const onlyIdx = process.argv.indexOf('--only');
+const ONLY = onlyIdx >= 0 ? process.argv[onlyIdx + 1] : null;
 const toIdx = process.argv.indexOf('--timeout');
 // 默认墙 1200s（2026-10-06 整理批：strutoctet k8 R96 单件实测 8m13s——旧默认 300s 对
 // strut 组结构性不足，S8 三件+基件连续 ETIMEDOUT；20 分钟覆盖慢机余量）
@@ -47,6 +51,7 @@ const REPS = ONCE ? [1] : [1, 2, 3];
 mkdirSync(outAbs, { recursive: true });
 let ok = 0, fail = 0;
 for (const m of MATRIX) {
+  if (ONLY && !m.id.includes(ONLY)) continue;
   for (const rep of REPS) {
     const id = ONCE ? m.id : `${m.id}_r${rep}`;
     const stl = join(outAbs, `${id}.stl`);
