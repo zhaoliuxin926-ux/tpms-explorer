@@ -352,6 +352,13 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
     vOld.geometrySemantics = 'v1-ancient';
     wf(join(dir, 'old.json'), JSON.stringify(vOld), 'utf8');
     ok('S3 几何语义版本变化拒绝（旧候选未经核对不得使用）', rej(join(dir, 'old.json'), '把第一个构建出来', '几何语义'));
+    // 红队 2026-10-11 参数卫生锚（曾裸崩 exit1 / 静默误绑定）
+    const rMr = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--dry-run', '--max-rounds', 'abc', 'hi'], { encoding: 'utf8', timeout: 30_000 });
+    ok('RT --max-rounds 非数=结构化 exit2（曾 NaN 裸崩 exit1）', rMr.status === 2 && /max-rounds/.test(rMr.stderr || ''), `exit=${rMr.status}`);
+    const rPipe = spawnSync(process.execPath, [join(HERE, 'agent-pipeline.mjs'), '--target-e', '2', '--target-k', '5', '--max-steps', 'abc'], { encoding: 'utf8', timeout: 30_000 });
+    ok('RT 管线 --max-steps 非数=结构化 exit2（曾裸崩）', rPipe.status === 2 && /max-steps/.test(rPipe.stderr || ''), `exit=${rPipe.status}`);
+    ok('RT 复合数词拒绝（"第一百个"曾静默当第一）', rej(sess, '把第一百个构建出来', '复合'));
+    ok('RT 小数序数拒绝（"第 1.5 个"曾静默当第一）', rej(sess, '把第 1.5 个构建出来', '小数'));
   } finally {
     rms(dir, { recursive: true, force: true });
   }
@@ -481,5 +488,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 87) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 87（82 + T2 工具历史/有界编排 5，2026-10-11 批次 5）`); process.exit(1); }
+if (pass < 91) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 91（87 + 参数卫生红队 4，2026-10-11）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

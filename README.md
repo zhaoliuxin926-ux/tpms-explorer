@@ -65,7 +65,7 @@
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **47 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 47/47 |
 | 🎯 Pareto 多目标前沿 | 骨支架三难权衡（E↑力学×κ↑传质×Sv↑生物活性）可视化：26 族×孔隙率×密度毫秒级解析代理扫描 → 非支配前沿 log-log 散点 → hover 读数 → **点击写回设计参数**；约束过滤（可行子集重算）+ 前沿 CSV 导出 + 双族混合律扫描（E/Sv 凸组合+κ KC 重算）+ **逆设计推荐**（输入目标 E/κ → 可达时给最小超标的达标点、不可达时给最近妥协，top-3 ★愿望点+log10 距离量化） | ml_pareto_audit 16 断言（hybrid b=0/1 退化锚+非支配性+逆设计距离序/fail-closed） |
-| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 43 条中英指令真实模型回归（glm-5.3-flash 满贯 43/43×2 轮 n=2（勿称确定性，含 H 组逆设计意图），6/6 端点×模型矩阵在案）+ llm_provider_selftest 87 断言（GUARD 87，+嵌套必填/正文超时/备注双出口/CLI 会话/工具历史编排钉 2026-10-11） |
+| 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 43 条中英指令真实模型回归（glm-5.3-flash 满贯 43/43×2 轮 n=2（勿称确定性，含 H 组逆设计意图），6/6 端点×模型矩阵在案）+ llm_provider_selftest 91 断言（GUARD 91，+嵌套必填/正文超时/CLI 会话/工具历史编排/参数卫生红队钉 2026-10-11） |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
 | 🏗️ 数字孪生压溃失效 | 最大主应变失效 + 渐进单元生死 + 坍塌应变预测 + Gibson-Ashby 对比（v6.0） | digital_twin_compression_audit 24 断言 |
 | 🌊 Navier-Stokes 微流体 | 融合显式松弛 Stokes + Uzawa 修正，Poiseuille 剖面 0.002%（v6.0） | wasm_navier_stokes_audit 17 断言 |

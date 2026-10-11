@@ -223,7 +223,13 @@ async function main() {
   // ── 有界多轮编排（批次 5 T2/T3）：--max-rounds N（默认 1=历史单轮行为完全不变）。
   // 每轮：provider → schema 拦截器（逐轮校验）→ 执行 → 结果按 tool_call_id 回填历史
   // → 下一轮；模型不再发 toolCalls（纯文本终答）或轮数耗尽即终。轮数硬帽 8。
-  const maxRounds = Math.min(8, Math.max(1, a.maxRounds ?? 1));
+  // 红队 2026-10-11：非有限数（如 --max-rounds abc → NaN）曾直入循环致裸崩 exit1——
+  // 违反退出码契约；参数卫生前置（结构化 exit2）
+  if (a.maxRounds !== undefined && (!Number.isFinite(a.maxRounds) || a.maxRounds < 1)) {
+    console.error('--max-rounds 需为 ≥1 的有限数字');
+    process.exit(2);
+  }
+  const maxRounds = Math.min(8, Math.max(1, Math.floor(a.maxRounds ?? 1)));
   const results = [];
   let verdict = null;
   let llmOut = null;

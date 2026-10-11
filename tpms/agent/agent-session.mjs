@@ -102,8 +102,8 @@ export function recordExecution(session, entry) {
 }
 
 // ── 指代解析（S2 确定性绑定）────────────────────────────────────
-const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
-const ORDINAL_RE = /第\s*([一二三四五六七八九十]|\d+)\s*(?:个|项|条|推荐|方案|设计|候选)?/;   // 第N(个/项/...)
+const CN_NUM = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+const ORDINAL_RE = /第\s*([一二两三四五六七八九十]|\d+)\s*(?:个|项|条|推荐|方案|设计|候选)?/;   // 第N(个/项/...)
 const ORDINAL_EN_RE = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th)\b/i;
 const DEMON_RE = /(刚才|上次|之前|前面|上面的|那个|首推|首个)/;
 const BUILD_RE = /(构建|建一?个|生成|导出|打印|输出|做出|造|build|construct|export|generate|print|make|create)/i;
@@ -136,7 +136,18 @@ export function resolveReference(session, instruction) {
     return { status: 'reject', reason: '会话中没有任何推荐结果可指代——请先用 tpms_pareto 生成推荐（同一 --session 文件）' };
   }
   let ordinal = 1;
-  if (mOrd) ordinal = parseOrdinal(mOrd[1]);
+  if (mOrd) {
+    // 红队 2026-10-11：「第一百个」曾把"一"捕获静默当第一（误导绑定）——复合数词
+    // （百/千/万/零或连串数字字）超出支持域，一律结构化拒绝而非猜
+    const after = instruction.slice((mOrd.index ?? 0) + mOrd[0].length);
+    if (/[一二两三四五六七八九十百千万零]/.test(after.slice(0, 1))) {
+      return { status: 'reject', reason: '复合/超域中文数词（如"一百"）不在 1~10 支持域——请用阿拉伯数字或"第 N 个"（1~10）' };
+    }
+    if (/^[.\d]/.test(after) && /^\d/.test(after.slice(1))) {
+      return { status: 'reject', reason: '指代序数含小数（如"第 1.5 个"）——只支持 1~10 整数序' };
+    }
+    ordinal = parseOrdinal(mOrd[1]);
+  }
   else if (mEn) ordinal = EN_ORD[mEn[1].toLowerCase()];
   if (!Number.isInteger(ordinal) || ordinal < 1) {
     return { status: 'reject', reason: `无法解析指代序数（"${mOrd?.[0] ?? mEn?.[0]}"）——请用"第 N 个"（1~10）` };

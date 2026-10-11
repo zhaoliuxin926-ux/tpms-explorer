@@ -47,6 +47,18 @@ for (let i = 0; i < argv.length; i++) {
 }
 
 const usage = '用法: node agent-pipeline.mjs --target-e <GPa> --target-k <×10⁻⁹ m²> [--top 3] [--pick 1] [--out 目录] [--session s.json] [--json]';
+// 红队 2026-10-11 参数卫生：NaN/负数预算曾致裸崩（NaN 预算恒 false 走 finish 引用未定义；
+// 负 subprocess timeout 直击 spawnSync RangeError）——非法一律结构化 exit2
+const intOpt = (v, name, lo, hi) => {
+  if (v === undefined) return undefined;
+  if (!Number.isFinite(v) || !Number.isInteger(v) || v < lo || v > hi) { console.error(`${name} 需为 ${lo}~${hi} 整数`); process.exit(2); }
+  return v;
+};
+intOpt(a.maxSteps, '--max-steps', 1, 100);
+intOpt(a.maxToolCalls, '--max-tool-calls', 1, 200);
+intOpt(a.maxRepairs, '--max-repairs', 0, 50);
+if (a.maxWallMs !== undefined && (!Number.isFinite(a.maxWallMs) || a.maxWallMs < 1000)) { console.error('--max-wall-ms 需为 ≥1000 的有限数字'); process.exit(2); }
+if (a.subTimeout !== undefined && (!Number.isFinite(a.subTimeout) || a.subTimeout < 1000 || a.subTimeout > 3_600_000)) { console.error('--subprocess-timeout-ms 需为 1000~3600000'); process.exit(2); }
 if (!Number.isFinite(a.targetE) || a.targetE <= 0) { console.error('--target-e 需为正数（GPa）\n' + usage); process.exit(2); }
 if (!Number.isFinite(a.targetK) || a.targetK <= 0) { console.error('--target-k 需为正数（×10⁻⁹ m²）\n' + usage); process.exit(2); }
 
