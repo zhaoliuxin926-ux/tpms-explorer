@@ -158,6 +158,9 @@
      "isoGrad": {
       "type": "object",
       "description": "C1 渐变等值场（z 向三区平台+过渡带）：{ values: [v0,v1,...] 各平台 iso 偏移（2~6 个 [-1.5,1.5] 有限数字），band?: 过渡带宽（默认 0.4，0≤b≤2）}。仅 solid_network；与 targetPorosity 二分互斥（显式 iso 求根基准）。R48 低分辨率下过渡带可能薄壁自触 fail-closed，建议 R≥96。",
+      "required": [
+       "values"
+      ],
       "additionalProperties": false,
       "properties": {
        "values": {
@@ -310,6 +313,9 @@
      "isoGrad": {
       "type": "object",
       "description": "C1 渐变等值场（z 向三区平台+过渡带），结构同 tpms_mesh.isoGrad；仅 solid_network，与孔隙率二分互斥。",
+      "required": [
+       "values"
+      ],
       "additionalProperties": false,
       "properties": {
        "values": {

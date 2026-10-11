@@ -65,6 +65,11 @@ function validateValue(toolName, key, spec, v, errors) {
         if (!Object.hasOwn(props, k)) errors.push(`tool ${toolName}.${key}: 未知属性 "${k}"`);
       }
     }
+    // 嵌套必填：required 只在顶层查过曾放过 isoGrad 缺 values（拦截器通过后 runCli.values.join 裸崩）——
+    // 任何层深的 object schema 都必须自查 required
+    for (const r of spec.required ?? []) {
+      if (!Object.hasOwn(v, r)) errors.push(`tool ${toolName}.${key}: 缺必填 "${r}"`);
+    }
     const out = {};
     for (const [k, sub] of Object.entries(props)) {
       if (!Object.hasOwn(v, k)) continue;
@@ -193,32 +198,34 @@ export class OllamaProvider extends LLMProvider {
       ...(tools?.length ? { tools } : {}),
     };
     // 手写 AbortController+clearTimeout：AbortSignal.timeout 的句柄在 process.exit 时
-    // 触发 libuv win/async.c 断言崩溃（Windows 实测），退出码被污染
+    // 触发 libuv win/async.c 断言崩溃（Windows 实测），退出码被污染。
+    // 计时器须覆盖到正文读取结束：只罩到响应头=服务器发完头后挂起正文仍永久卡死
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), this.timeoutMs);
-    let res;
     try {
-      res = await fetch(`${this.baseUrl}/api/chat`, {
+      const res = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Connection: 'close' },
         body: JSON.stringify(body),
         signal: ac.signal,
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        const err = new Error(`Ollama ${res.status}: ${text.slice(0, 200)}`);
+        err.own = true; // 已按 HTTP 状态包装，外层原样透传（除非期间发生中止）
+        throw err;
+      }
+      const json = await res.json();
+      const msg = json.message ?? {};
+      return { toolCalls: msg.tool_calls ?? [], raw: msg.content ?? '' };
     } catch (e) {
-      throw new Error(ac.signal.aborted
-        ? `Ollama ${this.timeoutMs}ms 无响应（timeout）`
-        : `Ollama 连接失败: ${e.message}`);
+      // 中止态一律超时语义：res.text 的 .catch(()=> '') 会吞 AbortError，只能以 signal 状态为准
+      if (ac.signal.aborted) throw new Error(`Ollama ${this.timeoutMs}ms 无响应（timeout）`);
+      if (e?.own) throw e;
+      throw new Error(`Ollama 连接失败: ${e.message}`);
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Ollama ${res.status}: ${text.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    const msg = json.message ?? {};
-    const toolCalls = msg.tool_calls ?? [];
-    return { toolCalls, raw: msg.content ?? '' };
   }
 }
 
@@ -247,28 +254,29 @@ export class OpenAICompatProvider extends LLMProvider {
     };
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), this.timeoutMs);
-    let res;
     try {
-      res = await fetch(`${this.baseUrl}/chat/completions`, {
+      const res = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}`, Connection: 'close' },
         body: JSON.stringify(body),
         signal: ac.signal,
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        const err = new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+        err.own = true;
+        throw err;
+      }
+      const json = await res.json();
+      const msg = json.choices?.[0]?.message ?? {};
+      return { toolCalls: msg.tool_calls ?? [], raw: msg.content ?? '' };
     } catch (e) {
-      throw new Error(ac.signal.aborted
-        ? `端点 ${this.timeoutMs}ms 无响应（timeout）`
-        : `端点连接失败: ${e.message}`);
+      if (ac.signal.aborted) throw new Error(`端点 ${this.timeoutMs}ms 无响应（timeout）`);
+      if (e?.own) throw e;
+      throw new Error(`端点连接失败: ${e.message}`);
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    const msg = json.choices?.[0]?.message ?? {};
-    return { toolCalls: msg.tool_calls ?? [], raw: msg.content ?? '' };
   }
 }
 
@@ -314,9 +322,8 @@ export class AnthropicCompatProvider extends LLMProvider {
     };
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), this.timeoutMs);
-    let res;
     try {
-      res = await fetch(`${this.baseUrl}/v1/messages`, {
+      const res = await fetch(`${this.baseUrl}/v1/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,33 +334,35 @@ export class AnthropicCompatProvider extends LLMProvider {
         body: JSON.stringify(body),
         signal: ac.signal,
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        const err = new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+        err.own = true;
+        throw err;
+      }
+      const json = await res.json();
+      // anthropic content 块：text 拼接为 raw；tool_use 转回 OpenAI 形（validateToolCalls 双形兼容，
+      // 统一为 function 形让下游单一口径）；thinking 等块忽略
+      const rawParts = [];
+      const toolCalls = [];
+      for (const blk of json.content ?? []) {
+        if (blk.type === 'text') rawParts.push(blk.text);
+        else if (blk.type === 'tool_use') {
+          toolCalls.push({
+            id: blk.id,
+            type: 'function',
+            function: { name: blk.name, arguments: JSON.stringify(blk.input ?? {}) },
+          });
+        }
+      }
+      return { toolCalls, raw: rawParts.join('\n') };
     } catch (e) {
-      throw new Error(ac.signal.aborted
-        ? `端点 ${this.timeoutMs}ms 无响应（timeout）`
-        : `端点连接失败: ${e.message}`);
+      if (ac.signal.aborted) throw new Error(`端点 ${this.timeoutMs}ms 无响应（timeout）`);
+      if (e?.own) throw e;
+      throw new Error(`端点连接失败: ${e.message}`);
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    // anthropic content 块：text 拼接为 raw；tool_use 转回 OpenAI 形（validateToolCalls 双形兼容，
-    // 统一为 function 形让下游单一口径）；thinking 等块忽略
-    const rawParts = [];
-    const toolCalls = [];
-    for (const blk of json.content ?? []) {
-      if (blk.type === 'text') rawParts.push(blk.text);
-      else if (blk.type === 'tool_use') {
-        toolCalls.push({
-          id: blk.id,
-          type: 'function',
-          function: { name: blk.name, arguments: JSON.stringify(blk.input ?? {}) },
-        });
-      }
-    }
-    return { toolCalls, raw: rawParts.join('\n') };
   }
 }
 

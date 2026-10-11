@@ -164,8 +164,11 @@ const SCHEDULE = [
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
   ['schema_check 契约与可用域（106 断言实测/98 基线；2026-10-02 C1 后 frd/dg 行为翻转钉 +1）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
-  ['llm_provider_selftest M3 拦截器自检（40 断言/GUARD 37，离线；+toolCalls 上限/anthropic provider/null 元素钉）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
+  ['llm_provider_selftest M3 拦截器自检（69 断言/GUARD 69，离线；+嵌套必填/正文超时/备注双出口钉 2026-10-11）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
   ['guard_audit 元门（恒真高置信扫描+GUARD 基线账实对拍，2026-09-29 纳管）', '门禁元审计', 'guard_audit.mjs'],
+  // 【2026-10-11 纳管】打磨计划批次 1A：strut 桁架族跨出口一致性（G1 尺度契约/G2 拓扑锚/
+  // G3 分派哨兵/G4 脚本出口/G5 mesh-体素-RVE 矩阵；octet 非流形 fail-closed 契约钉）
+  ['strut_exit_audit 桁架跨出口矩阵（28 断言/GUARD 24；cell=2π 契约+Octet 拓扑锚+独立参考对拍+mesh/体素/RVE/脚本一致性）', '桁架跨出口矩阵', 'strut_exit_audit.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));

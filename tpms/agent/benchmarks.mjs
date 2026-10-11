@@ -78,8 +78,8 @@ if (mdPath) {
         : t === 'dprime' || t === 'cdd' ? '低分辨率薄壁自触 fail-closed，R96 可产（nm 18252@R48）'
         : t === 'dg' ? '求根域自适应后（2026-10-02 C1）R96 精确命中 0.19pp（旧 ±1.6 钳制时代曾带 ~8pp 偏差静默交付）；R48 p0.6 薄壁自触 fail-closed（nm 18354），R96 可产；k6 下 p≥0.75 各分辨率拒产、升分辨率非单调（R128 p0.65 交错拒产，2026-10-04 实测）；高孔隙率需求建议 periods=3（实测全 p 可产）'
         : t === 'gprime' ? '默认周期数 k6 R96 p0.6 薄壁自触 fail-closed（nm 19080），降周期数 k=2 可产'
-        : t === 'strutbcc' ? '桁架杆网络 SDF（弯曲主导 E∝ρ²）；k 固定=3（cellSize 暂不联动）；C1 代理未标定走 fallback（标定留档）'
-        : t === 'strutoctet' ? '桁架拉伸主导（E∝ρ，Deshpande-Fleck）；k 固定=3；C1 未标定；与 strutbcc 构成 strut 力学谱'
+        : t === 'strutbcc' ? '真 BCC 桁架（2026-10-11 G1-G5 修复：cell=2π 一周期=k 个/域，k=periods 联动 cellSize；曾长期为 schwarz 嵌合体——提取场漏列查表）；C1=0.06 已标定'
+        : t === 'strutoctet' ? '真 Octet 拓扑（角杆 2026-10-11 恢复）；12 杆结点多片胞在 surface-nets 下结构性非流形→STL 出口 fail-closed 拒产（体素/RVE/脚本出口正常，抽取器多片胞改造留批次）；C1=1.2 线性律披露'
         : ['frd', 'lidinoid', 'fks', 'fky'].includes(t) ? '低分辨率薄壁自触 fail-closed，R96 可产' : '';
       return `| ${t} | ${g(48)} | ${g(96)} | ${note} |`;
     }), '',

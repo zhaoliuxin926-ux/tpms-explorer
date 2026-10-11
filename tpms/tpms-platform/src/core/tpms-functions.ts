@@ -328,7 +328,7 @@ export function getWeightCount(type: TpmType): number {
     case 'fky': case 'fcky': return 2; // 低频 (ccc+sss) + 2 倍频组，各乘一个权重
     case 'cdd': return 1;
     case 'slotp': case 'fs': case 'qstar': case 'ws': return 1;
-    case 'strutbcc': case 'strutoctet': return 1; // 杆半径 r（0.02~0.25）
+    case 'strutbcc': case 'strutoctet': return 1; // 杆半径=半胞分数 w[0]（r=w[0]·π；0.02~0.5，默认 0.25=1/8 胞宽）
     case 'custom': return 4;
     default: return 3;
   }
@@ -337,7 +337,7 @@ export function getWeightCount(type: TpmType): number {
 /** 获取某类型的默认权重 */
 export function getDefaultWeights(type: TpmType): Weights {
   const n = getWeightCount(type);
-  // strut 族 w[0]=杆半径：cell=2（mx 域单位）下 1/8 细长比合理默认；其余族=1
+  // strut 族 w[0]=杆半径（半胞分数，r=w[0]·π，G1 契约）：1/8 胞宽细长比合理默认；其余族=1
   if (type === 'strutbcc' || type === 'strutoctet') return [0.25, 0, 0, 0] as Weights;
   return [n > 0 ? 1 : 0, n > 1 ? 1 : 0, n > 2 ? 1 : 0, n > 3 ? 1 : 0] as Weights;
 }

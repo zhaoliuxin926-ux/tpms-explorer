@@ -34,6 +34,11 @@
 | strutbcc | ✓ dev 2.65pp / 4227ms | ✓ dev 3.33pp / 6885ms |
 | strutoctet | ✓ dev 0.14pp / 14980ms | ✓ dev 1.06pp / 8197ms |
 
+> ⚠️ strut 双族上行数字为 **schwarz 嵌合体时代的时点快照**（提取场曾漏列查表分派，实测同参数
+> strutbcc/strutoctet/schwarz 三角数逐位相同——benchmarks-latest.json 铁证）。2026-10-11 G1-G5
+> 修复后的现态：strutbcc 真场 dev 0.19pp@R64 水密；strutoctet 真拓扑 STL 出口 fail-closed
+> （§2）。全表待 V1 批次以真场重跑刷新。
+
 ## 2. 可用域速查（LLM/用户选择曲面时的决策表）
 
 | 曲面 | R48 可产 | R96 可产 | 备注 |
@@ -62,8 +67,8 @@
 | fs | ✅ | ✅ |  |
 | qstar | ⛔ | ✅ |  |
 | ws | ✅ | ✅ |  |
-| strutbcc | ✅ | ✅ | 桁架杆网络 SDF（弯曲主导 E∝ρ²）；k 固定=3（cellSize 暂不联动）；C1 代理未标定走 fallback（标定留档） |
-| strutoctet | ✅ | ✅ | 桁架拉伸主导（E∝ρ，Deshpande-Fleck）；k 固定=3；C1 未标定；与 strutbcc 构成 strut 力学谱 |
+| strutbcc | ✅ | ✅ | 真 BCC 桁架（2026-10-11 G1-G5 修复：cell=2π 一周期=k 个/域，k=periods 联动 cellSize；曾长期为 schwarz 嵌合体——提取场漏列查表）；C1=0.06 已标定 |
+| strutoctet | ⛔ | ⛔ | 真 Octet 拓扑（角杆 2026-10-11 恢复）；12 杆结点多片胞在 surface-nets 下结构性非流形→STL 出口 fail-closed 拒产（体素/RVE/脚本出口正常，抽取器多片胞改造留批次）；C1=1.2 线性律披露 |
 
 ## 3. 力学解析口径（Gibson-Ashby，非 FEA）
 

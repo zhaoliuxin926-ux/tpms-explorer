@@ -5,7 +5,7 @@
 An interactive, browser-based explorer for **Triply Periodic Minimal Surfaces (TPMS)** — the lattice geometries behind bone scaffolds, lightweight parts, heat exchangers and catalyst supports.
 Personal, independently maintained open-source project.
 
-**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **46 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 29 geometry cases (34 audit cases incl. reject sentinels)).
+**What makes it different: a verification-first culture.** Every formula, mesh and export path is guarded by **47 CI gates with 1,000+ assertions** (deterministic, pure-Node, cross-platform), anchored to analytic solutions — Poiseuille profile error 0.002 %, phononic Γ-point zero modes to machine precision, watertight STL by construction (open edges = 0 across 29 geometry cases (34 audit cases incl. reject sentinels)).
 
 ---
 
@@ -116,7 +116,7 @@ node tpms/agent/sync-publish.mjs --check          # blog paste-sources not drift
 
 # Full geometry cross-check (includes R48–R128 probes, ~5–10 min)
 node tpms/agent/schema_check.mjs                  # 113 assertions (guard baseline 98)
-cd tpms/tpms-platform && npm run test:all   # 46/46 gates, ~6–10 min
+cd tpms/tpms-platform && npm run test:all   # 47/47 gates, ~6–10 min
 ```
 
 Every gate carries a minimum guard (assertion count or case count, depending on the gate; summary-line formats vary), so silently skipping assertions fails the build. See [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md) for the guided path from "what is a minimal surface?" to research-grade workflows, and [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) (37 chapters) for AM/CFD/CAE practice.

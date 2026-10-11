@@ -28,6 +28,7 @@
 import type { BuildParams, WorkerResponse } from '../types';
 import { getTpmsFunction, type Weights } from '../core/tpms-functions';
 import { wcToMmFactor } from '../core/units';
+import { solveIsoAnalytic } from '../core/porosity-solver';
 
 /** 裁剪顶点：x = 非展开位置（可越出 ±π），t = 累计规范平移（L 的整数倍） */
 interface ClipVert { x: number; y: number; z: number; tx: number; ty: number; tz: number }
@@ -91,10 +92,12 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
   // ── 1. 场填充（查表族走 sin/cos 表；custom 与含 2 倍频谐波的 C2 扩展族实时求值）──
   // 第六批 slotp/fs/qstar/ws 同列（2026-10-02 对抗审查 C2：漏列会静默回退查表默认项
   // 产出 schwarz 几何——surface-nets 主管线同款排除集，此处曾漏）
+  // 【G3 2026-10-11】strut 双族同列（SDF 杆场无查表形态，漏列=RVE 出口 schwarz 几何）
   const useLookup = type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
     type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime' && type !== 'fcks' &&
     type !== 'dprime' && type !== 'dp' && type !== 'dd' && type !== 'dg' && type !== 'fcky' && type !== 'cdd' &&
-    type !== 'slotp' && type !== 'fs' && type !== 'qstar' && type !== 'ws';
+    type !== 'slotp' && type !== 'fs' && type !== 'qstar' && type !== 'ws' &&
+    type !== 'strutbcc' && type !== 'strutoctet';
   const tpmFn = useLookup ? null : getTpmsFunction(type, customFormula, { k, t: params.thickness, iso });
   const sn = new Float64Array(N), cs = new Float64Array(N), cs2 = new Float64Array(N);
   for (let i = 0; i < N; i++) {
@@ -158,9 +161,18 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
     const lb = (val: number) => { let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < val) lo = mid + 1; else hi = mid; } return lo; };
     const targetSolid = Math.max(0.02, Math.min(0.98, 1 - targetPorosity));
     if (mode === 'solid_network') {
-      let lo = -2, hi = 2;
-      for (let it = 0; it < 20; it++) { const mid = (lo + hi) / 2; if (lb(mid) / n > targetSolid) hi = mid; else lo = mid; }
-      bias = (lo + hi) / 2;
+      if (type === 'strutbcc' || type === 'strutoctet') {
+        // 【G5 2026-10-11】strut 距离场在 commensurate 节点栅格上产生巨量并列值
+        //（R=16 实测单一并列块占 26% 节点、R=8 全场仅 9 个不同值）——节点分位数二分
+        // 落在并列块边缘的随机侧，固相率漂移至 5%/72%。节点对齐是位级周期复制的
+        // 硬约束（不能半步偏移），strut 改走 MC 解析求根（与 buildSurface exact
+        // 孔隙率路径同源，跨出口一致）；经典族 sin/cos 场并列幅度小，保持既有分位数路径
+        bias = solveIsoAnalytic(tpmFn! as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, targetPorosity, w, null, `rve:${type}:k${k}`).iso;
+      } else {
+        let lo = -2, hi = 2;
+        for (let it = 0; it < 20; it++) { const mid = (lo + hi) / 2; if (lb(mid) / n > targetSolid) hi = mid; else lo = mid; }
+        bias = (lo + hi) / 2;
+      }
     } else {
       const count = (t: number) => lb(-t / 2) + (n - lb(t / 2));
       let lo = 0.02, hi = 6;

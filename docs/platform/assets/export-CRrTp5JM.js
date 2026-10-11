@@ -1,11 +1,11 @@
 /*! TPMS Explorer | MIT License | (c) 2026 zhaoliuxin926-ux | https://github.com/zhaoliuxin926-ux/tpms-explorer/blob/main/LICENSE */
-import{a as e,c as t,i as n,l as r,n as i,t as a}from"./index-Ce9YQ0pN.js";import{compileGcode as o,sliceMesh as s}from"./gcode-slicer-DiRcshDD.js";function c(e,t,n=1,r){let i=t.length/3,a=new ArrayBuffer(84+i*50),o=new DataView(a);for(let e=0;e<74&&e<80;e++)o.setUint8(e,`TPMS Explorer binary STL; units=mm; scale=uniform (cellSize or normalized)`.charCodeAt(e));o.setUint32(80,i,!0);let s=u(e,t),c=84;for(let t=0;t<i;t++){let r=s[t*3]*3,i=s[t*3+1]*3,a=s[t*3+2]*3,l=e[i]-e[r],u=e[i+1]-e[r+1],d=e[i+2]-e[r+2],f=e[a]-e[r],p=e[a+1]-e[r+1],m=e[a+2]-e[r+2],h=u*m-d*p,g=d*f-l*m,_=l*p-u*f,v=Math.sqrt(h*h+g*g+_*_)||1;o.setFloat32(c,h/v,!0),c+=4,o.setFloat32(c,g/v,!0),c+=4,o.setFloat32(c,_/v,!0),c+=4,o.setFloat32(c,e[r]*n,!0),c+=4,o.setFloat32(c,e[r+1]*n,!0),c+=4,o.setFloat32(c,e[r+2]*n,!0),c+=4,o.setFloat32(c,e[i]*n,!0),c+=4,o.setFloat32(c,e[i+1]*n,!0),c+=4,o.setFloat32(c,e[i+2]*n,!0),c+=4,o.setFloat32(c,e[a]*n,!0),c+=4,o.setFloat32(c,e[a+1]*n,!0),c+=4,o.setFloat32(c,e[a+2]*n,!0),c+=4,o.setUint16(c,0,!0),c+=2}return a}function l(e,t,n,r=1,i){let o=c(e,t,r,i);a(new Blob([o],{type:`model/stl`}),n)}function u(e,t){let n=t.length/3,r=t.slice();if(n===0)return r;let i=e.length/3,a=new Map;for(let e=0;e<n;e++)for(let n=0;n<3;n++){let r=t[e*3+n],o=t[e*3+(n+1)%3];if(r===o)continue;let s=r>o,c=s?o*i+r:r*i+o,l=a.get(c);l||(l=[],a.set(c,l)),l.length<2&&l.push({t:e,rev:s})}let o=new Int8Array(n).fill(-1),s=new Int32Array(n);for(let e=0;e<n;e++){if(o[e]!==-1)continue;o[e]=0;let n=0,r=0;for(s[r++]=e;n<r;){let e=s[n++];for(let n=0;n<3;n++){let c=t[e*3+n],l=t[e*3+(n+1)%3];if(c===l)continue;let u=c>l?l*i+c:c*i+l,d=a.get(u);if(!d||d.length!==2)continue;let f=d[0].t===e?d[1]:d[0];o[f.t]===-1&&(o[f.t]=f.rev===c>l?o[e]^1:o[e],s[r++]=f.t)}}}for(let e=0;e<n;e++)if(o[e]===1){let t=r[e*3+1];r[e*3+1]=r[e*3+2],r[e*3+2]=t}let c=0;for(let t=0;t<n;t++){let n=r[t*3]*3,i=r[t*3+1]*3,a=r[t*3+2]*3;c+=e[n]*(e[i+1]*e[a+2]-e[i+2]*e[a+1])+e[n+1]*(e[i+2]*e[a]-e[i]*e[a+2])+e[n+2]*(e[i]*e[a+1]-e[i+1]*e[a])}if(c<0)for(let e=0;e<n;e++){let t=r[e*3+1];r[e*3+1]=r[e*3+2],r[e*3+2]=t}return r}var d=[`inlet`,`outlet`,`sides`,`wall`];function f(e,t,n=1,r){let i=t.length/3,a=1/0,o=-1/0,s=1/0,c=-1/0,l=1/0,f=-1/0;for(let t=0;t<e.length;t+=3){let r=e[t]*n,i=e[t+1]*n,u=e[t+2]*n;r<a&&(a=r),r>o&&(o=r),i<s&&(s=i),i>c&&(c=i),u<l&&(l=u),u>f&&(f=u)}let p=Math.max((o-a)*.01,n*.001),m=Math.max((c-s)*.01,n*.001),h=Math.max((f-l)*.01,n*.001),g={inlet:[],outlet:[],sides:[],wall:[]},_=e=>e.toFixed(6),v=u(e,t);for(let t=0;t<i;t++){let r=v[t*3]*3,i=v[t*3+1]*3,u=v[t*3+2]*3,d=e[i]-e[r],y=e[i+1]-e[r+1],b=e[i+2]-e[r+2],x=e[u]-e[r],S=e[u+1]-e[r+1],C=e[u+2]-e[r+2],w=y*C-b*S,T=b*x-d*C,E=d*S-y*x,D=Math.sqrt(w*w+T*T+E*E)||1,O=w/D,k=T/D,A=E/D,j=(e[r]+e[i]+e[u])/3*n,M=(e[r+1]+e[i+1]+e[u+1])/3*n,N=(e[r+2]+e[i+2]+e[u+2])/3*n,P=`wall`;N<=l+h&&A<-.7?P=`inlet`:N>=f-h&&A>.7?P=`outlet`:(j<=a+p||j>=o-p||M<=s+m||M>=c-m)&&(P=`sides`),g[P].push(` facet normal ${_(O)} ${_(k)} ${_(A)}\n`,`  outer loop
-`,`   vertex ${_(e[r]*n)} ${_(e[r+1]*n)} ${_(e[r+2]*n)}\n`,`   vertex ${_(e[i]*n)} ${_(e[i+1]*n)} ${_(e[i+2]*n)}\n`,`   vertex ${_(e[u]*n)} ${_(e[u+1]*n)} ${_(e[u+2]*n)}\n`,`  endloop
+import{a as e,l as t,n,o as r,r as i,t as a,u as o}from"./index-CWsweYCR.js";import{compileGcode as s,sliceMesh as c}from"./gcode-slicer-DiRcshDD.js";function l(e,t,n=1,r){let i=t.length/3,a=new ArrayBuffer(84+i*50),o=new DataView(a);for(let e=0;e<74&&e<80;e++)o.setUint8(e,`TPMS Explorer binary STL; units=mm; scale=uniform (cellSize or normalized)`.charCodeAt(e));o.setUint32(80,i,!0);let s=d(e,t),c=84;for(let t=0;t<i;t++){let r=s[t*3]*3,i=s[t*3+1]*3,a=s[t*3+2]*3,l=e[i]-e[r],u=e[i+1]-e[r+1],d=e[i+2]-e[r+2],f=e[a]-e[r],p=e[a+1]-e[r+1],m=e[a+2]-e[r+2],h=u*m-d*p,g=d*f-l*m,_=l*p-u*f,v=Math.sqrt(h*h+g*g+_*_)||1;o.setFloat32(c,h/v,!0),c+=4,o.setFloat32(c,g/v,!0),c+=4,o.setFloat32(c,_/v,!0),c+=4,o.setFloat32(c,e[r]*n,!0),c+=4,o.setFloat32(c,e[r+1]*n,!0),c+=4,o.setFloat32(c,e[r+2]*n,!0),c+=4,o.setFloat32(c,e[i]*n,!0),c+=4,o.setFloat32(c,e[i+1]*n,!0),c+=4,o.setFloat32(c,e[i+2]*n,!0),c+=4,o.setFloat32(c,e[a]*n,!0),c+=4,o.setFloat32(c,e[a+1]*n,!0),c+=4,o.setFloat32(c,e[a+2]*n,!0),c+=4,o.setUint16(c,0,!0),c+=2}return a}function u(e,t,n,r=1,i){let o=l(e,t,r,i);a(new Blob([o],{type:`model/stl`}),n)}function d(e,t){let n=t.length/3,r=t.slice();if(n===0)return r;let i=e.length/3,a=new Map;for(let e=0;e<n;e++)for(let n=0;n<3;n++){let r=t[e*3+n],o=t[e*3+(n+1)%3];if(r===o)continue;let s=r>o,c=s?o*i+r:r*i+o,l=a.get(c);l||(l=[],a.set(c,l)),l.length<2&&l.push({t:e,rev:s})}let o=new Int8Array(n).fill(-1),s=new Int32Array(n);for(let e=0;e<n;e++){if(o[e]!==-1)continue;o[e]=0;let n=0,r=0;for(s[r++]=e;n<r;){let e=s[n++];for(let n=0;n<3;n++){let c=t[e*3+n],l=t[e*3+(n+1)%3];if(c===l)continue;let u=c>l?l*i+c:c*i+l,d=a.get(u);if(!d||d.length!==2)continue;let f=d[0].t===e?d[1]:d[0];o[f.t]===-1&&(o[f.t]=f.rev===c>l?o[e]^1:o[e],s[r++]=f.t)}}}for(let e=0;e<n;e++)if(o[e]===1){let t=r[e*3+1];r[e*3+1]=r[e*3+2],r[e*3+2]=t}let c=0;for(let t=0;t<n;t++){let n=r[t*3]*3,i=r[t*3+1]*3,a=r[t*3+2]*3;c+=e[n]*(e[i+1]*e[a+2]-e[i+2]*e[a+1])+e[n+1]*(e[i+2]*e[a]-e[i]*e[a+2])+e[n+2]*(e[i]*e[a+1]-e[i+1]*e[a])}if(c<0)for(let e=0;e<n;e++){let t=r[e*3+1];r[e*3+1]=r[e*3+2],r[e*3+2]=t}return r}var f=[`inlet`,`outlet`,`sides`,`wall`];function p(e,t,n=1,r){let i=t.length/3,a=1/0,o=-1/0,s=1/0,c=-1/0,l=1/0,u=-1/0;for(let t=0;t<e.length;t+=3){let r=e[t]*n,i=e[t+1]*n,d=e[t+2]*n;r<a&&(a=r),r>o&&(o=r),i<s&&(s=i),i>c&&(c=i),d<l&&(l=d),d>u&&(u=d)}let p=Math.max((o-a)*.01,n*.001),m=Math.max((c-s)*.01,n*.001),h=Math.max((u-l)*.01,n*.001),g={inlet:[],outlet:[],sides:[],wall:[]},_=e=>e.toFixed(6),v=d(e,t);for(let t=0;t<i;t++){let r=v[t*3]*3,i=v[t*3+1]*3,d=v[t*3+2]*3,f=e[i]-e[r],y=e[i+1]-e[r+1],b=e[i+2]-e[r+2],x=e[d]-e[r],S=e[d+1]-e[r+1],C=e[d+2]-e[r+2],w=y*C-b*S,T=b*x-f*C,E=f*S-y*x,D=Math.sqrt(w*w+T*T+E*E)||1,O=w/D,k=T/D,A=E/D,j=(e[r]+e[i]+e[d])/3*n,M=(e[r+1]+e[i+1]+e[d+1])/3*n,N=(e[r+2]+e[i+2]+e[d+2])/3*n,P=`wall`;N<=l+h&&A<-.7?P=`inlet`:N>=u-h&&A>.7?P=`outlet`:(j<=a+p||j>=o-p||M<=s+m||M>=c-m)&&(P=`sides`),g[P].push(` facet normal ${_(O)} ${_(k)} ${_(A)}\n`,`  outer loop
+`,`   vertex ${_(e[r]*n)} ${_(e[r+1]*n)} ${_(e[r+2]*n)}\n`,`   vertex ${_(e[i]*n)} ${_(e[i+1]*n)} ${_(e[i+2]*n)}\n`,`   vertex ${_(e[d]*n)} ${_(e[d+1]*n)} ${_(e[d+2]*n)}\n`,`  endloop
 `,` endfacet
-`)}let y=``;for(let e of d)y+=`solid ${e}\n${g[e].join(``)}endsolid ${e}\n`;return y}function p(e,t,n,r=1,i){let o=f(e,t,r,i);a(new Blob([o],{type:`model/stl`}),n)}function m(e){return e+3&-4}function h(e){let t=e.scale??1,n=e.positions.length/3,r=!!e.colors&&e.colors.length===n*3,i=new Float32Array(e.positions.length);for(let n=0;n<e.positions.length;n++)i[n]=e.positions[n]*t;let a=[1/0,1/0,1/0],o=[-1/0,-1/0,-1/0];for(let e=0;e<i.length;e+=3)for(let t=0;t<3;t++){let n=i[e+t];n<a[t]&&(a[t]=n),n>o[t]&&(o[t]=n)}let s=[],c=0,l=e=>{let t=c;return c+=m(e),s.push({offset:t,length:e}),s.length-1},u=l(i.byteLength),d=e.normals?l(e.normals.byteLength):-1,f=r?l(e.colors.byteLength):-1,p=l(e.indices.byteLength),h=new ArrayBuffer(c),g=new Uint8Array(h);g.set(new Uint8Array(i.buffer,i.byteOffset,i.byteLength),s[u].offset),e.normals&&d>=0&&g.set(new Uint8Array(e.normals.buffer,e.normals.byteOffset,e.normals.byteLength),s[d].offset),r&&f>=0&&g.set(new Uint8Array(e.colors.buffer,e.colors.byteOffset,e.colors.byteLength),s[f].offset),g.set(new Uint8Array(e.indices.buffer,e.indices.byteOffset,e.indices.byteLength),s[p].offset);let _=[],v=[{name:`tpms`,primitives:[{attributes:{POSITION:0,...e.normals?{NORMAL:1}:{},...r?{COLOR_0:2}:{}},indices:r?3:2,mode:4,material:0}]}];_.push({bufferView:u,componentType:5126,count:n,type:`VEC3`,min:a,max:o}),e.normals&&_.push({bufferView:d,componentType:5126,count:n,type:`VEC3`}),r&&_.push({bufferView:f,componentType:5126,count:n,type:`VEC3`}),_.push({bufferView:p,componentType:5125,count:e.indices.length,type:`SCALAR`});let y={asset:{version:`2.0`,generator:`TPMS Explorer (glb-exporter.ts)`,extras:{units:`millimeter`,...e.meta??{}}},scene:0,scenes:[{nodes:[0]}],nodes:[{name:`TPMS`,mesh:0}],meshes:v,materials:[{name:`tpms-material`,pbrMetallicRoughness:{baseColorFactor:[1,1,1,1],metallicFactor:.1,roughnessFactor:.6},...r?{vertexColors:!0}:{},doubleSided:!1}],accessors:_,bufferViews:s.map(e=>({buffer:0,byteOffset:e.offset,byteLength:e.length})),buffers:[{byteLength:c}]},b=JSON.stringify(y);for(;b.length%4!=0;)b+=` `;let x=new TextEncoder().encode(b),S=m(x.length)-x.length,C=20+x.length+S+8+c,w=new ArrayBuffer(C),T=new DataView(w),E=new Uint8Array(w);T.setUint32(0,1179937895,!0),T.setUint32(4,2,!0),T.setUint32(8,C,!0),T.setUint32(12,x.length+S,!0),T.setUint32(16,1313821514,!0),E.set(x,20);for(let e=0;e<S;e++)E[20+x.length+e]=32;let D=20+x.length+S;return T.setUint32(D,c,!0),T.setUint32(D+4,5130562,!0),E.set(g,D+8),w}function g(e,t,n,r,i,o=1,s){let c=h({positions:e,normals:t,indices:n,colors:r,scale:o,meta:s});a(new Blob([c],{type:`model/gltf-binary`}),i)}var _=(()=>{let e=new Uint32Array(256);for(let t=0;t<256;t++){let n=t;for(let e=0;e<8;e++)n=n&1?3988292384^n>>>1:n>>>1;e[t]=n>>>0}return e})();function v(e){let t=4294967295;for(let n=0;n<e.length;n++)t=_[(t^e[n])&255]^t>>>8;return(t^4294967295)>>>0}function y(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`)}function b(e,t,n,r){let i=e=>(Math.round(e*1e6)/1e6).toString(),a=e.length/3,o=t.length/3,s=r.endplateMm>0?`<metadata name="TPMS:EndplateMm">${r.endplateMm}</metadata>\n`:``,c=[];c.push(`<?xml version="1.0" encoding="UTF-8"?>
+`)}let y=``;for(let e of f)y+=`solid ${e}\n${g[e].join(``)}endsolid ${e}\n`;return y}function m(e,t,n,r=1,i){let o=p(e,t,r,i);a(new Blob([o],{type:`model/stl`}),n)}function h(e){return e+3&-4}function g(e){let t=e.scale??1,n=e.positions.length/3,r=!!e.colors&&e.colors.length===n*3,i=new Float32Array(e.positions.length);for(let n=0;n<e.positions.length;n++)i[n]=e.positions[n]*t;let a=[1/0,1/0,1/0],o=[-1/0,-1/0,-1/0];for(let e=0;e<i.length;e+=3)for(let t=0;t<3;t++){let n=i[e+t];n<a[t]&&(a[t]=n),n>o[t]&&(o[t]=n)}let s=[],c=0,l=e=>{let t=c;return c+=h(e),s.push({offset:t,length:e}),s.length-1},u=l(i.byteLength),d=e.normals?l(e.normals.byteLength):-1,f=r?l(e.colors.byteLength):-1,p=l(e.indices.byteLength),m=new ArrayBuffer(c),g=new Uint8Array(m);g.set(new Uint8Array(i.buffer,i.byteOffset,i.byteLength),s[u].offset),e.normals&&d>=0&&g.set(new Uint8Array(e.normals.buffer,e.normals.byteOffset,e.normals.byteLength),s[d].offset),r&&f>=0&&g.set(new Uint8Array(e.colors.buffer,e.colors.byteOffset,e.colors.byteLength),s[f].offset),g.set(new Uint8Array(e.indices.buffer,e.indices.byteOffset,e.indices.byteLength),s[p].offset);let _=[],v=[{name:`tpms`,primitives:[{attributes:{POSITION:0,...e.normals?{NORMAL:1}:{},...r?{COLOR_0:2}:{}},indices:r?3:2,mode:4,material:0}]}];_.push({bufferView:u,componentType:5126,count:n,type:`VEC3`,min:a,max:o}),e.normals&&_.push({bufferView:d,componentType:5126,count:n,type:`VEC3`}),r&&_.push({bufferView:f,componentType:5126,count:n,type:`VEC3`}),_.push({bufferView:p,componentType:5125,count:e.indices.length,type:`SCALAR`});let y={asset:{version:`2.0`,generator:`TPMS Explorer (glb-exporter.ts)`,extras:{units:`millimeter`,...e.meta??{}}},scene:0,scenes:[{nodes:[0]}],nodes:[{name:`TPMS`,mesh:0}],meshes:v,materials:[{name:`tpms-material`,pbrMetallicRoughness:{baseColorFactor:[1,1,1,1],metallicFactor:.1,roughnessFactor:.6},...r?{vertexColors:!0}:{},doubleSided:!1}],accessors:_,bufferViews:s.map(e=>({buffer:0,byteOffset:e.offset,byteLength:e.length})),buffers:[{byteLength:c}]},b=JSON.stringify(y);for(;b.length%4!=0;)b+=` `;let x=new TextEncoder().encode(b),S=h(x.length)-x.length,C=20+x.length+S+8+c,w=new ArrayBuffer(C),T=new DataView(w),E=new Uint8Array(w);T.setUint32(0,1179937895,!0),T.setUint32(4,2,!0),T.setUint32(8,C,!0),T.setUint32(12,x.length+S,!0),T.setUint32(16,1313821514,!0),E.set(x,20);for(let e=0;e<S;e++)E[20+x.length+e]=32;let D=20+x.length+S;return T.setUint32(D,c,!0),T.setUint32(D+4,5130562,!0),E.set(g,D+8),w}function _(e,t,n,r,i,o=1,s){let c=g({positions:e,normals:t,indices:n,colors:r,scale:o,meta:s});a(new Blob([c],{type:`model/gltf-binary`}),i)}var v=(()=>{let e=new Uint32Array(256);for(let t=0;t<256;t++){let n=t;for(let e=0;e<8;e++)n=n&1?3988292384^n>>>1:n>>>1;e[t]=n>>>0}return e})();function y(e){let t=4294967295;for(let n=0;n<e.length;n++)t=v[(t^e[n])&255]^t>>>8;return(t^4294967295)>>>0}function b(e){return e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`)}function x(e,t,n,r){let i=e=>(Math.round(e*1e6)/1e6).toString(),a=e.length/3,o=t.length/3,s=r.endplateMm>0?`<metadata name="TPMS:EndplateMm">${r.endplateMm}</metadata>\n`:``,c=[];c.push(`<?xml version="1.0" encoding="UTF-8"?>
 `),c.push(`<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
-`),c.push(`<metadata name="Title">${y(`TPMS ${r.configName}`)}</metadata>\n`),c.push(`<metadata name="Designer">TPMS Explorer</metadata>
-`),c.push(`<metadata name="Description">${y(`Triply-Periodic Minimal Surface lattice; mode=${r.structureMode}; target porosity=${r.porosity}%${r.endplateMm>0?`; solid endplates ${r.endplateMm} mm`:``}`)}</metadata>\n`),c.push(`<metadata name="TPMS:Config">${y(r.configName)}</metadata>\n`),c.push(`<metadata name="TPMS:PorosityPct">${r.porosity}</metadata>\n`),c.push(s),c.push(`<resources>
+`),c.push(`<metadata name="Title">${b(`TPMS ${r.configName}`)}</metadata>\n`),c.push(`<metadata name="Designer">TPMS Explorer</metadata>
+`),c.push(`<metadata name="Description">${b(`Triply-Periodic Minimal Surface lattice; mode=${r.structureMode}; target porosity=${r.porosity}%${r.endplateMm>0?`; solid endplates ${r.endplateMm} mm`:``}`)}</metadata>\n`),c.push(`<metadata name="TPMS:Config">${b(r.configName)}</metadata>\n`),c.push(`<metadata name="TPMS:PorosityPct">${r.porosity}</metadata>\n`),c.push(s),c.push(`<resources>
 <object id="1" type="model"><mesh>
 <vertices>
 `);for(let t=0;t<e.length;t+=3)c.push(`<vertex x="${i(e[t]*n)}" y="${i(e[t+1]*n)}" z="${i(e[t+2]*n)}"/>\n`);c.push(`</vertices>
@@ -17,11 +17,11 @@ import{a as e,c as t,i as n,l as r,n as i,t as a}from"./index-Ce9YQ0pN.js";impor
 </model>
 `);let l=c.join(``),u=(l.match(/<vertex /g)||[]).length,d=(l.match(/<triangle /g)||[]).length;if(u!==a||d!==o)throw Error(`3MF 守恒校验失败：vertices ${u}/${a}, triangles ${d}/${o}`);let f=new TextEncoder,p=[],m=f.encode(`<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`),h=f.encode(`<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`),g=f.encode(l);for(let[e,t]of[[`[Content_Types].xml`,m],[`_rels/.rels`,h],[`3D/3dmodel.model`,g]])p.push({nameBytes:f.encode(e),data:t,crc:v(t),offset:0});let _=0,b=[],x=[];for(let e of p){let t=new ArrayBuffer(30+e.nameBytes.length),n=new DataView(t);n.setUint32(0,67324752,!0),n.setUint16(4,20,!0),n.setUint16(6,0,!0),n.setUint16(8,0,!0),n.setUint16(10,0,!0),n.setUint16(12,0,!0),n.setUint32(14,e.crc,!0),n.setUint32(18,e.data.length,!0),n.setUint32(22,e.data.length,!0),n.setUint16(26,e.nameBytes.length,!0),n.setUint16(28,0,!0);let r=new Uint8Array(t);r.set(e.nameBytes,30),e.offset=_,b.push(r,e.data),_+=t.byteLength+e.data.length;let i=new ArrayBuffer(46+e.nameBytes.length),a=new DataView(i);a.setUint32(0,33639248,!0),a.setUint16(4,20,!0),a.setUint16(6,20,!0),a.setUint16(8,0,!0),a.setUint16(10,0,!0),a.setUint16(12,0,!0),a.setUint16(14,0,!0),a.setUint32(16,e.crc,!0),a.setUint32(20,e.data.length,!0),a.setUint32(24,e.data.length,!0),a.setUint16(28,e.nameBytes.length,!0),a.setUint32(42,e.offset,!0),new Uint8Array(i).set(e.nameBytes,46),x.push(new Uint8Array(i))}let S=x.reduce((e,t)=>e+t.length,0),C=new ArrayBuffer(22),w=new DataView(C);w.setUint32(0,101010256,!0),w.setUint16(8,p.length,!0),w.setUint16(10,p.length,!0),w.setUint32(12,S,!0),w.setUint32(16,_,!0);let T=_+S+22,E=new Uint8Array(T),D=0;for(let e of b)E.set(e,D),D+=e.length;for(let e of x)E.set(e,D),D+=e.length;return E.set(new Uint8Array(C),D),E.buffer}function x(e,t,n,r,i){let o=b(e,t,r,i);a(new Blob([o],{type:`model/3mf`}),n)}function S(e,t,n=1,r){let i=e.length/3,a=t.length/3,o=[`# vtk DataFile Version 3.0
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`),g=f.encode(l);for(let[e,t]of[[`[Content_Types].xml`,m],[`_rels/.rels`,h],[`3D/3dmodel.model`,g]])p.push({nameBytes:f.encode(e),data:t,crc:y(t),offset:0});let _=0,v=[],x=[];for(let e of p){let t=new ArrayBuffer(30+e.nameBytes.length),n=new DataView(t);n.setUint32(0,67324752,!0),n.setUint16(4,20,!0),n.setUint16(6,0,!0),n.setUint16(8,0,!0),n.setUint16(10,0,!0),n.setUint16(12,0,!0),n.setUint32(14,e.crc,!0),n.setUint32(18,e.data.length,!0),n.setUint32(22,e.data.length,!0),n.setUint16(26,e.nameBytes.length,!0),n.setUint16(28,0,!0);let r=new Uint8Array(t);r.set(e.nameBytes,30),e.offset=_,v.push(r,e.data),_+=t.byteLength+e.data.length;let i=new ArrayBuffer(46+e.nameBytes.length),a=new DataView(i);a.setUint32(0,33639248,!0),a.setUint16(4,20,!0),a.setUint16(6,20,!0),a.setUint16(8,0,!0),a.setUint16(10,0,!0),a.setUint16(12,0,!0),a.setUint16(14,0,!0),a.setUint32(16,e.crc,!0),a.setUint32(20,e.data.length,!0),a.setUint32(24,e.data.length,!0),a.setUint16(28,e.nameBytes.length,!0),a.setUint32(42,e.offset,!0),new Uint8Array(i).set(e.nameBytes,46),x.push(new Uint8Array(i))}let S=x.reduce((e,t)=>e+t.length,0),C=new ArrayBuffer(22),w=new DataView(C);w.setUint32(0,101010256,!0),w.setUint16(8,p.length,!0),w.setUint16(10,p.length,!0),w.setUint32(12,S,!0),w.setUint32(16,_,!0);let T=_+S+22,E=new Uint8Array(T),D=0;for(let e of v)E.set(e,D),D+=e.length;for(let e of x)E.set(e,D),D+=e.length;return E.set(new Uint8Array(C),D),E.buffer}function S(e,t,n,r,i){let o=x(e,t,r,i);a(new Blob([o],{type:`model/3mf`}),n)}function C(e,t,n=1,r){let i=e.length/3,a=t.length/3,o=[`# vtk DataFile Version 3.0
 `,`TPMS Structure; units=mm; uniform scale (cellSize or normalized domain mm)
 `,`ASCII
 `,`DATASET POLYDATA
-`,`POINTS ${i} float\n`],s=Array(i);for(let t=0;t<i;t++){let r=t*3;s[t]=`${(e[r]*n).toFixed(6)} ${(e[r+1]*n).toFixed(6)} ${(e[r+2]*n).toFixed(6)}\n`}o.push(s.join(``)),o.push(`POLYGONS ${a} ${a*4}\n`);let c=Array(a);for(let n=0;n<a;n++){let i=t[n*3],a=t[n*3+1],o=t[n*3+2];if(r){let t=r[i*3]+r[a*3]+r[o*3],n=r[i*3+1]+r[a*3+1]+r[o*3+1],s=r[i*3+2]+r[a*3+2]+r[o*3+2],c=e[a*3]-e[i*3],l=e[a*3+1]-e[i*3+1],u=e[a*3+2]-e[i*3+2],d=e[o*3]-e[i*3],f=e[o*3+1]-e[i*3+1],p=e[o*3+2]-e[i*3+2];if(t*(l*p-u*f)+n*(u*d-c*p)+s*(c*f-l*d)<0){let e=a;a=o,o=e}}c[n]=`3 ${i} ${a} ${o}\n`}return o.push(c.join(``)),o.join(``)}function C(e,t,n,r=1,i){a(new Blob([S(e,t,r,i)],{type:`application/vnd.vtk`}),n)}function w(e,t,n){let[r,i,a]=t,o=r*i*a,s=n?.cellSizeMm??1,c=(-s/2).toFixed(6),l=(s/(r-1)).toFixed(6),u=[`<?xml version="1.0"?>
+`,`POINTS ${i} float\n`],s=Array(i);for(let t=0;t<i;t++){let r=t*3;s[t]=`${(e[r]*n).toFixed(6)} ${(e[r+1]*n).toFixed(6)} ${(e[r+2]*n).toFixed(6)}\n`}o.push(s.join(``)),o.push(`POLYGONS ${a} ${a*4}\n`);let c=Array(a);for(let n=0;n<a;n++){let i=t[n*3],a=t[n*3+1],o=t[n*3+2];if(r){let t=r[i*3]+r[a*3]+r[o*3],n=r[i*3+1]+r[a*3+1]+r[o*3+1],s=r[i*3+2]+r[a*3+2]+r[o*3+2],c=e[a*3]-e[i*3],l=e[a*3+1]-e[i*3+1],u=e[a*3+2]-e[i*3+2],d=e[o*3]-e[i*3],f=e[o*3+1]-e[i*3+1],p=e[o*3+2]-e[i*3+2];if(t*(l*p-u*f)+n*(u*d-c*p)+s*(c*f-l*d)<0){let e=a;a=o,o=e}}c[n]=`3 ${i} ${a} ${o}\n`}return o.push(c.join(``)),o.join(``)}function w(e,t,n,r=1,i){a(new Blob([C(e,t,r,i)],{type:`application/vnd.vtk`}),n)}function T(e,t,n){let[r,i,a]=t,o=r*i*a,s=n?.cellSizeMm??1,c=(-s/2).toFixed(6),l=(s/(r-1)).toFixed(6),u=[`<?xml version="1.0"?>
 `,`<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian">
 `];if(n){let e=n.structureMode===`shell`||n.structureMode===`gradient_shell`;u.push(`  <ImageData WholeExtent="0 ${r-1} 0 ${i-1} 0 ${a-1}" Origin="${c} ${c} ${c}" Spacing="${l} ${l} ${l}">\n`,`    <!-- tpmsType=${n.type} structureMode=${n.structureMode} cellSizeMm=${s} isoUsed=${n.isoUsed??`NaN`} -->\n`,`    <!-- re-contour: ${e?`此场为裸 TPMS 场 V；shell/gradient_shell 需先变换 F=(V)^2-(t/2)^2 再 contour 0（t/2=isoUsed）`:`solid_network 直接 contour at isoUsed`} -->\n`,`    <FieldData>
 `,`      <DataArray type="Float64" Name="isoUsed" NumberOfTuples="1" format="ascii">${n.isoUsed??`NaN`}</DataArray>\n`,`      <DataArray type="Float64" Name="cellSizeMm" NumberOfTuples="1" format="ascii">${s}</DataArray>\n`,`    </FieldData>
@@ -34,7 +34,7 @@ import{a as e,c as t,i as n,l as r,n as i,t as a}from"./index-Ce9YQ0pN.js";impor
 `),u.push(`      </PointData>
 `),u.push(`    </Piece>
 `),u.push(`  </ImageData>
-`),u.push(`</VTKFile>`),u.join(``)}function T(e,t,n,r){a(new Blob([w(e,t,r)],{type:`application/xml`}),n)}function E(e){return e.model===`solid`?`${-((e.thickness-1)*.12)}`:`0.0`}function D(e){return e.customFormula.trim()?t(e.customFormula).toPython(e=>`kk*${e.toUpperCase()}`):`0.0  # 非自定义模式：此分支不执行`}function O(e){return e.customFormula.trim()?t(e.customFormula).toMatlab(e=>`kk*${e.toUpperCase()}`):`0.0; % 非自定义模式：此分支不执行`}function k(e){return typeof e==`string`?e.replace(/[^A-Za-z0-9_-]/g,`_`):String(e)}function A(e){return j(e)}function j(e){return`# TPMS 参数化重建脚本 (PyVista)
+`),u.push(`</VTKFile>`),u.join(``)}function E(e,t,n,r){a(new Blob([T(e,t,r)],{type:`application/xml`}),n)}function D(e){return e.model===`solid`?`${-((e.thickness-1)*.12)}`:`0.0`}function O(e){return e.customFormula.trim()?t(e.customFormula).toPython(e=>`kk*${e.toUpperCase()}`):`0.0  # 非自定义模式：此分支不执行`}function k(e){return e.customFormula.trim()?t(e.customFormula).toMatlab(e=>`kk*${e.toUpperCase()}`):`0.0; % 非自定义模式：此分支不执行`}function A(e){return typeof e==`string`?e.replace(/[^A-Za-z0-9_-]/g,`_`):String(e)}function j(e){return M(e)}function M(e){return`# TPMS 参数化重建脚本 (PyVista)
 # Generated by TPMS Explorer
 # 本脚本与平台逐点对齐：相同参数下等值面位置一致（算法差异仅剩 MC vs Surface Nets 的网格化误差）。
 # 运行: pip install numpy pyvista
@@ -43,17 +43,17 @@ import numpy as np
 import pyvista as pv
 
 # 参数配置
-tpms_type = '${k(e.type)}'
+tpms_type = '${A(e.type)}'
 porosity = ${e.porosity}
 cell_size = ${e.cellSize}      # 周期数 k（1 period = 1 mm，模型总宽 = cell_size mm）
 thickness = ${e.thickness}
 weights = [${e.weights.join(`, `)}]
-structure_mode = '${k(e.structureMode)}'
-container = '${k(e.containerShape)}'
-gradient_dir = '${k(e.gradientDir)}'
+structure_mode = '${A(e.structureMode)}'
+container = '${A(e.containerShape)}'
+gradient_dir = '${A(e.gradientDir)}'
 endplate_mm = ${e.endplateMm}   # 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
 # 【阶段 IV】应力场引导（与 core/stress-driven-field.ts 同源；none = 关闭）
-stress_preset = '${k(e.stress.preset)}'
+stress_preset = '${A(e.stress.preset)}'
 stress_strength = ${e.stress.strength}
 stress_anisotropy = ${e.stress.anisotropy}
 
@@ -70,6 +70,47 @@ x = np.linspace(-np.pi, np.pi, N)
 y = np.linspace(-np.pi, np.pi, N)
 z = np.linspace(-np.pi, np.pi, N)
 X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+
+# 【G4 2026-10-11】strut 桁架场：与 core/strut-bcc.ts / strut-octet.ts 同源
+# （cell=2π=一周期、r=w0·半胞、octet 角↔面心 FCC 逐轴 |Δ|≤½cell 判定 + 面心对角）。
+# 归约坐标 u = mx − cell·floor(mx/cell) ∈ [0,cell)，27 邻域在归约系平铺——天然周期。
+def _segdist(P, A, B):
+    AB = B - A
+    tt = np.clip(((P - A) * AB).sum(-1) / (AB * AB).sum(-1), 0.0, 1.0)
+    return np.sqrt(((P - (A + tt[..., None] * AB)) ** 2).sum(-1))
+
+def strut_field(X, Y, Z, w0, octet):
+    cell = 2.0 * np.pi
+    r = w0 * cell / 2.0
+    ci = np.floor(X / cell); cj = np.floor(Y / cell); ck = np.floor(Z / cell)
+    U = np.stack([X - ci * cell, Y - cj * cell, Z - ck * cell], axis=-1)
+    corners = [[vi, vj, vl] for vi in (0, 1) for vj in (0, 1) for vl in (0, 1)]
+    faces = []
+    for fx, fy, fz in ((0.5, 0.5, 0), (0.5, 0, 0.5), (0, 0.5, 0.5)):
+        faces.append([fx, fy, fz]); faces.append([1 - fx, 1 - fy, 1 - fz])
+    rods = []
+    if not octet:
+        bc = [0.5, 0.5, 0.5]
+        for c in corners:
+            rods.append((np.array(c, float) * cell, np.array(bc, float) * cell))
+    else:
+        for c in corners:
+            for f in faces:
+                if all(abs(f[a] - c[a]) <= 0.501 for a in range(3)):
+                    rods.append((np.array(c, float) * cell, np.array(f, float) * cell))
+        for a in range(len(faces)):
+            for b in range(a + 1, len(faces)):
+                d2 = sum((faces[a][q] - faces[b][q]) ** 2 for q in range(3))
+                if abs(d2 - 0.5) < 1e-6:
+                    rods.append((np.array(faces[a], float) * cell, np.array(faces[b], float) * cell))
+    D = np.full(X.shape, np.inf)
+    for di in (-1, 0, 1):
+        for dj in (-1, 0, 1):
+            for dk in (-1, 0, 1):
+                off = np.array([di, dj, dk], float) * cell
+                for A, B in rods:
+                    D = np.minimum(D, _segdist(U, A + off, B + off))
+    return D - r
 
 # 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
 def tpms_field(X, Y, Z, w, tpms_type_override=None):
@@ -178,6 +219,10 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
     elif t == 'ws':
         return (w[0]*((np.cos(2*kk*X)*np.cos(kk*Y) + np.cos(2*kk*Y)*np.cos(kk*Z) + np.cos(2*kk*Z)*np.cos(kk*X))
                 - (np.cos(kk*X)*np.cos(2*kk*Y) + np.cos(kk*Y)*np.cos(2*kk*Z) + np.cos(kk*Z)*np.cos(2*kk*X))))
+    elif t == 'strutbcc':
+        return strut_field(kk*X, kk*Y, kk*Z, w[0], False)
+    elif t == 'strutoctet':
+        return strut_field(kk*X, kk*Y, kk*Z, w[0], True)
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -228,24 +273,24 @@ else:
 if tpms_type == 'custom':
     # 【阶段 I】自定义公式 AST→NumPy 向量化翻译（沙箱坐标 x/y/z 为弧度域 = kk·X）
     # 注：custom + stress 组合暂为各向同性回退（变换未应用于表达式），与平台一致
-    iso_base = ${E(e)}   # 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
-    V = ${D(e)}
+    iso_base = ${D(e)}   # 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
+    V = ${O(e)}
 else:
     V = tpms_field(Xs, Ys, Zs, weights)
 
 # 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
-blend_function = '${k(e.hybrid.blendFunction)}'
-blend_axis = '${k(e.hybrid.axis??`x`)}'
+blend_function = '${A(e.hybrid.blendFunction)}'
+blend_axis = '${A(e.hybrid.axis??`x`)}'
 if ${e.hybrid.enabled?`True`:`False`}:
-    type_b = '${k(e.hybrid.typeB)}'
+    type_b = '${A(e.hybrid.typeB)}'
     weights_b = [${e.weights.join(`, `)}]  # 与平台同源（平台 B 场复用主权重，非默认权重）
     if type_b == 'custom':
         # 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
-        V_b = ${D(e)}
+        V_b = ${O(e)}
     else:
         V_b = tpms_field(Xs, Ys, Zs, weights_b, type_b)  # 与 A 侧同坐标（应力×hybrid 组合 B 侧漏传变换坐标，红队 B F1）
-    blend_center = ${k(e.hybrid.blendCenter)}
-    blend_width = ${k(e.hybrid.blendWidth)}
+    blend_center = ${A(e.hybrid.blendCenter)}
+    blend_width = ${A(e.hybrid.blendWidth)}
     # 波前投影（与平台 hybrid-functions wavefrontCoord 同源）：radial=球面半径
     px_ = X / np.pi; py_ = Y / np.pi; pz_ = Z / np.pi
     t_wave = {'x': px_, 'y': py_, 'z': pz_}.get(blend_axis, np.sqrt(px_**2 + py_**2 + pz_**2))
@@ -343,7 +388,7 @@ mesh = grid.contour([iso])
 
 # 【阶段 IV/v4.0】非欧度规映射（与 core/manifold-mapping.ts 逐式同源；identity 跳过）
 # 单位：mesh.points 为 mm；warp 在弧度域进行（rad = mm·2π/cellSize），R0 同尺度换算
-manifold_kind = '${k(e.manifold.kind)}'
+manifold_kind = '${A(e.manifold.kind)}'
 if manifold_kind != 'identity':
     K2R = 2 * np.pi / cell_size
     P = mesh.points * K2R
@@ -381,7 +426,7 @@ if manifold_kind != 'identity':
         P[:, 0] = ring * np.cos(u); P[:, 1] = ring * np.sin(u); P[:, 2] = tube * np.sin(v)
     elif manifold_kind == 'metric':
         sc = ${e.manifold.scale}
-        ax = '${k(e.manifold.axis)}'
+        ax = '${A(e.manifold.axis)}'
         c = P[:, 0] if ax == 'x' else P[:, 1] if ax == 'y' else P[:, 2]
         add = (sc - 1) * c
         if ax == 'x': P[:, 0] += add
@@ -410,7 +455,9 @@ def _tortuosity_axis(F, axis):
         for j in range(n):
             idx = [0,0,0]; idx[axis] = src_layer
             idx[(axis+1)%3] = i; idx[(axis+2)%3] = j
-            if src[tuple(idx)]:
+            # np.take(F, ·, axis) 摘除了 axis 维：src 是 2D 切片，须用去维后的坐标对
+            # （旧版 src[tuple(idx)] 以 3 元组索引 2D 数组 = IndexError，所有导出脚本必崩）
+            if src[tuple(idx[:axis] + idx[axis+1:])]:
                 dist[tuple(idx)] = 0.0
                 _hq.heappush(heap, (0.0, tuple(idx)))
     while heap:
@@ -434,21 +481,21 @@ def _tortuosity_axis(F, axis):
 
 taus = [_tortuosity_axis(F, a) for a in range(3)]
 print('三向几何迂曲度 τx/τy/τz =', ['未贯通' if not np.isfinite(t) else f'{t:.3f}' for t in taus])
-`}function M(e,t){a(new Blob([A(e)],{type:`text/plain`}),t)}function N(e){return`% TPMS 参数化重建脚本 (MATLAB)
+`}function N(e,t){a(new Blob([j(e)],{type:`text/plain`}),t)}function P(e){return`% TPMS 参数化重建脚本 (MATLAB)
 % Generated by TPMS Explorer
 % 本脚本与平台逐点对齐：相同参数下等值面位置一致（算法差异仅剩 MC vs Surface Nets 的网格化误差）。
 
-tpms_type = '${k(e.type)}';
+tpms_type = '${A(e.type)}';
 porosity = ${e.porosity};
 cell_size = ${e.cellSize};      % 周期数 k（1 period = 1 mm，模型总宽 = cell_size mm）
 thickness = ${e.thickness};
 weights = [${e.weights.join(`, `)}];
-structure_mode = '${k(e.structureMode)}';
-container = '${k(e.containerShape)}';
-gradient_dir = '${k(e.gradientDir)}';
+structure_mode = '${A(e.structureMode)}';
+container = '${A(e.containerShape)}';
+gradient_dir = '${A(e.gradientDir)}';
 endplate_mm = ${e.endplateMm};   % 实心加载端板单侧厚度 mm（0=关；生效值钳制至 0.4*L）
 % 【阶段 IV】应力场引导（与 core/stress-driven-field.ts 同源；'none' = 关闭）
-stress_preset = '${k(e.stress.preset)}';
+stress_preset = '${A(e.stress.preset)}';
 stress_strength = ${e.stress.strength};
 stress_anisotropy = ${e.stress.anisotropy};
 
@@ -532,8 +579,8 @@ X = Xs; Y = Ys; Z = Zs;
 % 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
 if strcmp(tpms_type, 'custom')
     % 【阶段 I】自定义公式 AST→MATLAB 向量化翻译（沙箱坐标 x/y/z 为弧度域 = kk·X）
-    iso_base = ${E(e)};  % 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
-    V = ${O(e)};
+    iso_base = ${D(e)};  % 基准等值（公式参数 iso 的语义源，与平台 baseIso 同源）
+    V = ${k(e)};
 elseif strcmp(tpms_type, 'gyroid')
     V = weights(1)*sin(kk*X).*cos(kk*Y) + weights(2)*sin(kk*Y).*cos(kk*Z) + weights(3)*sin(kk*Z).*cos(kk*X);
 elseif strcmp(tpms_type, 'diamond')
@@ -635,19 +682,21 @@ elseif strcmp(tpms_type, 'qstar')
 elseif strcmp(tpms_type, 'ws')
     V = weights(1)*((cos(2*kk*X).*cos(kk*Y) + cos(2*kk*Y).*cos(kk*Z) + cos(2*kk*Z).*cos(kk*X)) ...
         - (cos(kk*X).*cos(2*kk*Y) + cos(kk*Y).*cos(2*kk*Z) + cos(kk*Z).*cos(2*kk*X)));
+elseif strcmp(tpms_type, 'strutbcc') || strcmp(tpms_type, 'strutoctet')
+    V = strut_truss_field(kk*X, kk*Y, kk*Z, weights(1), strcmp(tpms_type, 'strutoctet'));
 else
     error('Unsupported TPMS type');
 end
 
 % 异构混合模式（与 core/hybrid-functions.ts 对齐：px→+1 侧为 A 主导）
-blend_function = '${k(e.hybrid.blendFunction)}';
-blend_axis = '${k(e.hybrid.axis??`x`)}';
-if ${k(e.hybrid.enabled)}
-    type_b = '${k(e.hybrid.typeB)}';
+blend_function = '${A(e.hybrid.blendFunction)}';
+blend_axis = '${A(e.hybrid.axis??`x`)}';
+if ${A(e.hybrid.enabled)}
+    type_b = '${A(e.hybrid.typeB)}';
     weights_b = [${e.weights.join(`, `)}];  % 与平台同源（平台 B 场复用主权重，非默认权重）
     if strcmp(type_b, 'custom')
         % 【阶段 I】B 侧自定义公式翻译（与 A 侧同一公式串，与平台 createHybridField 同源）
-        V_b = ${O(e)};
+        V_b = ${k(e)};
     elseif strcmp(type_b, 'gyroid')
         V_b = weights_b(1)*sin(kk*X).*cos(kk*Y) + weights_b(2)*sin(kk*Y).*cos(kk*Z) + weights_b(3)*sin(kk*Z).*cos(kk*X);
     elseif strcmp(type_b, 'diamond')
@@ -755,8 +804,8 @@ if ${k(e.hybrid.enabled)}
     else
         error('Unsupported hybrid TPMS type');
     end
-    blend_center = ${k(e.hybrid.blendCenter)};
-    blend_width = ${k(e.hybrid.blendWidth)};
+    blend_center = ${A(e.hybrid.blendCenter)};
+    blend_width = ${A(e.hybrid.blendWidth)};
     % 波前在物理空间取点（与平台 wavefrontCoord 同源），不经应力变换
     px_ = X0 / pi; py_ = Y0 / pi; pz_ = Z0 / pi;
     switch blend_axis
@@ -859,7 +908,7 @@ Zm = (pz / 2) * cell_size;
 
 % 【阶段 IV/v4.0】非欧度规映射（与 core/manifold-mapping.ts 同源；'identity' 跳过；
 % 径向族 poincare/hyperbolic 向量化，cylinder/torus/metric 见平台/Python 脚本）
-manifold_kind = '${k(e.manifold.kind)}';
+manifold_kind = '${A(e.manifold.kind)}';
 if ~strcmp(manifold_kind, 'identity') && (strcmp(manifold_kind, 'poincare') || strcmp(manifold_kind, 'hyperbolic'))
     K2R = 2 * pi / cell_size;
     Xr = Xm * K2R; Yr = Ym * K2R; Zr = Zm * K2R;
@@ -897,19 +946,76 @@ if strcmp(manifold_kind, 'identity')
 else
     lighting flat;
 end
-`}function P(e,t){a(new Blob([N(e)],{type:`text/plain`}),t)}var F={gyroid:`10.1016/j.ijsolstr.2017.02.015`,diamond:`10.1016/j.actbio.2018.04.011`,schwarz:`10.1016/j.addma.2017.03.019`,"i-wp":`10.1016/j.mechmat.2022.104504`,"f-rd":``,neovius:`10.1016/j.eml.2020.100688`,lidinoid:`10.1039/FT9908600769`,splitp:``,octo:``,karcher:``,fks:``,fky:``,gprime:``,fcks:``,dprime:``,dp:``,dd:``,dg:``,fcky:``,cdd:``,custom:``,slotp:``,fs:``,qstar:``,ws:``};function I(e){return e===`iwp`?`i-wp`:e===`frd`?`f-rd`:e}function L(e){return e.replace(/%/g,`\\%`).replace(/&/g,`\\&`).replace(/_/g,`\\_`).replace(/#/g,`\\#`)}function R(e,t,n){let r=new Date().toISOString(),i=n.replace(/[^a-zA-Z0-9]/g,``).substring(0,8)||`unnamed`,a=F[I(e.type)]||``,o=a?`  doi = {https://doi.org/${a}},\n`:``,s=window.location.href,c=L(`TPMS ${e.type} Scaffold: Porosity ${e.porosity}% | Cell Size ${e.cellSize} mm`),l=``;return t&&(l=` Sv=${t.svRatio.toFixed(3)} mm$^{-1}$, E*/Es=${t.gibsonAshbyE.toFixed(4)}, C1=${t.C1.toFixed(2)}, K=${(t.permeability*1e6).toFixed(2)} um$^2$. Mean pore: ${t.poreStats.meanDiameter.toFixed(3)} mm.`),`@misc{tpms_explorer_${i},
+
+% 【G4 2026-10-11】strut 桁架场（与 core/strut-bcc.ts / strut-octet.ts 同源）：
+% cell=2π=一周期、r=w0·半胞、octet 角↔面心 FCC 逐轴 |Δ|≤½cell 判定 + 面心对角；
+% 归约坐标 27 邻域（周期场，无需全局 cell 枚举）
+function D = strut_truss_field(MX, MY, MZ, w0, octet)
+    cellE = 2*pi;
+    r = w0 * cellE / 2;
+    ci = floor(MX / cellE); cj = floor(MY / cellE); ck = floor(MZ / cellE);
+    UX = MX - ci*cellE; UY = MY - cj*cellE; UZ = MZ - ck*cellE;
+    cList = [];
+    for vi = [0 1], for vj = [0 1], for vl = [0 1]
+        cList = [cList; vi vj vl]; %#ok<AGROW>
+    end, end, end
+    fList = [];
+    fc = [0.5 0.5 0; 0.5 0 0.5; 0 0.5 0.5];
+    for q = 1:3
+        fList = [fList; fc(q,:)]; %#ok<AGROW>
+        fList = [fList; 1-fc(q,:)]; %#ok<AGROW>
+    end
+    A = []; B = [];
+    if ~octet
+        for p = 1:size(cList,1)
+            A = [A; cList(p,:)]; %#ok<AGROW>
+            B = [B; 0.5 0.5 0.5]; %#ok<AGROW>
+        end
+    else
+        for p = 1:size(cList,1)
+            for q = 1:size(fList,1)
+                if all(abs(fList(q,:) - cList(p,:)) <= 0.501)
+                    A = [A; cList(p,:)]; %#ok<AGROW>
+                    B = [B; fList(q,:)]; %#ok<AGROW>
+                end
+            end
+        end
+        for a = 1:size(fList,1)
+            for b = a+1:size(fList,1)
+                if abs(sum((fList(a,:) - fList(b,:)).^2) - 0.5) < 1e-6
+                    A = [A; fList(a,:)]; %#ok<AGROW>
+                    B = [B; fList(b,:)]; %#ok<AGROW>
+                end
+            end
+        end
+    end
+    A = A * cellE; B = B * cellE;
+    D = inf(size(MX));
+    for di = -1:1, for dj = -1:1, for dk = -1:1
+        for p = 1:size(A,1)
+            a = A(p,:) + [di dj dk]*cellE;
+            b = B(p,:) + [di dj dk]*cellE;
+            ab = b - a;
+            L2 = ab * ab';
+            tt = max(0, min(1, ((UX-a(1))*ab(1) + (UY-a(2))*ab(2) + (UZ-a(3))*ab(3)) / L2));
+            D = min(D, sqrt((UX-(a(1)+tt.*ab(1))).^2 + (UY-(a(2)+tt.*ab(2))).^2 + (UZ-(a(3)+tt.*ab(3))).^2));
+        end
+    end, end, end
+    D = D - r;
+end
+`}function F(e,t){a(new Blob([P(e)],{type:`text/plain`}),t)}var I={gyroid:`10.1016/j.ijsolstr.2017.02.015`,diamond:`10.1016/j.actbio.2018.04.011`,schwarz:`10.1016/j.addma.2017.03.019`,"i-wp":`10.1016/j.mechmat.2022.104504`,"f-rd":``,neovius:`10.1016/j.eml.2020.100688`,lidinoid:`10.1039/FT9908600769`,splitp:``,octo:``,karcher:``,fks:``,fky:``,gprime:``,fcks:``,dprime:``,dp:``,dd:``,dg:``,fcky:``,cdd:``,custom:``,slotp:``,fs:``,qstar:``,ws:``};function L(e){return e===`iwp`?`i-wp`:e===`frd`?`f-rd`:e}function R(e){return e.replace(/%/g,`\\%`).replace(/&/g,`\\&`).replace(/_/g,`\\_`).replace(/#/g,`\\#`)}function z(e,t,n){let r=new Date().toISOString(),i=n.replace(/[^a-zA-Z0-9]/g,``).substring(0,8)||`unnamed`,a=I[L(e.type)]||``,o=a?`  doi = {https://doi.org/${a}},\n`:``,s=window.location.href,c=R(`TPMS ${e.type} Scaffold: Porosity ${e.porosity}% | Cell Size ${e.cellSize} mm`),l=``;return t&&(l=` Sv=${t.svRatio.toFixed(3)} mm$^{-1}$, E*/Es=${t.gibsonAshbyE.toFixed(4)}, C1=${t.C1.toFixed(2)}, K=${(t.permeability*1e6).toFixed(2)} um$^2$. Mean pore: ${t.poreStats.meanDiameter.toFixed(3)} mm.`),`@misc{tpms_explorer_${i},
   title = {${c}},
   author = {TPMS Explorer Platform},
   year = {${new Date().getFullYear()}},
 ${o}  keywords = {TPMS, ${e.type}, scaffold, porosity, additive manufacturing, bone tissue engineering},
-  note = {Generated on ${r}. Structure: ${L(e.structureMode)}, Container: ${L(e.containerShape)}.${l} Reproducible via: \\url{${s}}},
+  note = {Generated on ${r}. Structure: ${R(e.structureMode)}, Container: ${R(e.containerShape)}.${l} Reproducible via: \\url{${s}}},
   url = {\\url{${s}}}
-}`}function z(e,t,n,r){return JSON.stringify({version:`2.1`,generatedAt:new Date().toISOString(),parameters:{type:e.type,porosity:e.porosity,cellSize:e.cellSize,thickness:e.thickness,weights:e.weights,structureMode:e.structureMode,containerShape:e.containerShape,material:e.material,gradientDir:e.gradientDir,hybrid:e.hybrid,customFormula:e.customFormula},build:{resolution:r?.resolution??null,isoUsed:r?.isoUsed??null},metrics:t?{surfaceArea:t.surfaceArea,envelopeVolume:t.envelopeVolume,svRatio:t.svRatio,gibsonAshbyE:t.gibsonAshbyE,youngsModulusGPa:t.youngsModulusGPa,yieldStrengthMPa:t.yieldStrengthMPa,gibsonAshbySigma:t.gibsonAshbySigma,C1:t.C1,permeability_mm2:t.permeability,permeability_um2:t.permeability*1e6,poreMeanDiameter_mm:t.poreStats.meanDiameter,poreMinDiameter_mm:t.poreStats.minDiameter,poreMaxDiameter_mm:t.poreStats.maxDiameter,tortuosity:t.poreStats.tortuosity}:null,meshHash:n,reproducibility:{platform:`TPMS Explorer v1.1.0`,url:window.location.href}},null,2)}function B(t,i){let a=i,o=t.periods,s=2*Math.PI,c=s/i,l=t.weights,u=r(t.type,t.customFormula,{k:o,t:t.thickness,iso:t.iso}),d=e=>-Math.PI+(e+.5)/i*s,f=t.containerSdf,p=(e,t,n)=>{let r=(e/Math.PI+1)/2*i,a=(t/Math.PI+1)/2*i,o=(n/Math.PI+1)/2*i,s=Math.min(i-1,Math.max(0,Math.floor(r))),c=Math.min(i-1,Math.max(0,Math.floor(a))),l=Math.min(i-1,Math.max(0,Math.floor(o))),u=Math.min(1,Math.max(0,r-s)),d=Math.min(1,Math.max(0,a-c)),p=Math.min(1,Math.max(0,o-l)),m=Math.min(i,s+1),h=Math.min(i,c+1),g=Math.min(i,l+1),_=(e,t,n)=>f[(n*(i+1)+t)*(i+1)+e],v=_(s,c,l)*(1-u)+_(m,c,l)*u,y=_(s,h,l)*(1-u)+_(m,h,l)*u,b=_(s,c,g)*(1-u)+_(m,c,g)*u,x=_(s,h,g)*(1-u)+_(m,h,g)*u;return(v*(1-d)+y*d)*(1-p)+(b*(1-d)+x*d)*p},m=(e,n,r)=>t.containerShape===`cylinder`?Math.max(e*e+n*n-1,Math.abs(r)-1):Math.max(Math.abs(e)-1,Math.max(Math.abs(n)-1,Math.abs(r)-1)),h=new Float64Array(a*a*a),g=new Uint8Array(a*a*a),_=0,v=1/0,y=-1/0;for(let n=0;n<a;n++)for(let r=0;r<a;r++)for(let i=0;i<a;i++){let s=d(i),c=d(r),b=d(n),x=i+r*a+n*a*a;(f?p(s,c,b):m(s/Math.PI,c/Math.PI,b/Math.PI))<0&&(g[x]=1,_++);let S=t.stress&&t.stress.preset!==`none`?u(...e(t.stress,s*o,c*o,b*o),l):u(s*o,c*o,b*o,l);h[x]=S,g[x]&&(S<v&&(v=S),S>y&&(y=S))}if(!Number.isFinite(v)||y-v<1e-9)throw Error(`曲面场退化为常数，无法构建体素模型`);let b=t.iso,x=Math.max(.05,t.thickness*1.5);{let e=[];for(let t=0;t<a*a*a;t++)g[t]&&e.push(h[t]);e.sort((e,t)=>e-t);let n=e.length,r=t=>{let r=0,i=n;for(;r<i;){let n=r+i>>1;e[n]<t?r=n+1:i=n}return r},i=Math.max(.02,Math.min(.98,1-t.targetPorosity));if(t.structureMode===`solid_network`){let e=v-.5,t=y+.5;for(let a=0;a<24;a++){let a=(e+t)/2;r(a)/n>i?t=a:e=a}b=(e+t)/2}else{let e=e=>r(-e/2)+(n-r(e/2)),t=.02,a=(y-v)*4;for(let r=0;r<24;r++){let r=(t+a)/2;e(r)/n>i?t=r:a=r}x=(t+a)/2}}let S=new Uint8Array(a*a*a),C=0;for(let e=0;e<a;e++)for(let r=0;r<a;r++)for(let i=0;i<a;i++){let o=i+r*a+e*a*a;if(!g[o])continue;let s=h[o]-b,c=t.stress&&t.stress.preset!==`none`&&t.structureMode!==`solid_network`?n(t.stress,d(i),d(r),d(e)):1,l=x*c;(t.structureMode===`solid_network`?b-h[o]:s*s-l/2*(l/2))>0&&(S[o]=1,C++)}return{R:i,hWc:c,solid:S,solidCount:C,insideCount:_,inside:g,V:h,isoUsed:t.structureMode===`solid_network`?b:x/2}}function V(e){let{R:t,V:n}=e,r=2*Math.PI,i=e=>(e+Math.PI)/r*t-.5;return(e,r,a)=>{let o=i(e),s=i(r),c=i(a),l=Math.min(t-1,Math.max(0,Math.floor(o))),u=Math.min(t-1,Math.max(0,Math.floor(s))),d=Math.min(t-1,Math.max(0,Math.floor(c))),f=Math.min(1,Math.max(0,o-l)),p=Math.min(1,Math.max(0,s-u)),m=Math.min(1,Math.max(0,c-d)),h=Math.min(t-1,l+1),g=Math.min(t-1,u+1),_=Math.min(t-1,d+1),v=(e,r,i)=>n[(i*t+r)*t+e],y=v(l,u,d)*(1-f)+v(h,u,d)*f,b=v(l,g,d)*(1-f)+v(h,g,d)*f,x=v(l,u,_)*(1-f)+v(h,u,_)*f,S=v(l,g,_)*(1-f)+v(h,g,_)*f;return(y*(1-p)+b*p)*(1-m)+(x*(1-p)+S*p)*m}}function H(e,t){let n=[],r=0,i=0;for(;r<e.length&&i<t.length;){let a=Math.max(e[r][0],t[i][0]),o=Math.min(e[r][1],t[i][1]);o>a&&n.push([a,o]),e[r][1]<t[i][1]?r++:i++}return n}function U(e,t,n,r={}){let{R:i}=e,a=e.isoUsed,o=n/(2*Math.PI),s=2*Math.PI,c=V(e),l=i,u=s/l,d=s/t,f=r.containerShape??`cube`,p=(e,t,n)=>{let a=r.containerSdf,o=(e/Math.PI+1)/2*i,s=(t/Math.PI+1)/2*i,c=(n/Math.PI+1)/2*i,l=Math.min(i-1,Math.max(0,Math.floor(o))),u=Math.min(i-1,Math.max(0,Math.floor(s))),d=Math.min(i-1,Math.max(0,Math.floor(c))),f=Math.min(1,Math.max(0,o-l)),p=Math.min(1,Math.max(0,s-u)),m=Math.min(1,Math.max(0,c-d)),h=Math.min(i,l+1),g=Math.min(i,u+1),_=Math.min(i,d+1),v=(e,t,n)=>a[(n*(i+1)+t)*(i+1)+e],y=v(l,u,d)*(1-f)+v(h,u,d)*f,b=v(l,g,d)*(1-f)+v(h,g,d)*f,x=v(l,u,_)*(1-f)+v(h,u,_)*f,S=v(l,g,_)*(1-f)+v(h,g,_)*f;return(y*(1-p)+b*p)*(1-m)+(x*(1-p)+S*p)*m};if(f===`mesh`&&!r.containerSdf)throw Error(`containerShape=mesh 需要 containerSdf（computeMeshSDF 的 sdf）——fail-closed`);let m=(e,t)=>{if(f===`cube`)return null;let n=e=>(e+Math.PI)/s*l;if(f===`cylinder`){let r=e/Math.PI,i=t/Math.PI;if(Math.abs(i)>=1||Math.abs(r)>=1)return[];let a=Math.PI*Math.sqrt(1-r*r),o=n(-a),s=n(a),c=[];return s>o&&c.push([o,s]),c}let r=[];for(let n=0;n<=l;n++)r.push(p(-Math.PI+n/l*s,e,t));let i=[],a=r[0]<0?0:-1;for(let e=1;e<=l;e++){let t=r[e-1]<0,n=r[e]<0;n&&!t?a=e-1+r[e-1]/(r[e-1]-r[e]):!n&&t&&a>=0&&(i.push([a,e-1+(0-r[e-1])/(r[e]-r[e-1])]),a=-1)}return a>=0&&i.push([a,l]),i},h=[],g=0;for(let e=0;e<t;e++){let t=-Math.PI+(e+.5)*d,n=[],r=0;for(let e=0;e<l;e++){let i=-Math.PI+(e+.5)*u,d=[];for(let e=0;e<=l;e++)d.push(c(-Math.PI+e/l*s,i,t));let f=[],p=d[0]<a?0:-1,h=e=>d[e];for(let e=1;e<=l;e++){let t=h(e-1)<a,n=h(e)<a;if(n&&!t){let t=(h(e-1)-a)/(h(e-1)-h(e));p=e-1+t}else if(!n&&t&&p>=0){let t=(a-h(e-1))/(h(e)-h(e-1));f.push([p,e-1+t]),p=-1}}p>=0&&f.push([p,l]);let _=m(i,t);_!==null&&(f=H(f,_));let v=0;for(let[e,t]of f)v+=t-e;r+=v*u*u*o*o,g+=f.length,f.length&&n.push({y:e,iv:f})}h.push({z:t*o,nRows:l,rows:n,netArea:r})}let _=d*o;return{layers:h,layerHeightMm:_,volumeMm3:h.reduce((e,t)=>e+t.netArea,0)*_,totalIntervals:g}}function W(e,t){let n=`-1 -1 ${t+2} ${t+2}`,r=t/2,i=e.layers.map((e,n)=>{let i=t/e.nRows,a=[],o=[];for(let{y:n,iv:s}of e.rows){let c=-r+n*i;for(let[n,l]of s){let s=-r+n/e.nRows*t,u=-r+l/e.nRows*t;a.push(`M ${s.toFixed(4)} ${c.toFixed(4)} H ${u.toFixed(4)} V ${(c+i).toFixed(4)} H ${s.toFixed(4)} Z`),o.push(`M ${s.toFixed(4)} ${(c+i/2).toFixed(4)} H ${u.toFixed(4)}`)}}return`  <g id="layer-${n}" data-z="${e.z.toFixed(4)}" data-net-area="${e.netArea.toFixed(4)}">\n    <path d="${a.join(` `)}" fill="#cbd5e1" stroke="none"/>\n    <path d="${o.join(` `)}" fill="none" stroke="#1e293b" stroke-width="${Math.min(.06,i/8).toFixed(3)}"/>\n  </g>`}).join(`
-`);return`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n}" width="${t+2}mm" height="${t+2}mm">\n<metadata>{"layers":${e.layers.length},"layerHeightMm":${e.layerHeightMm.toFixed(6)},"volumeMm3":${e.volumeMm3.toFixed(6)},"totalIntervals":${e.totalIntervals}}</metadata>\n${i}\n</svg>\n`}function G(e,t){let n=t/2,r=[];r.push(`$$HEADER`),r.push(`$$UNITS/1`),r.push(`$$VERSION/201`),r.push(`$$LABEL/TPMS Explorer direct slice, layers=${e.layers.length}, layerHeight=${e.layerHeightMm.toFixed(6)}mm`);for(let i=0;i<e.layers.length;i++){let a=e.layers[i];r.push(`$$LAYER/${a.z.toFixed(4)}`);let o=t/a.nRows,s=[],c=0;for(let{y:e,iv:r}of a.rows){let i=-n+(e+.5)*o;for(let[e,o]of r){let r=-n+e/a.nRows*t,l=-n+o/a.nRows*t;s.push(0,+r.toFixed(4),+i.toFixed(4),+l.toFixed(4),+i.toFixed(4)),c++}}r.push(`$$HATCHES/1 ${c} `+s.join(` `))}return r.push(`$$ENDOFFILE`),r.join(`
+}`}function B(e,t,n,r){return JSON.stringify({version:`2.1`,generatedAt:new Date().toISOString(),parameters:{type:e.type,porosity:e.porosity,cellSize:e.cellSize,thickness:e.thickness,weights:e.weights,structureMode:e.structureMode,containerShape:e.containerShape,material:e.material,gradientDir:e.gradientDir,hybrid:e.hybrid,customFormula:e.customFormula},build:{resolution:r?.resolution??null,isoUsed:r?.isoUsed??null},metrics:t?{surfaceArea:t.surfaceArea,envelopeVolume:t.envelopeVolume,svRatio:t.svRatio,gibsonAshbyE:t.gibsonAshbyE,youngsModulusGPa:t.youngsModulusGPa,yieldStrengthMPa:t.yieldStrengthMPa,gibsonAshbySigma:t.gibsonAshbySigma,C1:t.C1,permeability_mm2:t.permeability,permeability_um2:t.permeability*1e6,poreMeanDiameter_mm:t.poreStats.meanDiameter,poreMinDiameter_mm:t.poreStats.minDiameter,poreMaxDiameter_mm:t.poreStats.maxDiameter,tortuosity:t.poreStats.tortuosity}:null,meshHash:n,reproducibility:{platform:`TPMS Explorer v1.1.0`,url:window.location.href}},null,2)}function V(t,n){let a=n,s=t.periods,c=2*Math.PI,l=c/n,u=t.weights,d=o(t.type,t.customFormula,{k:s,t:t.thickness,iso:t.iso}),f=e=>-Math.PI+(e+.5)/n*c,p=t.containerSdf,m=(e,t,r)=>{let i=(e/Math.PI+1)/2*n,a=(t/Math.PI+1)/2*n,o=(r/Math.PI+1)/2*n,s=Math.min(n-1,Math.max(0,Math.floor(i))),c=Math.min(n-1,Math.max(0,Math.floor(a))),l=Math.min(n-1,Math.max(0,Math.floor(o))),u=Math.min(1,Math.max(0,i-s)),d=Math.min(1,Math.max(0,a-c)),f=Math.min(1,Math.max(0,o-l)),m=Math.min(n,s+1),h=Math.min(n,c+1),g=Math.min(n,l+1),_=(e,t,r)=>p[(r*(n+1)+t)*(n+1)+e],v=_(s,c,l)*(1-u)+_(m,c,l)*u,y=_(s,h,l)*(1-u)+_(m,h,l)*u,b=_(s,c,g)*(1-u)+_(m,c,g)*u,x=_(s,h,g)*(1-u)+_(m,h,g)*u;return(v*(1-d)+y*d)*(1-f)+(b*(1-d)+x*d)*f},h=(e,n,r)=>t.containerShape===`cylinder`?Math.max(e*e+n*n-1,Math.abs(r)-1):Math.max(Math.abs(e)-1,Math.max(Math.abs(n)-1,Math.abs(r)-1)),g=new Float64Array(a*a*a),_=new Uint8Array(a*a*a),v=0,y=1/0,b=-1/0;for(let e=0;e<a;e++)for(let n=0;n<a;n++)for(let i=0;i<a;i++){let o=f(i),c=f(n),l=f(e),x=i+n*a+e*a*a;(p?m(o,c,l):h(o/Math.PI,c/Math.PI,l/Math.PI))<0&&(_[x]=1,v++);let S=t.stress&&t.stress.preset!==`none`?d(...r(t.stress,o*s,c*s,l*s),u):d(o*s,c*s,l*s,u);g[x]=S,_[x]&&(S<y&&(y=S),S>b&&(b=S))}if(!Number.isFinite(y)||b-y<1e-9)throw Error(`曲面场退化为常数，无法构建体素模型`);let x=t.iso,S=Math.max(.05,t.thickness*1.5);{let e=[];for(let t=0;t<a*a*a;t++)_[t]&&e.push(g[t]);e.sort((e,t)=>e-t);let n=e.length,r=t=>{let r=0,i=n;for(;r<i;){let n=r+i>>1;e[n]<t?r=n+1:i=n}return r},o=Math.max(.02,Math.min(.98,1-t.targetPorosity));if(t.structureMode===`solid_network`)if(t.type===`strutbcc`||t.type===`strutoctet`)x=i(d,t.targetPorosity,u,null,`vox:${t.type}:k${s}`).iso;else{let e=y-.5,t=b+.5;for(let i=0;i<24;i++){let i=(e+t)/2;r(i)/n>o?t=i:e=i}x=(e+t)/2}else{let e=e=>r(-e/2)+(n-r(e/2)),t=.02,i=(b-y)*4;for(let r=0;r<24;r++){let r=(t+i)/2;e(r)/n>o?t=r:i=r}S=(t+i)/2}}let C=new Uint8Array(a*a*a),w=0;for(let n=0;n<a;n++)for(let r=0;r<a;r++)for(let i=0;i<a;i++){let o=i+r*a+n*a*a;if(!_[o])continue;let s=g[o]-x,c=t.stress&&t.stress.preset!==`none`&&t.structureMode!==`solid_network`?e(t.stress,f(i),f(r),f(n)):1,l=S*c;(t.structureMode===`solid_network`?x-g[o]:s*s-l/2*(l/2))>0&&(C[o]=1,w++)}return{R:n,hWc:l,solid:C,solidCount:w,insideCount:v,inside:_,V:g,isoUsed:t.structureMode===`solid_network`?x:S/2}}function H(e){let{R:t,V:n}=e,r=2*Math.PI,i=e=>(e+Math.PI)/r*t-.5;return(e,r,a)=>{let o=i(e),s=i(r),c=i(a),l=Math.min(t-1,Math.max(0,Math.floor(o))),u=Math.min(t-1,Math.max(0,Math.floor(s))),d=Math.min(t-1,Math.max(0,Math.floor(c))),f=Math.min(1,Math.max(0,o-l)),p=Math.min(1,Math.max(0,s-u)),m=Math.min(1,Math.max(0,c-d)),h=Math.min(t-1,l+1),g=Math.min(t-1,u+1),_=Math.min(t-1,d+1),v=(e,r,i)=>n[(i*t+r)*t+e],y=v(l,u,d)*(1-f)+v(h,u,d)*f,b=v(l,g,d)*(1-f)+v(h,g,d)*f,x=v(l,u,_)*(1-f)+v(h,u,_)*f,S=v(l,g,_)*(1-f)+v(h,g,_)*f;return(y*(1-p)+b*p)*(1-m)+(x*(1-p)+S*p)*m}}function U(e,t){let n=[],r=0,i=0;for(;r<e.length&&i<t.length;){let a=Math.max(e[r][0],t[i][0]),o=Math.min(e[r][1],t[i][1]);o>a&&n.push([a,o]),e[r][1]<t[i][1]?r++:i++}return n}function W(e,t,n,r={}){let{R:i}=e,a=e.isoUsed,o=n/(2*Math.PI),s=2*Math.PI,c=H(e),l=i,u=s/l,d=s/t,f=r.containerShape??`cube`,p=(e,t,n)=>{let a=r.containerSdf,o=(e/Math.PI+1)/2*i,s=(t/Math.PI+1)/2*i,c=(n/Math.PI+1)/2*i,l=Math.min(i-1,Math.max(0,Math.floor(o))),u=Math.min(i-1,Math.max(0,Math.floor(s))),d=Math.min(i-1,Math.max(0,Math.floor(c))),f=Math.min(1,Math.max(0,o-l)),p=Math.min(1,Math.max(0,s-u)),m=Math.min(1,Math.max(0,c-d)),h=Math.min(i,l+1),g=Math.min(i,u+1),_=Math.min(i,d+1),v=(e,t,n)=>a[(n*(i+1)+t)*(i+1)+e],y=v(l,u,d)*(1-f)+v(h,u,d)*f,b=v(l,g,d)*(1-f)+v(h,g,d)*f,x=v(l,u,_)*(1-f)+v(h,u,_)*f,S=v(l,g,_)*(1-f)+v(h,g,_)*f;return(y*(1-p)+b*p)*(1-m)+(x*(1-p)+S*p)*m};if(f===`mesh`&&!r.containerSdf)throw Error(`containerShape=mesh 需要 containerSdf（computeMeshSDF 的 sdf）——fail-closed`);let m=(e,t)=>{if(f===`cube`)return null;let n=e=>(e+Math.PI)/s*l;if(f===`cylinder`){let r=e/Math.PI,i=t/Math.PI;if(Math.abs(i)>=1||Math.abs(r)>=1)return[];let a=Math.PI*Math.sqrt(1-r*r),o=n(-a),s=n(a),c=[];return s>o&&c.push([o,s]),c}let r=[];for(let n=0;n<=l;n++)r.push(p(-Math.PI+n/l*s,e,t));let i=[],a=r[0]<0?0:-1;for(let e=1;e<=l;e++){let t=r[e-1]<0,n=r[e]<0;n&&!t?a=e-1+r[e-1]/(r[e-1]-r[e]):!n&&t&&a>=0&&(i.push([a,e-1+(0-r[e-1])/(r[e]-r[e-1])]),a=-1)}return a>=0&&i.push([a,l]),i},h=[],g=0;for(let e=0;e<t;e++){let t=-Math.PI+(e+.5)*d,n=[],r=0;for(let e=0;e<l;e++){let i=-Math.PI+(e+.5)*u,d=[];for(let e=0;e<=l;e++)d.push(c(-Math.PI+e/l*s,i,t));let f=[],p=d[0]<a?0:-1,h=e=>d[e];for(let e=1;e<=l;e++){let t=h(e-1)<a,n=h(e)<a;if(n&&!t){let t=(h(e-1)-a)/(h(e-1)-h(e));p=e-1+t}else if(!n&&t&&p>=0){let t=(a-h(e-1))/(h(e)-h(e-1));f.push([p,e-1+t]),p=-1}}p>=0&&f.push([p,l]);let _=m(i,t);_!==null&&(f=U(f,_));let v=0;for(let[e,t]of f)v+=t-e;r+=v*u*u*o*o,g+=f.length,f.length&&n.push({y:e,iv:f})}h.push({z:t*o,nRows:l,rows:n,netArea:r})}let _=d*o;return{layers:h,layerHeightMm:_,volumeMm3:h.reduce((e,t)=>e+t.netArea,0)*_,totalIntervals:g}}function G(e,t){let n=`-1 -1 ${t+2} ${t+2}`,r=t/2,i=e.layers.map((e,n)=>{let i=t/e.nRows,a=[],o=[];for(let{y:n,iv:s}of e.rows){let c=-r+n*i;for(let[n,l]of s){let s=-r+n/e.nRows*t,u=-r+l/e.nRows*t;a.push(`M ${s.toFixed(4)} ${c.toFixed(4)} H ${u.toFixed(4)} V ${(c+i).toFixed(4)} H ${s.toFixed(4)} Z`),o.push(`M ${s.toFixed(4)} ${(c+i/2).toFixed(4)} H ${u.toFixed(4)}`)}}return`  <g id="layer-${n}" data-z="${e.z.toFixed(4)}" data-net-area="${e.netArea.toFixed(4)}">\n    <path d="${a.join(` `)}" fill="#cbd5e1" stroke="none"/>\n    <path d="${o.join(` `)}" fill="none" stroke="#1e293b" stroke-width="${Math.min(.06,i/8).toFixed(3)}"/>\n  </g>`}).join(`
+`);return`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n}" width="${t+2}mm" height="${t+2}mm">\n<metadata>{"layers":${e.layers.length},"layerHeightMm":${e.layerHeightMm.toFixed(6)},"volumeMm3":${e.volumeMm3.toFixed(6)},"totalIntervals":${e.totalIntervals}}</metadata>\n${i}\n</svg>\n`}function K(e,t){let n=t/2,r=[];r.push(`$$HEADER`),r.push(`$$UNITS/1`),r.push(`$$VERSION/201`),r.push(`$$LABEL/TPMS Explorer direct slice, layers=${e.layers.length}, layerHeight=${e.layerHeightMm.toFixed(6)}mm`);for(let i=0;i<e.layers.length;i++){let a=e.layers[i];r.push(`$$LAYER/${a.z.toFixed(4)}`);let o=t/a.nRows,s=[],c=0;for(let{y:e,iv:r}of a.rows){let i=-n+(e+.5)*o;for(let[e,o]of r){let r=-n+e/a.nRows*t,l=-n+o/a.nRows*t;s.push(0,+r.toFixed(4),+i.toFixed(4),+l.toFixed(4),+i.toFixed(4)),c++}}r.push(`$$HATCHES/1 ${c} `+s.join(` `))}return r.push(`$$ENDOFFILE`),r.join(`
 `)+`
-`}function K(e,t){let{R:n,solid:r,hWc:i}=e,a=t.specimenSizeMm/(2*Math.PI),o=i*a,s=n+1,c=(e,t,n)=>e+t*s+n*s*s,l=new Uint8Array(s*s*s);for(let e=0;e<n;e++)for(let t=0;t<n;t++)for(let i=0;i<n;i++)r[i+t*n+e*n*n]&&(l[c(i,t,e)]=1,l[c(i+1,t,e)]=1,l[c(i,t+1,e)]=1,l[c(i+1,t+1,e)]=1,l[c(i,t,e+1)]=1,l[c(i+1,t,e+1)]=1,l[c(i,t+1,e+1)]=1,l[c(i+1,t+1,e+1)]=1);let u=new Int32Array(s*s*s),d=[],f=0;for(let e=0;e<s*s*s;e++)l[e]&&(f++,u[e]=f,d.push(e));let p=[],m=e=>p.push(e);m(`*HEADING`),m(`TPMS lattice volumetric mesh (C3D8 voxel) - TPMS Explorer v1.1.0`),m(`** solid voxels: voxels classified by implicit field (solid fraction ${(e.solidCount/(n*n*n)).toFixed(4)})`),m(`** units: mm, N, MPa; specimen size ${t.specimenSizeMm.toFixed(3)} mm; voxel h = ${o.toExponential(4)} mm`),m(`**`),m(`*NODE`);for(let e of d){let t=Math.floor(e/(s*s)),n=Math.floor(e%(s*s)/s),r=e%s;m(`${u[e]}, ${(r*i-Math.PI)*a}, ${(n*i-Math.PI)*a}, ${(t*i-Math.PI)*a}`)}m(`*ELEMENT, TYPE=C3D8, ELSET=ESOLID`);let h=0,g={BOTTOM:[],TOP:[],PBC_X0:[],PBC_X1:[],PBC_Y0:[],PBC_Y1:[],PBC_Z0:[],PBC_Z1:[]};for(let e=0;e<n;e++)for(let t=0;t<n;t++)for(let i=0;i<n;i++){if(!r[i+t*n+e*n*n])continue;h++;let a=u[c(i,t,e)],o=u[c(i+1,t,e)],s=u[c(i+1,t+1,e)],l=u[c(i,t+1,e)],d=u[c(i,t,e+1)],f=u[c(i+1,t,e+1)],p=u[c(i+1,t+1,e+1)],g=u[c(i,t+1,e+1)];m(`${h}, ${a}, ${o}, ${s}, ${l}, ${d}, ${f}, ${p}, ${g}`)}for(let e of d){let t=Math.floor(e/(s*s)),r=Math.floor(e%(s*s)/s),i=e%s;t===0&&g.BOTTOM.push(u[e]),t===n&&g.TOP.push(u[e]),i===0&&g.PBC_X0.push(u[e]),i===n&&g.PBC_X1.push(u[e]),r===0&&g.PBC_Y0.push(u[e]),r===n&&g.PBC_Y1.push(u[e]),t===0&&g.PBC_Z0.push(u[e]),t===n&&g.PBC_Z1.push(u[e])}for(let[e,t]of Object.entries(g))if(t.length!==0){m(`*NSET, NSET=NSET_${e}`);for(let e=0;e<t.length;e+=8)m(t.slice(e,e+8).join(`, `))}m(`**`),m(`** PBC usage: couple NSET_PBC_X0/X1 (and Y/Z) with *EQUATION or a submodel of periodic MPC; edge/corner masters need dedicated sets in production workflows.`),m(`*SOLID SECTION, ELSET=ESOLID, MATERIAL=TPMS_MATRIX`),m(`*MATERIAL, NAME=TPMS_MATRIX`),m(`*ELASTIC`),m(`${t.youngModulusMPa}, ${t.poisson}`),m(`**`),m(`** Uniaxial compression along Z (bottom fixed, top displaced)`);let _=-(t.nominalStrain*t.specimenSizeMm);return m(`*STEP`),m(`*STATIC`),m(`*BOUNDARY`),m(`NSET_BOTTOM, 3, 3, 0.0`),m(`NSET_TOP, 3, 3, `+_.toFixed(6)),m(`*OUTPUT, FIELD`),m(`*ELEMENT OUTPUT`),m(`S, E`),m(`*NODE OUTPUT`),m(`U`),m(`*OUTPUT, HISTORY`),m(`*NODE OUTPUT, NSET=NSET_TOP`),m(`RF, U`),m(`*END STEP`),{text:p.join(`
+`}function q(e,t){let{R:n,solid:r,hWc:i}=e,a=t.specimenSizeMm/(2*Math.PI),o=i*a,s=n+1,c=(e,t,n)=>e+t*s+n*s*s,l=new Uint8Array(s*s*s);for(let e=0;e<n;e++)for(let t=0;t<n;t++)for(let i=0;i<n;i++)r[i+t*n+e*n*n]&&(l[c(i,t,e)]=1,l[c(i+1,t,e)]=1,l[c(i,t+1,e)]=1,l[c(i+1,t+1,e)]=1,l[c(i,t,e+1)]=1,l[c(i+1,t,e+1)]=1,l[c(i,t+1,e+1)]=1,l[c(i+1,t+1,e+1)]=1);let u=new Int32Array(s*s*s),d=[],f=0;for(let e=0;e<s*s*s;e++)l[e]&&(f++,u[e]=f,d.push(e));let p=[],m=e=>p.push(e);m(`*HEADING`),m(`TPMS lattice volumetric mesh (C3D8 voxel) - TPMS Explorer v1.1.0`),m(`** solid voxels: voxels classified by implicit field (solid fraction ${(e.solidCount/(n*n*n)).toFixed(4)})`),m(`** units: mm, N, MPa; specimen size ${t.specimenSizeMm.toFixed(3)} mm; voxel h = ${o.toExponential(4)} mm`),m(`**`),m(`*NODE`);for(let e of d){let t=Math.floor(e/(s*s)),n=Math.floor(e%(s*s)/s),r=e%s;m(`${u[e]}, ${(r*i-Math.PI)*a}, ${(n*i-Math.PI)*a}, ${(t*i-Math.PI)*a}`)}m(`*ELEMENT, TYPE=C3D8, ELSET=ESOLID`);let h=0,g={BOTTOM:[],TOP:[],PBC_X0:[],PBC_X1:[],PBC_Y0:[],PBC_Y1:[],PBC_Z0:[],PBC_Z1:[]};for(let e=0;e<n;e++)for(let t=0;t<n;t++)for(let i=0;i<n;i++){if(!r[i+t*n+e*n*n])continue;h++;let a=u[c(i,t,e)],o=u[c(i+1,t,e)],s=u[c(i+1,t+1,e)],l=u[c(i,t+1,e)],d=u[c(i,t,e+1)],f=u[c(i+1,t,e+1)],p=u[c(i+1,t+1,e+1)],g=u[c(i,t+1,e+1)];m(`${h}, ${a}, ${o}, ${s}, ${l}, ${d}, ${f}, ${p}, ${g}`)}for(let e of d){let t=Math.floor(e/(s*s)),r=Math.floor(e%(s*s)/s),i=e%s;t===0&&g.BOTTOM.push(u[e]),t===n&&g.TOP.push(u[e]),i===0&&g.PBC_X0.push(u[e]),i===n&&g.PBC_X1.push(u[e]),r===0&&g.PBC_Y0.push(u[e]),r===n&&g.PBC_Y1.push(u[e]),t===0&&g.PBC_Z0.push(u[e]),t===n&&g.PBC_Z1.push(u[e])}for(let[e,t]of Object.entries(g))if(t.length!==0){m(`*NSET, NSET=NSET_${e}`);for(let e=0;e<t.length;e+=8)m(t.slice(e,e+8).join(`, `))}m(`**`),m(`** PBC usage: couple NSET_PBC_X0/X1 (and Y/Z) with *EQUATION or a submodel of periodic MPC; edge/corner masters need dedicated sets in production workflows.`),m(`*SOLID SECTION, ELSET=ESOLID, MATERIAL=TPMS_MATRIX`),m(`*MATERIAL, NAME=TPMS_MATRIX`),m(`*ELASTIC`),m(`${t.youngModulusMPa}, ${t.poisson}`),m(`**`),m(`** Uniaxial compression along Z (bottom fixed, top displaced)`);let _=-(t.nominalStrain*t.specimenSizeMm);return m(`*STEP`),m(`*STATIC`),m(`*BOUNDARY`),m(`NSET_BOTTOM, 3, 3, 0.0`),m(`NSET_TOP, 3, 3, `+_.toFixed(6)),m(`*OUTPUT, FIELD`),m(`*ELEMENT OUTPUT`),m(`S, E`),m(`*NODE OUTPUT`),m(`U`),m(`*OUTPUT, HISTORY`),m(`*NODE OUTPUT, NSET=NSET_TOP`),m(`RF, U`),m(`*END STEP`),{text:p.join(`
 `)+`
-`,nodeCount:f,elemCount:h}}function q(e,t,n){let{text:r}=K(e,t);i(r,n,`text/plain`)}var J=(()=>{let e=new Uint32Array(256);for(let t=0;t<256;t++){let n=t;for(let e=0;e<8;e++)n=n&1?3988292384^n>>>1:n>>>1;e[t]=n>>>0}return e})();function Y(e){let t=4294967295;for(let n=0;n<e.length;n++)t=J[(t^e[n])&255]^t>>>8;return(t^4294967295)>>>0}function X(e){let t=new TextEncoder,n=[],r=[],i=0;for(let a of e){let e=t.encode(a.name),o=Y(a.data),s=a.data.length,c=new Uint8Array(30+e.length),l=new DataView(c.buffer);l.setUint32(0,67324752,!0),l.setUint16(4,20,!0),l.setUint16(6,0,!0),l.setUint16(8,0,!0),l.setUint16(10,0,!0),l.setUint16(12,0,!0),l.setUint32(14,o,!0),l.setUint32(18,s,!0),l.setUint32(22,s,!0),l.setUint16(26,e.length,!0),l.setUint16(28,0,!0),c.set(e,30),n.push(c,a.data);let u=new Uint8Array(46+e.length),d=new DataView(u.buffer);d.setUint32(0,33639248,!0),d.setUint16(4,20,!0),d.setUint16(6,20,!0),d.setUint16(8,0,!0),d.setUint16(10,0,!0),d.setUint16(12,0,!0),d.setUint16(14,0,!0),d.setUint32(16,o,!0),d.setUint32(20,s,!0),d.setUint32(24,s,!0),d.setUint16(28,e.length,!0),d.setUint32(42,i,!0),u.set(e,46),r.push(u),i+=c.length+s}let a=r.reduce((e,t)=>e+t.length,0),o=new Uint8Array(22),s=new DataView(o.buffer);s.setUint32(0,101010256,!0),s.setUint16(8,e.length,!0),s.setUint16(10,e.length,!0),s.setUint32(12,a,!0),s.setUint32(16,i,!0);let c=[...n,...r,o],l=c.reduce((e,t)=>e+t.length,0),u=new Uint8Array(l),d=0;for(let e of c)u.set(e,d),d+=e.length;return u}var Z=(e,t)=>`FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       ${e};\n    object      ${t};\n}\n`;function Q(e,t,n={}){let{R:r,solid:i,hWc:a}=e,o=a*(t/(2*Math.PI)),s=n.fourPatch===!0;if(s&&(n.flowAxis===void 0||![0,1,2].includes(n.flowAxis)))throw Error(`fourPatch 模式必须提供 flowAxis（0=x/1=y/2=z）——任意流形流向自动识别 ill-posed，fail-closed`);let c=(t,n,a)=>{let o=t+n*r+a*r*r;return i[o]?1:e.inside&&!e.inside[o]?2:0},l=new Int32Array(r*r*r).fill(-1),u=0,d=new Int32Array(r*r*r);for(let e=0;e<r*r*r;e++)c(e%r,Math.floor(e%(r*r)/r),Math.floor(e/(r*r)))===0&&(l[e]=u,d[u++]=e);let f=e=>{let t=Math.floor(e/(r*r)),n=Math.floor(e%(r*r)/r);return[e%r,n,t]},p=[],m=(e,t,n)=>e>=0&&e<r&&t>=0&&t<r&&n>=0&&n<r,h=(e,t,n)=>l[e+t*r+n*r*r],g=e=>{let[t,n,r]=f(d[e]);return[t+.5,n+.5,r+.5]};for(let e=0;e<3;e++){let[t,i]=e===0?[1,2]:e===1?[0,2]:[0,1];for(let a=0;a<=r;a++)for(let o=0;o<r;o++)for(let l=0;l<r;l++){let u=[0,0,0],d=[0,0,0];u[e]=a-1,d[e]=a,u[t]=l,u[i]=o,d[t]=l,d[i]=o;let f=m(u[0],u[1],u[2]),_=m(d[0],d[1],d[2]),v=f?c(u[0],u[1],u[2]):2,y=_?c(d[0],d[1],d[2]):2,b=f&&v===0,x=_&&y===0;if(!b&&!x)continue;let S=[],C=e=>S.push(e);e===0?(C([a,l,o]),C([a,l+1,o]),C([a,l+1,o+1]),C([a,l,o+1])):e===1?(C([l,a,o]),C([l,a,o+1]),C([l+1,a,o+1]),C([l+1,a,o])):(C([l,o,a]),C([l+1,o,a]),C([l+1,o+1,a]),C([l,o+1,a]));let w=[(S[0][0]+S[1][0]+S[2][0]+S[3][0])/4,(S[0][1]+S[1][1]+S[2][1]+S[3][1])/4,(S[0][2]+S[1][2]+S[2][2]+S[3][2])/4],T=[S[1][0]-S[0][0],S[1][1]-S[0][1],S[1][2]-S[0][2]],E=[S[2][0]-S[0][0],S[2][1]-S[0][1],S[2][2]-S[0][2]],D=[T[1]*E[2]-T[2]*E[1],T[2]*E[0]-T[0]*E[2],T[0]*E[1]-T[1]*E[0]],O=b?h(u[0],u[1],u[2]):h(d[0],d[1],d[2]),k=b&&x?h(d[0],d[1],d[2]):-1,A=g(O),j=(w[0]-A[0])*D[0]+(w[1]-A[1])*D[1]+(w[2]-A[2])*D[2]>=0?S:[S[0],S[3],S[2],S[1]],M=2;b&&x||(s?M=(b?y:v)===1?3:e===n.flowAxis&&(a===0||a===r)?+!!b:2:e===2&&a===0?M=0:e===2&&a===r&&(M=1)),p.push({pts:j,owner:O,neighbour:k,patch:M})}}let _=p.filter(e=>e.neighbour>=0),v=p.filter(e=>e.neighbour<0&&e.patch===0),y=p.filter(e=>e.neighbour<0&&e.patch===1),b=p.filter(e=>e.neighbour<0&&e.patch===2),x=s?p.filter(e=>e.neighbour<0&&e.patch===3):[],S=[..._,...v,...y,...b,...x],C=new Map,w=[],T=e=>{let t=`${e[0]},${e[1]},${e[2]}`,n=C.get(t);return n===void 0&&(n=w.length,w.push([(e[0]-r/2)*o,(e[1]-r/2)*o,(e[2]-r/2)*o]),C.set(t,n)),n},E=[],D=[],O=[],k=0,A=s?[`flow_inlet`,`flow_outlet`,`casing_wall`,`tpms_scaffold_wetted`]:[`inlet`,`outlet`,`wall`],j=Object.fromEntries(A.map(e=>[e,{start:-1,n:0}]));S.forEach((e,t)=>{if(E.push(`(${e.pts.map(T).join(` `)})`),D.push(String(e.owner)),e.neighbour>=0)O.push(String(e.neighbour)),k++;else{let n=A[e.patch];j[n].start<0&&(j[n].start=t),j[n].n++}});let M={};M[`constant/polyMesh/points`]=Z(`vectorField`,`points`)+`\n${w.length}\n(\n`+w.map(e=>`(${e.map(e=>e.toFixed(6)).join(` `)})`).join(`
+`,nodeCount:f,elemCount:h}}function J(e,t,r){let{text:i}=q(e,t);n(i,r,`text/plain`)}var Y=(()=>{let e=new Uint32Array(256);for(let t=0;t<256;t++){let n=t;for(let e=0;e<8;e++)n=n&1?3988292384^n>>>1:n>>>1;e[t]=n>>>0}return e})();function ee(e){let t=4294967295;for(let n=0;n<e.length;n++)t=Y[(t^e[n])&255]^t>>>8;return(t^4294967295)>>>0}function X(e){let t=new TextEncoder,n=[],r=[],i=0;for(let a of e){let e=t.encode(a.name),o=ee(a.data),s=a.data.length,c=new Uint8Array(30+e.length),l=new DataView(c.buffer);l.setUint32(0,67324752,!0),l.setUint16(4,20,!0),l.setUint16(6,0,!0),l.setUint16(8,0,!0),l.setUint16(10,0,!0),l.setUint16(12,0,!0),l.setUint32(14,o,!0),l.setUint32(18,s,!0),l.setUint32(22,s,!0),l.setUint16(26,e.length,!0),l.setUint16(28,0,!0),c.set(e,30),n.push(c,a.data);let u=new Uint8Array(46+e.length),d=new DataView(u.buffer);d.setUint32(0,33639248,!0),d.setUint16(4,20,!0),d.setUint16(6,20,!0),d.setUint16(8,0,!0),d.setUint16(10,0,!0),d.setUint16(12,0,!0),d.setUint16(14,0,!0),d.setUint32(16,o,!0),d.setUint32(20,s,!0),d.setUint32(24,s,!0),d.setUint16(28,e.length,!0),d.setUint32(42,i,!0),u.set(e,46),r.push(u),i+=c.length+s}let a=r.reduce((e,t)=>e+t.length,0),o=new Uint8Array(22),s=new DataView(o.buffer);s.setUint32(0,101010256,!0),s.setUint16(8,e.length,!0),s.setUint16(10,e.length,!0),s.setUint32(12,a,!0),s.setUint32(16,i,!0);let c=[...n,...r,o],l=c.reduce((e,t)=>e+t.length,0),u=new Uint8Array(l),d=0;for(let e of c)u.set(e,d),d+=e.length;return u}var Z=(e,t)=>`FoamFile\n{\n    version     2.0;\n    format      ascii;\n    class       ${e};\n    object      ${t};\n}\n`;function Q(e,t,n={}){let{R:r,solid:i,hWc:a}=e,o=a*(t/(2*Math.PI)),s=n.fourPatch===!0;if(s&&(n.flowAxis===void 0||![0,1,2].includes(n.flowAxis)))throw Error(`fourPatch 模式必须提供 flowAxis（0=x/1=y/2=z）——任意流形流向自动识别 ill-posed，fail-closed`);let c=(t,n,a)=>{let o=t+n*r+a*r*r;return i[o]?1:e.inside&&!e.inside[o]?2:0},l=new Int32Array(r*r*r).fill(-1),u=0,d=new Int32Array(r*r*r);for(let e=0;e<r*r*r;e++)c(e%r,Math.floor(e%(r*r)/r),Math.floor(e/(r*r)))===0&&(l[e]=u,d[u++]=e);let f=e=>{let t=Math.floor(e/(r*r)),n=Math.floor(e%(r*r)/r);return[e%r,n,t]},p=[],m=(e,t,n)=>e>=0&&e<r&&t>=0&&t<r&&n>=0&&n<r,h=(e,t,n)=>l[e+t*r+n*r*r],g=e=>{let[t,n,r]=f(d[e]);return[t+.5,n+.5,r+.5]};for(let e=0;e<3;e++){let[t,i]=e===0?[1,2]:e===1?[0,2]:[0,1];for(let a=0;a<=r;a++)for(let o=0;o<r;o++)for(let l=0;l<r;l++){let u=[0,0,0],d=[0,0,0];u[e]=a-1,d[e]=a,u[t]=l,u[i]=o,d[t]=l,d[i]=o;let f=m(u[0],u[1],u[2]),_=m(d[0],d[1],d[2]),v=f?c(u[0],u[1],u[2]):2,y=_?c(d[0],d[1],d[2]):2,b=f&&v===0,x=_&&y===0;if(!b&&!x)continue;let S=[],C=e=>S.push(e);e===0?(C([a,l,o]),C([a,l+1,o]),C([a,l+1,o+1]),C([a,l,o+1])):e===1?(C([l,a,o]),C([l,a,o+1]),C([l+1,a,o+1]),C([l+1,a,o])):(C([l,o,a]),C([l+1,o,a]),C([l+1,o+1,a]),C([l,o+1,a]));let w=[(S[0][0]+S[1][0]+S[2][0]+S[3][0])/4,(S[0][1]+S[1][1]+S[2][1]+S[3][1])/4,(S[0][2]+S[1][2]+S[2][2]+S[3][2])/4],T=[S[1][0]-S[0][0],S[1][1]-S[0][1],S[1][2]-S[0][2]],E=[S[2][0]-S[0][0],S[2][1]-S[0][1],S[2][2]-S[0][2]],D=[T[1]*E[2]-T[2]*E[1],T[2]*E[0]-T[0]*E[2],T[0]*E[1]-T[1]*E[0]],O=b?h(u[0],u[1],u[2]):h(d[0],d[1],d[2]),k=b&&x?h(d[0],d[1],d[2]):-1,A=g(O),j=(w[0]-A[0])*D[0]+(w[1]-A[1])*D[1]+(w[2]-A[2])*D[2]>=0?S:[S[0],S[3],S[2],S[1]],M=2;b&&x||(s?M=(b?y:v)===1?3:e===n.flowAxis&&(a===0||a===r)?+!!b:2:e===2&&a===0?M=0:e===2&&a===r&&(M=1)),p.push({pts:j,owner:O,neighbour:k,patch:M})}}let _=p.filter(e=>e.neighbour>=0),v=p.filter(e=>e.neighbour<0&&e.patch===0),y=p.filter(e=>e.neighbour<0&&e.patch===1),b=p.filter(e=>e.neighbour<0&&e.patch===2),x=s?p.filter(e=>e.neighbour<0&&e.patch===3):[],S=[..._,...v,...y,...b,...x],C=new Map,w=[],T=e=>{let t=`${e[0]},${e[1]},${e[2]}`,n=C.get(t);return n===void 0&&(n=w.length,w.push([(e[0]-r/2)*o,(e[1]-r/2)*o,(e[2]-r/2)*o]),C.set(t,n)),n},E=[],D=[],O=[],k=0,A=s?[`flow_inlet`,`flow_outlet`,`casing_wall`,`tpms_scaffold_wetted`]:[`inlet`,`outlet`,`wall`],j=Object.fromEntries(A.map(e=>[e,{start:-1,n:0}]));S.forEach((e,t)=>{if(E.push(`(${e.pts.map(T).join(` `)})`),D.push(String(e.owner)),e.neighbour>=0)O.push(String(e.neighbour)),k++;else{let n=A[e.patch];j[n].start<0&&(j[n].start=t),j[n].n++}});let M={};M[`constant/polyMesh/points`]=Z(`vectorField`,`points`)+`\n${w.length}\n(\n`+w.map(e=>`(${e.map(e=>e.toFixed(6)).join(` `)})`).join(`
 `)+`
 )
 `,M[`constant/polyMesh/faces`]=Z(`faceList`,`faces`)+`\n${S.length}\n(\n`+E.join(`
@@ -922,7 +1028,7 @@ ${o}  keywords = {TPMS, ${e.type}, scaffold, porosity, additive manufacturing, b
 `)+`
 )
 `;let N=A.map(e=>{let t=k,n=j[e];return t+=n.n,`    ${e}\n    {\n        type            ${s&&(e===`casing_wall`||e===`tpms_scaffold_wetted`)?`wall`:`patch`};\n        nFaces          ${n.n};\n        startFace       ${n.n>0?n.start:t};\n    }`}).join(`
-`);return M[`constant/polyMesh/boundary`]=Z(`polyBoundaryMesh`,`boundary`)+`\n${A.length}\n(\n${N}\n)\n`,{files:M,stats:{points:w.length,faces:S.length,internalFaces:k,boundaryFaces:S.length-k,cells:u,patches:Object.fromEntries(A.map(e=>[e,j[e].n]))}}}function ee(e,t,n,r){let i=Q(e,t),a=new TextEncoder,o=X(Object.entries(i.files).map(([e,t])=>({name:e,data:a.encode(t)})));r(new Blob([o],{type:`application/zip`}),n)}var te=String.raw`# -*- coding: utf-8 -*-
+`);return M[`constant/polyMesh/boundary`]=Z(`polyBoundaryMesh`,`boundary`)+`\n${A.length}\n(\n${N}\n)\n`,{files:M,stats:{points:w.length,faces:S.length,internalFaces:k,boundaryFaces:S.length-k,cells:u,patches:Object.fromEntries(A.map(e=>[e,j[e].n]))}}}function te(e,t,n,r){let i=Q(e,t),a=new TextEncoder,o=X(Object.entries(i.files).map(([e,t])=>({name:e,data:a.encode(t)})));r(new Blob([o],{type:`application/zip`}),n)}var ne=String.raw`# -*- coding: utf-8 -*-
 """Abaqus no-GUI 准静态压缩求解与后处理（TPMS Explorer v1.1.0 验证包）
 
 用法（Abaqus 命令行环境）:
@@ -1004,7 +1110,7 @@ with open(OUT, 'w') as fp:
              % (e_fem, sigma_peak, sigma_pl))
 print('TPMS verification: E_FEM=%.4f MPa, sigma_peak=%.4f, sigma_pl=%.4f -> %s'
       % (e_fem, sigma_peak, sigma_pl, OUT))
-`,ne=String.raw`# -*- coding: utf-8 -*-
+`,re=String.raw`# -*- coding: utf-8 -*-
 """OpenFOAM 达西渗流自动化求解与后处理（TPMS Explorer v1.1.0 验证包）
 
 用法（OpenFOAM 环境，python3）:
@@ -1144,7 +1250,7 @@ boundaryField
 
 if __name__ == '__main__':
     main()
-`,re=`#!/bin/bash
+`,ie=`#!/bin/bash
 # TPMS Explorer v1.1.0 —— Abaqus 验证一键脚本
 # 用法: ./run_abaqus.sh tpms-gyroid-voxel.inp 1.0
 set -e
@@ -1152,14 +1258,14 @@ INP=\${1:-tpms-voxel.inp}
 SPEC=\${2:-1.0}
 abaqus cae noGUI=abaqus_auto_runner.py -- --inp "$INP" --out abaqus_result.csv --specimen "$SPEC"
 echo "完成: abaqus_result.csv（E_FEM / sigma_peak / sigma_pl）"
-`,ie=`#!/bin/bash
+`,ae=`#!/bin/bash
 # TPMS Explorer v1.1.0 —— OpenFOAM 达西渗流一键脚本
 # 用法: ./run_openfoam.sh tpms-polymesh-case
 set -e
 CASE=\${1:-tpms-polymesh-case}
 python3 openfoam_auto_runner.py --case "$CASE" --out permeability.csv
 echo "完成: permeability.csv（kappa / Q / WSS）"
-`,ae=`metric,unit,theory_prediction,cae_simulation,rel_error,verdict
+`,oe=`metric,unit,theory_prediction,cae_simulation,rel_error,verdict
 E_FEM,MPa,,,
 sigma_peak,MPa,,,
 sigma_pl,MPa,,,
@@ -1170,7 +1276,7 @@ f1_Hz,Hz,,,
 # theory_prediction 来源：平台物理面板（Gibson-Ashby/Kozeny-Carman/impact-energy.ts）
 # cae_simulation 来源：abaqus_auto_runner.py / openfoam_auto_runner.py 输出 CSV
 # rel_error = |theory - cae| / |theory|；verdict: PASS <= 15% (解析代理口径), REVIEW > 15%
-`;function $(e){let t={};return t[`abaqus_auto_runner.py`]=te,t[`openfoam_auto_runner.py`]=ne,t[`run_abaqus.sh`]=re,t[`run_openfoam.sh`]=ie,t[`comparison_template.csv`]=ae,t[`README.md`]=`# TPMS Explorer v1.1.0 CAE 验证脚本包
+`;function $(e){let t={};return t[`abaqus_auto_runner.py`]=ne,t[`openfoam_auto_runner.py`]=re,t[`run_abaqus.sh`]=ie,t[`run_openfoam.sh`]=ae,t[`comparison_template.csv`]=oe,t[`README.md`]=`# TPMS Explorer v1.1.0 CAE 验证脚本包
 
 目标模型：${e.type}（固相体素 ${e.solidCount} / 流体体素 ${e.voidCount}）
 
@@ -1187,5 +1293,5 @@ f1_Hz,Hz,,,
 ## 对比矩阵
 把两个 CSV 的数值填入 comparison_template.csv，与平台物理面板理论预估对齐，
 rel_error ≤ 15% 视为解析代理口径 PASS（>15% 请核对单位与试样尺寸换算）。
-`,t}function oe(e,t,n){let r=$(e),i=new TextEncoder,a=X(Object.entries(r).map(([e,t])=>({name:e,data:i.encode(t)})));n(new Blob([a],{type:`application/zip`}),t)}export{b as build3MF,K as buildAbaqusInp,G as buildCliFormat,h as buildGLB,f as buildMultiSolidSTL,Q as buildOpenfoamPolyMesh,W as buildSliceSvg,X as buildStoredZip,w as buildVTI,S as buildVTK,$ as buildVerificationSuite,B as buildVoxelModel,o as compileGcode,U as directSlice,x as export3MF,q as exportAbaqusInp,l as exportBinarySTL,g as exportGLB,P as exportMatlabScript,p as exportMultiSolidSTL,ee as exportOpenfoamPolyMesh,M as exportPythonScript,T as exportVTI,C as exportVTK,oe as exportVerificationSuite,R as generateBibTeX,z as generateJSONSidecar,s as sliceMesh};
-//# sourceMappingURL=export-Bs7Z9UBs.js.map
+`,t}function se(e,t,n){let r=$(e),i=new TextEncoder,a=X(Object.entries(r).map(([e,t])=>({name:e,data:i.encode(t)})));n(new Blob([a],{type:`application/zip`}),t)}export{x as build3MF,q as buildAbaqusInp,K as buildCliFormat,g as buildGLB,p as buildMultiSolidSTL,Q as buildOpenfoamPolyMesh,G as buildSliceSvg,X as buildStoredZip,T as buildVTI,C as buildVTK,$ as buildVerificationSuite,V as buildVoxelModel,s as compileGcode,W as directSlice,S as export3MF,J as exportAbaqusInp,u as exportBinarySTL,_ as exportGLB,F as exportMatlabScript,m as exportMultiSolidSTL,te as exportOpenfoamPolyMesh,N as exportPythonScript,E as exportVTI,w as exportVTK,se as exportVerificationSuite,z as generateBibTeX,B as generateJSONSidecar,c as sliceMesh};
+//# sourceMappingURL=export-CRrTp5JM.js.map

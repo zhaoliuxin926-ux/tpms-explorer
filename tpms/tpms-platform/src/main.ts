@@ -498,8 +498,6 @@ function runPlasticityDemo(): boolean {
   if (plasRunning) return false;
   const btn = document.getElementById('btn-plasticity');
   const out = document.getElementById('plas-result');
-  plasRunning = true;
-  if (btn) (btn as HTMLButtonElement).disabled = true;
   const st0 = getState();
   if (st0.structureMode !== 'solid_network') {
     // 诚实守卫：壳类模式的固相定义是 |V−bias|<t/2（双壁），体素化口径仅支持 solid_network——
@@ -507,6 +505,8 @@ function runPlasticityDemo(): boolean {
     flashToast('弹塑性压溃目前仅支持实体网络模式（当前为 ' + st0.structureMode + '），已跳过');
     return false;
   }
+  plasRunning = true;
+  if (btn) (btn as HTMLButtonElement).disabled = true;
   if (out) { out.style.display = 'block'; out.textContent = '体素化 + 组装中…（R=8 · 8 载荷步 · 主线程同步求解，期间视图无响应）'; }
   flashToast('弹塑性压溃：主线程同步求解（R=8·8 步），期间视图暂不响应');
   // 让 toast 先绘制

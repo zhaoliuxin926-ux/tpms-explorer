@@ -1,6 +1,6 @@
 # 诚实边界表（自动生成）
 
-> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-10-05）。
+> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-10-11）。
 > **改边界只改 bugs.md 定案，再跑本脚本**；禁止手改本表导致双源漂移。
 
 | # | 边界 | 说明（摘要） |
@@ -19,5 +19,6 @@
 | 12 | UI 口径 / 二分目标偏差（2026-08-27 定案不修） | targetPorosity→iso 二分格点分位偏差 k=1 时最大 1.5pp（Halton 序列可压但倍频曲面无收益）；UI 已双读数披露（目标/实测）。 |
 | 14 | 弹塑性压溃求解域（2026-09-20 第三批收窄后仍存） | 三连修（σy/E 单位×1000、孤岛 BFS 剪除、R6→8）+ 收敛性双修（深回溯线搜索 α→1/512 + 非单调接受 ≤1.5×）+ 体素化解析化（6 解析族走 isSolidAt 同源 analyticFieldValue，查表插… |
 | 16 | strut 桁架族标定边界（2026-10-05 标定批定案） | strutbcc C1=0.06 落 Despande-Fleck BCC 弯曲主导文献域中值，ρ² 律形状完全适配；strutoctet 拉伸主导（E∝ρ 线性律）与 Gibson-Ashby ρ² 框架**形状律不适配**——C1=1.… |
+| 17 | strut 双族嵌合体时代终结+Octet STL 非流形边界（2026-10-11 打磨批 G1-G5 定案） | - **历史缺陷（已修）**：strut 提取场曾漏列 useLookup 排除集 → V 场走查表尾项 schwarz 公式（实测同参数 strutbcc/strutoctet/schwarz 三角数逐位相同=98064，benchmar… |
 
-共 **14** 条已定案边界。
+共 **15** 条已定案边界。

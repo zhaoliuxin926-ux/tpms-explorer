@@ -75,7 +75,16 @@ const CASES = [
   { name: 'E4 幻觉文件名 scenario', instr: '用 my_design_v1.json 方案交付一个 60% gyroid', expect: { tool: 'tpms_scenario', design: 'my_design_v1.json' } },
   // E5 指代无上下文（2026-10-06 两步旅程对抗：单轮 agent 无会话状态，指代词无可解析对象
   // →期望合法默认参数执行（模糊→默认设计）而非臆测具体所指；披露走模型备注通道）
-  { name: 'E5 指代无上下文', instr: '把第一个构建出来', expect: { tool: 'tpms_mesh' } },
+  // A3（2026-10-11）：参数透明=硬线（porosity 必须显式且合法——执行了什么必须可见）；
+  // 备注披露=软线（flash 档常不带 text 块的档位差异如实——有备注则必须含披露语义）
+  { name: 'E5 指代无上下文', instr: '把第一个构建出来', expect: { tool: 'tpms_mesh' },
+    check: (out) => {
+      const p = out.calls?.[0]?.arguments?.porosity;
+      if (p === undefined || normP(p) < 2 || normP(p) > 98) return `porosity=${p} 未显式或越界（参数透明硬线）`;
+      const note = out.modelNote ?? '';
+      if (note && !/指代|无上下文|默认|context|default|refer/i.test(note)) return `备注无披露语义: ${String(note).slice(0, 80)}`;
+      return null; // null = 通过（无备注=档位差异合法，参数透明仍是防线）
+    } },
   // ── F. 模糊/多目标 ──
   { name: 'F1 模糊意图', instr: '建一个骨支架', expect: { tool: 'tpms_mesh' } },
   { name: 'F2 多目标', instr: 'Gyroid 和 Diamond 各建一个孔隙率 60% 的支架', minCalls: 2 },
@@ -86,7 +95,9 @@ const CASES = [
   { name: 'G2 closed-loop EN', instr: 'Create a 60% porosity Diamond scaffold and run the verify closed loop until it passes', expect: { tool: 'tpms_design_verify', type: 'diamond', porosity: 60 } },
   { name: 'G3 可产性不确定', instr: '用 FKS 曲面做一个孔隙率 60% 的支架，不确定能不能生产出来，帮我自动修复到通过', expect: { tool: 'tpms_design_verify', type: 'fks', porosity: 60 } },
   // ── H. 逆设计意图（tpms_pareto 第六工具，2026-10-06；性能愿望≠具体构型）──
-  { name: 'H1 逆设计 CN', instr: '我需要一个等效模量不低于 2GPa、渗透率不低于 5e-9 m² 的支架，推荐几个合适的设计', expect: { tool: 'tpms_pareto', target_e_gpa: 2 } },
+  // A3（2026-10-11）：E/κ 双槽位+单位语义锁定——「2GPa」→target_e_gpa=2（GPa 直读）、
+  // 「5e-9 m²」→target_k_nm2=5（schema 口径：κ 单位=×10⁻⁹ m²）
+  { name: 'H1 逆设计 CN', instr: '我需要一个等效模量不低于 2GPa、渗透率不低于 5e-9 m² 的支架，推荐几个合适的设计', expect: { tool: 'tpms_pareto', target_e_gpa: 2, target_k_nm2: 5 } },
   { name: 'H2 逆设计 EN', instr: 'Recommend scaffold designs with E at least 2 GPa and permeability at least 5e-9 m²', expect: { tool: 'tpms_pareto', target_e_gpa: 2, target_k_nm2: 5 } },
 ];
 
@@ -141,11 +152,12 @@ for (const tc of CASES) {
       const pv = normArgP(calls, 'porosity');
       if (pv === undefined || Math.abs(pv - E.porosity) > 2) errs.push(`porosity=${pv} 期望 ${E.porosity}±2`);
     }
-    for (const k of ['periods', 'resolution', 'container', 'design']) {
+    for (const k of ['periods', 'resolution', 'container', 'design', 'target_e_gpa', 'target_k_nm2']) {
       if (E[k] !== undefined && getArg(calls, k) !== E[k]) errs.push(`${k}=${getArg(calls, k)} 期望 ${E[k]}`);
     }
     if (E.material && getArg(calls, 'material') !== E.material) errs.push(`material=${getArg(calls, 'material')} 期望 ${E.material}`);
     if (tc.minCalls && calls.length < tc.minCalls) errs.push(`calls=${calls.length} 期望 ≥${tc.minCalls}`);
+    if (tc.check) { const c = tc.check(out); if (c) errs.push(c); }
     ok = errs.length === 0;
     verdict = ok ? `→ ${calls.map((c) => c.name).join('+')}` : errs.join('；');
   } else {

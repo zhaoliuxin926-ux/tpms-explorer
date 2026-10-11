@@ -161,10 +161,13 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   const radialOn = radialCfg !== null;
   // 含 2 倍频谐波/常偏置的曲面族无法使用 sin/cos 查表，需实时求值（C2 扩展族与 lidinoid/splitp 同语义；
   // 第六批 slotp/fs/qstar/ws 同列——漏列会静默回退查表默认项产出 schwarz 几何，探针 iso 同值实锤）
+  // 【G3 2026-10-11】strut 双族同列：漏列曾使 V 场走查表尾项 schwarz 公式（实测同参数
+  // strutbcc 与 schwarz 三角数逐位相同=交付物实为 schwarz 嵌合体，仅投影/iso 用了真 SDF）
   const useLookup = !radialOn && !hybridEnabled && !stressOn && !hierCfg && !neuralOn && type !== 'custom' && type !== 'lidinoid' && type !== 'splitp' &&
     type !== 'octo' && type !== 'karcher' && type !== 'fks' && type !== 'fky' && type !== 'gprime' && type !== 'fcks' &&
     type !== 'dprime' && type !== 'dp' && type !== 'dd' && type !== 'dg' && type !== 'fcky' && type !== 'cdd' &&
-    type !== 'slotp' && type !== 'fs' && type !== 'qstar' && type !== 'ws';
+    type !== 'slotp' && type !== 'fs' && type !== 'qstar' && type !== 'ws' &&
+    type !== 'strutbcc' && type !== 'strutoctet';
 
   let tpmFn: ((mx: number, my: number, mz: number, w: Weights) => number) | null = null;
   let hybridFn: ((mx: number, my: number, mz: number, px: number, py: number, pz: number, w: Weights) => number) | null = null;
@@ -1240,7 +1243,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
 
     // 数值梯度循环不变量外提：c2New/needNumericGrad/solidFn/rawAt 此前在每顶点重算，
     // shell×lookup 族甚至每顶点 getTpmsFunction（真热点）。数值语义不变。
-    const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky' || type === 'cdd' || type === 'slotp' || type === 'fs' || type === 'qstar' || type === 'ws';
+    const c2New = type === 'octo' || type === 'karcher' || type === 'fks' || type === 'fky' || type === 'gprime' || type === 'fcks' || type === 'dprime' || type === 'dp' || type === 'dd' || type === 'dg' || type === 'fcky' || type === 'cdd' || type === 'slotp' || type === 'fs' || type === 'qstar' || type === 'ws' || type === 'strutbcc' || type === 'strutoctet';
     const needNumericGrad = radialOn || hybridEnabled || stressOn || neuralOn || mode !== 'solid_network' || type === 'custom' || c2New;
     let numRawAt: ((a: number, b2: number, c2: number) => number) | null = null;
     if (needNumericGrad) {

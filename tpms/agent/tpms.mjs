@@ -128,7 +128,7 @@ function solveIsoAnalytic(core, type, target, W, isoGrad = null) {
  * 混沌敏感性），单轮后 diamond ~5pp / gyroid ~2pp；R96 ≤0.1pp。
  */
 function solveExactPorosity(core, type, pf, R, buildOnce, isoGrad = null) {
-  const W = [1, 1, 1, 1];
+  const W = core.getDefaultWeights(type);
   _lcg = 0x9e3779b9; // 每次求解重置种子：确定性
   const { iso, slope, band } = solveIsoAnalytic(core, type, pf, W, isoGrad);
   const [bLo, bHi] = band ?? [-1.6, 1.6];
@@ -352,7 +352,7 @@ function cmdSolve(a, json) {
     core.globalBufferPool.reset();
     return core.buildSurface({
       type, iso, periods, resolution, targetPorosity: undefined,
-      weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      weights: core.getDefaultWeights(type), structureMode: mode, containerShape: container,
       thickness: 1.0, gradientDir: 'z',
       customFormula: '', preview: false, isoGrad,
       hybrid: hybridS ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
@@ -360,7 +360,7 @@ function cmdSolve(a, json) {
   };
 
   _lcg = 0x9e3779b9;
-  const W = [1, 1, 1, 1];
+  const W = core.getDefaultWeights(type);
   const { iso: iso0, slope, band: solBand } = solveIsoAnalytic(core, type, pf, W, isoGrad0);
   const [bandLo, bandHi] = solBand ?? [-1.6, 1.6];
 
@@ -548,7 +548,7 @@ function cmdMesh(a, json) {
 
   const params = {
     type, iso: 0, periods, resolution, targetPorosity: pf,
-    weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+    weights: core.getDefaultWeights(type), structureMode: mode, containerShape: container,
     thickness: 1.0, gradientDir: 'z',
     customFormula: '', preview: false,
     hybrid: hybridM ?? { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1, axis: 'x' },
@@ -771,7 +771,7 @@ function cmdMesh(a, json) {
   //（审计定案：管壁碎片结构性存在），STL 绝对门失败时 CFD 交付物仍有效（仅拒 STL）
   if (cfdPoly) {
     const vox = core.buildVoxelModel({
-      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      type, periods, weights: core.getDefaultWeights(type), structureMode: mode, containerShape: container,
       thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
       containerSdf: mr.sdf,
     }, resolution);
@@ -918,7 +918,7 @@ function cmdVerify(core, a, json) {
   // 先降后升浪费修复轮；改为「向上一档」
   const nextLadder = (cur) => LADDER.find((x) => x > cur);
 
-  const W = [1, 1, 1, 1];
+  const W = core.getDefaultWeights(type);
   const attempts = [];
   let verdict = 'fail', finalStage = '', res = null, audit = null, est = NaN, isoUsed = NaN;
   let iso = null;
@@ -1083,7 +1083,7 @@ function cmdSlice(a, json) {
   let vox;
   try {
     vox = core.buildVoxelModel({
-      type, periods, weights: [1, 1, 1, 1], structureMode: mode,
+      type, periods, weights: core.getDefaultWeights(type), structureMode: mode,
       containerShape: mrSlice ? 'cube' : container,
       thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
       containerSdf: mrSlice ? mrSlice.sdf : undefined,
@@ -1399,7 +1399,7 @@ function cmdScenario(a, json) {
     core.globalBufferPool.reset();
     return core.buildSurface({
       type, iso, periods, resolution, targetPorosity: undefined,
-      weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      weights: core.getDefaultWeights(type), structureMode: mode, containerShape: container,
       thickness: 1.0, gradientDir: 'z',
       hybrid: { enabled: false, typeB: 'diamond', blendFunction: 'sigmoid', blendCenter: 0, blendWidth: 1 },
       customFormula: '', preview: false, isoGrad: isoGradS,
@@ -1431,7 +1431,7 @@ function cmdScenario(a, json) {
   let voxel = null;
   if (!isoGradS) {
     voxel = core.buildVoxelModel({
-      type, periods, weights: [1, 1, 1, 1], structureMode: mode, containerShape: container,
+      type, periods, weights: core.getDefaultWeights(type), structureMode: mode, containerShape: container,
       thickness: 1.0, targetPorosity: pf, iso: 0, customFormula: '',
     }, resolution);
     const inp = core.buildAbaqusInp(voxel, {

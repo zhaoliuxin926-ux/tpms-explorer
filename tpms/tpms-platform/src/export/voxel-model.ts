@@ -12,6 +12,7 @@
 import type { TpmType, StructureMode, ContainerShape, StressConfig } from '../types';
 import { getTpmsFunction } from '../core/tpms-functions';
 import { transformByStress, stressThicknessScale } from '../core/stress-driven-field';
+import { solveIsoAnalytic } from '../core/porosity-solver';
 
 export interface VoxelModelParams {
   type: TpmType;
@@ -122,9 +123,16 @@ export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel
     const lb = (val: number) => { let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi) >> 1; if (samples[mid] < val) lo = mid + 1; else hi = mid; } return lo; };
     const targetSolid = Math.max(0.02, Math.min(0.98, 1 - params.targetPorosity));
     if (params.structureMode === 'solid_network') {
-      let lo = minV - 0.5, hi = maxV + 0.5;
-      for (let it = 0; it < 24; it++) { const mid = (lo + hi) / 2; if (lb(mid) / n > targetSolid) hi = mid; else lo = mid; }
-      bias = (lo + hi) / 2;
+      if (params.type === 'strutbcc' || params.type === 'strutoctet') {
+        // 【G5 2026-10-11】strut 距离场在体素中心栅格上仍有大并列块（目标分位落在块内，
+        // 二分落在随机侧 → 固相率漂移 ±5pp 且随 R 非单调）。改走 MC 解析求根
+        //（与 buildSurface exact 路径同源）；残余偏差=细杆体素化的本征离散（随 R 收敛）
+        bias = solveIsoAnalytic(tpmFn as (x: number, y: number, z: number, w: number[] | readonly number[]) => number, params.targetPorosity, w, null, `vox:${params.type}:k${k}`).iso;
+      } else {
+        let lo = minV - 0.5, hi = maxV + 0.5;
+        for (let it = 0; it < 24; it++) { const mid = (lo + hi) / 2; if (lb(mid) / n > targetSolid) hi = mid; else lo = mid; }
+        bias = (lo + hi) / 2;
+      }
     } else {
       const count = (t: number) => lb(-t / 2) + (n - lb(t / 2));
       let lo = 0.02, hi = (maxV - minV) * 4;

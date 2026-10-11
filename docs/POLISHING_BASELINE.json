@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-10-11",
+  "timeZone": "Asia/Shanghai",
+  "sourceCommit": "a9ee569650d0aa28ae10ac1ff74eb2621d1dbcf5",
+  "scope": "First reliability batch A1/A2/U1; preserve S7/S8 references for later geometry corrections",
+  "affectedSpecimens": [
+    {
+      "path": "specimens/S7_B65.stl",
+      "sha256": "823b11ea94487b56b29595079db774400dd166efc25d384eb3a96d98ba3f0805",
+      "bytes": 24076884,
+      "metadata": "specimens/S7_B65.json",
+      "type": "strutbcc",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6940297880896302,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S7_B65_r1.stl",
+      "sha256": "823b11ea94487b56b29595079db774400dd166efc25d384eb3a96d98ba3f0805",
+      "bytes": 24076884,
+      "metadata": "specimens/S7_B65_r1.json",
+      "type": "strutbcc",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6940297880896302,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S7_B65_r2.stl",
+      "sha256": "823b11ea94487b56b29595079db774400dd166efc25d384eb3a96d98ba3f0805",
+      "bytes": 24076884,
+      "metadata": "specimens/S7_B65_r2.json",
+      "type": "strutbcc",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6940297880896302,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S7_B65_r3.stl",
+      "sha256": "823b11ea94487b56b29595079db774400dd166efc25d384eb3a96d98ba3f0805",
+      "bytes": 24076884,
+      "metadata": "specimens/S7_B65_r3.json",
+      "type": "strutbcc",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6940297880896302,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S8_O65.stl",
+      "sha256": "4add546b7fdfb843331afac5ff48bbe17685aabcee83153f3437f0a2624dd4d9",
+      "bytes": 24076884,
+      "metadata": "specimens/S8_O65.json",
+      "type": "strutoctet",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6951383234581332,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S8_O65_r1.stl",
+      "sha256": "4add546b7fdfb843331afac5ff48bbe17685aabcee83153f3437f0a2624dd4d9",
+      "bytes": 24076884,
+      "metadata": "specimens/S8_O65_r1.json",
+      "type": "strutoctet",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6951383234581332,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S8_O65_r2.stl",
+      "sha256": "4add546b7fdfb843331afac5ff48bbe17685aabcee83153f3437f0a2624dd4d9",
+      "bytes": 24076884,
+      "metadata": "specimens/S8_O65_r2.json",
+      "type": "strutoctet",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6951383234581332,
+      "sourceVersion": "historical-before-strut-corrections"
+    },
+    {
+      "path": "specimens/S8_O65_r3.stl",
+      "sha256": "4add546b7fdfb843331afac5ff48bbe17685aabcee83153f3437f0a2624dd4d9",
+      "bytes": 24076884,
+      "metadata": "specimens/S8_O65_r3.json",
+      "type": "strutoctet",
+      "porosityTarget": 0.65,
+      "periods": 8,
+      "resolution": 96,
+      "porosityMeasured": 0.6951383234581332,
+      "sourceVersion": "historical-before-strut-corrections"
+    }
+  ],
+  "knownReproductions": [
+    {
+      "task": "A1",
+      "input": "tpms_mesh(type=gyroid, porosity=0.6, isoGrad={})",
+      "before": "validator accepts; execution throws TypeError and exits 1",
+      "expected": "structured rejection with exit 2 before execution"
+    },
+    {
+      "task": "A2",
+      "input": "HTTP headers arrive immediately; response body stalls; timeout=100ms",
+      "before": "body reading outlives the request timeout",
+      "expected": "timeout applies to headers and body including HTTP error body"
+    },
+    {
+      "task": "U1",
+      "input": "shell -> click plasticity -> solid_network -> retry",
+      "before": "button stays disabled and plasRunning stays true after rejection",
+      "expected": "rejected call does not lock the next supported run"
+    }
+  ]
+}

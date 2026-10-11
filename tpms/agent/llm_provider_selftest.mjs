@@ -10,10 +10,12 @@
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   loadToolsSchema, validateToolCalls, schemaToOllamaTools, MockProvider,
+  OllamaProvider, OpenAICompatProvider, AnthropicCompatProvider,
 } from './llm-provider.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -187,6 +189,44 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 0.6, isoGrad: { values: [0] } }), schema);
   ok('isoGrad values 数量 <2 被拒', v.ok === false, JSON.stringify(v.errors));
 }
+// 嵌套必填：缺 values 曾通过拦截器后在 runCli.values.join 裸崩（exit1）。
+{
+  const names = ['tpms_mesh', 'tpms_design_verify'];
+  ok('两个 isoGrad schema 均必填 values', names.every((name) =>
+    schema.tools.find((t) => t.name === name).parameters.properties.isoGrad.required?.includes('values')));
+  for (const name of names) {
+    for (const [label, isoGrad] of [['空对象', {}], ['仅 band', { band: 0.4 }]]) {
+      const v = validateToolCalls(mkCall(name, { type: 'gyroid', porosity: 0.6, isoGrad }), schema);
+      ok(`${name}.isoGrad ${label} 缺必填 values 被拒`,
+        v.ok === false && v.errors.some((e) => e.includes('isoGrad') && e.includes('values') && e.includes('缺必填')),
+        JSON.stringify(v));
+    }
+    const isoGrad = { values: [-0.1, 0, 0.1] };
+    const v = validateToolCalls(mkCall(name, { type: 'gyroid', porosity: 0.6, isoGrad }), schema);
+    ok(`${name}.isoGrad band 可省略且 values 原值保留`,
+      v.ok === true && JSON.stringify(v.calls[0].arguments.isoGrad) === JSON.stringify(isoGrad), JSON.stringify(v));
+  }
+  // 独立小 schema 钉递归实现，避免仅在 isoGrad 上特判掩盖数组内深层 required 漏检。
+  const nestedSchema = { tools: [{ name: 'nested_probe', parameters: {
+    type: 'object', properties: { entries: { type: 'array', items: {
+      type: 'object', properties: { detail: {
+        type: 'object', required: ['value'], properties: { value: { type: 'number' } },
+      } },
+    } } },
+  } }] };
+  const nested = validateToolCalls(mkCall('nested_probe', { entries: [{ detail: {} }] }), nestedSchema);
+  ok('数组内深层 object.required 递归拒绝缺值', nested.ok === false
+    && nested.errors.some((e) => e.includes('entries[0].detail') && e.includes('value')), JSON.stringify(nested));
+  const r = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--json', '嵌套必填回归'], {
+    encoding: 'utf8', timeout: 10_000,
+    env: { ...process.env, TPMS_ALLOW_MOCK_EXEC: '1', TPMS_MOCK_TOOLCALLS: JSON.stringify({
+      toolCalls: mkCall('tpms_mesh', { type: 'gyroid', porosity: 0.6, isoGrad: {} }),
+    }) },
+  });
+  ok('mock 真实执行入口在 CLI 前拒绝缺 values [exit2]', r.status === 2 && r.stdout === ''
+    && /schema.*拒绝/.test(r.stderr || '') && !/TypeError|→ 执行/.test(r.stderr || ''),
+    `exit=${r.status} ${r.stderr?.slice(0, 180)}`);
+}
 // 2u~2v. 严格类型（曾 "75"→75 / [5]→5 / true→1 强制转换怪象）
 {
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: '75' }), schema);
@@ -220,6 +260,80 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   ok('mock 不带 --dry-run 拒绝真实执行 [exit2]', r.status === 2 && (r.stderr || '').includes('--dry-run'), `exit=${r.status} ${r.stderr?.slice(0, 120)}`);
 }
 
+// 模型备注双出口（A3 2026-10-11）：provider 捕获的伴随文本（指代披露等）不得在主流程丢失——
+// JSON 出口 modelNote 字段与普通出口「ℹ 模型备注」行都必须保留
+{
+  const env = { ...process.env, TPMS_MOCK_TOOLCALLS: JSON.stringify({
+    toolCalls: mkCall('tpms_list', {}), raw: '指代无上下文，已按默认 gyroid 处理',
+  }) };
+  const rj = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--dry-run', '--json', '备注出口'], {
+    encoding: 'utf8', timeout: 10_000, env,
+  });
+  let jj = null; try { jj = JSON.parse(rj.stdout); } catch { /* */ }
+  ok('modelNote 在 JSON 出口保留', rj.status === 0 && typeof jj?.modelNote === 'string' && jj.modelNote.includes('已按默认 gyroid'), JSON.stringify(jj?.modelNote));
+  const rp = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--dry-run', '备注出口'], {
+    encoding: 'utf8', timeout: 10_000, env,
+  });
+  ok('模型备注行在普通出口保留', rp.status === 0 && (rp.stdout || '').includes('ℹ 模型备注: ') && (rp.stdout || '').includes('已按默认 gyroid'), `exit=${rp.status} ${(rp.stdout || '').slice(0, 120)}`);
+}
+
+// 正文超时：真实本地 HTTP，正常/慢正文/挂正文/慢错误正文/正常错误五种交付。
+// 挂正文另设服务器熔断，旧实现也会有限时间内失败，避免测试自身永久挂起。
+{
+  const timeoutMs = 200;
+  const timers = new Set();
+  const server = createServer((req, res) => {
+    req.resume();
+    const mode = req.url.split('/')[1];
+    const isError = mode === 'slow-error' || mode === 'error';
+    res.writeHead(isError ? 503 : 200, { 'Content-Type': 'application/json' });
+    res.flushHeaders();
+    const payload = req.url.endsWith('/api/chat')
+      ? { message: { content: 'local-note', tool_calls: mkCall('tpms_list', {}) } }
+      : req.url.endsWith('/v1/messages')
+        ? { content: [{ type: 'text', text: 'local-note' }, { type: 'tool_use', id: 'local-call', name: 'tpms_list', input: {} }] }
+        : { choices: [{ message: { content: 'local-note', tool_calls: mkCall('tpms_list', {}) } }] };
+    const end = () => mode === 'hang' ? res.destroy() : res.end(isError ? 'local unavailable' : JSON.stringify(payload));
+    if (mode === 'normal' || mode === 'error') end();
+    else {
+      const timer = setTimeout(end, timeoutMs * 4);
+      timers.add(timer);
+      res.once('close', () => { clearTimeout(timer); timers.delete(timer); });
+    }
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const base = `http://127.0.0.1:${server.address().port}`;
+    for (const Provider of [OllamaProvider, OpenAICompatProvider, AnthropicCompatProvider]) {
+      for (const mode of ['normal', 'slow', 'hang', 'slow-error', 'error']) {
+        const provider = new Provider({ baseUrl: `${base}/${mode}`, apiKey: 'local-test-key',
+          timeoutMs: mode === 'normal' || mode === 'error' ? 5000 : timeoutMs });
+        let result = null, error = null;
+        try { result = await provider.complete([{ role: 'user', content: 'local probe' }], tools); }
+        catch (e) { error = e; }
+        if (mode === 'normal') {
+          const v = result && validateToolCalls(result.toolCalls, schema);
+          ok(`${Provider.name} 正常正文保留工具与备注`, error === null && result?.raw === 'local-note'
+            && v?.ok === true && v.calls?.[0]?.name === 'tpms_list', error?.message ?? JSON.stringify(result));
+        } else if (mode === 'error') {
+          const prefix = Provider === OllamaProvider ? 'Ollama' : 'HTTP';
+          ok(`${Provider.name} 正常错误正文保留 HTTP 格式`, error?.message === `${prefix} 503: local unavailable`, error?.message);
+        } else {
+          const prefix = Provider === OllamaProvider ? 'Ollama' : '端点';
+          ok(`${Provider.name} ${mode} 正文受同一超时保护`,
+            error?.message === `${prefix} ${timeoutMs}ms 无响应（timeout）`, error?.message ?? JSON.stringify(result));
+        }
+      }
+    }
+  } finally {
+    for (const timer of timers) clearTimeout(timer);
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+}
 // ── 3. MockProvider → runCli 链路（list 端到端）──
 {
   const mock = new MockProvider({ toolCalls: mkCall('tpms_list', {}) });
@@ -235,5 +349,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 37) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 37（35 + anthropic provider 双钉 2026-10-01）`); process.exit(1); }
+if (pass < 69) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 69（43 + 嵌套必填 9 + 正文超时 15 + 备注双出口 2，2026-10-11）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

@@ -13,7 +13,7 @@
  * E 屈服面（安全系数+包络半径带）
  * N yield-viewer 静态哨兵（create/dispose 幂等 + RAF/renderer 释放）
  * F 逆向 solve+apply（三族解+标题/徽标同步——updateBadges 修复哨兵）
- * G 压溃 wiring（σy/E=0.0080 单位哨兵+无 'undefined'+无孤岛求解失败+指引文案）
+ * G 压溃 wiring（壳模式按钮/NL 拒绝后可重试+重复运行拒绝+σy/E 单位+结果后解锁）
  * H 参数扫描（9 帧完成+孔隙率还原）
  * I 水平集（演化读数含柔度——主线程同步较重，宽超时）
  * J 结构开关三连（应力引导/分形统计/混合选项——网格规模差分+还原）
@@ -131,12 +131,44 @@ try {
     ? ok('E 屈服面包络+安全系数')
     : bad('E 屈服面', yNote.slice(0, 80));
 
-  // G 压溃 wiring（默认配置同步求解——单位+孤岛+文案三哨兵；swiftshader 慢给宽超时）
-  await clickBtn('btn-plasticity');
+  // G 压溃 wiring：壳模式按钮/NL 拒绝不占运行锁，切回实体后经 NL 启动同一轮求解。
+  // 在 40ms 求解定时器前重发 NL，验证已有运行被拒绝；复用原有求解，不额外跑长仿真。
+  const plasRetry = await page.evaluate(() => {
+    const btn = document.getElementById('btn-plasticity');
+    const input = document.getElementById('nl-input');
+    const log = document.getElementById('nl-log');
+    const send = () => { input.value = '运行压溃仿真'; document.getElementById('nl-send').click(); };
+    document.querySelector('[data-structure="shell"]').click();
+    btn.click();
+    const shellButtonEnabled = !btn.disabled;
+    const shellToast = document.getElementById('toast')?.textContent || '';
+    let before = log.textContent.length;
+    send();
+    const shellNLReply = log.textContent.slice(before);
+    const shellNLEnabled = !btn.disabled;
+    document.querySelector('[data-structure="solid_network"]').click();
+    before = log.textContent.length;
+    send();
+    const startReply = log.textContent.slice(before);
+    const runningDisabled = btn.disabled;
+    before = log.textContent.length;
+    send();
+    const busyReply = log.textContent.slice(before);
+    return { shellButtonEnabled, shellToast, shellNLReply, shellNLEnabled, startReply, runningDisabled, busyReply, stillDisabled: btn.disabled };
+  });
+  plasRetry.shellButtonEnabled && /仅支持实体网络模式.*shell/.test(plasRetry.shellToast)
+    && plasRetry.shellNLEnabled && /仿真未启动/.test(plasRetry.shellNLReply)
+    ? ok('G 壳模式按钮/NL 拒绝后保持可重试')
+    : bad('G 壳模式拒绝解锁', JSON.stringify(plasRetry).slice(0, 300));
+  /已触发数字孪生压溃仿真/.test(plasRetry.startReply) && plasRetry.runningDisabled
+    && /仿真未启动/.test(plasRetry.busyReply) && !/已触发数字孪生压溃仿真/.test(plasRetry.busyReply) && plasRetry.stillDisabled
+    ? ok('G 切回实体后 NL 启动成功+已有运行拒绝重复启动')
+    : bad('G 实体重试/运行中守卫', JSON.stringify(plasRetry).slice(0, 300));
   await page.waitForFunction(() => /数字孪生压溃 R=/.test(document.getElementById('plas-result')?.textContent || ''), null, { timeout: 240000, polling: 2000 }).catch(() => {});
   const plasNote = await readNote('plas-result');
-  (/σy\/E=0\.0080/.test(plasNote) && !/undefined/.test(plasNote) && !/求解失败：弹塑性求解：固相含/.test(plasNote) && /数字孪生压溃 R=8/.test(plasNote))
-    ? ok('G 压溃 σy/E 单位哨兵 0.0080+无孤岛求解失败+无 undefined')
+  (/σy\/E=0\.0080/.test(plasNote) && !/undefined/.test(plasNote) && !/求解失败：弹塑性求解：固相含/.test(plasNote) && /数字孪生压溃 R=8/.test(plasNote)
+    && await page.evaluate(() => !document.getElementById('btn-plasticity').disabled))
+    ? ok('G 压溃 σy/E 单位哨兵 0.0080+无孤岛求解失败+无 undefined+结果后解锁')
     : bad('G 压溃', plasNote.slice(0, 120));
 
   // H 参数扫描（9 帧+还原到扫描前状态；F 已 apply 反演解，断言须状态相对而非写死默认值）

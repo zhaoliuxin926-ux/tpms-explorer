@@ -90,6 +90,47 @@ y = np.linspace(-np.pi, np.pi, N)
 z = np.linspace(-np.pi, np.pi, N)
 X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
+# 【G4 2026-10-11】strut 桁架场：与 core/strut-bcc.ts / strut-octet.ts 同源
+# （cell=2π=一周期、r=w0·半胞、octet 角↔面心 FCC 逐轴 |Δ|≤½cell 判定 + 面心对角）。
+# 归约坐标 u = mx − cell·floor(mx/cell) ∈ [0,cell)，27 邻域在归约系平铺——天然周期。
+def _segdist(P, A, B):
+    AB = B - A
+    tt = np.clip(((P - A) * AB).sum(-1) / (AB * AB).sum(-1), 0.0, 1.0)
+    return np.sqrt(((P - (A + tt[..., None] * AB)) ** 2).sum(-1))
+
+def strut_field(X, Y, Z, w0, octet):
+    cell = 2.0 * np.pi
+    r = w0 * cell / 2.0
+    ci = np.floor(X / cell); cj = np.floor(Y / cell); ck = np.floor(Z / cell)
+    U = np.stack([X - ci * cell, Y - cj * cell, Z - ck * cell], axis=-1)
+    corners = [[vi, vj, vl] for vi in (0, 1) for vj in (0, 1) for vl in (0, 1)]
+    faces = []
+    for fx, fy, fz in ((0.5, 0.5, 0), (0.5, 0, 0.5), (0, 0.5, 0.5)):
+        faces.append([fx, fy, fz]); faces.append([1 - fx, 1 - fy, 1 - fz])
+    rods = []
+    if not octet:
+        bc = [0.5, 0.5, 0.5]
+        for c in corners:
+            rods.append((np.array(c, float) * cell, np.array(bc, float) * cell))
+    else:
+        for c in corners:
+            for f in faces:
+                if all(abs(f[a] - c[a]) <= 0.501 for a in range(3)):
+                    rods.append((np.array(c, float) * cell, np.array(f, float) * cell))
+        for a in range(len(faces)):
+            for b in range(a + 1, len(faces)):
+                d2 = sum((faces[a][q] - faces[b][q]) ** 2 for q in range(3))
+                if abs(d2 - 0.5) < 1e-6:
+                    rods.append((np.array(faces[a], float) * cell, np.array(faces[b], float) * cell))
+    D = np.full(X.shape, np.inf)
+    for di in (-1, 0, 1):
+        for dj in (-1, 0, 1):
+            for dk in (-1, 0, 1):
+                off = np.array([di, dj, dk], float) * cell
+                for A, B in rods:
+                    D = np.minimum(D, _segdist(U, A + off, B + off))
+    return D - r
+
 # 隐函数场（与平台 core/tpms-functions.ts 逐项一致）
 def tpms_field(X, Y, Z, w, tpms_type_override=None):
     t = tpms_type_override if tpms_type_override is not None else tpms_type
@@ -197,6 +238,10 @@ def tpms_field(X, Y, Z, w, tpms_type_override=None):
     elif t == 'ws':
         return (w[0]*((np.cos(2*kk*X)*np.cos(kk*Y) + np.cos(2*kk*Y)*np.cos(kk*Z) + np.cos(2*kk*Z)*np.cos(kk*X))
                 - (np.cos(kk*X)*np.cos(2*kk*Y) + np.cos(kk*Y)*np.cos(2*kk*Z) + np.cos(kk*Z)*np.cos(2*kk*X))))
+    elif t == 'strutbcc':
+        return strut_field(kk*X, kk*Y, kk*Z, w[0], False)
+    elif t == 'strutoctet':
+        return strut_field(kk*X, kk*Y, kk*Z, w[0], True)
     else:
         raise ValueError(f'Unsupported type: {t}')
 
@@ -429,7 +474,9 @@ def _tortuosity_axis(F, axis):
         for j in range(n):
             idx = [0,0,0]; idx[axis] = src_layer
             idx[(axis+1)%3] = i; idx[(axis+2)%3] = j
-            if src[tuple(idx)]:
+            # np.take(F, ·, axis) 摘除了 axis 维：src 是 2D 切片，须用去维后的坐标对
+            # （旧版 src[tuple(idx)] 以 3 元组索引 2D 数组 = IndexError，所有导出脚本必崩）
+            if src[tuple(idx[:axis] + idx[axis+1:])]:
                 dist[tuple(idx)] = 0.0
                 _hq.heappush(heap, (0.0, tuple(idx)))
     while heap:
@@ -667,6 +714,8 @@ elseif strcmp(tpms_type, 'qstar')
 elseif strcmp(tpms_type, 'ws')
     V = weights(1)*((cos(2*kk*X).*cos(kk*Y) + cos(2*kk*Y).*cos(kk*Z) + cos(2*kk*Z).*cos(kk*X)) ...
         - (cos(kk*X).*cos(2*kk*Y) + cos(kk*Y).*cos(2*kk*Z) + cos(kk*Z).*cos(2*kk*X)));
+elseif strcmp(tpms_type, 'strutbcc') || strcmp(tpms_type, 'strutoctet')
+    V = strut_truss_field(kk*X, kk*Y, kk*Z, weights(1), strcmp(tpms_type, 'strutoctet'));
 else
     error('Unsupported TPMS type');
 end
@@ -928,6 +977,63 @@ if strcmp(manifold_kind, 'identity')
     lighting gouraud;
 else
     lighting flat;
+end
+
+% 【G4 2026-10-11】strut 桁架场（与 core/strut-bcc.ts / strut-octet.ts 同源）：
+% cell=2π=一周期、r=w0·半胞、octet 角↔面心 FCC 逐轴 |Δ|≤½cell 判定 + 面心对角；
+% 归约坐标 27 邻域（周期场，无需全局 cell 枚举）
+function D = strut_truss_field(MX, MY, MZ, w0, octet)
+    cellE = 2*pi;
+    r = w0 * cellE / 2;
+    ci = floor(MX / cellE); cj = floor(MY / cellE); ck = floor(MZ / cellE);
+    UX = MX - ci*cellE; UY = MY - cj*cellE; UZ = MZ - ck*cellE;
+    cList = [];
+    for vi = [0 1], for vj = [0 1], for vl = [0 1]
+        cList = [cList; vi vj vl]; %#ok<AGROW>
+    end, end, end
+    fList = [];
+    fc = [0.5 0.5 0; 0.5 0 0.5; 0 0.5 0.5];
+    for q = 1:3
+        fList = [fList; fc(q,:)]; %#ok<AGROW>
+        fList = [fList; 1-fc(q,:)]; %#ok<AGROW>
+    end
+    A = []; B = [];
+    if ~octet
+        for p = 1:size(cList,1)
+            A = [A; cList(p,:)]; %#ok<AGROW>
+            B = [B; 0.5 0.5 0.5]; %#ok<AGROW>
+        end
+    else
+        for p = 1:size(cList,1)
+            for q = 1:size(fList,1)
+                if all(abs(fList(q,:) - cList(p,:)) <= 0.501)
+                    A = [A; cList(p,:)]; %#ok<AGROW>
+                    B = [B; fList(q,:)]; %#ok<AGROW>
+                end
+            end
+        end
+        for a = 1:size(fList,1)
+            for b = a+1:size(fList,1)
+                if abs(sum((fList(a,:) - fList(b,:)).^2) - 0.5) < 1e-6
+                    A = [A; fList(a,:)]; %#ok<AGROW>
+                    B = [B; fList(b,:)]; %#ok<AGROW>
+                end
+            end
+        end
+    end
+    A = A * cellE; B = B * cellE;
+    D = inf(size(MX));
+    for di = -1:1, for dj = -1:1, for dk = -1:1
+        for p = 1:size(A,1)
+            a = A(p,:) + [di dj dk]*cellE;
+            b = B(p,:) + [di dj dk]*cellE;
+            ab = b - a;
+            L2 = ab * ab';
+            tt = max(0, min(1, ((UX-a(1))*ab(1) + (UY-a(2))*ab(2) + (UZ-a(3))*ab(3)) / L2));
+            D = min(D, sqrt((UX-(a(1)+tt.*ab(1))).^2 + (UY-(a(2)+tt.*ab(2))).^2 + (UZ-(a(3)+tt.*ab(3))).^2));
+        end
+    end, end, end
+    D = D - r;
 end
 `;
   return script;
