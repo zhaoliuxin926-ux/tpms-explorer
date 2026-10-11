@@ -33,6 +33,7 @@ function parseArgs(argv) {
     else if (s === '--api-key') a.apiKey = argv[++i];
     else if (s === '--dry-run') a.dryRun = true;
     else if (s === '--json') a.json = true;
+    else if (s === '--session') a.session = argv[++i];
     else if (s.startsWith('--')) { console.error(`未知选项 ${s}`); process.exit(2); }
     else a._.push(s);
   }
@@ -109,8 +110,60 @@ async function main() {
   const a = parseArgs(process.argv.slice(2));
   const userMsg = a._.join(' ').trim();
   if (!userMsg) {
-    console.error('用法: node llm-agent.mjs [--provider ollama|openai|anthropic|mock] [--model X] [--base-url U] [--api-key K] [--dry-run] "<自然语言指令>"');
+    console.error('用法: node llm-agent.mjs [--provider ollama|openai|anthropic|mock] [--model X] [--base-url U] [--api-key K] [--dry-run] [--session 会话.json] "<自然语言指令>"');
     process.exit(2);
+  }
+
+  // ── 会话模式（批次 4 S1-S3）：加载 + 确定性指代绑定（先于 provider——指代构建不交给模型猜）──
+  let session = null;
+  if (a.session) {
+    const { loadOrCreateSession, resolveReference } = await import('./agent-session.mjs');
+    try {
+      session = loadOrCreateSession(a.session);
+    } catch (e) {
+      console.error(`✗ 会话加载失败：${e.message}`);
+      process.exitCode = 2; return;
+    }
+    const ref = resolveReference(session, userMsg);
+    if (ref.status === 'reject') {
+      console.error(`✗ 指代无法解析：${ref.reason}`);
+      process.exitCode = 2; return;
+    }
+    if (ref.status === 'resolved') {
+      const { saveSession, recordExecution } = await import('./agent-session.mjs');
+      const c = ref.candidate;
+      const out = join(dirname(a.session), `mesh-${ref.recId}-cand${ref.ordinal}-${c.type}-p${Math.round(c.porosity * 100)}.stl`);
+      const meshArgs = { type: c.type, porosity: c.porosity, periods: c.cellSize, resolution: 96, out };
+      if (a.dryRun) {
+        console.error(`[dry-run][session] tpms_mesh ${JSON.stringify(meshArgs)}（来自推荐 ${ref.recId} 第 ${ref.ordinal} 项）`);
+        if (a.json) console.log(JSON.stringify({ ok: true, mode: 'session-reference', resolvedFrom: { recId: ref.recId, ordinal: ref.ordinal, candidate: c }, args: meshArgs, dryRun: true }, null, 2));
+        process.exitCode = 0; return;
+      }
+      console.error(`→ [session] 指代绑定：推荐 ${ref.recId} 第 ${ref.ordinal} 项 → tpms_mesh ${c.type} p=${c.porosity} k=${c.cellSize}（确定性提取，不经模型）`);
+      const r = runCli('tpms_mesh', meshArgs);
+      let parsed = null;
+      try { parsed = JSON.parse(r.stdout); } catch { /* */ }
+      if (r.status === 0) {
+        recordExecution(session, {
+          fromRecommendation: ref.recId, candidateIndex: ref.ordinal - 1, tool: 'tpms_mesh',
+          args: meshArgs, exit: 0, artifacts: [out],
+          resultDigest: parsed ? { porosityEstimate: parsed.porosityEstimate, watertight: parsed.watertight, fileBytes: parsed.fileBytes } : undefined,
+          source: 'session-reference 确定性绑定',
+        });
+        saveSession(a.session, session);
+      }
+      if (a.json) {
+        console.log(JSON.stringify({ ok: r.status === 0, mode: 'session-reference', resolvedFrom: { recId: ref.recId, ordinal: ref.ordinal, candidate: c }, args: meshArgs, results: [{ tool: 'tpms_mesh', args: meshArgs, exit: r.status, result: parsed ?? (r.stdout || '').slice(0, 500) }] }, null, 2));
+      } else if (r.status === 0) {
+        console.log(`✓ 会话指代构建完成：${out}`);
+        console.log(`  来源：推荐 ${ref.recId} 候选 ${ref.ordinal}（${c.type} p=${c.porosity} k=${c.cellSize}，代理估值 E=${c.E_GPa?.toFixed?.(2) ?? c.E_GPa}GPa——解析近似非 FE）`);
+      } else {
+        console.error(`✗ tpms_mesh exit=${r.status}`);
+        if (r.stderr) console.error(r.stderr.slice(0, 300));
+      }
+      process.exitCode = r.status; return;
+    }
+    // status==='none'：普通指令 → 走 LLM 路径（推荐结果稍后记录）
   }
 
   const schema = loadToolsSchema();
@@ -204,11 +257,17 @@ async function main() {
     let parsed = null;
     try { parsed = JSON.parse(r.stdout); } catch { /* 非 JSON 输出 */ }
     results.push({ tool: call.name, args: call.arguments, exit: r.status, result: parsed ?? r.stdout.slice(0, 500) });
+    // 会话模式：tpms_pareto 成功结果落推荐集（S1/S3——候选+代理口径快照）
+    if (session && r.status === 0 && call.name === 'tpms_pareto') {
+      const { recordPareto } = await import('./agent-session.mjs');
+      recordPareto(session, call.arguments, parsed);
+    }
     if (r.status !== 0) {
       console.error(`✗ ${call.name} exit=${r.status}`);
       if (r.stderr) console.error(r.stderr.slice(0, 300));
       if (a.json) console.log(JSON.stringify({ ok: false, calls: verdict.calls, results }, null, 2));
       // 退出码透传：CLI 0/2/3；driver 另有 4=修复轮数耗尽（报告 JSON 内有 verdict 详情）
+      if (session) { const { saveSession } = await import('./agent-session.mjs'); saveSession(a.session, session); }
       process.exitCode = r.status; return;
     }
   }
@@ -221,6 +280,11 @@ async function main() {
     // "指代无上下文，已按默认处理"——此前无输出通道，披露要求落空；成功路径同样呈现）
     if (llmOut.raw) console.log(`ℹ 模型备注: ${llmOut.raw.slice(0, 200)}`);
     for (const r of results) console.log(`  ${r.tool}: exit=${r.exit}`);
+  }
+  // 会话模式：成功路径落盘（推荐集更新/幂等不重复记录）
+  if (session) {
+    const { saveSession } = await import('./agent-session.mjs');
+    saveSession(a.session, session);
   }
   process.exitCode = 0;
 }

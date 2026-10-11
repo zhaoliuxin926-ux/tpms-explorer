@@ -29,6 +29,16 @@ node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5
 # 目标可达给最小超标达标点；不可达给最近妥协+log10 距离。确认后走 Demo 2 构建首推荐。
 ```
 
+## Demo 5 · Agent 会话两步走（推荐 → 跨进程指代构建，2026-10-11+）
+
+```bash
+node tpms/agent/llm-agent.mjs --provider anthropic --session work.json "推荐 E≥2GPa 且渗透率≥5e-9 的支架"
+node tpms/agent/llm-agent.mjs --session work.json "把第一个构建出来"
+# 第二条不调用模型：指代被确定性绑定到会话推荐集的具体候选（type/porosity/periods
+# 直读），STL 落在会话文件旁；越界/歧义/会话损坏/几何语义版本变化→exit2 结构化拒绝。
+# 代理口径（解析近似非 FE）随候选快照落盘。key 走 TPMS_LLM_* env，绝不入会话文件。
+```
+
 ## Demo 3 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）
 
 ```bash

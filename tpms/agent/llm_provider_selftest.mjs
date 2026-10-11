@@ -277,6 +277,86 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   ok('模型备注行在普通出口保留', rp.status === 0 && (rp.stdout || '').includes('ℹ 模型备注: ') && (rp.stdout || '').includes('已按默认 gyroid'), `exit=${rp.status} ${(rp.stdout || '').slice(0, 120)}`);
 }
 
+// CLI 显式会话（批次 4 S1-S3，2026-10-11）：最小旅程=推荐→退出→同 session 指代构建；
+// 指代=确定性绑定（不经模型），缺结果/越界/歧义/损坏/语义版本变化全部结构化 exit2
+{
+  const { mkdtempSync, writeFileSync: wf, readFileSync: rf, existsSync: ef, rmSync: rms } = await import('node:fs');
+  const { tmpdir: td } = await import('node:os');
+  const dir = mkdtempSync(join(td(), 'tpms-session-'));
+  const sess = join(dir, 's.json');
+  try {
+    // S1 首跑新建 + mock pareto 真实执行落推荐集
+    const r1 = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--provider', 'mock', '--session', sess, '--json', '推荐支架'], {
+      encoding: 'utf8', timeout: 120_000,
+      env: { ...process.env, TPMS_ALLOW_MOCK_EXEC: '1', TPMS_MOCK_TOOLCALLS: JSON.stringify({
+        toolCalls: mkCall('tpms_pareto', { target_e_gpa: 2, target_k_nm2: 5, top: 3 }),
+      }) },
+    });
+    let s1 = null; try { s1 = JSON.parse(r1.stdout); } catch { /* */ }
+    ok('S1 会话首跑新建+pareto 落推荐集（exit0）', r1.status === 0 && s1?.ok && ef(sess), `exit=${r1.status}`);
+    const stored = JSON.parse(rf(sess, 'utf8'));
+    ok('S1 会话带版本与几何语义标签（原子 JSON）', stored.schemaVersion === 1 && typeof stored.geometrySemantics === 'string' && stored.geometrySemantics.length > 0);
+    ok('S1 推荐候选含代理来源披露（S3 口径随快照）', stored.recommendations.length === 1 && stored.recommendations[0].candidates.length === 3
+      && /解析代理/.test(stored.recommendations[0].source));
+    ok('S1 会话不含 API key 字段', !/api[_-]?key/i.test(rf(sess, 'utf8')));
+    // S2 最小旅程：手搓可控候选（gyroid p0.7 k3）→ 指代构建（确定性，不经模型）
+    const crafted = JSON.parse(rf(sess, 'utf8'));
+    crafted.recommendations.push({
+      id: 'r2', createdAt: '2026-10-11T00:00:00Z', tool: 'tpms_pareto',
+      input: { targetE: 2, targetKappaM2: 5e-9, top: 2 }, reachable: true,
+      candidates: [
+        { rank: 1, type: 'gyroid', porosity: 0.7, cellSize: 3, E_GPa: 2.5, kappa_m2: 6e-9, dist_log10: 0.1, meetsTarget: true },
+        { rank: 2, type: 'diamond', porosity: 0.65, cellSize: 4, E_GPa: 2.1, kappa_m2: 5.5e-9, dist_log10: 0.2, meetsTarget: true },
+      ],
+      source: 'tpms_pareto 解析代理（Gibson-Ashby×Kozeny-Carman，非 FE 精确）',
+    });
+    wf(sess, JSON.stringify(crafted), 'utf8');
+    // dry-run：绑定参数核对（快）
+    const rd = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', sess, '--dry-run', '--json', '把第一个构建出来'], {
+      encoding: 'utf8', timeout: 20_000,
+    });
+    let jd = null; try { jd = JSON.parse(rd.stdout); } catch { /* */ }
+    const wantArgs = { type: 'gyroid', porosity: 0.7, periods: 3, resolution: 96 };
+    const gotArgs = jd?.args ?? {};
+    ok('S2 指代确定性绑定参数（dry-run 核对完整参数）', rd.status === 0 && jd?.mode === 'session-reference'
+      && jd?.resolvedFrom?.recId === 'r2' && jd?.resolvedFrom?.ordinal === 1
+      && ['type', 'porosity', 'periods', 'resolution'].every((k) => gotArgs[k] === wantArgs[k]),
+      JSON.stringify(jd?.args ?? rd.stdout?.slice(0, 100)));
+    // 真实构建：最小旅程终点（STL 落盘+执行记录）
+    const rb = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', sess, '--json', '把第一个构建出来'], {
+      encoding: 'utf8', timeout: 300_000,
+    });
+    let jb = null; try { jb = JSON.parse(rb.stdout); } catch { /* */ }
+    const stl = join(dir, 'mesh-r2-cand1-gyroid-p70.stl');
+    const after = JSON.parse(rf(sess, 'utf8'));
+    const ex = after.executions?.[0];
+    ok('S2 最小旅程：推荐→退出→同会话构建第一项（STL 落盘 exit0）', rb.status === 0 && jb?.mode === 'session-reference' && ef(stl), `exit=${rb.status}`);
+    ok('S3 执行记录含候选来源/完整参数/产物位置', ex && ex.fromRecommendation === 'r2' && ex.candidateIndex === 0
+      && ex.args?.type === 'gyroid' && ex.args?.porosity === 0.7 && ex.args?.periods === 3
+      && Array.isArray(ex.artifacts) && ex.artifacts[0] === stl && ex.resultDigest?.watertight === true,
+      JSON.stringify(ex ?? null).slice(0, 120));
+    // 拒绝族（全部 exit2）
+    const rej = (args, instr, expectSub) => {
+      const r = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', args, instr], { encoding: 'utf8', timeout: 30_000 });
+      return r.status === 2 && (r.stderr || '').includes(expectSub);
+    };
+    ok('S2 越界指代结构化拒绝（exit2）', rej(sess, '把第五个构建出来', '越界'));
+    ok('S2 指代+新参数歧义拒绝（exit2）', rej(sess, '把第一个用孔隙率 80% 构建', '歧义'));
+    ok('S2 缺推荐结果拒绝（exit2）', rej(join(dir, 'empty.json'), '把第一个构建出来', '没有任何推荐'), 'empty 会话预写入');
+    wf(join(dir, 'empty.json'), JSON.stringify({ schemaVersion: 1, geometrySemantics: stored.geometrySemantics, created: 'x', updated: 'x', recommendations: [], executions: [] }), 'utf8');
+    const rNo = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', join(dir, 'empty.json'), '把第一个构建出来'], { encoding: 'utf8', timeout: 30_000 });
+    ok('S2 缺推荐结果拒绝复核（empty 文件就位后 exit2）', rNo.status === 2 && /没有任何推荐/.test(rNo.stderr || ''));
+    wf(join(dir, 'corrupt.json'), '{not json', 'utf8');
+    ok('S1 损坏会话明确拒绝（exit2）', rej(join(dir, 'corrupt.json'), 'hi', '损坏'));
+    const vOld = JSON.parse(rf(sess, 'utf8'));
+    vOld.geometrySemantics = 'v1-ancient';
+    wf(join(dir, 'old.json'), JSON.stringify(vOld), 'utf8');
+    ok('S3 几何语义版本变化拒绝（旧候选未经核对不得使用）', rej(join(dir, 'old.json'), '把第一个构建出来', '几何语义'));
+  } finally {
+    rms(dir, { recursive: true, force: true });
+  }
+}
+
 // 正文超时：真实本地 HTTP，正常/慢正文/挂正文/慢错误正文/正常错误五种交付。
 // 挂正文另设服务器熔断，旧实现也会有限时间内失败，避免测试自身永久挂起。
 {
@@ -349,5 +429,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 69) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 69（43 + 嵌套必填 9 + 正文超时 15 + 备注双出口 2，2026-10-11）`); process.exit(1); }
+if (pass < 82) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 82（69 + CLI 会话 13，2026-10-11 批次 4）`); process.exit(1); }
 process.exit(fail ? 1 : 0);
