@@ -187,6 +187,17 @@ console.log('\n[E] Otsu 二值化（装配栈 + Otsu）');
   const vol = assembleStack([sliceA, sliceB]);
   check('assembleStack 长度', vol.length === 128);
   check('层序正确（前 64 = 40）', vol[0] === 40 && vol[64] === 200);
+  // N1（2026-10-11）：骨形态计 Otsu 与 CT 单一实现同源——分类端点/退化行为对齐锚
+  const halfG = new Uint8Array(8000);   // R=20 → size=R³=8000
+  for (let i = 0; i < 4000; i++) { halfG[i] = 40; halfG[4000 + i] = 200; }
+  const mGray = computeMorphometry({ gray: halfG, R: 20, voxelMm: 0.1 });
+  check('灰度双峰各半 → BV/TV=0.5（严格 > 端点，旧 >= 得 1.0）', Math.abs(mGray.bvTv - 0.5) < 1e-12, `bvTv=${mGray.bvTv}`);
+  const halfB = new Uint8Array(8000);
+  for (let i = 0; i < 4000; i++) { halfB[i] = 0; halfB[4000 + i] = 1; }
+  const mBin = computeMorphometry({ binary: halfB, R: 20, voxelMm: 0.1 });
+  check('灰度与 binary 同构输入结果一致（跨模块单一实现）', Math.abs(mGray.bvTv - mBin.bvTv) < 1e-12);
+  const mUni = computeMorphometry({ gray: new Uint8Array(1000).fill(90), R: 10, voxelMm: 0.1 });
+  check('单峰常数 → BV/TV=0（无衬度即无结构，有限确定）', mUni.bvTv === 0, `bvTv=${mUni.bvTv}`);
 }
 
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);

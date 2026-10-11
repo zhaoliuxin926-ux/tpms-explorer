@@ -32,7 +32,7 @@ function bundle(exportLines, name) {
 }
 
 const m = await import(pathToFileURL(bundle([
-  `export { simulateLPBF, assessProcessWindow, TI64 } from ${JSON.stringify(join(PLATFORM, 'src/physics/lpbf-thermo-mechanical.ts'))};`,
+  `export { simulateLPBF, assessProcessWindow, TI64, laserLaneCells } from ${JSON.stringify(join(PLATFORM, 'src/physics/lpbf-thermo-mechanical.ts'))};`,
 ], 'lpbf')));
 
 let passCount = 0, failCount = 0;
@@ -94,8 +94,20 @@ console.log('\n[F] 网格无关性');
   check(`沸点封顶跨网格稳定（ΔT=${peakDiff.toFixed(1)}K）`, peakDiff <= 1);
 }
 
+// ── N3（2026-10-11）换道量纲锚：道距格数推进，首三道 y=2/4/6 格 ──
+{
+  const N = 32, dx = 25e-6;
+  const spacing = Math.max(1, Math.floor(50e-6 / dx));   // = 2 格（50µm/25µm）
+  const lanes = [1, 2, 3].map((p) => m.laserLaneCells(p, spacing, N));
+  check(`N32·dx25µm 前三次换道 y=2/4/6 格（实测 ${lanes.join('/')}）`, lanes.join(',') === '2,4,6');
+  const dx2 = 40e-6, sp2 = Math.max(1, Math.floor(50e-6 / dx2));   // = 1 格
+  const lanes2 = [1, 2, 3].map((p) => m.laserLaneCells(p, sp2, N));
+  check(`另一组尺度 dx40µm 换道 y=1/2/3 格（实测 ${lanes2.join('/')}）`, lanes2.join(',') === '1,2,3');
+  const wrapped = m.laserLaneCells(16, 2, N);   // 32 格域回绕
+  check('域宽回绕（pass16·2格 mod 32 = 0）', wrapped === 0);
+}
 console.log(`\n== RESULT: ${passCount} PASS / ${failCount} FAIL ==`);
-  if (passCount < 18) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 18（恒真/集体跳过防护，2026-09-04 审查纳管）'); process.exit(1); }
+  if (passCount < 21) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 21（+N3 换道量纲三锚，2026-10-11）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

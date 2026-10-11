@@ -42,6 +42,7 @@ const BUNDLE = join(tmpdir(), 'tpms_parity_bundle.mjs');
     'src/export/stl-exporter.ts:buildBinarySTL',
     'src/physics/tortuosity.ts:analyzeTortuosity3D',
     'src/core/region-grad.ts:regionWeight,validateRegionGrad',
+    'src/measure/svg-slice-exporter.ts:exportSliceSVG',
   ];
   writeFileSync(entry, mods.map((m) => {
     const [f, names] = m.split(':');
@@ -800,6 +801,31 @@ const { generateBibTeX } = (await imp(BUNDLE));
   check('units: wcToMmFactor = cellSize/(2π)', /return cellSize \/ \(2 \* Math\.PI\);/.test(unitsSrc));
   check('svg-slice: exportSliceSVG + 800 画布',
     /export function exportSliceSVG\(/.test(svgSrc) && /const SVG_SIZE = 800;/.test(svgSrc));
+// 【N4 2026-10-11】SVG 切片交点行为测试（此前只有静态断言——边判定恒查 onPlane[0]/[1]
+// 的缺陷四轮全绿漏网）。规则：逐边自身端点判定/贴面顶点半开约定/共面边跳过由邻接补足。
+{
+  const THREE = await imp(join(PLATFORM, 'node_modules/three/build/three.module.js'));
+  const { exportSliceSVG } = await imp(BUNDLE);
+  const mk = (tris) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tris.flat()), 3));
+    return g;
+  };
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // z = 0
+  const segN = (svg) => (svg.match(/M /g) || []).length;
+  const svg1 = exportSliceSVG(mk([[-1, -1, 1], [1, -1, -1], [-1, 1, -1]]), plane);
+  check('svg-slice 正常穿越三角出 1 段', segN(svg1) === 1, `M=${segN(svg1)}`);
+  const svg2 = exportSliceSVG(mk([[0, 0, 0], [1, 0, 1], [0, 1, 1]]), plane);
+  check('svg-slice 平面仅接触一个顶点不生线段', svg2 === '', `len=${svg2.length}`);
+  const svg3 = exportSliceSVG(mk([[0, 0, 0], [1, 0, 1], [0, 1, -1]]), plane);
+  check('svg-slice 贴面顶点参与成段（对侧严格为负，半开约定）', segN(svg3) === 1, `M=${segN(svg3)}`);
+  const svg4 = exportSliceSVG(mk([[0, 0, 0], [1, 0, 0], [0, 1, 1], [0, 0, 0], [1, 0, 0], [0, 1, -1]]), plane);
+  check('svg-slice 共面边由邻接三角补足（恰 1 段无重叠双计）', segN(svg4) === 1, `M=${segN(svg4)}`);
+  const svg5a = exportSliceSVG(mk([[-1, -1, 1], [1, -1, -1], [-1, 1, -1]]), plane);
+  const svg5b = exportSliceSVG(mk([[1, -1, -1], [-1, 1, -1], [-1, -1, 1]]), plane);
+  check('svg-slice 顶点顺序置换一致截面', segN(svg5a) === 1 && segN(svg5b) === 1, `${segN(svg5a)}/${segN(svg5b)}`);
+}
+
   check('main: btn-bbox/caliper/slice-svg 三接线 + exportSliceSVG 调用',
     /getElementById\('btn-bbox'\)\?\.addEventListener/.test(mainSrc)
     && /getElementById\('btn-caliper'\)\?\.addEventListener/.test(mainSrc)
@@ -816,6 +842,6 @@ if (fail > 0) {
   console.log('\n失败项:');
   for (const f of failures) console.log('  ✗ ' + f);
 }
-  if (pass < 332) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 332（恒真/集体跳过防护，2026-09-04 审查纳管；历史 280→282→314→332（2026-09-22 P1-12 region-grad +11 / measure +7））'); process.exit(1); }
+  if (pass < 337) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 337（恒真/集体跳过防护+N4 切片五锚 2026-10-11，2026-09-04 审查纳管；历史 280→282→314→332（2026-09-22 P1-12 region-grad +11 / measure +7））'); process.exit(1); }
 
 process.exit(fail ? 1 : 0);

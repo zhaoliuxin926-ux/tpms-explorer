@@ -89,23 +89,24 @@ function sliceGeometry(geometry: THREE.BufferGeometry, plane: THREE.Plane): Segm
     const db = plane.distanceToPoint(b);
     const dc = plane.distanceToPoint(c);
 
-    const onPlane = [Math.abs(da) < EPS, Math.abs(db) < EPS, Math.abs(dc) < EPS];
-
     // 收集交点（去重）
     const pts: THREE.Vector3[] = [];
     const pushPt = (p: THREE.Vector3) => {
       if (pts.length === 0 || pts[pts.length - 1].distanceTo(p) > EPS) pts.push(p);
     };
 
+    // 【N4 2026-10-11】每条边按自身端点判定（旧版恒查 onPlane[0]/[1]=顶点 a/b——
+    // (b,c)/(c,a) 边拿错端点：顶点接触生假段、贴面顶点漏段）。
+    // 规则：① 严格跨边 d1·d2<0 → 插值点；② 顶点贴面：半开约定——仅当对侧严格
+    // 为负时计入该顶点（每贴面顶点在邻边中恰计一次）；③ 共面边（两端都贴面）跳过
+    // ——轮廓由相邻非共面三角形的边提供，防重叠双计（共面三角形处理规则，定案）。
     const edge = (p1: THREE.Vector3, p2: THREE.Vector3, d1: number, d2: number) => {
-      if (onPlane[0] && onPlane[1]) {
-        pushPt(p1);
-        pushPt(p2);
-      } else if (onPlane[0]) {
-        pushPt(p1);
-      } else if (onPlane[1]) {
-        pushPt(p2);
-      } else if (d1 * d2 < 0) {
+      const on1 = Math.abs(d1) < EPS;
+      const on2 = Math.abs(d2) < EPS;
+      if (on1 && on2) return;
+      if (on1) { if (d2 < 0) pushPt(p1); return; }
+      if (on2) { if (d1 < 0) pushPt(p2); return; }
+      if (d1 * d2 < 0) {
         const t = d1 / (d1 - d2);
         pushPt(new THREE.Vector3().lerpVectors(p1, p2, t));
       }

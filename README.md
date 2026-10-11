@@ -55,12 +55,12 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 26 族曲面（24 TPMS + 2 桁架） | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等）+ **strut 桁架双族**（BCC 弯曲主导 / Octet 拉伸主导，杆=胶囊 SDF 周期场，cell=2π 一周期契约——桁架侧力学谱；Octet STL 出口为 12 杆结点非流形 fail-closed 已知边界，体素/RVE/脚本出口正常）+ **26 族画廊**（一屏同参数缩略对比，点击切族），可用域与文献对照见 BENCHMARKS.md | parity_math 332 断言四方同源 + mesh_audit 34 案例 |
+| 🧬 26 族曲面（24 TPMS + 2 桁架） | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等）+ **strut 桁架双族**（BCC 弯曲主导 / Octet 拉伸主导，杆=胶囊 SDF 周期场，cell=2π 一周期契约——桁架侧力学谱；Octet STL 出口为 12 杆结点非流形 fail-closed 已知边界，体素/RVE/脚本出口正常）+ **26 族画廊**（一屏同参数缩略对比，点击切族），可用域与文献对照见 BENCHMARKS.md | parity_math 337 断言四方同源 + mesh_audit 34 案例 |
 | 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 34 案例审计门（29 几何 + 5 拒产/RT 哨兵），几何案例开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
 | 📐 曲率热力图 | 平均/高斯曲率（数值 Hessian）+ 场权重/高度着色 | sim_export_check 曲率数值健壮性（混叠工况无 NaN） |
-| 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 332/332 |
+| 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 337/337 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
 | 🔗 分享与审计 | URL 全量恢复 + **47 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 47/47 |

@@ -26,8 +26,15 @@ export interface CTScanData {
   threshold: number;         // Otsu 阈值（0~255 灰度域）
 }
 
-/** Otsu 自动阈值：256 级灰度直方图的最大类间方差 */
+/**
+ * Otsu 自动阈值：256 级灰度直方图的最大类间方差。
+ * 分类端点契约（N1 2026-10-11 统一）：最大方差分割为（≤t | >t）——
+ * 消费者分类必须用严格 `> threshold` 进高灰度固相类（CT 骨=高灰度）。
+ * 退化输入：空输入抛错；单峰常数输入无双峰可分，返回该值本身
+ * （分类后全背景——无衬度即无结构，有限确定）。
+ */
 export function otsuThreshold(values: Uint8Array | number[]): number {
+  if (values.length === 0) throw new Error('Otsu 输入为空（无灰度样本）');
   const hist = new Float64Array(256);
   for (let i = 0; i < values.length; i++) hist[Math.min(255, Math.max(0, values[i] | 0))]++;
   const total = values.length;
@@ -44,6 +51,10 @@ export function otsuThreshold(values: Uint8Array | number[]): number {
     const mF = (sumAll - sumB) / wF;
     const between = wB * wF * (mB - mF) * (mB - mF);
     if (between > bestVar) { bestVar = between; best = t; }
+  }
+  if (bestVar < 0) {
+    // 单峰常数（全部同桶）：无有效分割——返回该唯一灰度值（有限、确定）
+    for (let t = 0; t < 256; t++) if (hist[t] > 0) return t;
   }
   return best;
 }
@@ -128,7 +139,8 @@ export interface CTReconstruction {
 export function reconstructFromGray(gray: Uint8Array, R: number, voxelMm: number): CTReconstruction {
   const threshold = otsuThreshold(gray);
   const binary = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) binary[i] = gray[i] >= threshold ? 1 : 0;
+  // N1 契约：严格 > 进固相（Otsu 分割为 ≤t | >t；旧 >= 会把低峰簇一并计入固相）
+  for (let i = 0; i < gray.length; i++) binary[i] = gray[i] > threshold ? 1 : 0;
   return finalize(binary, R, voxelMm, threshold);
 }
 

@@ -54,10 +54,10 @@
 
 ## 2. 数值与测量修复
 
-- [ ] **N1 统一 Otsu 分类端点。** CT 与骨形态模块统一阈值含义。40/200 双峰各半应得到 50% 固相；灰度与对应 binary 输入结果一致。均匀灰度、空输入和全实心情况返回有定义的有限结果或明确拒绝。
-- [ ] **N2 修复 FD-Darcy 出口流量。** 流量积分检查真实流体出口邻接。开口单管与双管保持解析关系；封死出口或中段时流量近零，不能因封堵而增加渗透率。
-- [ ] **N3 修复 LPBF 换道量纲。** 统一网格坐标与米制坐标。N32、dx25µm 的前三次换道应为 y=2/4/6 格，并检查另一组尺度参数；同时保留能量台账验证。此项不扩大 LPBF 的物理精度宣称。
-- [ ] **N4 修复 SVG 交点判断。** 每条边按自身端点判断。平面仅接触一个顶点时不生成线段；正常相交、共面边和顶点顺序置换得到一致截面，明确共面三角形的处理规则。
+- [x] **N1 统一 Otsu 分类端点。**（单一实现入 ct-reconstruction，bone-morphometry 复用；严格 >threshold 进固相——40/200 双峰各半=50%（旧 >= 得 100%）、灰度↔binary 等价、空输入 throw、单峰常数=该值且全背景；ct 审计 15/0+bone 审计 21/0 含新锚） CT 与骨形态模块统一阈值含义。40/200 双峰各半应得到 50% 固相；灰度与对应 binary 输入结果一致。均匀灰度、空输入和全实心情况返回有定义的有限结果或明确拒绝。
+- [x] **N2 修复 FD-Darcy 出口流量。**（流量积分只认真实流体出口邻接 isFluid(z=R−1)——封死出口 κ=0 精确、中段封死 κ=1e-11 级（开放管百万分之一以下）；开口单/双管解析锚原样通过；native_cae 审计 22/0） 流量积分检查真实流体出口邻接。开口单管与双管保持解析关系；封死出口或中段时流量近零，不能因封堵而增加渗透率。
+- [x] **N3 修复 LPBF 换道量纲。**（yLaser 统一格数口径 laserLaneCells——旧 (pass·格数)%(N·dx) 米制取模恒 0=激光永不换道全叠印 y=0；N32·dx25µm 首三道 y=2/4/6 格+dx40µm 组 1/2/3+域回绕锚；能量台账 ≤0.5% 保持；lpbf 审计 21/0） 统一网格坐标与米制坐标。N32、dx25µm 的前三次换道应为 y=2/4/6 格，并检查另一组尺度参数；同时保留能量台账验证。此项不扩大 LPBF 的物理精度宣称。
+- [x] **N4 修复 SVG 交点判断。**（edge 逐边自身端点判定——旧恒查 onPlane[0]/[1]：(b,c)/(c,a) 边拿错顶点=顶点接触生假段；规则定案：贴面顶点半开约定（对侧严格为负才计入）+共面边跳过由邻接三角补足；parity_math +5 运行时行为锚 332→337（此前仅静态断言=该缺陷四轮漏网根因）） 每条边按自身端点判断。平面仅接触一个顶点时不生成线段；正常相交、共面边和顶点顺序置换得到一致截面，明确共面三角形的处理规则。
 
 主要文件：[ct-reconstruction.ts](../tpms/tpms-platform/src/geometry/ct-reconstruction.ts)、[bone-morphometry.ts](../tpms/tpms-platform/src/physics/bone-morphometry.ts)、[lbm-permeability.ts](../tpms/tpms-platform/src/physics/lbm-permeability.ts)、[lpbf-thermo-mechanical.ts](../tpms/tpms-platform/src/physics/lpbf-thermo-mechanical.ts)、[svg-slice-exporter.ts](../tpms/tpms-platform/src/measure/svg-slice-exporter.ts)。
 

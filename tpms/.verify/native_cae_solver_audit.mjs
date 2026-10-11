@@ -139,6 +139,17 @@ console.log('\n[D] FD-Darcy 单管解析锚点');
   let threw = false;
   try { solveDarcyPermeability({ R, solid: new Uint8Array(R ** 3).fill(1) }); } catch { threw = true; }
   check('空流体域显式抛错', threw);
+  // 【N2 2026-10-11】封堵守卫：流量积分只认真实流体出口邻接——封死出口/中段 κ≈0
+  //（旧版把被封堵节点的侧向回压当流量计入=封堵反而抬高渗透率）
+  const sSealOut = new Uint8Array(R ** 3).fill(1);
+  for (let iz = 0; iz < R - 1; iz++) sSealOut[6 + 6 * R + iz * R * R] = 0;   // 单管但出口面封死
+  const kSealOut = solveDarcyPermeability({ R, solid: sSealOut, tol: 1e-10, maxIter: 20000 }).kappaLU;
+  check(`出口封死 → κ≈0（实测 ${kSealOut.toExponential(2)}，旧版计入回压≈正常量级）`, kSealOut === 0);
+  const sSealMid = new Uint8Array(R ** 3).fill(1);
+  for (const iz of [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]) sSealMid[6 + 6 * R + iz * R * R] = 0;  // 中段封死
+  const kSealMid = solveDarcyPermeability({ R, solid: sSealMid, tol: 1e-10, maxIter: 20000 }).kappaLU;
+  check(`中段封死 → κ≈0（实测 ${kSealMid.toExponential(2)}，开放管 ${res.kappaLU.toExponential(2)} 的百万分之一以下）`,
+    kSealMid < res.kappaLU * 1e-6);
 }
 
 // ── E. 管径线性标度 + 孔隙率单调性（精确锚点）──

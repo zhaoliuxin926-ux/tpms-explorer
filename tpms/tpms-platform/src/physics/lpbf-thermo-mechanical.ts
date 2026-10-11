@@ -81,6 +81,11 @@ export function assessProcessWindow(power: number, speed: number, layerDepth: nu
   return '键合良好';
 }
 
+/** 蛇形换道 y（格数口径；导出供门禁直测量纲）。道距格数×道序、域宽 N 格回绕 */
+export function laserLaneCells(pass: number, trackSpacing: number, N: number): number {
+  return (pass * trackSpacing) % N;
+}
+
 export function simulateLPBF(params: LPBFParams): LPBFResult {
   const t0 = performance.now();
   const N = params.N;
@@ -125,7 +130,10 @@ export function simulateLPBF(params: LPBFParams): LPBFResult {
     const pass = Math.floor((t * params.speed) / passLen);
     const dir = pass % 2 === 0 ? 1 : -1;
     const xLaser = dir === 1 ? xL : passLen - xL;
-    const yLaser = (pass * trackSpacing) % (N * dx);
+    // 【N3 2026-10-11】换道 y 统一网格坐标口径：道距以格数推进、域回绕按格数取模再乘 dx。
+    // 旧版 (pass·trackSpacing) % (N·dx) 把格数对米制长度取模——N32·dx25µm 时 8e-4 整除
+    // 任意整数（1250k）→ yLaser 恒 0，激光永不换道（所有道叠印在 y=0）
+    const yLaser = laserLaneCells(pass, trackSpacing, N) * dx;
     const ixL = xLaser / dx, iyL = yLaser / dx;
 
     // 显式热传导 + 热源（镜像边界 = 绝热，守恒口径）

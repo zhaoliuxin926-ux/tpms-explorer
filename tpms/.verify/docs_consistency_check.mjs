@@ -31,7 +31,7 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
   const inv = read('tpms/.verify/inverse_design_audit.mjs');
 
   const guardOf = (src, n) => new RegExp(`\\bpass(?:Count)?\\s*<\\s*${n}\\b`).test(src);
-  guardOf(parity, 332) ? ok('parity_math GUARD 332') : bad('parity_math GUARD 332');
+  guardOf(parity, 337) ? ok('parity_math GUARD 337') : bad('parity_math GUARD 337');
   guardOf(selftest, 50) ? ok('selftest GUARD 50') : bad('selftest GUARD 50');
   guardOf(llmp, 69) ? ok('llm_provider GUARD 69') : bad('llm_provider GUARD 67');
   guardOf(schema, 98) ? ok('schema_check GUARD 98（实测可 >）') : bad('schema_check GUARD 98');
@@ -52,7 +52,7 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
   const ip = read('docs/career/interview-pack.md');
   new RegExp(`${gateN} 道 CI 门禁`).test(ip)
     ? ok('interview-pack 门数对拍 SCHEDULE') : bad('interview-pack 门数漂移', `期望 ${gateN} 道`);
-  readme.includes('332') ? ok('README 引用 parity 332') : bad('README 引用 parity 332');
+  readme.includes('337') ? ok('README 引用 parity 337') : bad('README 引用 parity 337');
   readme.includes('inverse_design_audit 27') ? ok('README 反演 27 断言') : bad('README 反演 27 断言');
 }
 

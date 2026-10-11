@@ -25,7 +25,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ct_audit_bundle.mjs');
 {
   const entry = join(tmpdir(), 'tpms_ct_audit_entry.ts');
   writeFileSync(entry, [
-    `export { otsuThreshold, exactEDT, reconstructFromGray, generateDemoCT, sampleDeviation, deviationColors, deviationStats } from ${JSON.stringify(join(PLATFORM, 'src/geometry/ct-reconstruction.ts'))};`,
+    `export { otsuThreshold, exactEDT, reconstructFromGray, reconstructFromBinary, generateDemoCT, sampleDeviation, deviationColors, deviationStats } from ${JSON.stringify(join(PLATFORM, 'src/geometry/ct-reconstruction.ts'))};`,
     `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
@@ -33,7 +33,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ct_audit_bundle.mjs');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { otsuThreshold, exactEDT, reconstructFromGray, generateDemoCT, sampleDeviation, deviationColors, deviationStats, buildSurface } = await import(pathToFileURL(BUNDLE));
+const { otsuThreshold, exactEDT, reconstructFromGray, reconstructFromBinary, generateDemoCT, sampleDeviation, deviationColors, deviationStats, buildSurface } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -54,6 +54,31 @@ console.log('\n[A] Otsu 自动阈值');
   check(`双峰谷区阈值 ${t} ∈ [40, 200]`, t >= 40 && t <= 200);
   const flat = new Array(1000).fill(128);
   check('常数输入不崩溃（返回有限值）', Number.isFinite(otsuThreshold(flat)));
+  // N1（2026-10-11）：分类端点契约——严格 > 进固相；双峰各半=50%；灰度↔binary 等价
+  const half = new Uint8Array(2000);
+  for (let i = 0; i < 1000; i++) { half[i] = 40; half[1000 + i] = 200; }
+  const recHalf = reconstructFromGray(half, 10, 0.1);
+  let solidHalf = 0;
+  for (let i = 0; i < half.length; i++) if (half[i] > recHalf.threshold) solidHalf++;
+  check('40/200 双峰各半 → 50% 固相（严格 > 端点）', solidHalf === 1000 && recHalf.threshold === 40,
+    `thr=${recHalf.threshold} solid=${solidHalf}`);
+  const binEquiv = new Uint8Array(2000);
+  for (let i = 0; i < 1000; i++) { binEquiv[i] = 0; binEquiv[1000 + i] = 1; }
+  const recBin = reconstructFromBinary(binEquiv, 10, 0.1);
+  let solidBin = 0, agree = 0;
+  for (let i = 0; i < 2000; i++) {
+    if (binEquiv[i]) solidBin++;
+    if ((half[i] > recHalf.threshold ? 1 : 0) === binEquiv[i]) agree++;
+  }
+  check('灰度与对应 binary 输入分类一致', agree === 2000 && solidBin === 1000, `agree=${agree}`);
+  let threwEmpty = false;
+  try { otsuThreshold([]); } catch { threwEmpty = true; }
+  check('空输入明确拒绝（throw）', threwEmpty);
+  const uni = new Uint8Array(500).fill(90);
+  const thrU = otsuThreshold(uni);
+  let solidU = 0;
+  for (let i = 0; i < 500; i++) if (uni[i] > thrU) solidU++;
+  check('单峰常数 → 阈值=该值且全背景（无衬度即无结构，有限确定）', thrU === 90 && solidU === 0, `thr=${thrU}`);
 }
 
 // ── B. EDT 精确性 ──

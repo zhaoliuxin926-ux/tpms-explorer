@@ -12,7 +12,7 @@
  * 法线-顶点法线夹角离散；体素分辨率 ≥64³ 时误差 ~5% 量级（门禁校准）。
  */
 
-import { exactEDT } from '../geometry/ct-reconstruction';
+import { exactEDT, otsuThreshold } from '../geometry/ct-reconstruction';
 export interface MorphoParams {
   gray?: Uint8Array;          // 灰度体素（可选：提供则先 Otsu 二值化）
   binary?: Uint8Array;        // 已二值化体素（1 = 骨/固相）
@@ -62,25 +62,12 @@ export function computeMorphometry(params: MorphoParams): MorphoResult {
   };
 }
 
-/** 简化 Otsu 二值化 */
+/** Otsu 二值化（复用 ct-reconstruction 单一实现；N1 2026-10-11 统一分类端点：
+ *  严格 > threshold 进固相——旧本地副本用 >= 且退化初值 128，双峰各半会得 100% 固相） */
 function binarizeOtsu(gray: Uint8Array): Uint8Array {
-  const hist = new Float64Array(256);
-  for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
-  const total = gray.length;
-  let sumAll = 0;
-  for (let t = 0; t < 256; t++) sumAll += t * hist[t];
-  let sumB = 0, wB = 0, best = 128, bestVar = -1;
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (wB === 0) continue;
-    const wF = total - wB;
-    if (wF === 0) break;
-    sumB += t * hist[t];
-    const between = wB * wF * Math.pow(sumB / wB - (sumAll - sumB) / wF, 2);
-    if (between > bestVar) { bestVar = between; best = t; }
-  }
-  const out = new Uint8Array(total);
-  for (let i = 0; i < total; i++) out[i] = gray[i] >= best ? 1 : 0;
+  const threshold = otsuThreshold(gray);
+  const out = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) out[i] = gray[i] > threshold ? 1 : 0;
   return out;
 }
 

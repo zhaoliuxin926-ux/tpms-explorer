@@ -91,10 +91,12 @@ export function solveDarcyPermeability(params: DarcyParams): DarcyResult {
   }
 
   // 流量：z = R−2 截面向 z = R−1（p=0 汇面）的流动 Q = Σ k·(p[z=R−2] − 0)/1
+  // 【N2 2026-10-11】仅统计真正与出口汇面流体邻接的节点——出口被封堵（z=R−1 固相）
+  // 的节点无出流边，其 p 是侧向回压不是流量；旧版一律计入=封堵反而抬高渗透率
   let fluxQ = 0;
   for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
     const i = ix + iy * R + (R - 2) * R * R;
-    if (!solid[i]) fluxQ += p[i] - 0;
+    if (!solid[i] && isFluid(ix, iy, R - 1)) fluxQ += p[i] - 0;
   }
   // κ（格子单位）：Q·L/(A·Δp)，L = R−1，A = R²，Δp = 1
   const L = R - 1;
