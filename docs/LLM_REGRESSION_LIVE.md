@@ -102,3 +102,11 @@ TPMS_REG_PROVIDER=anthropic TPMS_LLM_API_KEY=*** TPMS_LLM_BASE_URL=https://open.
 - 三新词用例（B7 BCC 桁架 / B8 Octet truss / C8 单元密度）两轮全 PASS——strut 双族 NL 语义在真实模型链路的稳定性达到 n=2 证据标准。
 - 历史口径遵守：n=2 仍不称确定性；失败项轮换是历史 4-flash 档的观察（33/37 档），5.3-flash 满贯档无需该豁免。
 - 本节与 2026-10-05 上节（端点知识/合规边界/6/6 矩阵）共同构成本会话 LLM 线终态。
+
+
+## 2026-10-11 43 条 n=2 双轮满贯（A3 语义验收补齐批 · 断言加强后）
+
+- 用户新 key（2026-10-11，Coding Plan 型——anthropic 通道探针 200；只经 env 不落盘）；R1/R2 背靠背 **43/43×2 零失败零轮换**
+- **本批断言加强项双轮全过（打磨计划 A3 收口）**：①H1 补 target_k_nm2=5——E/κ 双槽位+单位语义锁定（"2GPa"→target_e_gpa=2 直读、"5e-9 m²"→target_k_nm2=5 即 ×10⁻⁹ m² 口径）；②E5 check 钩——porosity 显式且合法（参数透明硬线）+modelNote 若带文本必含披露语义（软线，flash 档常无 text 块=档位差异如实）；③F4 isoGrad 在 schema required:[values] 后真实链路照常通过（模型从指令正确填 values）
+- strut 真场修复（同日 G1-G5）后 B7/B8 两轮照常 PASS——NL 语义层与几何修复解耦，链路完整
+- 复现三 env 铁律同上（KEY/BASE_URL/REG_PROVIDER=anthropic + TPMS_LLM_TIMEOUT_MS=170000）

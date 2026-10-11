@@ -48,7 +48,7 @@
 - [x] **A1 修复嵌套必填校验。**（tools.schema isoGrad required:[values]+validateValue 嵌套 required 递归（数组内深层独立小 schema 钉）；mock 真实执行入口 exit2 无 TypeError——llm_provider_selftest 43→69 断言） 两处 `isoGrad` schema 要求 `values`，递归 validator 检查嵌套 `required`。空对象、仅 band 和缺字段均结构化拒绝；合法 values 保持可执行。非法输入退出码为 2，不出现裸 TypeError。
 - [x] **A2 收口 Provider 正文超时。**（三 Provider 计时器覆盖响应头+JSON 正文+错误正文读取，中止态优先超时语义；本地 HTTP 五形态（正常/慢正文/挂正文/慢错误/正常错误）×3 Provider 全测） 三个 Provider 的计时器覆盖响应头、JSON 正文和错误正文读取。验证立即响应头后挂起、慢错误正文、正常响应；结束后清理计时器和请求资源。这是已登记问题的修复。
 - [x] **U1 修复压溃拒绝后的重试。**（运行标志/禁按钮移到支持条件检查后——壳模式拒绝不占锁；card_smoke G 段三断言（壳模式可重试/切回实体 NL 启动/运行中拒绝重复+结果后解锁）19/0） 在设置运行标志、禁用按钮前完成支持条件检查。壳模式拒绝后切回实体网络可再次启动；按钮与 NL 入口状态一致。
-- [ ] **A3 补齐关键语义验收。**（离线已落：H1 补 target_k_nm2=5 单位锁定+E5 check 钩（porosity 显式=硬线/备注披露=软线）+modelNote 双出口断言；**余：真实模型 n=2 复验待用户 key（本会话 env 无 key）**） H1/H2 比较 E、κ 槽位及单位；E5 检查无上下文指代的披露和实际参数；检查 `modelNote` 在普通输出和 JSON 出口保留。先完成离线用例，再按现有 n=2 标准复验真实模型。
+- [x] **A3 补齐关键语义验收。**（离线：H1 κ 槽位单位锁定+E5 check 钩+modelNote 双出口断言；真实模型：2026-10-11 用户新 key（anthropic 通道）**43/43×2 双轮满贯**——加强断言全过，H1 双槽位/E5 披露钩/F4 values 必填两轮经受，见 LLM_REGRESSION_LIVE.md 2026-10-11 节） H1/H2 比较 E、κ 槽位及单位；E5 检查无上下文指代的披露和实际参数；检查 `modelNote` 在普通输出和 JSON 出口保留。先完成离线用例，再按现有 n=2 标准复验真实模型。
 
 主要文件：[tools.schema.json](../tpms/agent/tools.schema.json)、[llm-provider.mjs](../tpms/agent/llm-provider.mjs)、[llm-agent.mjs](../tpms/agent/llm-agent.mjs)、[llm_regression.mjs](../tpms/agent/llm_regression.mjs)、[main.ts](../tpms/tpms-platform/src/main.ts)。
 
