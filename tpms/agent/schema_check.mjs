@@ -189,19 +189,10 @@ for (const ty of TYPES) {
     continue;
   }
   if (ty === 'strutbcc' || ty === 'strutoctet') {
-    // 【2026-10-11 打磨批 G1-G5】strut 真场修复后的交付契约：
-    //  · strutbcc：真 BCC 桁架全链可产（曾=schwarz 嵌合体，strut_exit_audit E1 锚）
-    //  · strutoctet：真 Octet 拓扑（角杆恢复）在 surface-nets 下 12 杆结点多片胞
-    //    结构性非流形（单顶点/胞抽取局限，分辨率/杆径全域实测无水密窗）——契约=
-    //    fail-closed 拒产绝不交付破网格；抽取器多片胞改造为独立批次（bugs.md 在案）
+    // 【2026-10-11 S8 解锁批】非流形短边焊接（surface-nets 9b，strut 门控）后双族
+    // 全链可产：octet k8 R96 水密 0.88pp（曾 12 杆结点投影重合 4-共享边全域拒产）
     const r = run('mesh', '--type', ty, '--porosity', '0.7', '--resolution', '64', '--out', join(tmpOut()), '--json');
-    if (ty === 'strutbcc') {
-      r.status === 0 ? ok('type enum 值 strutbcc 可构建（真 BCC 桁架；G1 cell=2π 契约，dev 0.19pp@R64') : bad('type enum strutbcc R64', (r.stderr || '').slice(-70));
-    } else {
-      r.status === 3 && (r.stderr || '').includes('水密门')
-        ? ok('type enum 值 strutoctet 已登记 fail-closed（12 杆结点非流形，真拓扑修复后暴露）')
-        : bad('type enum strutoctet 行为漂移', `exit=${r.status}`);
-    }
+    r.status === 0 ? ok(`type enum 值 ${ty} 可构建（焊接后真场水密；G1 cell=2π 契约）`) : bad(`type enum ${ty} R64`, (r.stderr || '').slice(-70));
     continue;
   }
   if (ty === 'lidinoid') {

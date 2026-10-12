@@ -1236,6 +1236,66 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   //     full 模式：解析梯度（边界顶点用几何法线，内部用 ∇f）
   //     preview 模式：跳过解析法线，用离散 computeVertexNormals
   // ──────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────
+  // 9b. 非流形短边焊接（2026-10-11 S8 解锁批，仅 strut 桁架族）：
+  //    Newton 投影把薄feature两侧的胞质心拉到同一表面点附近 → 亚格距短边被
+  //    4 个 sliver 三角共享 = 非流形（真 Octet 12 杆结点全域实测 nm 4050@k3R48）。
+  //    机制（探针实证 eps 扫描 4050→46→0）：只焊「使用次数≠2」的边——流形边永不动，
+  //    焊接畸变上界=非流形边自身长度（物理掐捏点处两侧近重合片合一）；每轮批量焊
+  //    全体不相交候选（union-find 合链），迭代至无非流形边。实测 k3R48：weld 4096
+  //    处，open=0 nm=0 全水密；tri 129892→113540（去退化 sliver）。
+  //    经典族不进此段（字节级不变量）；单遍批量化使探针 602s → 内核秒级。
+  // ──────────────────────────────────────────────────────────────
+  if ((type === 'strutbcc' || type === 'strutoctet') && indexCount >= 3) {
+    const vpar = new Int32Array(vertCount).map((_, i) => i);
+    const vfind = (i: number): number => { while (vpar[i] !== i) { vpar[i] = vpar[vpar[i]]; i = vpar[i]; } return i; };
+    let weldedTotal = 0;
+    for (let round = 0; round < 64; round++) {
+      // 边使用计数（当前合并态）
+      const use = new Map<number, number>();
+      const eu = (a: number, b: number) => {
+        if (a === b) return;
+        const k = a < b ? a * 4294967296 + b : b * 4294967296 + a;
+        use.set(k, (use.get(k) ?? 0) + 1);
+      };
+      for (let t = 0; t < indexCount; t += 3) {
+        eu(vfind(indices[t]), vfind(indices[t + 1]));
+        eu(vfind(indices[t + 1]), vfind(indices[t + 2]));
+        eu(vfind(indices[t + 2]), vfind(indices[t]));
+      }
+      // 候选：使用≠2 的边；每轮全体（union-find 天然处理共享端点链）
+      const cands: Array<[number, number]> = [];
+      for (const [k, n] of use) {
+        if (n === 2) continue;
+        cands.push([Math.floor(k / 4294967296), k % 4294967296]);
+      }
+      if (cands.length === 0) break;
+      let mergedThisRound = 0;
+      for (const [a0, b0] of cands) {
+        const ra = vfind(a0), rb = vfind(b0);
+        if (ra === rb) continue;
+        // 位置取中点（低号根保留）
+        const lo = Math.min(ra, rb), hi = Math.max(ra, rb);
+        positions[lo * 3] = (positions[lo * 3] + positions[hi * 3]) / 2;
+        positions[lo * 3 + 1] = (positions[lo * 3 + 1] + positions[hi * 3 + 1]) / 2;
+        positions[lo * 3 + 2] = (positions[lo * 3 + 2] + positions[hi * 3 + 2]) / 2;
+        vpar[hi] = lo;
+        mergedThisRound++;
+      }
+      if (mergedThisRound === 0) break;
+      weldedTotal += mergedThisRound;
+      // 重索引 + 去退化三角形（就地压缩）
+      let w = 0;
+      for (let t = 0; t < indexCount; t += 3) {
+        const a = vfind(indices[t]), b = vfind(indices[t + 1]), c = vfind(indices[t + 2]);
+        if (a === b || b === c || a === c) continue;
+        indices[w++] = a; indices[w++] = b; indices[w++] = c;
+      }
+      indexCount = w;
+    }
+    void weldedTotal;
+  }
+
   const normals = pool.normals.subarray(0, vertCount * 3);
 
   if (vertCount > 0 && !isPreview) {

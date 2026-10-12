@@ -166,12 +166,11 @@ const BP = (type, extra = {}) => ({ type, iso: 0, periods: 3, resolution: 48, we
     `bcc=${r1.indices.length / 3} schwarz=${r1b.indices.length / 3}`);
 }
 {
-  // E2 mesh（octet）: 真拓扑在 surface-nets 下结构性非流形（12 杆结点多片同胞）——
-  // 契约=CLI fail-closed 拒交付（exit 3），绝不落盘破网格。抽取器多片胞改造前为已知边界。
+  // E2 mesh（octet）：非流形短边焊接（surface-nets 9b，2026-10-11 S8 解锁批）后
+  // 真拓扑水密交付（曾 12 杆结点投影重合 4-共享边全域拒产——焊接根治）
   const r = spawnSync(process.execPath, [join(ROOT, 'tpms/agent/tpms.mjs'), 'mesh', '--type', 'strutoctet',
     '--porosity', '70', '--resolution', '48', '--json'], { encoding: 'utf8', timeout: 600_000, cwd: ROOT });
-  const rejected = r.status === 3;
-  check('E2 mesh(octet): 非流形 fail-closed（exit 3 结构化拒收，无破网格交付）', rejected,
+  check('E2 mesh(octet): 焊接后水密交付（exit0 + watertight True）', r.status === 0 && /"watertight":\s*true/.test(r.stdout || ''),
     `exit=${r.status} ${(r.stderr || '').slice(0, 90).replace(/\n/g, ' ')}`);
 }
 {

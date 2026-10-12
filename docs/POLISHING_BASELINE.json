@@ -179,5 +179,63 @@
         "sourceVersion": "post-fix-true-bcc-2026-10-11"
       }
     ]
+  },
+  "postFixS8Weld": {
+    "recordedOn": "2026-10-11",
+    "note": "非流形短边焊接（surface-nets 9b）解锁后 S8 重生成：k8 R96 水密 0.88pp 四件逐位确定；S7 未重生成（bcc nm=0 焊接 no-op，postFix 块哈希仍有效）",
+    "affectedSpecimens": [
+      {
+        "path": "specimens/S8_O65.stl",
+        "sha256": "78c0a6fc04777a68ceffe2e22b7ac0db08d18fdeeb6b73fc8c0e56d5604fb68a",
+        "bytes": 42249684,
+        "metadata": "specimens/S8_O65.json",
+        "type": "strutoctet",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6587538134468767,
+        "watertight": true,
+        "sourceVersion": "post-weld-2026-10-11"
+      },
+      {
+        "path": "specimens/S8_O65_r1.stl",
+        "sha256": "78c0a6fc04777a68ceffe2e22b7ac0db08d18fdeeb6b73fc8c0e56d5604fb68a",
+        "bytes": 42249684,
+        "metadata": "specimens/S8_O65_r1.json",
+        "type": "strutoctet",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6587538134468767,
+        "watertight": true,
+        "sourceVersion": "post-weld-2026-10-11"
+      },
+      {
+        "path": "specimens/S8_O65_r2.stl",
+        "sha256": "78c0a6fc04777a68ceffe2e22b7ac0db08d18fdeeb6b73fc8c0e56d5604fb68a",
+        "bytes": 42249684,
+        "metadata": "specimens/S8_O65_r2.json",
+        "type": "strutoctet",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6587538134468767,
+        "watertight": true,
+        "sourceVersion": "post-weld-2026-10-11"
+      },
+      {
+        "path": "specimens/S8_O65_r3.stl",
+        "sha256": "78c0a6fc04777a68ceffe2e22b7ac0db08d18fdeeb6b73fc8c0e56d5604fb68a",
+        "bytes": 42249684,
+        "metadata": "specimens/S8_O65_r3.json",
+        "type": "strutoctet",
+        "porosityTarget": 0.65,
+        "periods": 8,
+        "resolution": 96,
+        "porosityMeasured": 0.6587538134468767,
+        "watertight": true,
+        "sourceVersion": "post-weld-2026-10-11"
+      }
+    ]
   }
 }

@@ -15,5 +15,5 @@
 - 稳定：路径穿越删非法 `out`、越界自钳制、G 组闭环；历史弱项 C3 cylinder 工具选择抖动已缓解（37 条时代记录在案）
 - 明细：`docs/LLM_REGRESSION_LIVE.md`；key **未入库**
 
-> 仓内命令、门禁、28 件可打印试样（含 S7 真场 BCC 桁架对照组；S8 Octet 受阻于抽取器非流形边界已披露）、文档、真实模型回归已齐。剩余两步（转化 / 上机）仍需你侧。
+> 仓内命令、门禁、32 件可打印试样（含 S7 真 BCC + S8 真 Octet 桁架对照组——后者经非流形短边焊接于同日解锁）、文档、真实模型回归已齐。剩余两步（转化 / 上机）仍需你侧。
 > 虚拟标定闭环（合成曲线，**非实机**）：`node tpms/agent/virtual-calibration.mjs` → `docs/VIRTUAL_CALIBRATION.md`

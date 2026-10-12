@@ -63,7 +63,7 @@
 | qstar | ⛔ | ✅ |  |
 | ws | ✅ | ✅ |  |
 | strutbcc | ✅ | ✅ | 真 BCC 桁架（2026-10-11 G1-G5 修复：cell=2π 一周期=k 个/域，k=periods 联动 cellSize；曾长期为 schwarz 嵌合体——提取场漏列查表）；C1=0.06 已标定 |
-| strutoctet | ⛔ | ⛔ | 真 Octet 拓扑（角杆 2026-10-11 恢复）；12 杆结点多片胞在 surface-nets 下结构性非流形→STL 出口 fail-closed 拒产（体素/RVE/脚本出口正常，抽取器多片胞改造留批次）；C1=1.2 线性律披露 |
+| strutoctet | ⛔ | ⛔ | 真 Octet 拓扑（2026-10-11 焊接解锁：12 杆结点 Newton 投影重合 4-共享边曾全域拒产→非流形短边焊接根治，k8 R96 水密 0.88pp；上表若为拒产行=焊接前时点快照，重跑 `benchmarks.mjs --md BENCHMARKS.md` 刷新）；C1=1.2 线性律披露 |
 
 ## 3. 力学解析口径（Gibson-Ashby，非 FEA）
 

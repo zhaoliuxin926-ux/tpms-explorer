@@ -55,7 +55,7 @@
 
 | 能力 | 说明 | 验证 |
 |---|---|---|
-| 🧬 26 族曲面（24 TPMS + 2 桁架） | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等）+ **strut 桁架双族**（BCC 弯曲主导 / Octet 拉伸主导，杆=胶囊 SDF 周期场，cell=2π 一周期契约——桁架侧力学谱；Octet STL 出口为 12 杆结点非流形 fail-closed 已知边界，体素/RVE/脚本出口正常）+ **26 族画廊**（一屏同参数缩略对比，点击切族），可用域与文献对照见 BENCHMARKS.md | parity_math 337 断言四方同源 + mesh_audit 34 案例 |
+| 🧬 26 族曲面（24 TPMS + 2 桁架） | 教学 8 类经典 + 工程版 C2 扩展（Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等）+ **strut 桁架双族**（BCC 弯曲主导 / Octet 拉伸主导，杆=胶囊 SDF 周期场，cell=2π 一周期契约——桁架侧力学谱；Octet 12 杆结点非流形曾全域拒产，2026-10-11 非流形短边焊接根治=双族全链水密可产）+ **26 族画廊**（一屏同参数缩略对比，点击切族），可用域与文献对照见 BENCHMARKS.md | parity_math 337 断言四方同源 + mesh_audit 34 案例 |
 | 🔬 网格管线 v2 | 边穿越键提取 + 切向 Taubin + 解析 Newton 投影，构造性水密 | 34 案例审计门（29 几何 + 5 拒产/RT 哨兵），几何案例开放边 = 0 |
 | 🧱 加载端板 | 压缩试验防接触早溃的实心端板（0~3 mm，体素场融合） | 端板审计 26 断言，体积增量实测 ≤1.79% |
 | 🌊 CFD Multi-Patch STL | inlet/outlet/sides/wall 四区块自动分类，OpenFOAM 直读 | sim_export_check 13 断言 |
