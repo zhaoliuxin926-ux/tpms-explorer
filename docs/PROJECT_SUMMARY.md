@@ -1,6 +1,6 @@
 # TPMS Explorer 项目全貌总结（v1.1.0）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **47 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **48 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4–v9.2 + v1.0.x.md（×7）。
 
 ---
@@ -142,7 +142,7 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 
 ## 六、文档体系
 
-- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（47 门徽章 1000+）+ LEARNING_PATH 入口
+- **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（48 门徽章 1000+）+ LEARNING_PATH 入口
 - **WORKFLOW_GUIDE.md**：36 章（TOC）实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
 - **RELEASE_NOTES_v2.4–v9.2 + v1.0.x**：七份双语发布说明
 - **BENCHMARKS.md**：26 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
@@ -181,7 +181,7 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 cd tpms/tpms-platform
 npm run dev          # 开发
 npm run build        # 构建（dist → docs/platform 同步，勿入库 sourcemap）
-npm run test:all     # 47 门 CI（本机约 6-10 分钟）
+npm run test:all     # 48 门 CI（本机约 6-10 分钟）
 
 # Agent CLI
 node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.65 --resolution 96 --json

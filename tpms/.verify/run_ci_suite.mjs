@@ -169,6 +169,9 @@ const SCHEDULE = [
   // 【2026-10-11 纳管】打磨计划批次 1A：strut 桁架族跨出口一致性（G1 尺度契约/G2 拓扑锚/
   // G3 分派哨兵/G4 脚本出口/G5 mesh-体素-RVE 矩阵；octet 非流形 fail-closed 契约钉）
   ['strut_exit_audit 桁架跨出口矩阵（28 断言/GUARD 24；cell=2π 契约+Octet 拓扑锚+独立参考对拍+mesh/体素/RVE/脚本一致性）', '桁架跨出口矩阵', 'strut_exit_audit.mjs'],
+  // 【2026-10-11 纳管】批次 5 管线三链（成功/不可达/预算耗尽）+M4 闭环原 6 断言——
+  // "不在调度→静默红"事故史纪律（selftest/schema_check/llm_provider 三先例）
+  ['llm_driver_selftest M4 闭环+管线三链（10 断言，真实执行 ~2 分钟）', '驱动闭环+管线', '../agent/llm_driver_selftest.mjs'],
 ];
 
 const JOBS = Math.max(1, Math.min(8, Number(process.env.CI_JOBS) || 4));

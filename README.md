@@ -3,7 +3,7 @@
 > **中文** · [English](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
 ![release](https://img.shields.io/badge/release-v1.1.0-2563eb)
-![ci](https://img.shields.io/badge/CI-47%2F47%20gates%C2%B71000%2B%20assertions-16a34a)
+![ci](https://img.shields.io/badge/CI-48%2F48%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
 ![license-note](https://img.shields.io/badge/status-独立开源作品-8b5cf6)
@@ -63,7 +63,7 @@
 | 🐍 脚本复现 | Python(PyVista)/MATLAB 自包含重建脚本，与平台逐点对齐 | parity_math 337/337 |
 | 📦 工业格式导出 | 彩色 GLB（顶点色）+ 3MF（mm 原生/端板元数据/单位声明）+ VTK/VTI | industrial_export_audit 24 断言 |
 | 🌀 三向迂曲度 τ | 26 连通 Dijkstra 几何迂曲度（壳层排除口径）+ Zener 各向异性比 | micro_physics_audit 17 断言 |
-| 🔗 分享与审计 | URL 全量恢复 + **47 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 47/47 |
+| 🔗 分享与审计 | URL 全量恢复 + **48 道 CI 门禁、1000+ 断言**（三平台矩阵） | state_url_audit 12 + worker_bridge_audit 11；`run_ci_suite` 顶层汇总 48/48 |
 | 🎯 Pareto 多目标前沿 | 骨支架三难权衡（E↑力学×κ↑传质×Sv↑生物活性）可视化：26 族×孔隙率×密度毫秒级解析代理扫描 → 非支配前沿 log-log 散点 → hover 读数 → **点击写回设计参数**；约束过滤（可行子集重算）+ 前沿 CSV 导出 + 双族混合律扫描（E/Sv 凸组合+κ KC 重算）+ **逆设计推荐**（输入目标 E/κ → 可达时给最小超标的达标点、不可达时给最近妥协，top-3 ★愿望点+log10 距离量化） | ml_pareto_audit 16 断言（hybrid b=0/1 退化锚+非支配性+逆设计距离序/fail-closed） |
 | 🤖 自然语言 Agent | **M0-M5 全线打通**：NL → tool calling → schema 拦截（路径狱/越界拒绝）→ CLI 确定性执行；OpenAI 兼容端点（智谱/DeepSeek/LM Studio）+ Anthropic 兼容（智谱 Coding Plan 订阅直抵）+ Ollama + Mock 四 Provider | 43 条中英指令真实模型回归（glm-5.3-flash 满贯 43/43×2 轮 n=2（勿称确定性，含 H 组逆设计意图），6/6 端点×模型矩阵在案）+ llm_provider_selftest 91 断言（GUARD 91，+嵌套必填/正文超时/CLI 会话/工具历史编排/参数卫生红队钉 2026-10-11） |
 | 🏋️ WebGPU 弹塑性大变形 | 全拉格朗日 StVK + J2 径向返回体素 FEM，能量漂移 ≤0.5%（v6.0） | gpu_plasticity_audit 57 断言 |
@@ -107,7 +107,7 @@
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
-- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 47/47（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门）。
+- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 48/48（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门）。
 - 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 331 断言（干净 clone 口径），GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 - **60 秒自证（访客/面试官，无需 npm install——以下两门纯 node:fs 零依赖）**：
 
@@ -117,7 +117,7 @@
   node tpms/.verify/docs_consistency_check.mjs # 文档数字一致性 331 断言（README↔代码↔GUARD 对拍，~10s）
   ```
 
-  47 门不是徽章嘴说的——这两条命令让你亲眼看到门禁在审计门禁自己。
+  48 门不是徽章嘴说的——这两条命令让你亲眼看到门禁在审计门禁自己。
 
 ---
 

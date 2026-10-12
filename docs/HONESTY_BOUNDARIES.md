@@ -1,6 +1,6 @@
 # 诚实边界表（自动生成）
 
-> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-10-11）。
+> 由 `node tpms/agent/gen-boundary-table.mjs` 从 `tpms/agent_memory/bugs.md` §一 重生（2026-10-12）。
 > **改边界只改 bugs.md 定案，再跑本脚本**；禁止手改本表导致双源漂移。
 
 | # | 边界 | 说明（摘要） |
