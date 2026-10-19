@@ -6,12 +6,12 @@
 3. 把 4 条链接丢回本仓任一会话 → AI 回填 README / job_narrative
 
 ## 2 · 物理闭环（有打印机时）
-1. `docs/LAB_ONE_PAGER.md` 打印 `specimens/S*_r1.stl`（18 件已在 `specimens/`）
+1. `docs/LAB_ONE_PAGER.md` 打印 `specimens/S*_r1.stl`（32 件已在 `specimens/`：S1-S6 经典 24 件+S7 真 BCC+S8 真 Octet 桁架对照组）
 2. ISO 13314 压缩 → CSV 放 `specimens/csv/`
 3. `node tpms/agent/fit-batch.mjs`；正式 ISO 以工程版「试验曲线反演」复核为准
 
-## 3 · 模型回归 —— ✅ 已完成（2026-09-24 首轮，2026-10-05 刷新）
-- **glm-5.3-flash 双轮：40/40×2（n=2）**；**勿称确定性**；端点×模型矩阵 6/6 在案
+## 3 · 模型回归 —— ✅ 已完成（2026-09-24 首轮，2026-10-11 刷新）
+- **glm-5.3-flash 双轮：43/43×2（n=2）**；**勿称确定性**；端点×模型矩阵 6/6 在案
 - 稳定：路径穿越删非法 `out`、越界自钳制、G 组闭环；历史弱项 C3 cylinder 工具选择抖动已缓解（37 条时代记录在案）
 - 明细：`docs/LLM_REGRESSION_LIVE.md`；key **未入库**
 

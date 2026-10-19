@@ -1,38 +1,38 @@
 # BENCHMARKS — TPMS Explorer 公开基准
 
-> 生成于 2026-10-11T07:29:14.570Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
+> 生成于 2026-10-19T08:12:01.120Z｜复跑：`node tpms/agent/benchmarks.mjs --md BENCHMARKS.md`（约 10-20 分钟，全程确定性）
 > 口径：目标孔隙率 60%｜exact 孔隙率求解器（解析积分求根 + 网格实测割线校正）｜水密三硬指标（开放边/非流形边/退化面）任一非零即 fail-closed 拒产——**拒产是平台的正确行为**，代表该 (曲面, 孔隙率, 分辨率) 组合的网格表示不可靠（亚体素薄壁自触，随分辨率收敛）。
 
 ## 1. 几何基准矩阵（可产性 / 水密 / 孔隙率偏差）
 
 | 曲面 | R48 | R96 |
 |---|---|---|
-| gyroid | ✓ dev 0.59pp / 2424ms | ✓ dev 0.09pp / 7641ms |
-| diamond | ✓ dev 0.06pp / 2420ms | ✓ dev 0.37pp / 6325ms |
-| schwarz | ✓ dev 0.02pp / 1449ms | ✓ dev 0.12pp / 4031ms |
-| neovius | ✓ dev 0.18pp / 1857ms | ✓ dev 0.27pp / 4723ms |
-| iwp | ✓ dev 0.22pp / 2974ms | ✓ dev 0.02pp / 10172ms |
-| frd | ✓ dev 4.08pp / 3717ms | ✓ dev 0.04pp / 12515ms |
-| lidinoid | ✓ dev 0.3pp / 5165ms | ✓ dev 0.09pp / 19201ms |
-| splitp | ✓ dev 0.59pp / 4650ms | ✓ dev 0.3pp / 17836ms |
-| octo | ✓ dev 6.95pp / 2573ms | ✓ dev 0.34pp / 9557ms |
-| karcher | ✓ dev 0.49pp / 3728ms | ✓ dev 0.22pp / 12853ms |
-| fks | 拒产 (nm 9504) / 3922ms | ✓ dev 0.17pp / 9530ms |
-| fky | 拒产 (nm 4752) / 3503ms | ✓ dev 0.57pp / 15770ms |
-| gprime | ✓ dev 1.11pp / 4353ms | 拒产 (nm 19080) / 8594ms |
-| fcks | 拒产 (nm 27720) / 4335ms | 拒产 (nm 10368) / 16830ms |
-| dprime | 拒产 (nm 18252) / 4048ms | ✓ dev 0.14pp / 18372ms |
-| dp | ✓ dev 2.92pp / 4401ms | ✓ dev 0.22pp / 9580ms |
-| dd | ✓ dev 1.26pp / 3503ms | ✓ dev 0.16pp / 7577ms |
-| dg | 拒产 (nm 18354) / 4572ms | ✓ dev 0.19pp / 13805ms |
-| fcky | ✓ dev 0.28pp / 3117ms | ✓ dev 0.2pp / 6575ms |
-| cdd | 拒产 (nm 18252) / 3075ms | ✓ dev 0.16pp / 20777ms |
-| slotp | ✓ dev 2.16pp / 3889ms | ✓ dev 0.2pp / 12700ms |
-| fs | ✓ dev 9.55pp / 2152ms | ✓ dev 0.07pp / 7882ms |
-| qstar | 拒产 (nm 792) / 3051ms | ✓ dev 0.18pp / 6762ms |
-| ws | ✓ dev 13.26pp / 3491ms | ✓ dev 0.15pp / 15013ms |
-| strutbcc | ✓ dev 0.56pp / 5582ms | ✓ dev 0.25pp / 13050ms |
-| strutoctet | 拒产 (nm 17424) / 22014ms | 拒产 (nm 38160) / 112555ms |
+| gyroid | ✓ dev 0.59pp / 2445ms | ✓ dev 0.09pp / 7976ms |
+| diamond | ✓ dev 0.06pp / 2536ms | ✓ dev 0.37pp / 6604ms |
+| schwarz | ✓ dev 0.02pp / 1852ms | ✓ dev 0.12pp / 3776ms |
+| neovius | ✓ dev 0.18pp / 2191ms | ✓ dev 0.27pp / 4418ms |
+| iwp | ✓ dev 0.22pp / 2691ms | ✓ dev 0.02pp / 8543ms |
+| frd | ✓ dev 4.08pp / 3535ms | ✓ dev 0.04pp / 10988ms |
+| lidinoid | ✓ dev 0.3pp / 4117ms | ✓ dev 0.09pp / 16480ms |
+| splitp | ✓ dev 0.59pp / 3845ms | ✓ dev 0.3pp / 15006ms |
+| octo | ✓ dev 6.95pp / 2102ms | ✓ dev 0.34pp / 8269ms |
+| karcher | ✓ dev 0.49pp / 3140ms | ✓ dev 0.22pp / 10824ms |
+| fks | 拒产 (nm 9504) / 3141ms | ✓ dev 0.17pp / 9127ms |
+| fky | 拒产 (nm 4752) / 2855ms | ✓ dev 0.57pp / 14400ms |
+| gprime | ✓ dev 1.11pp / 3952ms | 拒产 (nm 19080) / 7420ms |
+| fcks | 拒产 (nm 27720) / 3384ms | 拒产 (nm 10368) / 15895ms |
+| dprime | 拒产 (nm 18252) / 3836ms | ✓ dev 0.14pp / 17202ms |
+| dp | ✓ dev 2.92pp / 3500ms | ✓ dev 0.22pp / 7969ms |
+| dd | ✓ dev 1.26pp / 3146ms | ✓ dev 0.16pp / 6540ms |
+| dg | 拒产 (nm 18354) / 4358ms | ✓ dev 0.19pp / 13806ms |
+| fcky | ✓ dev 0.28pp / 3134ms | ✓ dev 0.2pp / 7762ms |
+| cdd | 拒产 (nm 18252) / 4087ms | ✓ dev 0.16pp / 19580ms |
+| slotp | ✓ dev 2.16pp / 3335ms | ✓ dev 0.2pp / 11462ms |
+| fs | ✓ dev 9.55pp / 1953ms | ✓ dev 0.07pp / 7709ms |
+| qstar | 拒产 (nm 792) / 2445ms | ✓ dev 0.18pp / 6428ms |
+| ws | ✓ dev 13.26pp / 3257ms | ✓ dev 0.15pp / 13829ms |
+| strutbcc | ✓ dev 0.56pp / 5022ms | ✓ dev 0.25pp / 12422ms |
+| strutoctet | ✓ dev 2.37pp / 20468ms | ✓ dev 0.47pp / 109753ms |
 
 ## 2. 可用域速查（LLM/用户选择曲面时的决策表）
 
@@ -63,7 +63,7 @@
 | qstar | ⛔ | ✅ |  |
 | ws | ✅ | ✅ |  |
 | strutbcc | ✅ | ✅ | 真 BCC 桁架（2026-10-11 G1-G5 修复：cell=2π 一周期=k 个/域，k=periods 联动 cellSize；曾长期为 schwarz 嵌合体——提取场漏列查表）；C1=0.06 已标定 |
-| strutoctet | ⛔ | ⛔ | 真 Octet 拓扑（2026-10-11 焊接解锁：12 杆结点 Newton 投影重合 4-共享边曾全域拒产→非流形短边焊接根治，k8 R96 水密 0.88pp；上表若为拒产行=焊接前时点快照，重跑 `benchmarks.mjs --md BENCHMARKS.md` 刷新）；C1=1.2 线性律披露 |
+| strutoctet | ✅ | ✅ | 真 Octet 拓扑（2026-10-11 焊接解锁：12 杆结点 Newton 投影重合 4-共享边曾全域拒产→非流形短边焊接根治，k8 R96 水密 0.88pp；上表若为拒产行=焊接前时点快照，重跑 `benchmarks.mjs --md BENCHMARKS.md` 刷新）；C1=1.2 线性律披露 |
 
 ## 3. 力学解析口径（Gibson-Ashby，非 FEA）
 
@@ -76,8 +76,8 @@
 | 能力 | 本项目 | RegionTPMS | MiniSurf | microgen |
 |---|---|---|---|---|
 | 浏览器零安装交互 | ✅ WebGPU/TS 单页 | ❌ Mathematica | ❌ MATLAB | ❌ Python 库 |
-| 曲面族 | 24 | 4 | 19 | 8+ |
-| 验证门禁 | 46 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |
+| 曲面族 | 26 | 4 | 19 | 8+ |
+| 验证门禁 | 48 道 CI 门禁 / 1000+ 断言 | ❌ | ❌ | ❌ |
 | 孔隙率求解 | exact 解析求根+网格实测校正（Diamond R96 见 §2 当前快照，MC 噪声带 0.1~0.4pp） | 解析 NIntegrate | level-set 近似 | 数值 |
 | 渐变等值场 | ✅ isoGrad 三平台+过渡带 | ✅ 渐变 | ❌ | 部分 |
 | 异族拼接 | ✅ hybrid 凸组合（CLI/UI） | ✅ 多相 | ❌ | ❌ |

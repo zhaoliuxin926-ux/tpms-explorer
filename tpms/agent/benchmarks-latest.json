@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-11T07:29:14.564Z",
+ "generatedAt": "2026-10-19T08:12:01.112Z",
  "porosity": 0.6,
  "rows": [
   {
@@ -11,7 +11,7 @@
    "devPP": 0.59,
    "tris": 133920,
    "stlBytes": 6696084,
-   "wallMs": 2424,
+   "wallMs": 2445,
    "rejected": false,
    "err": ""
   },
@@ -24,7 +24,7 @@
    "devPP": 0.09,
    "tris": 536904,
    "stlBytes": 26845284,
-   "wallMs": 7641,
+   "wallMs": 7976,
    "rejected": false,
    "err": ""
   },
@@ -37,7 +37,7 @@
    "devPP": 0.06,
    "tris": 139896,
    "stlBytes": 6994884,
-   "wallMs": 2420,
+   "wallMs": 2536,
    "rejected": false,
    "err": ""
   },
@@ -50,7 +50,7 @@
    "devPP": 0.37,
    "tris": 662904,
    "stlBytes": 33145284,
-   "wallMs": 6325,
+   "wallMs": 6604,
    "rejected": false,
    "err": ""
   },
@@ -63,7 +63,7 @@
    "devPP": 0.02,
    "tris": 89424,
    "stlBytes": 4471284,
-   "wallMs": 1449,
+   "wallMs": 1852,
    "rejected": false,
    "err": ""
   },
@@ -76,7 +76,7 @@
    "devPP": 0.12,
    "tris": 416016,
    "stlBytes": 20800884,
-   "wallMs": 4031,
+   "wallMs": 3776,
    "rejected": false,
    "err": ""
   },
@@ -89,7 +89,7 @@
    "devPP": 0.18,
    "tris": 133848,
    "stlBytes": 6692484,
-   "wallMs": 1857,
+   "wallMs": 2191,
    "rejected": false,
    "err": ""
   },
@@ -102,7 +102,7 @@
    "devPP": 0.27,
    "tris": 524664,
    "stlBytes": 26233284,
-   "wallMs": 4723,
+   "wallMs": 4418,
    "rejected": false,
    "err": ""
   },
@@ -115,7 +115,7 @@
    "devPP": 0.22,
    "tris": 155592,
    "stlBytes": 7779684,
-   "wallMs": 2974,
+   "wallMs": 2691,
    "rejected": false,
    "err": ""
   },
@@ -128,7 +128,7 @@
    "devPP": 0.02,
    "tris": 607752,
    "stlBytes": 30387684,
-   "wallMs": 10172,
+   "wallMs": 8543,
    "rejected": false,
    "err": ""
   },
@@ -141,7 +141,7 @@
    "devPP": 4.08,
    "tris": 199224,
    "stlBytes": 9961284,
-   "wallMs": 3717,
+   "wallMs": 3535,
    "rejected": false,
    "err": ""
   },
@@ -154,7 +154,7 @@
    "devPP": 0.04,
    "tris": 761976,
    "stlBytes": 38098884,
-   "wallMs": 12515,
+   "wallMs": 10988,
    "rejected": false,
    "err": ""
   },
@@ -167,7 +167,7 @@
    "devPP": 0.3,
    "tris": 243516,
    "stlBytes": 12175884,
-   "wallMs": 5165,
+   "wallMs": 4117,
    "rejected": false,
    "err": ""
   },
@@ -180,7 +180,7 @@
    "devPP": 0.09,
    "tris": 1047900,
    "stlBytes": 52395084,
-   "wallMs": 19201,
+   "wallMs": 16480,
    "rejected": false,
    "err": ""
   },
@@ -193,7 +193,7 @@
    "devPP": 0.59,
    "tris": 203772,
    "stlBytes": 10188684,
-   "wallMs": 4650,
+   "wallMs": 3845,
    "rejected": false,
    "err": ""
   },
@@ -206,7 +206,7 @@
    "devPP": 0.3,
    "tris": 887196,
    "stlBytes": 44359884,
-   "wallMs": 17836,
+   "wallMs": 15006,
    "rejected": false,
    "err": ""
   },
@@ -219,7 +219,7 @@
    "devPP": 6.95,
    "tris": 124056,
    "stlBytes": 6202884,
-   "wallMs": 2573,
+   "wallMs": 2102,
    "rejected": false,
    "err": ""
   },
@@ -232,7 +232,7 @@
    "devPP": 0.34,
    "tris": 640152,
    "stlBytes": 32007684,
-   "wallMs": 9557,
+   "wallMs": 8269,
    "rejected": false,
    "err": ""
   },
@@ -245,7 +245,7 @@
    "devPP": 0.49,
    "tris": 177192,
    "stlBytes": 8859684,
-   "wallMs": 3728,
+   "wallMs": 3140,
    "rejected": false,
    "err": ""
   },
@@ -258,7 +258,7 @@
    "devPP": 0.22,
    "tris": 728136,
    "stlBytes": 36406884,
-   "wallMs": 12853,
+   "wallMs": 10824,
    "rejected": false,
    "err": ""
   },
@@ -271,7 +271,7 @@
    "devPP": 7.35,
    "tris": 228960,
    "stlBytes": null,
-   "wallMs": 3922,
+   "wallMs": 3141,
    "rejected": true,
    "err": ""
   },
@@ -284,7 +284,7 @@
    "devPP": 0.17,
    "tris": 884088,
    "stlBytes": 44204484,
-   "wallMs": 9530,
+   "wallMs": 9127,
    "rejected": false,
    "err": ""
   },
@@ -297,7 +297,7 @@
    "devPP": 0.13,
    "tris": 210816,
    "stlBytes": null,
-   "wallMs": 3503,
+   "wallMs": 2855,
    "rejected": true,
    "err": ""
   },
@@ -310,7 +310,7 @@
    "devPP": 0.57,
    "tris": 889344,
    "stlBytes": 44467284,
-   "wallMs": 15770,
+   "wallMs": 14400,
    "rejected": false,
    "err": ""
   },
@@ -323,7 +323,7 @@
    "devPP": 1.11,
    "tris": 184896,
    "stlBytes": 9244884,
-   "wallMs": 4353,
+   "wallMs": 3952,
    "rejected": false,
    "err": ""
   },
@@ -336,7 +336,7 @@
    "devPP": 0.31,
    "tris": 976320,
    "stlBytes": null,
-   "wallMs": 8594,
+   "wallMs": 7420,
    "rejected": true,
    "err": ""
   },
@@ -349,7 +349,7 @@
    "devPP": 5.29,
    "tris": 278208,
    "stlBytes": null,
-   "wallMs": 4335,
+   "wallMs": 3384,
    "rejected": true,
    "err": ""
   },
@@ -362,7 +362,7 @@
    "devPP": 0.01,
    "tris": 1270080,
    "stlBytes": null,
-   "wallMs": 16830,
+   "wallMs": 15895,
    "rejected": true,
    "err": ""
   },
@@ -375,7 +375,7 @@
    "devPP": 0.2,
    "tris": 240120,
    "stlBytes": null,
-   "wallMs": 4048,
+   "wallMs": 3836,
    "rejected": true,
    "err": ""
   },
@@ -388,7 +388,7 @@
    "devPP": 0.14,
    "tris": 918936,
    "stlBytes": 45946884,
-   "wallMs": 18372,
+   "wallMs": 17202,
    "rejected": false,
    "err": ""
   },
@@ -401,7 +401,7 @@
    "devPP": 2.92,
    "tris": 193536,
    "stlBytes": 9676884,
-   "wallMs": 4401,
+   "wallMs": 3500,
    "rejected": false,
    "err": ""
   },
@@ -414,7 +414,7 @@
    "devPP": 0.22,
    "tris": 806976,
    "stlBytes": 40348884,
-   "wallMs": 9580,
+   "wallMs": 7969,
    "rejected": false,
    "err": ""
   },
@@ -427,7 +427,7 @@
    "devPP": 1.26,
    "tris": 157176,
    "stlBytes": 7858884,
-   "wallMs": 3503,
+   "wallMs": 3146,
    "rejected": false,
    "err": ""
   },
@@ -440,7 +440,7 @@
    "devPP": 0.16,
    "tris": 628632,
    "stlBytes": 31431684,
-   "wallMs": 7577,
+   "wallMs": 6540,
    "rejected": false,
    "err": ""
   },
@@ -453,7 +453,7 @@
    "devPP": 5.59,
    "tris": 221604,
    "stlBytes": null,
-   "wallMs": 4572,
+   "wallMs": 4358,
    "rejected": true,
    "err": ""
   },
@@ -466,7 +466,7 @@
    "devPP": 0.19,
    "tris": 1018812,
    "stlBytes": 50940684,
-   "wallMs": 13805,
+   "wallMs": 13806,
    "rejected": false,
    "err": ""
   },
@@ -479,7 +479,7 @@
    "devPP": 0.28,
    "tris": 190944,
    "stlBytes": 9547284,
-   "wallMs": 3117,
+   "wallMs": 3134,
    "rejected": false,
    "err": ""
   },
@@ -492,7 +492,7 @@
    "devPP": 0.2,
    "tris": 745272,
    "stlBytes": 37263684,
-   "wallMs": 6575,
+   "wallMs": 7762,
    "rejected": false,
    "err": ""
   },
@@ -505,7 +505,7 @@
    "devPP": 3.18,
    "tris": 292248,
    "stlBytes": null,
-   "wallMs": 3075,
+   "wallMs": 4087,
    "rejected": true,
    "err": ""
   },
@@ -518,7 +518,7 @@
    "devPP": 0.16,
    "tris": 1332072,
    "stlBytes": 66603684,
-   "wallMs": 20777,
+   "wallMs": 19580,
    "rejected": false,
    "err": ""
   },
@@ -531,7 +531,7 @@
    "devPP": 2.16,
    "tris": 173820,
    "stlBytes": 8691084,
-   "wallMs": 3889,
+   "wallMs": 3335,
    "rejected": false,
    "err": ""
   },
@@ -544,7 +544,7 @@
    "devPP": 0.2,
    "tris": 703596,
    "stlBytes": 35179884,
-   "wallMs": 12700,
+   "wallMs": 11462,
    "rejected": false,
    "err": ""
   },
@@ -557,7 +557,7 @@
    "devPP": 9.55,
    "tris": 95544,
    "stlBytes": 4777284,
-   "wallMs": 2152,
+   "wallMs": 1953,
    "rejected": false,
    "err": ""
   },
@@ -570,7 +570,7 @@
    "devPP": 0.07,
    "tris": 537336,
    "stlBytes": 26866884,
-   "wallMs": 7882,
+   "wallMs": 7709,
    "rejected": false,
    "err": ""
   },
@@ -583,7 +583,7 @@
    "devPP": 0.14,
    "tris": 146184,
    "stlBytes": null,
-   "wallMs": 3051,
+   "wallMs": 2445,
    "rejected": true,
    "err": ""
   },
@@ -596,7 +596,7 @@
    "devPP": 0.18,
    "tris": 586536,
    "stlBytes": 29326884,
-   "wallMs": 6762,
+   "wallMs": 6428,
    "rejected": false,
    "err": ""
   },
@@ -609,7 +609,7 @@
    "devPP": 13.26,
    "tris": 152928,
    "stlBytes": 7646484,
-   "wallMs": 3491,
+   "wallMs": 3257,
    "rejected": false,
    "err": ""
   },
@@ -622,7 +622,7 @@
    "devPP": 0.15,
    "tris": 913248,
    "stlBytes": 45662484,
-   "wallMs": 15013,
+   "wallMs": 13829,
    "rejected": false,
    "err": ""
   },
@@ -635,7 +635,7 @@
    "devPP": 0.56,
    "tris": 151284,
    "stlBytes": 7564284,
-   "wallMs": 5582,
+   "wallMs": 5022,
    "rejected": false,
    "err": ""
   },
@@ -648,34 +648,34 @@
    "devPP": 0.25,
    "tris": 662196,
    "stlBytes": 33109884,
-   "wallMs": 13050,
+   "wallMs": 12422,
    "rejected": false,
    "err": ""
   },
   {
    "type": "strutoctet",
    "R": 48,
-   "exit": 3,
-   "watertight": false,
-   "nm": 17424,
-   "devPP": 2.24,
-   "tris": 221700,
-   "stlBytes": null,
-   "wallMs": 22014,
-   "rejected": true,
+   "exit": 0,
+   "watertight": true,
+   "nm": 0,
+   "devPP": 2.37,
+   "tris": 152004,
+   "stlBytes": 7600284,
+   "wallMs": 20468,
+   "rejected": false,
    "err": ""
   },
   {
    "type": "strutoctet",
    "R": 96,
-   "exit": 3,
-   "watertight": false,
-   "nm": 38160,
-   "devPP": 0.45,
-   "tris": 1071588,
-   "stlBytes": null,
-   "wallMs": 112555,
-   "rejected": true,
+   "exit": 0,
+   "watertight": true,
+   "nm": 0,
+   "devPP": 0.47,
+   "tris": 918948,
+   "stlBytes": 45947484,
+   "wallMs": 109753,
+   "rejected": false,
    "err": ""
   }
  ]
