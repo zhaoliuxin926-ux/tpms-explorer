@@ -12,7 +12,8 @@
  * 预算（T3）：--max-steps（默认 10）/ --max-tool-calls（12）/ --max-wall-ms（默认 30 分钟）/
  * --subprocess-timeout-ms（600s，与 llm-agent 对齐）/ --max-repairs（候选顺延 3）。
  * 耗尽→报告含已完成步骤+最后诊断+未完成原因，exit 4（driver 轮数耗尽先例）；
- * 全候选拒产→exit 3（不可达结构化宣告）；成功→exit 0。
+ * 全候选拒产→exit 3（不可达结构化宣告）；成功→exit 0；
+ * 末步（悬垂审计）失败→failed/exit 1（已交付 STL 保留）；参数非法→exit 2（stdout JSON）。
  * --session 可选：推荐与执行按批次 4 会话格式落盘（跨进程指代可接续）。
  *
  * 用法：node agent-pipeline.mjs --target-e 2 --target-k 5 [--top 3] [--pick 1]
@@ -24,7 +25,16 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TPMS = join(HERE, 'tpms.mjs');
+// 测试接缝（2026-10-19 A5，学生裁决"可替换执行器"）：selftest 经 TPMS_AGENT_TPMS_BIN 注入
+// 确定性夹具子进程，覆盖推荐失败/拒产顺延/慢子进程预算钳制/末步失败等错误路径；缺省恒为真实入口。
+const TPMS = process.env.TPMS_AGENT_TPMS_BIN ?? join(HERE, 'tpms.mjs');
+
+// 2026-10-19 A2（Codex 审计）：非法参数补 stdout JSON（机器可读契约），exit2
+const fail2 = (msg) => {
+  console.error(msg);
+  console.log(JSON.stringify({ command: 'pipeline', ok: false, status: 'invalid-argument', error: msg }, null, 2));
+  process.exit(2);
+};
 
 const a = { _: [] };
 const argv = process.argv.slice(2);
@@ -42,25 +52,28 @@ for (let i = 0; i < argv.length; i++) {
   else if (s === '--subprocess-timeout-ms') a.subTimeout = Number(argv[++i]);
   else if (s === '--max-repairs') a.maxRepairs = Number(argv[++i]);
   else if (s === '--json') a.json = true;
-  else if (s.startsWith('--')) { console.error(`未知选项 ${s}`); process.exit(2); }
+  else if (s.startsWith('--')) { fail2(`未知选项 ${s}`); }
   else a._.push(s);
 }
 
 const usage = '用法: node agent-pipeline.mjs --target-e <GPa> --target-k <×10⁻⁹ m²> [--top 3] [--pick 1] [--out 目录] [--session s.json] [--json]';
 // 红队 2026-10-11 参数卫生：NaN/负数预算曾致裸崩（NaN 预算恒 false 走 finish 引用未定义；
-// 负 subprocess timeout 直击 spawnSync RangeError）——非法一律结构化 exit2
+// 负 subprocess timeout 直击 spawnSync RangeError）——非法一律结构化 exit2。
+// 2026-10-19 A2（Codex 审计）：top/pick 补校验（--top abc 曾穿到 pareto 失败后 finish() 撞 TDZ 裸崩）
 const intOpt = (v, name, lo, hi) => {
   if (v === undefined) return undefined;
-  if (!Number.isFinite(v) || !Number.isInteger(v) || v < lo || v > hi) { console.error(`${name} 需为 ${lo}~${hi} 整数`); process.exit(2); }
+  if (!Number.isFinite(v) || !Number.isInteger(v) || v < lo || v > hi) fail2(`${name} 需为 ${lo}~${hi} 整数`);
   return v;
 };
 intOpt(a.maxSteps, '--max-steps', 1, 100);
 intOpt(a.maxToolCalls, '--max-tool-calls', 1, 200);
 intOpt(a.maxRepairs, '--max-repairs', 0, 50);
-if (a.maxWallMs !== undefined && (!Number.isFinite(a.maxWallMs) || a.maxWallMs < 1000)) { console.error('--max-wall-ms 需为 ≥1000 的有限数字'); process.exit(2); }
-if (a.subTimeout !== undefined && (!Number.isFinite(a.subTimeout) || a.subTimeout < 1000 || a.subTimeout > 3_600_000)) { console.error('--subprocess-timeout-ms 需为 1000~3600000'); process.exit(2); }
-if (!Number.isFinite(a.targetE) || a.targetE <= 0) { console.error('--target-e 需为正数（GPa）\n' + usage); process.exit(2); }
-if (!Number.isFinite(a.targetK) || a.targetK <= 0) { console.error('--target-k 需为正数（×10⁻⁹ m²）\n' + usage); process.exit(2); }
+intOpt(a.top, '--top', 1, 10);    // 与 pareto 自身域对齐（tpms.mjs --top 1..10）
+intOpt(a.pick, '--pick', 1, 10);
+if (a.maxWallMs !== undefined && (!Number.isFinite(a.maxWallMs) || a.maxWallMs < 1000)) fail2('--max-wall-ms 需为 ≥1000 的有限数字');
+if (a.subTimeout !== undefined && (!Number.isFinite(a.subTimeout) || a.subTimeout < 1000 || a.subTimeout > 3_600_000)) fail2('--subprocess-timeout-ms 需为 1000~3600000');
+if (!Number.isFinite(a.targetE) || a.targetE <= 0) fail2('--target-e 需为正数（GPa）\n' + usage);
+if (!Number.isFinite(a.targetK) || a.targetK <= 0) fail2('--target-k 需为正数（×10⁻⁹ m²）\n' + usage);
 
 // ── 预算账本（T3）：每步每调用记账，超限即停并如实报告 ──
 const budget = {
@@ -88,6 +101,13 @@ const exhausted = (why) => ({
 });
 const budgetLeft = () => stepsUsed < budget.maxSteps && toolCallsUsed < budget.maxToolCalls && (Date.now() - t0) < budget.maxWallMs;
 
+// 2026-10-19 A2（Codex 审计）：报告所需状态全部前置——早退 finish() 曾撞 outDir/repairsUsed
+// 的 TDZ ReferenceError 裸崩（--top abc：pareto 失败→finish()→读未初始化 repairsUsed）
+const outDir = a.out ? resolve(a.out) : process.cwd();
+mkdirSync(outDir, { recursive: true });
+const pick = Math.max(1, a.pick ?? 1);
+let built = null, repairsUsed = 0;
+
 function runCli(args, stepName, meta) {
   if (!budgetLeft()) {
     report.status = 'budget-exhausted';
@@ -96,9 +116,20 @@ function runCli(args, stepName, meta) {
     return null;
   }
   stepsUsed++; toolCallsUsed++;
+  // 2026-10-19 A3（Codex 审计）：子进程超时钳到剩余总预算——曾给完整 subTimeout（600s），
+  // 1s 总预算实测穿透到 30.8s 才返回；因预算被杀归 budget-exhausted（exit4）而非 failed。
+  const subMs = Math.max(1, Math.min(budget.subTimeout, budget.maxWallMs - (Date.now() - t0)));
+  const wallBound = subMs < budget.subTimeout;
   const r = spawnSync(process.execPath, [TPMS, ...args, '--json'], {
-    encoding: 'utf8', timeout: budget.subTimeout, maxBuffer: 64 * 1024 * 1024,
+    encoding: 'utf8', timeout: subMs, maxBuffer: 64 * 1024 * 1024,
   });
+  if (r.status === null && wallBound) {
+    report.steps.push({ step: stepName, tool: `tpms ${args[0]}`, input: meta, output: { killed: 'wall-budget', note: `子进程在剩余总预算（${subMs}ms）处被终止` }, exit: 4, ms: Date.now() - t0 });
+    report.status = 'budget-exhausted';
+    report.exhaustion = exhausted(`总时长预算在子进程执行中触顶（${stepName} 被终止，未等其自然结束）`);
+    report.exitCode = 4;
+    return null;
+  }
   let parsed = null;
   try { parsed = JSON.parse(r.stdout ?? ''); } catch { /* 非 JSON */ }
   report.steps.push({ step: stepName, tool: `tpms ${args[0]}`, input: meta, output: parsed ?? { exit: r.status, stderrTail: (r.stderr || '').slice(-200) }, exit: r.status ?? 1, ms: Date.now() - t0 });
@@ -129,11 +160,8 @@ if (a.session) {
 }
 
 // ── Step 2+3: 候选选取→构建（水密门=验收；失败按修复预算顺延）──
-const outDir = a.out ? resolve(a.out) : process.cwd();
-mkdirSync(outDir, { recursive: true });
 const recs = r1.parsed.recommendations;
-const pick = Math.max(1, a.pick ?? 1);
-let built = null, repairsUsed = 0;
+if (pick > recs.length) fail2(`--pick ${pick} 越界：本次推荐只有 ${recs.length} 个候选`);
 for (let idx = pick - 1; idx < recs.length; idx++) {
   // 修复预算=首个失败后允许顺延的次数（0=只试首选）
   if (idx > pick - 1) {
@@ -183,13 +211,21 @@ if (session && built) {
 // ── Step 4: 可打印性（物理层：悬垂面审计）──
 const ro = runCli(['overhang', '--input', built.stl], 'printability-overhang', { input: built.stl, critical: 45 });
 if (!ro) { finish(); }
-report.layers.printability = ro.status === 0 && ro.parsed ? {
-  layer: '物理可打印性（悬垂面 α<45° 判需支撑，工程阈值——实际 30~60°）',
-  criticalAreaRatio: ro.parsed.criticalAreaRatio ?? null, tris: ro.parsed.tris ?? null, criticalDeg: ro.parsed.criticalDeg ?? null,
-} : { layer: '物理可打印性', note: `overhang exit=${ro.status}（可打印性步骤失败，不回滚已交付 STL）`, failed: true };
-
-report.status = 'completed';
-report.exitCode = 0;
+// 2026-10-19 A4（Codex 审计，学生裁决沿用 failed/exit1）：末步失败不再伪装整体成功——
+// 保留已交付 STL、明确失败步骤；总预算耗尽仍走 exit4 语义，不新增状态码。
+if (ro.status !== 0 || !ro.parsed) {
+  report.layers.printability = { layer: '物理可打印性', note: `overhang exit=${ro.status}（可打印性步骤失败，不回滚已交付 STL）`, failed: true };
+  report.status = 'failed';
+  report.failure = { step: 'printability-overhang', exit: ro.status, stderrTail: (ro.stderr || '').slice(-200), note: 'STL 已交付，悬垂审计未完成' };
+  report.exitCode = 1;
+} else {
+  report.layers.printability = {
+    layer: '物理可打印性（悬垂面 α<45° 判需支撑，工程阈值——实际 30~60°）',
+    criticalAreaRatio: ro.parsed.criticalAreaRatio ?? null, tris: ro.parsed.tris ?? null, criticalDeg: ro.parsed.criticalDeg ?? null,
+  };
+  report.status = 'completed';
+  report.exitCode = 0;
+}
 
 function finish() {
   report.finishedAt = new Date().toISOString();

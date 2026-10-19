@@ -13,10 +13,18 @@
  *  5. 非法修复决策（type='warpdrive'）→ 拦截器拒绝（exit 2）
  *  6. 轮数耗尽（无效 patch 反复）→ max_rounds（exit 4）+ 原始设计文件全程未被改写
  *
+ * 2026-10-19 批次 A5（Codex 审计）：错误路径改可控故障注入——经 TPMS_AGENT_TPMS_BIN
+ * 注入确定性夹具子进程（pareto 罐头推荐 / mesh 按 cand 序号脚本化退出 / 慢子进程 /
+ * overhang 可控失败），不再依赖"某几何族恰好不可产"承载错误路径覆盖：
+ *  11. --top 非法=stdout JSON+exit2（曾 TDZ 裸崩）  12. 推荐失败=failed/exit1
+ *  13. 拒产顺延（exit3→下一候选）  14. 全拒产=unreachable/exit3（候选用尽）
+ *  15. wall 预算钳制慢子进程（budget-exhausted/exit4，秒回不穿透）
+ *  16. 末步悬垂失败=failed/exit1（STL 保留）  17. --pick 越界=JSON+exit2
+ *
  * 运行：node llm_driver_selftest.mjs   （真实构建约 3~6 分钟）
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, readFileSync, rmSync, mkdtempSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, rmSync, mkdtempSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -112,6 +120,80 @@ function drive(designObj, decisions, maxRounds = 6) {
   const rb = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--pick', '2', '--max-steps', '2', '--out', pipeDir], { encoding: 'utf8', timeout: 600_000 });
   const br = parse(rb.stdout ?? '');
   ok('10 管线预算耗尽链：exit4+已完成步骤+最后诊断', rb.status === 4 && br?.status === 'budget-exhausted' && br?.exhaustion?.completedSteps === 2 && br?.exhaustion?.lastDiagnosis !== null, 'exit=' + rb.status);
+}
+
+// 2026-10-19 批次 A5（Codex 审计）：可替换执行器夹具——错误路径确定性注入，不依赖真实几何族
+{
+  const pipeDir = join(work, 'pipe-fix');
+  mkdirSync(pipeDir, { recursive: true });
+  const PIPE = join(HERE, 'agent-pipeline.mjs');
+  const parse = (s) => { try { return JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); } catch { return null; } };
+  // 夹具子进程：行为=（mode, args）的纯函数，无跨调用状态；cand 序号从 --out 文件名提取
+  const FIXTURE = join(pipeDir, 'fixture-tpms.mjs');
+  writeFileSync(FIXTURE, `import { writeFileSync } from 'node:fs';
+const mode = process.env.TPMS_FIXTURE_MODE ?? 'ok';
+const args = process.argv.slice(2);
+const cmd = args[0];
+const outIdx = args.indexOf('--out');
+const out = outIdx >= 0 ? args[outIdx + 1] : null;
+const PARETO = { command: 'pareto', reachable: true, recommendations: [
+  { rank: 1, type: 'gyroid', porosity: 0.6, cellSize: 3, E_GPa: 2.1, kappa_m2: 5e-9, dist_log10: 0.1, meetsTarget: true },
+  { rank: 2, type: 'diamond', porosity: 0.65, cellSize: 4, E_GPa: 2.0, kappa_m2: 5.2e-9, dist_log10: 0.2, meetsTarget: true },
+  { rank: 3, type: 'iwp', porosity: 0.5, cellSize: 3, E_GPa: 1.9, kappa_m2: 5.5e-9, dist_log10: 0.3, meetsTarget: false },
+] };
+const meshOK = () => {
+  if (out) writeFileSync(out, 'solid fixture\\nendsolid fixture\\n');
+  console.log(JSON.stringify({ command: 'mesh', watertight: true, porosityEstimate: 0.6, fileBytes: 1024 }));
+  process.exit(0);
+};
+if (cmd === 'pareto') {
+  if (mode === 'pareto-fail') { console.error('fixture: pareto 模拟失败'); process.exit(1); }
+  if (mode === 'two-candidates') { console.log(JSON.stringify({ ...PARETO, recommendations: PARETO.recommendations.slice(0, 2) })); process.exit(0); }
+  console.log(JSON.stringify(PARETO)); process.exit(0);
+}
+if (cmd === 'mesh') {
+  if (mode === 'reject-all') { console.error('fixture: mesh 模拟拒产（exit3）'); process.exit(3); }
+  if (mode === 'reject-then-pass' && /cand1[.-]/.test(out ?? '')) { console.error('fixture: cand1 模拟拒产（exit3）'); process.exit(3); }
+  if (mode === 'slow-mesh') Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60_000);  // 同步睡眠 60s，会被 wall 预算杀
+  meshOK();
+}
+if (cmd === 'overhang') {
+  if (mode === 'overhang-fail') { console.error('fixture: overhang 模拟失败'); process.exit(1); }
+  console.log(JSON.stringify({ command: 'overhang', criticalAreaRatio: 0.12, tris: 24, criticalDeg: 45 })); process.exit(0);
+}
+console.error('fixture: 未知子命令 ' + cmd); process.exit(2);
+`);
+  const run = (mode, extra) => {
+    const t = Date.now();
+    const r = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--out', pipeDir, ...extra], {
+      encoding: 'utf8', timeout: 120_000,
+      env: { ...process.env, TPMS_AGENT_TPMS_BIN: FIXTURE, TPMS_FIXTURE_MODE: mode },
+    });
+    return { r, pr: parse(r.stdout ?? ''), ms: Date.now() - t };
+  };
+  // 11 --top 非法：曾穿到 pareto 失败后 finish() 撞 TDZ 裸崩（无 JSON）
+  const rTop = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--top', 'abc'], { encoding: 'utf8', timeout: 30_000 });
+  const pTop = parse(rTop.stdout ?? '');
+  ok('11 管线 --top 非法=stdout JSON+exit2（曾 TDZ 裸崩无报告）', rTop.status === 2 && pTop?.status === 'invalid-argument' && /top/.test(pTop?.error ?? ''), `exit=${rTop.status}`);
+  // 12 推荐失败：结构化 failed + exit1（不裸崩）
+  const { r: r12, pr: p12 } = run('pareto-fail', []);
+  ok('12 推荐失败链=failed/exit1+JSON 报告', r12.status === 1 && p12?.status === 'failed' && p12?.failure?.step === 'recommend' && Array.isArray(p12?.steps), `exit=${r12.status} status=${p12?.status}`);
+  // 13 拒产顺延：cand1 exit3 → 顺延 cand2 成功（repairs=1）
+  const { r: r13, pr: p13 } = run('reject-then-pass', []);
+  ok('13 拒产顺延链：cand1 拒产→cand2 水密（repairs=1）', r13.status === 0 && p13?.status === 'completed' && p13?.budget?.used?.repairs === 1 && p13?.layers?.meshAcceptance?.candidateIndex === 1, `exit=${r13.status} repairs=${p13?.budget?.used?.repairs}`);
+  // 14 全拒产：unreachable/exit3（候试用尽，不再依赖 octet 真实拒产）
+  const { r: r14, pr: p14 } = run('reject-all', []);
+  ok('14 全拒产链=unreachable/exit3（候选用尽，故障注入版）', r14.status === 3 && p14?.status === 'unreachable' && /候选用尽/.test(p14?.failure?.reason ?? '') && p14?.failure?.repairsUsed === 2, `exit=${r14.status}`);
+  // 15 wall 预算钳制：1s 预算+60s 慢子进程 → 秒回 budget-exhausted/exit4（曾穿透 30.8s）
+  const { r: r15, pr: p15, ms: ms15 } = run('slow-mesh', ['--max-wall-ms', '1000']);
+  ok('15 wall 预算钳制慢子进程：budget-exhausted/exit4 且秒回（曾穿透到 30.8s）', r15.status === 4 && p15?.status === 'budget-exhausted' && p15?.steps?.some((s) => s.output?.killed === 'wall-budget') && ms15 < 10_000, `exit=${r15.status} ms=${ms15}`);
+  // 16 末步失败：overhang exit1 → failed/exit1，已交付 STL 保留（曾无条件 completed/exit0）
+  const { r: r16, pr: p16 } = run('overhang-fail', []);
+  const stl16 = p16?.layers?.meshAcceptance?.file;
+  ok('16 末步悬垂失败=failed/exit1+STL 保留', r16.status === 1 && p16?.status === 'failed' && p16?.failure?.step === 'printability-overhang' && p16?.layers?.meshAcceptance?.watertight === true && stl16 && existsSync(stl16), `exit=${r16.status} step=${p16?.failure?.step}`);
+  // 17 --pick 越界：推荐返回后校验，JSON+exit2
+  const { r: r17, pr: p17 } = run('two-candidates', ['--pick', '5']);
+  ok('17 管线 --pick 越界=stdout JSON+exit2', r17.status === 2 && p17?.status === 'invalid-argument' && /越界/.test(p17?.error ?? ''), `exit=${r17.status}`);
 }
 
 rmSync(work, { recursive: true, force: true });

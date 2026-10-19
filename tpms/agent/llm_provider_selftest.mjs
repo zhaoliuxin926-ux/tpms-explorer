@@ -359,6 +359,14 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
     ok('RT 管线 --max-steps 非数=结构化 exit2（曾裸崩）', rPipe.status === 2 && /max-steps/.test(rPipe.stderr || ''), `exit=${rPipe.status}`);
     ok('RT 复合数词拒绝（"第一百个"曾静默当第一）', rej(sess, '把第一百个构建出来', '复合'));
     ok('RT 小数序数拒绝（"第 1.5 个"曾静默当第一）', rej(sess, '把第 1.5 个构建出来', '小数'));
+    // 2026-10-19 批次 A1 收窄锚（Codex 审计：否定/多指代/附带参数曾静默误绑首候选；学生裁决第一版只收明确单一肯定指代）
+    ok('A1 否定+对比指代拒绝（"不要构建第一个，构建第二个"曾绑第 1 项）', rej(sess, '不要构建第一个，构建第二个', '否定'));
+    ok('A1 多指代拒绝（"把第一个和第二个都构建出来"曾只绑第 1 项不披露）', rej(sess, '把第一个和第二个都构建出来', '序数指代'));
+    ok('A1 附带周期拒绝（"改成 4 个周期"曾静默用候选 periods）', rej(sess, '把第一个改成 4 个周期构建出来', '歧义'));
+    ok('A1 附带容器拒绝（"换成圆柱容器"曾静默忽略容器要求）', rej(sess, '把第一个换成圆柱容器构建出来', '歧义'));
+    const rPos = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', sess, '--dry-run', '--json', '构建第二个'], { encoding: 'utf8', timeout: 20_000 });
+    let jPos = null; try { jPos = JSON.parse(rPos.stdout); } catch { /* */ }
+    ok('A1 单一肯定指代仍直通（护栏：第二项 diamond 绑定不被收窄误伤）', rPos.status === 0 && jPos?.resolvedFrom?.ordinal === 2 && jPos?.args?.type === 'diamond', `exit=${rPos.status} ordinal=${jPos?.resolvedFrom?.ordinal} type=${jPos?.args?.type}`);
   } finally {
     rms(dir, { recursive: true, force: true });
   }
@@ -488,5 +496,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 91) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 91（87 + 参数卫生红队 4，2026-10-11）`); process.exit(1); }
+if (pass < 96) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 96（91 + 指代收窄锚 5，2026-10-19）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

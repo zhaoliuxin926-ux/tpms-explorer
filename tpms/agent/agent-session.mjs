@@ -122,15 +122,28 @@ const EN_ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, s
  */
 export function resolveReference(session, instruction) {
   const build = BUILD_RE.test(instruction);
+  const ordCount = [...instruction.matchAll(new RegExp(ORDINAL_RE.source, 'g'))].length
+    + [...instruction.matchAll(new RegExp(ORDINAL_EN_RE.source, 'gi'))].length;
   const mOrd = instruction.match(ORDINAL_RE);
   const mEn = instruction.match(ORDINAL_EN_RE);
   const mDem = DEMON_RE.test(instruction);
   const hasRef = !!(mOrd || mEn || mDem);
   if (!hasRef || !build) return { status: 'none' };   // 非指代构建指令 → 走正常 LLM 路径
 
-  // 歧义守卫：指令同时携带新参数（显式孔隙率/百分数）→ 拒绝静默混合
-  if (/孔隙率|porosity|\d+\s*[%％]/i.test(instruction)) {
-    return { status: 'reject', reason: '指令同时含指代与新的参数（孔隙率等）——歧义拒绝。请要么只说"把第 N 个构建出来"，要么给完整参数不带指代' };
+  // 2026-10-19 Codex 审计 A1 收窄（学生裁决：第一版只接受明确、单一的肯定指代）：
+  // 否定表述（"不要构建第一个，构建第二个"曾静默绑第 1 项）与多序数指代（"第一个和第二个"
+  // 曾只绑第 1 项不披露）一律解释后拒绝，不做否定范围推断；指代+参数覆盖解析留待后续独立批次。
+  if (/(不要|别(?!的)|勿|莫|而非|而不是|除了|排除|不用)/.test(instruction)) {
+    return { status: 'reject', reason: '检测到否定/排除表述——第一版指代绑定只接受明确、单一的肯定指代；请直接说"把第 N 个构建出来"' };
+  }
+  if (ordCount > 1) {
+    return { status: 'reject', reason: `检测到 ${ordCount} 个序数指代——第一版不支持多候选/对比选择，请逐个指代（如"把第二个构建出来"）` };
+  }
+
+  // 歧义守卫：指令同时携带新参数 → 拒绝静默混合（2026-10-19 扩周期/容器/分辨率：
+  // "改成 4 个周期""换成圆柱容器"曾静默用候选原值构建，llm-agent 不经模型直接绑定）
+  if (/孔隙率|porosity|周期|periods|容器|container|分辨率|resolution|\d+\s*[%％]/i.test(instruction)) {
+    return { status: 'reject', reason: '指令同时含指代与新的参数（孔隙率/周期/容器/分辨率等）——歧义拒绝。请要么只说"把第 N 个构建出来"，要么给完整参数不带指代' };
   }
   if (session.recommendations.length === 0) {
     return { status: 'reject', reason: '会话中没有任何推荐结果可指代——请先用 tpms_pareto 生成推荐（同一 --session 文件）' };
