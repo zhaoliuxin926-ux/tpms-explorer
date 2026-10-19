@@ -120,38 +120,35 @@ const EN_ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, s
  * @returns {{status:'none'} | {status:'reject', reason:string} |
  *           {status:'resolved', recId:string, ordinal:number, candidate:object, meetsTarget:boolean}}
  */
+// ── 指代解析（S2 确定性绑定；2026-10-19 推送前复核 A1v2：黑名单→完整匹配白名单）──
+// 安全边界=白名单：只有完整匹配下列有限肯定句式才绑定候选（Codex 复核：'不构建第二个'
+// 'Don't build the second''换成圆柱''生成3MF'等任何黑名单漏网词都必须落进拒绝）。
+// 分类提示（否定/多指代/参数）只为给出更准确的拒绝理由，不承担安全性。
+const AFFIRM_WL = [
+  // 把第 N 个构建出来 / 请把第 N 个生成
+  new RegExp('^(?:请|麻烦|帮我)?\\s*(?:把|帮我把|给我把)?\\s*第\\s*([一二两三四五六七八九十]|\\d{1,2})\\s*(?:个|项|条|推荐|方案|设计|候选)?\\s*(?:给)?\\s*(?:构建|建一?个?|生成|导出|打印|输出|做出|造)\\s*(?:出来)?\\s*(?:吧|呗|了|谢谢)?$'),
+  // 构建第 N 个 / 生成第二个
+  new RegExp('^(?:请|麻烦|帮我)?\\s*(?:构建|生成|导出|打印|输出|做|造)\\s*第\\s*([一二两三四五六七八九十]|\\d{1,2})\\s*(?:个|项|条|推荐|方案|设计|候选)?\\s*(?:出来)?\\s*(?:吧|呗|了|谢谢)?$'),
+  // 构建那个/首推/首个（含"刚才（推荐）的"限定，序数恒为 1）
+  new RegExp('^(?:请|麻烦|帮我)?\\s*(?:把|帮我把)?\\s*(?:刚才|上次|之前|前面|上面的)?\\s*(?:推荐)?的?\\s*(那个|首推|首个)\\s*(?:给)?\\s*(?:构建|生成|导出|打印|输出|做出|造)\\s*(?:出来)?\\s*(?:吧|呗|了|谢谢)?$', 'i'),
+  // build the second (one) / please make the 3rd
+  new RegExp('^(?:please\\s+)?(?:build|make|export|generate|print|create)\\s+(?:the\\s+)?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th)(?:\\s+(?:one|item|candidate|recommendation|design))?\\s*[.!]?$', 'i'),
+];
+const NEG_HINT = /(不要|别(?!的)|勿|莫|而非|而不是|除了|排除|不用|不构建|不建|不生成|不导出|don'?t|do\s+not|doesn'?t)/i;
+const PARAM_HINT = /孔隙率|porosity|周期|periods|容器|container|圆柱|cylinder|分辨率|resolution|3mf|obj|glb|step|格式|\d+\s*[%％]/i;
+
 export function resolveReference(session, instruction) {
   const build = BUILD_RE.test(instruction);
-  const ordCount = [...instruction.matchAll(new RegExp(ORDINAL_RE.source, 'g'))].length
-    + [...instruction.matchAll(new RegExp(ORDINAL_EN_RE.source, 'gi'))].length;
+  const ordAll = [...instruction.matchAll(new RegExp(ORDINAL_RE.source, 'g'))]
+    .concat([...instruction.matchAll(new RegExp(ORDINAL_EN_RE.source, 'gi'))]);
   const mOrd = instruction.match(ORDINAL_RE);
   const mEn = instruction.match(ORDINAL_EN_RE);
   const mDem = DEMON_RE.test(instruction);
   const hasRef = !!(mOrd || mEn || mDem);
   if (!hasRef || !build) return { status: 'none' };   // 非指代构建指令 → 走正常 LLM 路径
 
-  // 2026-10-19 Codex 审计 A1 收窄（学生裁决：第一版只接受明确、单一的肯定指代）：
-  // 否定表述（"不要构建第一个，构建第二个"曾静默绑第 1 项）与多序数指代（"第一个和第二个"
-  // 曾只绑第 1 项不披露）一律解释后拒绝，不做否定范围推断；指代+参数覆盖解析留待后续独立批次。
-  if (/(不要|别(?!的)|勿|莫|而非|而不是|除了|排除|不用)/.test(instruction)) {
-    return { status: 'reject', reason: '检测到否定/排除表述——第一版指代绑定只接受明确、单一的肯定指代；请直接说"把第 N 个构建出来"' };
-  }
-  if (ordCount > 1) {
-    return { status: 'reject', reason: `检测到 ${ordCount} 个序数指代——第一版不支持多候选/对比选择，请逐个指代（如"把第二个构建出来"）` };
-  }
-
-  // 歧义守卫：指令同时携带新参数 → 拒绝静默混合（2026-10-19 扩周期/容器/分辨率：
-  // "改成 4 个周期""换成圆柱容器"曾静默用候选原值构建，llm-agent 不经模型直接绑定）
-  if (/孔隙率|porosity|周期|periods|容器|container|分辨率|resolution|\d+\s*[%％]/i.test(instruction)) {
-    return { status: 'reject', reason: '指令同时含指代与新的参数（孔隙率/周期/容器/分辨率等）——歧义拒绝。请要么只说"把第 N 个构建出来"，要么给完整参数不带指代' };
-  }
-  if (session.recommendations.length === 0) {
-    return { status: 'reject', reason: '会话中没有任何推荐结果可指代——请先用 tpms_pareto 生成推荐（同一 --session 文件）' };
-  }
-  let ordinal = 1;
+  // 精确诊断先行（既有测试契约：复合数词/小数给出专属理由）
   if (mOrd) {
-    // 红队 2026-10-11：「第一百个」曾把"一"捕获静默当第一（误导绑定）——复合数词
-    // （百/千/万/零或连串数字字）超出支持域，一律结构化拒绝而非猜
     const after = instruction.slice((mOrd.index ?? 0) + mOrd[0].length);
     if (/[一二两三四五六七八九十百千万零]/.test(after.slice(0, 1))) {
       return { status: 'reject', reason: '复合/超域中文数词（如"一百"）不在 1~10 支持域——请用阿拉伯数字或"第 N 个"（1~10）' };
@@ -159,9 +156,39 @@ export function resolveReference(session, instruction) {
     if (/^[.\d]/.test(after) && /^\d/.test(after.slice(1))) {
       return { status: 'reject', reason: '指代序数含小数（如"第 1.5 个"）——只支持 1~10 整数序' };
     }
-    ordinal = parseOrdinal(mOrd[1]);
   }
-  else if (mEn) ordinal = EN_ORD[mEn[1].toLowerCase()];
+
+  // 白名单完整匹配（安全边界）：规整（去首尾空白/末尾标点）后逐一试
+  const norm = instruction.trim().replace(/[。！!？?，,\s]+$/, '');
+  let ordinal = null;
+  for (const re of AFFIRM_WL) {
+    const m = norm.match(re);
+    if (m) {
+      const tok = m[1];
+      const cn = parseOrdinal(tok);                                   // 中文数词/数字 → 1~10
+      if (Number.isInteger(cn)) ordinal = cn;
+      else if (EN_ORD[tok.toLowerCase()]) ordinal = EN_ORD[tok.toLowerCase()];
+      else ordinal = 1;   // 指示代词（那个/首推/首个）恒为第 1 项
+      break;
+    }
+  }
+  if (ordinal === null) {
+    // 分类提示只为理由准确；无论命中哪类（或都不命中），未过白名单=拒绝
+    if (NEG_HINT.test(instruction)) {
+      return { status: 'reject', reason: '检测到否定/排除表述——指代绑定只接受明确、单一的肯定句式（如"把第 N 个构建出来"）；否定与对比选择请拆成独立确认指令' };
+    }
+    if (ordAll.length > 1) {
+      return { status: 'reject', reason: `检测到 ${ordAll.length} 个序数指代——不支持多候选/对比选择，请逐个指代（如"把第二个构建出来"）` };
+    }
+    if (PARAM_HINT.test(instruction)) {
+      return { status: 'reject', reason: '指令同时含指代与新的参数或格式要求（孔隙率/周期/容器/圆柱/分辨率/3MF 等）——歧义拒绝：请要么只说"把第 N 个构建出来"，要么给完整参数不带指代' };
+    }
+    return { status: 'reject', reason: '指令不是支持的明确肯定句式——歧义拒绝。请用"把第 N 个构建出来"或"构建第 N 个"（1~10）；其余指代表述（含否定、多候选、附带修改）均不执行' };
+  }
+
+  if (session.recommendations.length === 0) {
+    return { status: 'reject', reason: '会话中没有任何推荐结果可指代——请先用 tpms_pareto 生成推荐（同一 --session 文件）' };
+  }
   if (!Number.isInteger(ordinal) || ordinal < 1) {
     return { status: 'reject', reason: `无法解析指代序数（"${mOrd?.[0] ?? mEn?.[0]}"）——请用"第 N 个"（1~10）` };
   }

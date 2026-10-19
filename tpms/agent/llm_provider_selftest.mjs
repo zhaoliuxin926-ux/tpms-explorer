@@ -367,6 +367,14 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
     const rPos = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', sess, '--dry-run', '--json', '构建第二个'], { encoding: 'utf8', timeout: 20_000 });
     let jPos = null; try { jPos = JSON.parse(rPos.stdout); } catch { /* */ }
     ok('A1 单一肯定指代仍直通（护栏：第二项 diamond 绑定不被收窄误伤）', rPos.status === 0 && jPos?.resolvedFrom?.ordinal === 2 && jPos?.args?.type === 'diamond', `exit=${rPos.status} ordinal=${jPos?.resolvedFrom?.ordinal} type=${jPos?.args?.type}`);
+    // 推送前复核 A1v2（白名单前黑名单漏网词，2026-10-19 Codex 复现四例全收）
+    ok('A1 否定词变体拒绝（"不构建第二个"曾仍准备构建第二项）', rej(sess, '不构建第二个', '否定'));
+    ok('A1 英文否定拒绝（"Don\'t build the second"曾仍准备构建第二项）', rej(sess, "Don't build the second", '否定'));
+    ok('A1 容器值词拒绝（"换成圆柱"曾静默忽略容器要求）', rej(sess, '把第二个换成圆柱构建出来', '歧义'));
+    ok('A1 格式词拒绝（"用第二个生成3MF"曾仍按 STL 路径构建）', rej(sess, '用第二个生成3MF', '歧义'));
+    const rCj = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', join(dir, 'corrupt.json'), '--json', '构建第二个'], { encoding: 'utf8', timeout: 30_000 });
+    let jCj = null; try { jCj = JSON.parse(rCj.stdout); } catch { /* */ }
+    ok('A1 损坏会话 JSON 错误出口（曾只写 stderr，机器可读链路断头）', rCj.status === 2 && jCj?.ok === false && /加载失败|损坏/.test(jCj?.error ?? ''), `exit=${rCj.status} stdout=${(rCj.stdout || '').slice(0, 60)}`);
   } finally {
     rms(dir, { recursive: true, force: true });
   }
@@ -496,5 +504,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 96) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 96（91 + 指代收窄锚 5，2026-10-19）`); process.exit(1); }
+if (pass < 101) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 101（96 + 推送前复核锚 5，2026-10-19）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

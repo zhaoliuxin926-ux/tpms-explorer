@@ -59,14 +59,14 @@ API 通了，17³ 格点 gyroid 场真跑起来，本机 GPU 对拍最坏偏差 
 3. 数值对拍阈值按**最慢/最软的后端**定标（本例：软件光栅的超越函数误差是真 GPU 的 170 倍）。
 4. "环境不可用就跳过"的 catch 要拆两层：探测失败可以 SKIP，执行失败必须 FAIL——否则你的测试框架会替你把 bug 藏起来。
 5. 挂账三个月的"未验证"宣称，值得真的去验证一次：这次排查的最终产物是一道在真 GPU 和软件光栅器上都真执行的 CI 门，以及这篇博客。
-6. 执行后端列表是偏好列表，不是契约——onnxruntime-web 的 `['webgpu','wasm']` 会在同一次 create 里**静默落到 WASM**，推理照常出结果，测的其实是 CPU（tf.js 的 `setBackend` 同款）。验真：只传一个 EP 让失败直接抛，或 create 后显式断言实际后端。
+6. 执行后端列表是偏好列表，不是契约——onnxruntime-web 的 `['webgpu','wasm']` 在 WebGPU 初始化失败时不会让 create 失败，而是留一条控制台警告后落到 WASM，推理照常出结果，测的其实是 CPU。验真：只传一个 EP 收窄初始化选择、让初始化失败显式化，或 create 后断言实际后端（初始化层≠算子层，单 EP 不保证每个算子都在 GPU 上执行）。
 
-## 读者补充：onnxruntime-web 的 EP 静默回退（2026-10-19）
+## 读者补充：onnxruntime-web 的 EP 回退陷阱（2026-10-19）
 
-本文发到稀土掘金后，有读者留言分享了同款坑：`executionProviders` 写 `['webgpu','wasm']`，GPU 起不来时会在同一次 create 调用里悄悄落到 WASM。他后来只传一个 EP，让失败直接以异常的形状冒出来。
+本文发到稀土掘金后，有读者留言分享了同款坑：`executionProviders` 写 `['webgpu','wasm']`，GPU 初始化失败时不会让 create 失败——ORT 在控制台留一条警告，然后把后端落到 WASM，推理照常出结果。不看控制台（或日志级别不足）就容易漏察，测的其实是 CPU。他后来只传一个 EP，把降级路径从候选列表里删掉，初始化失败才以异常的形状冒出来。
 
-这比"类似"更近——是第二层坑的直接下游：onnxruntime-web 的 WebGPU EP 底层就是 `navigator.gpu`，非 secure context 下这个属性整个不暴露，EP 初始化必然失败，而多 EP 列表给了它一条安静的退路。把文中 Playwright `setContent` 的场景原样套上 ort-web，就会精确复现读者的遭遇。
+这比"类似"更近——是第二层坑的直接下游：onnxruntime-web 的 WebGPU EP 底层就是 `navigator.gpu`，非 secure context 下这个属性整个不暴露，EP 初始化必然失败，而多 EP 列表给了它一条安静的退路。把文中 Playwright `setContent` 的场景套上 ort-web，就具备了复现读者遭遇的环境条件——非 secure context 下 WebGPU EP 必然初始化失败是确定的部分；最终落到哪一层还取决于版本、包与模型配置。
 
-"只传一个 EP"是清单第 4 条的实例化：把降级路径从系统里物理删掉，失败就只能显式报错。同族还有 tf.js——`setBackend('webgl'/'webgpu')` 是异步的且可能静默落到 cpu，必须再 `getBackend()` 断言实际后端。**"请求了能力"和"用上了能力"之间，永远要有一道显式断言。**
+"只传一个 EP"是清单第 4 条的实例化：把降级路径从候选列表里删掉，初始化失败就只能显式报错——它能约束 JS 侧的后端初始化选择，但不等价于"每个算子都在 GPU 上执行"（初始化层与算子层是两回事，算子级仍可能有 CPU 回退）。同族还有 tf.js：显式 `setBackend(...)` 失败会返回 false 或抛错，"自动落到 cpu"发生在 ready/惰性初始化等路径而非 setBackend 本身——检查方式是断言 `await setBackend(...)` 的返回值，再用 `getBackend()` 确认实际后端。**"请求了能力"和"用上了能力"之间，永远要有一道显式断言。**
 
 （完）

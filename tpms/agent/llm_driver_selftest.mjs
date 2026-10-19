@@ -20,6 +20,8 @@
  *  13. 拒产顺延（exit3→下一候选）  14. 全拒产=unreachable/exit3（候选用尽）
  *  15. wall 预算钳制慢子进程（budget-exhausted/exit4，秒回不穿透）
  *  16. 末步悬垂失败=failed/exit1（STL 保留）  17. --pick 越界=JSON+exit2
+ *  18. --max-wall-ms 浮点=JSON+exit2（整数契约，曾 ERR_OUT_OF_RANGE 裸崩）
+ *  19. 子进程 ENOBUFS=failed/exit1 保留错误码（曾被误报 budget-exhausted）
  *
  * 运行：node llm_driver_selftest.mjs   （真实构建约 3~6 分钟）
  */
@@ -155,6 +157,7 @@ if (cmd === 'mesh') {
   if (mode === 'reject-all') { console.error('fixture: mesh 模拟拒产（exit3）'); process.exit(3); }
   if (mode === 'reject-then-pass' && /cand1[.-]/.test(out ?? '')) { console.error('fixture: cand1 模拟拒产（exit3）'); process.exit(3); }
   if (mode === 'slow-mesh') Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60_000);  // 同步睡眠 60s，会被 wall 预算杀
+  if (mode === 'flood') { const chunk = 'x'.repeat(1024 * 1024); for (let i = 0; i < 80; i++) process.stdout.write(chunk + '\\n'); process.exit(0); }  // 80MB stdout → maxBuffer ENOBUFS
   meshOK();
 }
 if (cmd === 'overhang') {
@@ -194,6 +197,13 @@ console.error('fixture: 未知子命令 ' + cmd); process.exit(2);
   // 17 --pick 越界：推荐返回后校验，JSON+exit2
   const { r: r17, pr: p17 } = run('two-candidates', ['--pick', '5']);
   ok('17 管线 --pick 越界=stdout JSON+exit2', r17.status === 2 && p17?.status === 'invalid-argument' && /越界/.test(p17?.error ?? ''), `exit=${r17.status}`);
+  // 18 浮点预算整数契约（推送前复核：1000.5 曾穿校验直击 spawnSync ERR_OUT_OF_RANGE 裸崩）
+  const r18 = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--max-wall-ms', '1000.5'], { encoding: 'utf8', timeout: 30_000 });
+  const p18 = parse(r18.stdout ?? '');
+  ok('18 --max-wall-ms 浮点=stdout JSON+exit2（曾 ERR_OUT_OF_RANGE 裸崩 stdout 空）', r18.status === 2 && p18?.status === 'invalid-argument' && /整数/.test(p18?.error ?? '') && (r18.stdout ?? '').trim().startsWith('{'), `exit=${r18.status} stdout=${(r18.stdout || '').slice(0, 40)}`);
+  // 19 ENOBUFS 归因（推送前复核：maxBuffer 溢出曾被误报 budget-exhausted/exit4）
+  const { r: r19, pr: p19 } = run('flood', []);
+  ok('19 子进程 ENOBUFS=failed/exit1 保留错误码（曾被误报 budget-exhausted/exit4）', r19.status === 1 && p19?.status === 'failed' && /ENOBUFS/.test(JSON.stringify(p19)) && p19?.status !== 'budget-exhausted', `exit=${r19.status} status=${p19?.status}`);
 }
 
 rmSync(work, { recursive: true, force: true });

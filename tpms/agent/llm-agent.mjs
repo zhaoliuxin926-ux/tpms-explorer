@@ -122,7 +122,9 @@ async function main() {
     try {
       session = loadOrCreateSession(a.session);
     } catch (e) {
+      // 2026-10-19 推送前复核：损坏会话补 JSON 错误出口（曾只写 stderr，机器可读链路断头）
       console.error(`✗ 会话加载失败：${e.message}`);
+      if (a.json) console.log(JSON.stringify({ ok: false, mode: 'session', error: `会话加载失败：${e.message}` }, null, 2));
       process.exitCode = 2; return;
     }
     const ref = resolveReference(session, userMsg);

@@ -70,8 +70,10 @@ intOpt(a.maxToolCalls, '--max-tool-calls', 1, 200);
 intOpt(a.maxRepairs, '--max-repairs', 0, 50);
 intOpt(a.top, '--top', 1, 10);    // 与 pareto 自身域对齐（tpms.mjs --top 1..10）
 intOpt(a.pick, '--pick', 1, 10);
-if (a.maxWallMs !== undefined && (!Number.isFinite(a.maxWallMs) || a.maxWallMs < 1000)) fail2('--max-wall-ms 需为 ≥1000 的有限数字');
-if (a.subTimeout !== undefined && (!Number.isFinite(a.subTimeout) || a.subTimeout < 1000 || a.subTimeout > 3_600_000)) fail2('--subprocess-timeout-ms 需为 1000~3600000');
+// 2026-10-19 推送前复核：wall/sub 期限统一整数契约——1000.5 曾穿校验后直击 spawnSync
+// ERR_OUT_OF_RANGE 裸崩（stdout 空、无 JSON）
+if (a.maxWallMs !== undefined && (!Number.isInteger(a.maxWallMs) || a.maxWallMs < 1000)) fail2('--max-wall-ms 需为 ≥1000 的整数');
+if (a.subTimeout !== undefined && (!Number.isInteger(a.subTimeout) || a.subTimeout < 1000 || a.subTimeout > 3_600_000)) fail2('--subprocess-timeout-ms 需为 1000~3600000 整数');
 if (!Number.isFinite(a.targetE) || a.targetE <= 0) fail2('--target-e 需为正数（GPa）\n' + usage);
 if (!Number.isFinite(a.targetK) || a.targetK <= 0) fail2('--target-k 需为正数（×10⁻⁹ m²）\n' + usage);
 
@@ -118,17 +120,25 @@ function runCli(args, stepName, meta) {
   stepsUsed++; toolCallsUsed++;
   // 2026-10-19 A3（Codex 审计）：子进程超时钳到剩余总预算——曾给完整 subTimeout（600s），
   // 1s 总预算实测穿透到 30.8s 才返回；因预算被杀归 budget-exhausted（exit4）而非 failed。
-  const subMs = Math.max(1, Math.min(budget.subTimeout, budget.maxWallMs - (Date.now() - t0)));
+  // 推送前复核 A3v2：取整防浮点；只有超时击杀且约束边是剩余 wall 预算才归预算耗尽——
+  // ENOBUFS（maxBuffer 溢出）等进程错误按 failed/exit1 保留错误码，不冒充预算耗尽。
+  const subMs = Math.max(1, Math.min(budget.subTimeout, Math.floor(budget.maxWallMs - (Date.now() - t0))));
   const wallBound = subMs < budget.subTimeout;
   const r = spawnSync(process.execPath, [TPMS, ...args, '--json'], {
     encoding: 'utf8', timeout: subMs, maxBuffer: 64 * 1024 * 1024,
   });
-  if (r.status === null && wallBound) {
+  const errCode = r.error?.code ?? null;
+  if (r.status === null && errCode !== 'ENOBUFS' && wallBound && (errCode === 'ETIMEDOUT' || !errCode)) {
     report.steps.push({ step: stepName, tool: `tpms ${args[0]}`, input: meta, output: { killed: 'wall-budget', note: `子进程在剩余总预算（${subMs}ms）处被终止` }, exit: 4, ms: Date.now() - t0 });
     report.status = 'budget-exhausted';
     report.exhaustion = exhausted(`总时长预算在子进程执行中触顶（${stepName} 被终止，未等其自然结束）`);
     report.exitCode = 4;
     return null;
+  }
+  if (r.error) {
+    const errText = errCode ?? String(r.error.message).slice(0, 120);
+    report.steps.push({ step: stepName, tool: `tpms ${args[0]}`, input: meta, output: { error: errText }, exit: r.status ?? 1, ms: Date.now() - t0 });
+    return { status: r.status ?? 1, parsed: null, stderr: `子进程错误 ${errText}` };
   }
   let parsed = null;
   try { parsed = JSON.parse(r.stdout ?? ''); } catch { /* 非 JSON */ }
