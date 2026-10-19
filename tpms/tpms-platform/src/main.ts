@@ -4580,7 +4580,7 @@ async function runSweep(): Promise<void> {
           gradientDir: frameState.gradientDir,
         },
         generatedAt: new Date().toISOString(),
-        platform: 'TPMS Explorer v1.0.3',
+        platform: 'TPMS Explorer v1.2.0',
       };
       configs.push(config);
       frameRows.push({

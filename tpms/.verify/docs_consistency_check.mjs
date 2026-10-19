@@ -211,8 +211,8 @@ console.log('\n[C2] 调色预设结构');
     'tpms/tpms-platform/src/export/verification-suite.ts',
   ].map((f) => read(f)).join('\n');
   /Explorer v(?:0|2|3|4|5|6|7|8|9)\./.test(expHeaders)
-    ? bad('导出物仍自称 v0/v2–v9', '应 v1.1.0')
-    : ok('导出物产品号 v1.x（当前 v1.1.0）');
+    ? bad('导出物仍自称 v0/v2–v9', '应 v1.2.0')
+    : ok('导出物产品号 v1.x（当前 v1.2.0）');
   /Explorer v1\.\d+\./.test(expHeaders) ? ok('导出物含 v1.x 版本头') : bad('导出物缺 v1.x 版本头');
   const landing = read('docs/index.html');
   /style="color:#[0-9a-f]+">v[0-9]+\.[0-9]</.test(landing)

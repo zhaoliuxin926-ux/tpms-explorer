@@ -1,4 +1,4 @@
-# TPMS Explorer 项目全貌总结（v1.1.0）
+# TPMS Explorer 项目全貌总结（v1.2.0）
 
 > 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **48 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 RELEASE_NOTES_v2.4–v9.2 + v1.0.x.md（×7）。
@@ -108,7 +108,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
 | 验收 | 真实模型 37 条中英回归（**glm-5.3 与 5.3-flash 双档多轮 n=2 各 37/37（2026-10-01 anthropic 通道=Coding Plan 订阅直抵）**；五档画像：4-flash 34×2/4.5 通/4.6 35/5.3 37×2/5.3-flash 37×2，flashx 套餐未开放；temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 50 + schema_check 113（GUARD 98） + llm_provider_selftest 101（GUARD 101） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 19（管线链+M4+错误路径故障注入+预算/缓冲错误归因，2026-10-19） |
+| 自检（CI 纳管） | agent_selftest 50 + schema_check 113（GUARD 98） + llm_provider_selftest 101（GUARD 101） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 20（管线链+M4+错误路径故障注入+预算/缓冲/会话错误归因，2026-10-19） |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
