@@ -21,7 +21,8 @@
  *  15. wall 预算钳制慢子进程（budget-exhausted/exit4，秒回不穿透）
  *  16. 末步悬垂失败=failed/exit1（STL 保留）  17. --pick 越界=JSON+exit2
  *  18. --max-wall-ms 浮点=JSON+exit2（整数契约，曾 ERR_OUT_OF_RANGE 裸崩）
- *  19. 子进程输出超限=failed/exit1 不冒充预算耗尽（跨 Node：ENOBUFS/静默截断两实现）
+ *  19. 子进程输出超限=failed/exit1 不冒充预算耗尽（跨环境两实现：ENOBUFS/静默截断）
+ * 20. 管线损坏会话=stdout JSON+exit2（发布前补漏，曾只写 stderr）
  *
  * 运行：node llm_driver_selftest.mjs   （真实构建约 3~6 分钟）
  */
@@ -201,11 +202,19 @@ console.error('fixture: 未知子命令 ' + cmd); process.exit(2);
   const r18 = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--max-wall-ms', '1000.5'], { encoding: 'utf8', timeout: 30_000 });
   const p18 = parse(r18.stdout ?? '');
   ok('18 --max-wall-ms 浮点=stdout JSON+exit2（曾 ERR_OUT_OF_RANGE 裸崩 stdout 空）', r18.status === 2 && p18?.status === 'invalid-argument' && /整数/.test(p18?.error ?? '') && (r18.stdout ?? '').trim().startsWith('{'), `exit=${r18.status} stdout=${(r18.stdout || '').slice(0, 40)}`);
-  // 19 输出超限归因（推送前复核：曾被误报 budget-exhausted/exit4）。跨 Node 版本契约：
-  // 旧 Node spawnSync 超限→error ENOBUFS（管线保留错误码）；新 Node→stdout 静默截断、
-  // exit0 无 JSON→水密验收失败——两机制殊途同归 failed/exit1，断言只钉语义不钉错误码实现。
+  // 19 输出超限归因（推送前复核：曾被误报 budget-exhausted/exit4）。跨环境契约（本机 Node
+  // 25.2.1 报 error ENOBUFS / CI Node 22 stdout 静默截断 exit0 无 JSON——分叉点未单独证明，
+  // 证据只支持"跨环境超限行为不同"）：两实现殊途同归 failed/exit1，断言只钉语义不钉错误码实现。
   const { r: r19, pr: p19 } = run('flood', []);
-  ok('19 子进程输出超限=failed/exit1 不冒充预算耗尽（Node 版本差异：ENOBUFS 保留错误码 / 静默截断致验收失败）', r19.status === 1 && p19?.status === 'failed' && p19?.status !== 'budget-exhausted', `exit=${r19.status} status=${p19?.status} err=${/ENOBUFS/.test(JSON.stringify(p19)) ? 'ENOBUFS' : 'truncated-or-other'}`);
+  ok('19 子进程输出超限=failed/exit1 不冒充预算耗尽（跨环境两实现：ENOBUFS 保留错误码 / 静默截断致验收失败）', r19.status === 1 && p19?.status === 'failed' && p19?.status !== 'budget-exhausted', `exit=${r19.status} status=${p19?.status} err=${/ENOBUFS/.test(JSON.stringify(p19)) ? 'ENOBUFS' : 'truncated-or-other'}`);
+  // 20 管线损坏会话（发布前补漏：llm-agent 已修，管线同漏——曾 exit2 stdout 空）
+  writeFileSync(join(pipeDir, 'corrupt.json'), '{not json', 'utf8');
+  const r20 = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--out', pipeDir, '--session', join(pipeDir, 'corrupt.json')], {
+    encoding: 'utf8', timeout: 60_000,
+    env: { ...process.env, TPMS_AGENT_TPMS_BIN: FIXTURE, TPMS_FIXTURE_MODE: 'ok' },
+  });
+  const p20 = parse(r20.stdout ?? '');
+  ok('20 管线损坏会话=stdout JSON+exit2（曾只写 stderr）', r20.status === 2 && p20?.status === 'invalid-argument' && /加载失败|损坏/.test(p20?.error ?? ''), `exit=${r20.status} stdout=${(r20.stdout || '').slice(0, 60)}`);
 }
 
 rmSync(work, { recursive: true, force: true });

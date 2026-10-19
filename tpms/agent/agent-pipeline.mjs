@@ -163,7 +163,8 @@ let session = null;
 if (a.session) {
   const { loadOrCreateSession, recordPareto, saveSession } = await import('./agent-session.mjs');
   try { session = loadOrCreateSession(a.session); } catch (e) {
-    console.error(`✗ 会话加载失败：${e.message}`); process.exit(2);
+    // 2026-10-19 发布前补漏：与参数非法同一结构化出口（曾只写 stderr，stdout 空=机器可读断头）
+    fail2(`会话加载失败：${e.message}`);
   }
   recordPareto(session, { target_e_gpa: a.targetE, target_k_nm2: a.targetK }, r1.parsed);
   saveSession(a.session, session);
