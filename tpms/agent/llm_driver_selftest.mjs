@@ -21,7 +21,7 @@
  *  15. wall 预算钳制慢子进程（budget-exhausted/exit4，秒回不穿透）
  *  16. 末步悬垂失败=failed/exit1（STL 保留）  17. --pick 越界=JSON+exit2
  *  18. --max-wall-ms 浮点=JSON+exit2（整数契约，曾 ERR_OUT_OF_RANGE 裸崩）
- *  19. 子进程 ENOBUFS=failed/exit1 保留错误码（曾被误报 budget-exhausted）
+ *  19. 子进程输出超限=failed/exit1 不冒充预算耗尽（跨 Node：ENOBUFS/静默截断两实现）
  *
  * 运行：node llm_driver_selftest.mjs   （真实构建约 3~6 分钟）
  */
@@ -201,9 +201,11 @@ console.error('fixture: 未知子命令 ' + cmd); process.exit(2);
   const r18 = spawnSync(process.execPath, [PIPE, '--target-e', '2', '--target-k', '5', '--max-wall-ms', '1000.5'], { encoding: 'utf8', timeout: 30_000 });
   const p18 = parse(r18.stdout ?? '');
   ok('18 --max-wall-ms 浮点=stdout JSON+exit2（曾 ERR_OUT_OF_RANGE 裸崩 stdout 空）', r18.status === 2 && p18?.status === 'invalid-argument' && /整数/.test(p18?.error ?? '') && (r18.stdout ?? '').trim().startsWith('{'), `exit=${r18.status} stdout=${(r18.stdout || '').slice(0, 40)}`);
-  // 19 ENOBUFS 归因（推送前复核：maxBuffer 溢出曾被误报 budget-exhausted/exit4）
+  // 19 输出超限归因（推送前复核：曾被误报 budget-exhausted/exit4）。跨 Node 版本契约：
+  // 旧 Node spawnSync 超限→error ENOBUFS（管线保留错误码）；新 Node→stdout 静默截断、
+  // exit0 无 JSON→水密验收失败——两机制殊途同归 failed/exit1，断言只钉语义不钉错误码实现。
   const { r: r19, pr: p19 } = run('flood', []);
-  ok('19 子进程 ENOBUFS=failed/exit1 保留错误码（曾被误报 budget-exhausted/exit4）', r19.status === 1 && p19?.status === 'failed' && /ENOBUFS/.test(JSON.stringify(p19)) && p19?.status !== 'budget-exhausted', `exit=${r19.status} status=${p19?.status}`);
+  ok('19 子进程输出超限=failed/exit1 不冒充预算耗尽（Node 版本差异：ENOBUFS 保留错误码 / 静默截断致验收失败）', r19.status === 1 && p19?.status === 'failed' && p19?.status !== 'budget-exhausted', `exit=${r19.status} status=${p19?.status} err=${/ENOBUFS/.test(JSON.stringify(p19)) ? 'ENOBUFS' : 'truncated-or-other'}`);
 }
 
 rmSync(work, { recursive: true, force: true });
