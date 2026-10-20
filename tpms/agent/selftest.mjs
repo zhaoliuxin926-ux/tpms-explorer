@@ -10,11 +10,12 @@
 // 运行: node selftest.mjs
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import { readFileSync, rmSync, existsSync, unlinkSync, writeFileSync, statSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { readFileSync, rmSync, existsSync, unlinkSync, writeFileSync, statSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, '..', '..');
 const CLI = join(HERE, 'tpms.mjs');
 
 let pass = 0, fail = 0;
@@ -270,16 +271,54 @@ rmSync(stlPath, { force: true });
   const m2 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--resolution', '48', '--periods', '3', '--json');
   let a = null, b = null;
   try { a = JSON.parse(m1.stdout); b = JSON.parse(m2.stdout); } catch { /* fallthrough */ }
-  const isoA = a?.isoUsed ?? a?.porTrace?.at?.(-1)?.iso;
-  const isoB = b?.isoUsed ?? b?.porTrace?.at?.(-1)?.iso;
+  const isoA = a?.isoUsed ?? a?.porosityTrace?.at?.(-1)?.iso;
+  const isoB = b?.isoUsed ?? b?.porosityTrace?.at?.(-1)?.iso;
   const trA = JSON.stringify(a?.porosityTrace ?? a?.porTrace ?? null);
   const trB = JSON.stringify(b?.porosityTrace ?? b?.porTrace ?? null);
   (a && b && Number.isFinite(isoA) && isoA === isoB && trA === trB)
     ? ok('exact 求解确定性（isoUsed/轨迹两次逐位一致）')
     : bad('exact 确定性', `isoA=${isoA} isoB=${isoB}`);
 }
+// ── fit-batch 真实内核验收（2026-10-20 用户复核交办：示意算法→experimental-fit 接入+契约校验）──
+{
+  const FIT = join(HERE, 'fit-batch.mjs');
+  const parseLastJson = (s) => { const d = s ?? ''; const i = d.indexOf('{'); return i < 0 ? null : (() => { try { return JSON.parse(d.slice(i, d.lastIndexOf('}') + 1)); } catch { return null; } })(); };
+  const rm = spawnSync(process.execPath, [FIT, '--mock', '--json'], { encoding: 'utf8', timeout: 120_000 });
+  const jm = parseLastJson(rm.stdout);
+  (rm.status === 0 && jm?.good === 6 && Array.isArray(jm.rows))
+    ? ok('fit-batch mock 真实内核链路：6 合成曲线经文件路径全成功')
+    : bad('fit-batch mock', `exit=${rm.status} good=${jm?.good} ${(rm.stderr || '').slice(0, 80)}`);
+  (jm?.rows?.every((r) => Number.isFinite(r.truthE) && Math.abs((r.metrics?.elasticModulusE ?? NaN) - r.truthE) / r.truthE <= 0.06))
+    ? ok('fit-batch E* 反演落真值 ±6%（toe 补偿经真实内核）')
+    : bad('fit-batch E* 精度', JSON.stringify(jm?.rows?.map((r) => [r.id, r.metrics?.elasticModulusE, r.truthE])));
+  // CSV 契约用例须位于仓库根内（fit-batch --dir 有路径穿越守卫；仓库根临时目录 + finally 清理）
+  const tmp = mkdtempSync(join(ROOT, 'fitbatch-st-'));
+  try {
+    writeFileSync(join(tmp, 'nohdr.csv'), '0.01,10\n0.02,20\n0.03,30\n0.04,40\n0.05,50\n0.06,60\n0.07,70\n0.08,80\n0.09,90\n0.10,100\n0.11,110\n0.12,120\n', 'utf8');
+    const rn = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    (rn.status === 1 && /表头|列名/.test(rn.stderr + rn.stdout)) ? ok('fit-batch 无表头/列名结构化拒绝（不再默认前两列）') : bad('fit-batch 无表头拒绝', `exit=${rn.status}`);
+    writeFileSync(join(tmp, 'nohdr.csv'), 'displacement_mm,force_N\n' + Array.from({ length: 40 }, (_, i) => (i * 0.05).toFixed(3) + ',' + (i * 20).toFixed(1)).join('\n') + '\n', 'utf8');
+    const rd = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    (rd.status === 1 && /尺寸/.test(rd.stderr + rd.stdout)) ? ok('fit-batch 试样尺寸元数据缺失拒绝') : bad('fit-batch 尺寸缺失拒绝', `exit=${rd.status}`);
+    writeFileSync(join(tmp, 'nohdr.csv'), ['# lengthMm=30', '# widthMm=20', '# thicknessMm=20', 'displacement_mm,force_N',
+      ...Array.from({ length: 501 }, (_, i) => {
+        const e = i * 0.001;
+        let s;
+        if (e <= 0.01) s = 60000 * e * e;
+        else if (e <= 0.035) s = 60000 * 0.0001 + 1200 * (e - 0.01);
+        else if (e <= 0.06) s = 36 + 9 * Math.min(1, (e - 0.035) / 0.025);
+        else if (e <= 0.45) s = 36 + 0.1 * (e - 0.06);
+        else s = 36 + 0.1 * 0.39 + 25 * (Math.exp(18 * (e - 0.45)) - 1);
+        return (e * 30).toFixed(5) + ',' + (s * 400).toFixed(3);
+      })].join('\n') + '\n', 'utf8');
+    const rh = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    const jh = parseLastJson(rh.stdout);
+    (rh.status === 0 && /24/.test(jh?.rows?.[0]?.hWarn ?? '')) ? ok('fit-batch H₀ 越档口径告警（30→提示 24 端板口径）') : bad('fit-batch 越档告警', `exit=${rh.status} warn=${(jh?.rows?.[0]?.hWarn ?? '无').slice(0, 50)}`);
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
 
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
-// pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；2026-09-26 exact 确定性入账 49→50）
-if (pass < 50) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 50`); process.exit(1); }
+// pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；2026-09-26 exact 确定性入账 49→50；
+// 2026-10-20 fit-batch 真实内核验收 5 锚入账 50→55）
+if (pass < 55) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 55`); process.exit(1); }
 process.exit(fail ? 1 : 0);

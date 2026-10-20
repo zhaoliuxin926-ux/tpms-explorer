@@ -32,7 +32,7 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
 
   const guardOf = (src, n) => new RegExp(`\\bpass(?:Count)?\\s*<\\s*${n}\\b`).test(src);
   guardOf(parity, 337) ? ok('parity_math GUARD 337') : bad('parity_math GUARD 337');
-  guardOf(selftest, 50) ? ok('selftest GUARD 50') : bad('selftest GUARD 50');
+  guardOf(selftest, 55) ? ok('selftest GUARD 55') : bad('selftest GUARD 55');
   guardOf(llmp, 101) ? ok('llm_provider GUARD 101') : bad('llm_provider GUARD 101');
   guardOf(schema, 98) ? ok('schema_check GUARD 98（实测可 >）') : bad('schema_check GUARD 98');
   guardOf(inv, 27) ? ok('inverse_design GUARD 27') : bad('inverse_design GUARD 27');
