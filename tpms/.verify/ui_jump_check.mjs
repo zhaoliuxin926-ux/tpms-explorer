@@ -20,8 +20,18 @@ const ctx = await browser.newContext({ viewport: { width: 1600, height: 950 } })
 const page = await ctx.newPage();
 page.setDefaultTimeout(45000);
 const errors = [];
+// 慢 runner 分级（B5 同型校准，2026-10-25）：pageerror（未捕获异常）保持硬门零容忍；
+// console.error 中「Worker build timed out …（已重建 worker）」是自愈路径的观测日志
+// （CI-350 windows 实证：278s 超慢 runner 上 120s 看门狗触发+自愈成功，功能无损）——
+// 归观测通道披露不判失败；其余 console.error（无自愈确认的错误）仍红。
+const healed = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
+page.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  const t = m.text();
+  if (/Worker build timed out.*已重建 worker/.test(t)) healed.push(t);
+  else errors.push('console.error: ' + t);
+});
 
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.evaluate(() => localStorage.setItem('tpms_onboard_v1', '1'));
@@ -139,7 +149,7 @@ ok('逆设计非法输入 fail-closed（不炸+状态保持）', inv3.note.start
 // （原第 8 节 hybrid 隔离钉已合并进第 6 节双污染序列——固定窗口三次校准史 469→492→552s
 //  证明任何独立第二跑都会把门推过 STEP_TIMEOUT，合并后全门唯一一次画廊生成）
 
-ok('0 pageerror/console.error', errors.length === 0, errors.join('; '));
+ok('0 pageerror/console.error（自愈观测日志除外，慢 runner 披露不判失败）', errors.length === 0, errors.join('; ') + (healed.length ? `（自愈×${healed.length}）` : ''));
 console.log(`RESULT: ${pass} PASS / ${fail} FAIL`);
   const guardFail = pass < 12;
   if (guardFail) console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 12（恒真/集体跳过防护；2026-10-05 +2 画廊/+3 逆设计；2026-10-06 双污染合并仍 12）');
