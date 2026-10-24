@@ -35,6 +35,7 @@ import { geoCache, geoCacheSet, geoCacheTouch, cacheKey } from './geometry/geo-c
 import { initTheme } from './ui/theme';
 import { flashToast } from './ui/toast';
 import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
+import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
 import type { YieldCriterionKind } from './physics/yield-surface';
 import type { YieldViewer } from './viewers/yield-viewer';
@@ -580,7 +581,7 @@ function runPlasticityDemo(): boolean {
 document.getElementById('btn-plasticity')?.addEventListener('click', runPlasticityDemo);
 
 // ── v9.0 试验曲线反演（experimental-fit UI 接线）──
-function drawExpFitCanvas(cv: HTMLCanvasElement, xs: Float64Array, ys: Float64Array, plateau: number, ed: number, rp: number, emod: number): void {
+function drawExpFitCanvas(cv: HTMLCanvasElement, xs: Float64Array, ys: Float64Array, plateau: number, ed: number | null, rp: number, emod: number): void {
   cv.style.display = 'block';
   const ctx = cv.getContext('2d');
   if (!ctx) return;
@@ -597,7 +598,10 @@ function drawExpFitCanvas(cv: HTMLCanvasElement, xs: Float64Array, ys: Float64Ar
   // 平台线（绿虚）+ εd 竖线
   ctx.strokeStyle = 'rgba(46,204,113,.8)'; ctx.setLineDash([4, 3]);
   ctx.beginPath(); ctx.moveTo(X(0), Y(plateau)); ctx.lineTo(X(emax), Y(plateau)); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(X(ed), Y(0)); ctx.lineTo(X(ed), Y(smax * 0.95)); ctx.stroke();
+  // εd 竖线：未观察到密实化（η 极值落在记录末点）时不画——停机点不是密实化（2026-10-24 审查 #5）
+  if (ed != null && Number.isFinite(ed)) {
+    ctx.beginPath(); ctx.moveTo(X(ed), Y(0)); ctx.lineTo(X(ed), Y(smax * 0.95)); ctx.stroke();
+  }
   ctx.setLineDash([]);
   // Rp0.2 交点
   ctx.fillStyle = '#e74c3c';
@@ -641,9 +645,16 @@ function bindExperimentalFit(): void {
       const gaPlateau = 0.3 * Math.pow(1 - pf, 1.5) * syield; // Gibson-Ashby 开孔式平台应力估算
       const ratio = gaPlateau / m.plateauStress;
       out.style.display = 'block';
+      // εd/W 有效性口径（2026-10-24 审查 #5）：截断曲线 η 极值落末点=未观察到密实化，
+      // εd 不给伪确定值；W 标注实际积分终点（记录末点），不冒称"至密实化吸能"
+      const edTxt = m.densificationStrain != null
+        ? 'εd=' + (m.densificationStrain * 100).toFixed(1) + '%'
+        : 'εd=未观察到密实化（曲线截断）';
+      const wTxt = 'W=' + m.energyAbsorptionW.toFixed(3) + ' MJ/m³'
+        + (m.densificationStatus === 'not-observed' ? `（截至记录末点 ε=${(m.energyAbsorptionEndStrain * 100).toFixed(1)}%）` : '');
       out.textContent = 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
-        + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · εd=' + (m.densificationStrain * 100).toFixed(1)
-        + '% · W=' + m.energyAbsorptionW.toFixed(3) + ' MJ/m³ · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%）';
+        + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · ' + edTxt
+        + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%）';
       drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
     } catch (err) {
       out.style.display = 'block';
@@ -735,7 +746,7 @@ function bindParetoCard(): void {
       ctx2d.stroke();
       if (i === hoverIdx) {
         ctx2d.fillStyle = '#dde6ff'; ctx2d.font = '11px system-ui';
-        const label = `${p.type} p=${(p.porosity * 100).toFixed(0)}% k=${p.cellSize} · E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`;
+        const label = `${p.type} p=${(p.porosity * 100).toFixed(0)}% 单胞=${p.cellSize}mm · E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`;
         const w = ctx2d.measureText(label).width;
         const lx = Math.min(sx(p.E) + 10, canvas.width - w - 12);
         ctx2d.fillText(label, lx, Math.max(M.t + 10, sy(p.kappa) - 10));
@@ -872,6 +883,14 @@ function bindParetoCard(): void {
   canvas.addEventListener('click', () => {
     if (hoverIdx < 0 || !front[hoverIdx]) return;
     const p = front[hoverIdx];
+    // 尺寸契约（2026-10-24 实用性审查 #2 UI 链）：Pareto 候选 cellSize=单胞 mm（前向代理
+    // 口径），UI 手动设计为「1 周期=1mm」（单胞恒 1mm）——单胞≠1mm 的候选写入 state.cellSize
+    // 只是改周期数，性能预测（κ∝单胞²）不随周期数缩放，"已采用"即虚假承诺。先阻断该应用
+    // 入口（完整 UI 独立尺寸支持另批实施）；等效构建走 CLI mesh --specimen-size。
+    if (p.cellSize !== 1) {
+      flashToast(`已阻断采用：候选单胞 ${p.cellSize} mm 在 UI「1 周期=1mm」口径下不可表示（UI 单胞恒 1mm；κ∝单胞²，按周期数重建无法兑现预测性能）。CLI 等效构建：mesh --type ${String(p.type).split('×')[0]} --porosity ${p.porosity} --periods 3 --specimen-size ${3 * p.cellSize}`);
+      return;
+    }
     // hybrid 复合点（type 含 '×@'）：UI hybrid 是空间分区混合（blendCenter=波前坐标），
     // 无「均匀混合比 b」参数可直接写回——部分写回（族 A/孔隙率/密度）+指引手动配 hybrid
     const isHybrid = p.type.includes('×');
@@ -882,8 +901,8 @@ function bindParetoCard(): void {
     { const sb = getState(); updateBadges(sb.type, sb.model, sb.material, sb.structureMode); }
     scheduleRebuild(false);
     flashToast(isHybrid
-      ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · k=${p.cellSize}）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
-      : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单元密度 ${p.cellSize}（E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm）`);
+      ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · 单胞 ${p.cellSize}mm=1 周期）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
+      : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单胞 ${p.cellSize} mm（k=${p.cellSize}，UI 单胞 1mm 口径可表示）· E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`);
   });
   // 逆设计入口：性能愿望点（E/κ）→ 前沿上 log10 空间最近的 top-3 候选。
   // 愿望通常严格优于全前沿（不可达）——最近候选即可行最优妥协；目标可达时
@@ -905,7 +924,7 @@ function bindParetoCard(): void {
     const reachable = feasible.length > 0;
     targetTop = nearestFrontCandidates(reachable ? feasible : front, eV, kappaM2, 3);
     const lines = targetTop.map((t, i) =>
-      `${i + 1}. ${String(t.point.type)} p=${(t.point.porosity * 100).toFixed(0)}% k=${t.point.cellSize} · E=${t.point.E.toFixed(2)}GPa κ=${t.point.kappa.toExponential(1)} · 距目标 ${t.dist.toFixed(2)} log10`);
+      `${i + 1}. ${String(t.point.type)} p=${(t.point.porosity * 100).toFixed(0)}% 单胞=${t.point.cellSize}mm · E=${t.point.E.toFixed(2)}GPa κ=${t.point.kappa.toExponential(1)} · 距目标 ${t.dist.toFixed(2)} log10`);
     note!.textContent = reachable
       ? `目标可满足（存在达标前沿点）——最接近目标的 top-3 已金色标注（★=愿望点，序号=推荐顺位）：\n${lines.join('　')}\n点击前沿圆点写回该设计参数。`
       : `目标在当前设计空间不可达——最近的可行妥协 top-3 已金色标注（★=愿望点，序号=推荐顺位，log10 距离越小越接近）：\n${lines.join('　')}\n逆设计=愿望与可行前沿的协商；解析代理非 FE 精确，采用后可在主界面网格级复核。`;
@@ -1660,6 +1679,11 @@ async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
   const sNow = getState();
   const base = `tpms-${sNow.type}-p${sNow.porosity}`;
   if (!baseGeo) throw new Error('几何尚未就绪');
+  // 网格交付门（2026-10-24 审查 #7 连带）：NL 助手导出与导出中心同口径——非水密不交付
+  const aNL = auditMeshIndices(baseGeo.attributes.position.array as Float32Array, baseGeo.index!.array as Uint32Array);
+  if (aNL.openEdges !== 0 || aNL.nonManifoldEdges !== 0 || aNL.degenTris !== 0) {
+    throw new Error(`网格未通过水密审计（开放边=${aNL.openEdges} 非流形边=${aNL.nonManifoldEdges} 退化面=${aNL.degenTris}）——不导出（与 CLI/导出中心同口径）`);
+  }
   const pos = baseGeo.attributes.position.array as Float32Array;
   const idx = baseGeo.index!.array as Uint32Array;
   const scale = meshCont ? meshCont.scale : wcToMmFactor(sNow.cellSize);
@@ -3657,7 +3681,7 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     const el = document.getElementById('inverse-result');
     if (el) {
       el.textContent = top.map((so, i) =>
-        `${i + 1}. ${so.type} P=${(so.params.porosity * 100).toFixed(0)}% 单元 ${so.params.cellSize.toFixed(1)}mm α=${so.params.anisotropy.toFixed(2)} → E*=${so.prediction.EGPa.toFixed(2)}GPa κ=${(so.prediction.kappaM2 * 1e8).toFixed(2)}e-8 m²（J=${so.objective.toExponential(1)}，${inverseReport!.elapsedMs.toFixed(1)}ms）`,
+        `${i + 1}. ${so.type} P=${(so.params.porosity * 100).toFixed(0)}% 单胞 ${so.params.cellSize.toFixed(1)}mm α=${so.params.anisotropy.toFixed(2)} → E*=${so.prediction.EGPa.toFixed(2)}GPa κ=${(so.prediction.kappaM2 * 1e8).toFixed(2)}e-8 m²（J=${so.objective.toExponential(1)}，${inverseReport!.elapsedMs.toFixed(1)}ms）`,
       ).join(' ｜ ');
     }
     flashToast(inverseReport.converged ? '反演收敛：目标指标全部命中（≤1e-3 相对残差）' : '反演完成：目标组合超出可行包络，已给出最优折中');
@@ -3665,6 +3689,13 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
   document.getElementById('btn-inv-apply')?.addEventListener('click', () => {
     if (!inverseReport) { flashToast('请先执行反演寻优'); return; }
     const best = inverseReport.solutions[0];
+    // 尺寸契约（2026-10-24 实用性审查 #2 UI 链）：求解器 cellSize=单胞 mm（连续 [1,5]），
+    // UI「1 周期=1mm」下单胞恒 1mm——单胞≠1mm 时取整写周期数只会得到另一个 1mm 单胞
+    // 设计，预测性能（κ∝单胞²）不兑现。阻断应用并给 CLI 路径（UI 独立尺寸支持另批）。
+    if (best.params.cellSize !== 1) {
+      flashToast(`已阻断应用：最优解单胞 ${best.params.cellSize.toFixed(2)} mm 在 UI「1 周期=1mm」口径下不可表示（UI 单胞恒 1mm；旧实现取整写周期数=尺度丢失）。CLI 等效构建：mesh --type ${best.type} --porosity ${best.params.porosity.toFixed(3)} --periods 3 --specimen-size ${(3 * best.params.cellSize).toFixed(2)}`);
+      return;
+    }
     // 口径定案（2026-09-22）：求解器保持 [0.02,0.98] 宽域，回 UI 与滑块同域 [60,90] 钳制（NL/红队 D 同策略）
     const rawP = Math.round(best.params.porosity * 100);
     const porosity = Math.max(60, Math.min(90, rawP));
@@ -3672,7 +3703,7 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     setState({
       type: best.type,
       porosity,
-      cellSize: Math.max(1, Math.min(5, Math.round(best.params.cellSize))),
+      cellSize: 1,
     });
     // 与 NL/预设等编程式应用路径统一：setState→syncUI→updateBadges→rebuild→HD
     // （此前缺 updateBadges → 应用后 document.title/徽标滞留旧族名）
@@ -3682,7 +3713,7 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     scheduleRebuild(false);
     scheduleHdUpgrade();
     const clampNote = porosity !== rawP ? `；孔隙率 ${rawP}% 超出 UI 域 [60,90]，已钳制为 ${porosity}%` : '';
-    flashToast(`已应用最优解：${best.type}（P=${porosity}%）${clampNote}`);
+    flashToast(`已应用最优解：${best.type}（P=${porosity}% · 单胞 1mm=k1，UI 可表示）${clampNote}`);
   });
 
   // 【v4.0 阶段 V】CT 重构与制造偏差
@@ -4647,14 +4678,18 @@ async function runSweep(): Promise<void> {
  * 返回 false 表示构建失败（已 toast）。配图模式与导出中心共用——两入口产物
  * 必须同为 HD 口径（figure 无 HD 锁曾致配图基于 preview 网格，2026-08-26 登记）。
  */
-async function ensureExportGradeGeometry(s: AppState): Promise<boolean> {
+/** 导出级几何确保：HD 档重建（与配图模式共享锁）。
+ *  overrideR：水密级升档重试（2026-10-24 审查 #7 连带）——hdResolution 显示档（19+k·14）
+ *  对 gyroid/diamond 系统性不足以产水密网格（CLI 矩阵：gyroid 需 ~21+ 格/周期），导出
+ *  门审计失败后以 CLI 验证过的 32 格/周期档重建再判；不传保持原显示档行为。 */
+async function ensureExportGradeGeometry(s: AppState, overrideR?: number): Promise<boolean> {
   if (!baseGeo || !baseGeo.index) {
     flashToast('请先生成有效曲面再导出');
     return false;
   }
   // 拖动滑块后 0~350ms 内 HD 升级尚未完成，此时导出会拿到 preview(R=28) 网格——
   // 同步在主线程重建高清（一次性几百 ms），保证导出物与屏幕最终形态一致
-  const hdR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+  const hdR = overrideR ?? hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
   const levelsetOverrideValid = levelsetOverrideStateKey === geometryStateKey(s);
   const pendingRebuild = rebuildTimer !== null || hdUpgradeTimer !== null || activeBuild !== null;
   const expectedHdKey = buildRequestKey(s, hdR);
@@ -4878,6 +4913,29 @@ async function handleExportInner(fmt: string): Promise<void> {
   const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode';
   // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
   if (needGeo && !(await ensureExportGradeGeometry(s))) return;
+  // 网格交付门（2026-10-24 实用性审查 #7：网页与 CLI 同一口径）：三角网格导出前独立审计
+  // 三硬指标——任一非零即硬拒（与 CLI mesh 水密门一致），不触发下载。此前网页仅查
+  // "结果非空"+构建期一次性非流形 toast，非流形网格仍可进入 STL/3MF 导出交付。
+  // 升档重试：显示档（19+k·14）对 gyroid/diamond 系统性不足以产水密网格（gyroid 需
+  // ~21+ 格/周期，R64 过/R61 拒——CLI 矩阵实证），失败先按 CLI 验证过的 32 格/周期档
+  // 重建再审（min 128 = BufferPool 上界）；128 帽内仍非水密（如 diamond k5、fcks 薄壁
+  // 自触族）= 该设计在可达分辨率下结构性不可产，如实拒并报最终数值。
+  if (needGeo) {
+    const hdRDisp = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+    let a7 = auditMeshIndices(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array);
+    const bad = (x: { openEdges: number; nonManifoldEdges: number; degenTris: number }) =>
+      x.openEdges !== 0 || x.nonManifoldEdges !== 0 || x.degenTris !== 0;
+    if (bad(a7)) {
+      const escR = Math.min(128, Math.max(hdRDisp, s.cellSize * 32));
+      if (escR > hdRDisp && await ensureExportGradeGeometry(s, escR)) {
+        a7 = auditMeshIndices(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array);
+      }
+    }
+    if (bad(a7)) {
+      flashToast(`已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`);
+      return;
+    }
+  }
   const exp = await loadExport();
   const gcodeMod = await loadGcode();
   try {

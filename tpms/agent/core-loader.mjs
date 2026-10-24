@@ -24,7 +24,8 @@ const CORE_EXPORTS = [
   `export { buildSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/surface-nets.ts'))};`,
   `export { buildPeriodicSurface } from ${JSON.stringify(join(PLATFORM, 'src/geometry/periodic-surface.ts'))};`,
   `export { globalBufferPool } from ${JSON.stringify(join(PLATFORM, 'src/geometry/buffer-pool.ts'))};`,
-  `export { wcToMmFactor } from ${JSON.stringify(join(PLATFORM, 'src/core/units.ts'))};`,
+  `export { wcToMmFactor, wcToMmFactorByWidth } from ${JSON.stringify(join(PLATFORM, 'src/core/units.ts'))};`,
+  `export { auditMeshIndices } from ${JSON.stringify(join(PLATFORM, 'src/core/mesh-audit.ts'))};`,
   `export { computeMeshSDF, checkMesh, parseSTL, closestPtTriangle } from ` + JSON.stringify(join(PLATFORM, 'src/geometry/mesh-container.ts')) + `;
   export { buildBinarySTL } from ${JSON.stringify(join(PLATFORM, 'src/export/stl-exporter.ts'))};`,
   `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,

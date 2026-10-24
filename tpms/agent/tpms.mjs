@@ -270,50 +270,8 @@ function cmdEstimate(a, json) {
 // ── M1 几何闭环：参数 → 体素场 → Surface Nets → STL（不经浏览器）──────────
 // 自检口径与 .verify/mesh_audit.mjs 同源：开放边/非流形/退化面三硬指标，任一非零
 // 即判失败且【不产出 STL】——水密门不过不交货。
-
-function auditMeshIndices(positions, indices, opts) {
-  const triCount = indices.length / 3;
-  const vertCount = positions.length / 3;
-  const KM = vertCount + 1;
-  // 退化判据模式（radial-grad MT 管线解锁，2026-09-15）：'absolute'（默认，|cross|²≤1e-18，
-  // surface-nets 管线历史契约）| 'shape'（尺度无关 area/max_edge²<1e-12——manifold_audit
-  // 2026-09-11 先例判据：等边微楔片是相切带的真实离散几何计为合法，针形仍拦）
-  const shapeMode = opts?.degenMode === 'shape';
-  const edgeKeys = new Float64Array(triCount * 3);
-  let n = 0, degenTris = 0;
-  for (let t = 0; t < triCount; t++) {
-    const i0 = indices[t * 3], i1 = indices[t * 3 + 1], i2 = indices[t * 3 + 2];
-    if (i0 === i1 || i1 === i2 || i0 === i2) { degenTris++; continue; }
-    edgeKeys[n++] = (i0 < i1 ? i0 * KM + i1 : i1 * KM + i0) * 2 + (i0 < i1 ? 0 : 1);
-    edgeKeys[n++] = (i1 < i2 ? i1 * KM + i2 : i2 * KM + i1) * 2 + (i1 < i2 ? 0 : 1);
-    edgeKeys[n++] = (i2 < i0 ? i2 * KM + i0 : i0 * KM + i2) * 2 + (i2 < i0 ? 0 : 1);
-    const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3;
-    const ax = positions[p1] - positions[p0], ay = positions[p1 + 1] - positions[p0 + 1], az = positions[p1 + 2] - positions[p0 + 2];
-    const bx = positions[p2] - positions[p0], by = positions[p2 + 1] - positions[p0 + 1], bz = positions[p2 + 2] - positions[p0 + 2];
-    const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
-    if (shapeMode) {
-      const maxE2 = Math.max(ax * ax + ay * ay + az * az, bx * bx + by * by + bz * bz,
-        (positions[p1] - positions[p2]) ** 2 + (positions[p1 + 1] - positions[p2 + 1]) ** 2 + (positions[p1 + 2] - positions[p2 + 2]) ** 2);
-      if (maxE2 > 0 && (cx * cx + cy * cy + cz * cz) / (4 * maxE2) < 1e-24) degenTris++;
-    } else if (cx * cx + cy * cy + cz * cz <= 1e-18) degenTris++;
-  }
-  const edges = edgeKeys.subarray(0, n);
-  edges.sort(); // TypedArray 数值排序
-  let openEdges = 0, nonManifoldEdges = 0, misorientedEdges = 0;
-  for (let i = 0; i < n; ) {
-    const undKey = Math.floor(edges[i] / 2);
-    let ab = 0, ba = 0; // ab = min→max 计数，ba = max→min 计数
-    while (i < n && Math.floor(edges[i] / 2) === undKey) {
-      if (edges[i] % 2 === 0) ab++; else ba++;
-      i++;
-    }
-    const total = ab + ba;
-    if (total === 1) openEdges++;
-    else if (total > 2) nonManifoldEdges++;
-    else if (ab === 0 || ba === 0) misorientedEdges++; // total==2 但两三角同向
-  }
-  return { triCount, degenTris, openEdges, nonManifoldEdges, misorientedEdges };
-}
+// 2026-10-24 审查 #7：auditMeshIndices 提炼至平台 src/core/mesh-audit.ts（单一真源，
+// UI 导出门同口径消费）；本文件经 core-loader 桥调用，本地副本已删。
 
 // ── B-t4.0 M4 内环自校正：solve 命令 ──
 // 闭环语义：解析求根 → build → 网格实测 → 校正 iso → 重复，直至收敛或判定不可达。
@@ -380,7 +338,7 @@ function cmdSolve(a, json) {
       unreachable = { reason: 'build_error', detail: String(res.message ?? res.type), iso };
       break;
     }
-    audit = auditMeshIndices(res.positions, res.indices);
+    audit = core.auditMeshIndices(res.positions, res.indices);
     est = res.porosityEstimate;
     const dev = Math.abs(est - pf);
     const wt = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
@@ -475,7 +433,7 @@ function cmdSolve(a, json) {
 }
 
 function cmdMesh(a, json) {
-  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--out 文件.stl] [--json]（注: 官方容差矩阵标定域 k≤5；k=6 非标定域，薄壁族建议 --periods ≤5；径向双族分区: --region-inner <族> [--region-r 0.55] [--region-blend 0.15]）';
+  const usage = '用法: node tpms.mjs mesh --type <曲面> --porosity <0~1|百分数> [--periods 6] [--resolution 64] [--container cube|cylinder] [--mode solid_network|shell|gradient_shell] [--porosity-solver exact|legacy] [--specimen-size <总宽mm，默认=periods>] [--out 文件.stl] [--json]（注: 官方容差矩阵标定域 k≤5；k=6 非标定域，薄壁族建议 --periods ≤5；径向双族分区: --region-inner <族> [--region-r 0.55] [--region-blend 0.15]）';
   if (a._.length) die(`多余的位置参数 "${a._.join(' ')}"`, usage);
   const type = String(a.type ?? '');
   if (!BUILTIN_TYPES.includes(type)) die(`未知曲面类型 "${type}"，可选: ${BUILTIN_TYPES.join(' ')}`, usage);
@@ -485,6 +443,10 @@ function cmdMesh(a, json) {
   if (pf < 0.05 || pf >= 1) die(`孔隙率 ${pf} 越界，须 0.05 ≤ p < 1（近全实心的网格无工程意义）`, usage);
   const periods = a.periods === undefined ? 6 : Number(a.periods);
   if (!Number.isInteger(periods) || periods < 1 || periods > 12) die('periods 须为 1~12 整数（上限保证 R≤96 时每周期 ≥8 格）', usage);
+  // 尺寸契约（2026-10-24 审查 #1）：总宽基准 --specimen-size，默认=periods（1 period=1mm
+  // 旧行为逐位不变）；显式给定后 STL 按总宽缩放，单胞=总宽/periods 为派生披露量
+  const specimenSizeMm = a['specimen-size'] === undefined ? periods : Number(a['specimen-size']);
+  if (!Number.isFinite(specimenSizeMm) || specimenSizeMm <= 0 || specimenSizeMm > 1000) die('--specimen-size 须为 0 < L ≤ 1000（试样总宽 mm，默认=periods）', usage);
   // 平台缓冲池容量硬约束：N³ > 1e6 即 throw（units.ts 分辨率档位 R≤99）——CLI 上限对齐
   const resolution = a.resolution === undefined ? 64 : Number(a.resolution);
   if (!Number.isInteger(resolution) || resolution < 48 || resolution > 128) die('resolution 须为 48~128 整数', usage);
@@ -588,6 +550,11 @@ function cmdMesh(a, json) {
     die('--flow-axis 仅与 --cfd-polyMesh 组合使用', usage);
   if (flowAxisS !== undefined && !['x', 'y', 'z'].includes(flowAxisS))
     die(`--flow-axis 须 x|y|z（收到 "${flowAxisS}"）`, usage);
+  // 尺寸契约定界（2026-10-24 审查 #1）：显式总宽仅支持标准 wc 域路径；radial-grad/region
+  // （归一域 MT 管线）与 container-mesh/cfd（容器固有毫米尺度）的尺度统一未完成——
+  // 显式给出即拒绝，不传保持旧行为（绝不静默忽略或错缩放）
+  if (a['specimen-size'] !== undefined && (radialM || regionM || meshDomain || cfdPoly))
+    die('--specimen-size 暂不支持与 --radial-grad/--region-inner/--container-mesh/--cfd-polyMesh 组合（这些路径有固有毫米尺度/归一域，总宽统一未完成）；不传该参数保持旧行为', usage);
   const solver = String(a['porosity-solver'] ?? 'exact');
   if (!['exact', 'legacy'].includes(solver)) die(`未知求解器 "${solver}"，可选 exact|legacy`, usage);
 
@@ -728,7 +695,7 @@ function cmdMesh(a, json) {
 
   // radial-grad MT 管线：degen 判据走尺度无关口径（manifold_audit 2026-09-11 先例——等边微楔片
   // 为相切带真实离散几何；针形/自环仍拦）
-  const audit = auditMeshIndices(res.positions, res.indices, (radialM || regionM) ? { degenMode: 'shape' } : undefined);
+  const audit = core.auditMeshIndices(res.positions, res.indices, (radialM || regionM) ? { degenMode: 'shape' } : undefined);
   const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
   // porosityEstimate 平台口径为小数（=1−发散固相/包络，surface-nets 内建钳制），恒 ≤1
   const porEst = res.porosityEstimate;
@@ -751,6 +718,9 @@ function cmdMesh(a, json) {
     lastAuditCounts: audit,
     solver, porosityTrace: porTrace,
     scaleMmPerWc: core.wcToMmFactor(periods),
+    // 尺寸契约披露（2026-10-24 审查 #1）：总宽真源+派生单胞（radial/容器路径的 STL 尺度
+    // 走各自固有口径，不套用本组字段——显式 --specimen-size 已在参数层与其互斥）
+    ...(!radialM && !meshDomain ? { specimenSizeMm, cellSizeMm: +(specimenSizeMm / periods).toFixed(6) } : {}),
     boundary: (radialM
       ? 'radial-grad MT 管线：Marching Tetrahedra 提取（论文 MC 同机理）+ 复合场（平方壳 P²−C(r)² + 场内圆柱裁剪 max(r1²−rb², |Z|−rb)）；'
         + '退化判据=尺度无关（area/max_edge²<1e-12，manifold_audit 2026-09-11 先例）——相切带等边微楔片为真实离散几何；'
@@ -821,7 +791,9 @@ function cmdMesh(a, json) {
     console.error(`✗ 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 不产出 STL`);
     process.exit(3);
   }
-  const scale = radialM ? periods / 2 : (meshDomain ? meshDomain.scale : core.wcToMmFactor(periods)); // MT 归一域 [−1,1] → mm 直径 periods
+  // 尺寸契约：标准 wc 域路径按总宽缩放（默认=periods 时与旧 wcToMmFactor(periods) 逐位一致）；
+  // radial/容器路径有固有尺度（组合已在参数层显式拒绝，不达此处）
+  const scale = radialM ? periods / 2 : (meshDomain ? meshDomain.scale : core.wcToMmFactorByWidth(specimenSizeMm));
   const stl = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
   writeFileSync(outFile, Buffer.from(stl));
   out.file = outFile;
@@ -954,7 +926,7 @@ function cmdVerify(core, a, json) {
       break;
     }
     res = built;
-    audit = auditMeshIndices(res.positions, res.indices);
+    audit = core.auditMeshIndices(res.positions, res.indices);
     const wt = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
     est = res.porosityEstimate;
     isoUsed = res.isoUsed;
@@ -1412,7 +1384,7 @@ function cmdScenario(a, json) {
     process.exit(3);
   }
   const res = solved.res;
-  const audit = auditMeshIndices(res.positions, res.indices);
+  const audit = core.auditMeshIndices(res.positions, res.indices);
   const watertight = audit.openEdges === 0 && audit.nonManifoldEdges === 0 && audit.degenTris === 0;
   if (!watertight) {
     console.error(`✗ scenario 水密门未过：开放边=${audit.openEdges} 非流形边=${audit.nonManifoldEdges} 退化面=${audit.degenTris} —— 该 (曲面, 孔隙率, 容器) 组合在 R=${resolution} 下网格表示不可靠，建议提高 resolution`);
@@ -1422,7 +1394,9 @@ function cmdScenario(a, json) {
   const isoUsed = solved.isoUsed;
 
   // ── 4. 交付物：STL（mm）+ Abaqus INP（体素 C3D8 + PBC 压缩工况）──
-  const scale = core.wcToMmFactor(periods);
+  // 尺寸契约单一真源（2026-10-24 审查 #1）：总宽 specimenSizeMm 基准——STL 与 INP 同消费
+  // wcToMmFactorByWidth；默认 specimenSizeMm=periods 时与旧 wcToMmFactor(periods) 逐位一致
+  const scale = core.wcToMmFactorByWidth(specimenSizeMm);
   const stlBuf = core.buildBinarySTL(res.positions, res.indices, scale, res.normals);
   const stlFile = `${outPrefix}.stl`;
   writeFileSync(stlFile, Buffer.from(stlBuf));
@@ -1447,7 +1421,7 @@ function cmdScenario(a, json) {
   const sha16 = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 16);
   const reportJson = {
     command: 'scenario', scenario: 'bone-scaffold-template (M5)',
-    design: { type, porosity: pf, material, materialLabel: MATERIAL_LABELS[material], resolution, periods, container, mode, tolerance, nominalStrain, specimenSizeMm },
+    design: { type, porosity: pf, material, materialLabel: MATERIAL_LABELS[material], resolution, periods, container, mode, tolerance, nominalStrain, specimenSizeMm, cellSizeMm: +(specimenSizeMm / periods).toFixed(6) },
     isoGrad: isoGradS ? { values: design.isoGrad.values, band: design.isoGrad.band === undefined ? 0.4 : Number(design.isoGrad.band), dir: 'z' } : undefined,
     geometry: {
       isoUsed: +isoUsed.toFixed(6), rounds: solved.trace.length, porosityTrace: solved.trace,
@@ -1487,7 +1461,7 @@ function cmdScenario(a, json) {
     `| 曲面族 | ${type} |`, `| 目标孔隙率 | ${(pf * 100).toFixed(1)}% |`,
     `| 材料 | ${MATERIAL_LABELS[material]}（E=${matGPa} GPa, ν=${poisson}） |`,
     `| 结构/容器 | ${mode} / ${container} |`, `| 分辨率/周期 | R=${resolution} / ${periods} 周期 |`,
-    `| 试样宽 | ${specimenSizeMm} mm（${scale.toFixed(4)} mm/wc） |`,
+    `| 试样尺寸 | 总宽 ${specimenSizeMm} mm = ${periods} 周期 × 单胞 ${(specimenSizeMm / periods).toFixed(4)} mm（${scale.toFixed(4)} mm/wc，STL/INP 同基准——2026-10-24 审查 #1 尺寸契约） |`,
     '',
     '## 2. 几何交付（STL 网格）',
     `- 等值常数 iso = ${isoUsed.toFixed(6)}（exact 解析求根 + ${solved.trace.length} 轮网格实测校正）`,
@@ -1542,7 +1516,7 @@ function cmdScenario(a, json) {
 const KNOWN_FLAGS = {
   list: ['json', 'help'],
   estimate: ['type', 'porosity', 'material', 'json', 'help'],
-  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'radial-grad', 'ta', 'tb', 'region-inner', 'region-r', 'region-blend', 'out', 'json', 'help'],
+  mesh: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'porosity-solver', 'iso-grad', 'hybrid', 'container-mesh', 'container-blend', 'cfd-polyMesh', 'flow-axis', 'flow-rate', 'nu', 'radial-grad', 'ta', 'tb', 'region-inner', 'region-r', 'region-blend', 'specimen-size', 'out', 'json', 'help'],
   solve: ['type', 'porosity', 'periods', 'resolution', 'container', 'mode', 'tolerance', 'max-rounds', 'iso-grad', 'hybrid', 'out', 'json', 'help'],
   verify: ['design', 'max-rounds', 'json', 'help'],
   scenario: ['design', 'json', 'help'],

@@ -11,14 +11,16 @@
  *   - 尺寸校验：H₀ 匹配协议档 {12,24,34}mm ±1 为标称；越档照算但在报告标注口径告警
  *     （×2.5 档总高 24 非 30——端板不随缩放，2026-10-20 协议修正）
  *
- * 运行: node tpms/agent/fit-batch.mjs [--mock] [--dir specimens/csv] [--json]
- * 输出: docs/fit-report.md（mock → docs/fit-report.mock.md）；--json 附 stdout 机器摘要
+ * 运行: node tpms/agent/fit-batch.mjs [--mock] [--dir specimens/csv] [--out <仓库根内相对路径>] [--json]
+ * 输出: docs/fit-report.md（mock → docs/fit-report.mock.md）；--out 显式指定（含 selftest 隔离）；
+ *       0 有效曲线时不写文件并 exit1——保护既有成功报告（2026-10-24 实用性审查 #3）。
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -26,6 +28,14 @@ const MOCK = process.argv.includes('--mock');
 const JSON_OUT = process.argv.includes('--json');
 const dirIdx = process.argv.indexOf('--dir');
 const DIR = dirIdx >= 0 ? process.argv[dirIdx + 1] : 'specimens/csv';
+const outIdx = process.argv.indexOf('--out');
+const OUT = outIdx >= 0 ? process.argv[outIdx + 1] : null;
+if (outIdx >= 0) {
+  // 与 --dir 同款守卫：显式报告路径必须位于仓库根内（防 selftest/误用写到仓库外或覆盖系统路径）
+  if (!OUT || isAbsolute(OUT) || OUT.trim() === '') { console.error('FAIL --out 须为仓库根内相对路径'); process.exit(1); }
+  const relOut = relative(ROOT, resolve(ROOT, OUT));
+  if (isAbsolute(relOut) || relOut.startsWith('..' + sep) || relOut === '..') { console.error('FAIL --out 须为仓库根内相对路径'); process.exit(1); }
+}
 
 // ── 内核桥（experimental_fit_audit 同款：rolldown 打包 TS → 临时 mjs import）──
 const PLATFORM = join(HERE, '../tpms-platform');
@@ -92,6 +102,9 @@ function synthDf(seed) {
   return { text: lines.join('\n'), truthE: E0 };
 }
 
+// ── 输入溯源：逐份记录来源路径与原始文本 sha256（前 16 位）——id 不足以唯一追溯输入 ──
+const sha16 = (s) => createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 16);
+
 const rows = [];
 if (MOCK) {
   const tmp = mkdtempSync(join(tmpdir(), 'fitbatch-mock-'));
@@ -105,7 +118,8 @@ if (MOCK) {
       }
     }
     for (const f of readdirSync(tmp).filter((x) => /\.csv$/i.test(x)).sort()) {
-      rows.push({ ...fitOneCsv(readFileSync(join(tmp, f), 'utf8'), f.replace(/\.csv$/i, '')), truthE: truths[f.replace(/\.csv$/i, '')] });
+      const text = readFileSync(join(tmp, f), 'utf8');
+      rows.push({ ...fitOneCsv(text, f.replace(/\.csv$/i, '')), src: `mock:${f.replace(/\.csv$/i, '')}`, sha: sha16(text), truthE: truths[f.replace(/\.csv$/i, '')] });
     }
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 } else {
@@ -120,13 +134,23 @@ if (MOCK) {
     process.exit(1);
   }
   for (const f of readdirSync(dirAbs).filter((x) => /\.csv$/i.test(x)).sort()) {
-    rows.push({ ...fitOneCsv(readFileSync(join(dirAbs, f), 'utf8'), f.replace(/\.csv$/i, '')) });
+    const text = readFileSync(join(dirAbs, f), 'utf8');
+    rows.push({ ...fitOneCsv(text, f.replace(/\.csv$/i, '')), src: relative(ROOT, join(dirAbs, f)).replace(/\\/g, '/'), sha: sha16(text) });
   }
 }
 
 // ── 重复间离散度（同 S 前缀 r1/r2/r3 分组；n≥2 才有 CV）──
 const groupOf = (id) => id.replace(/_r\d+$/, '');
-const cv = (xs) => { const m = xs.reduce((a, b) => a + b, 0) / xs.length; return m > 0 ? (Math.max(...xs) - Math.min(...xs)) / m * 100 : NaN; };
+// 样本 CV = 样本标准差/均值（n−1 分母，NIST 口径；2026-10-24 审查 #6——旧实现为极差/均值，
+// [100,110,120] 曾报 18.18%，样本 CV 实为 9.09%）
+const cv = (xs) => {
+  const n = xs.length;
+  if (n < 2) return NaN;
+  const m = xs.reduce((a, b) => a + b, 0) / n;
+  if (!(m > 0)) return NaN;
+  const s = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1));
+  return (s / m) * 100;
+};
 const repeats = Object.values(rows.filter((r) => r.metrics).reduce((acc, r) => {
   const g = groupOf(r.id);
   (acc[g] ??= { id: g, E: [], Rp: [], Pl: [] });
@@ -140,6 +164,13 @@ const md = [
   '',
   `> 模式：${MOCK ? '**mock 自测曲线**（合成位移-载荷，非试验数据；走与真实 CSV 相同路径）' : '试验 CSV'} · ${new Date().toISOString().slice(0, 10)}`,
   '> **口径**：内核=平台 `experimental-fit.ts`（Toe 补偿+ISO 13314 特征，门 43 独立审计）；位移→应变以实测 H₀（含端板）为基准——压机柔度与端板变形使 E\* 为**下限口径**；正式引用前以工程版「试验曲线反演」复核（协议 §七预处理建议）。',
+  `> **分析配置**：位移→应变基准=实测 H₀（# lengthMm）；H₀ 档位校验 {12,24,34}±1（越档照算+告警）；εd=吸能效率 η 内部极值（截断曲线 η 极值落记录末点=未观察到密实化，εd 不适用，W 积分至记录末点并标注）；重复间离散度=样本 CV（std/均值，n−1）；输入 ${rows.length} 份（逐份溯源见下）。`,
+  '',
+  '## 输入溯源',
+  '',
+  '| 输入文件 | sha256(前16) | 数据类型 | H₀/宽/厚 (mm) |',
+  '|---|---|---|---|',
+  ...rows.map((r) => `| ${r.src} | ${r.sha} | ${MOCK ? 'mock 合成' : '试验 CSV'} | ${fmt(r.dims?.lengthMm, 1)}/${fmt(r.dims?.widthMm, 1)}/${fmt(r.dims?.thicknessMm, 1)} |`),
   '',
   '## 单件特征',
   '',
@@ -147,11 +178,12 @@ const md = [
   '|---|---|---|---|---|---|---|---|---|',
   ...rows.map((r) => r.error
     ? `| ${r.id} | — | FAIL | ${r.error.slice(0, 60)} | | | | | |`
-    : `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`),
+    : `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`),
   ...(rows.some((r) => r.hWarn) ? ['', ...rows.filter((r) => r.hWarn).map((r) => `- ⚠ ${r.id}：${r.hWarn}`)] : []),
   ...(rows.some((r) => r.error) ? ['', ...rows.filter((r) => r.error).map((r) => `- ✗ ${r.id}：${r.error}`)] : []),
+  ...(rows.some((r) => r.metrics?.densificationStatus === 'not-observed') ? ['', ...rows.filter((r) => r.metrics?.densificationStatus === 'not-observed').map((r) => `- ⚠ ${r.id}：未观察到密实化（曲线截断，η 极值落记录末点）——εd 不适用；W=${fmt(r.metrics.energyAbsorptionW, 3)} MJ/m³ 系截至记录末点 ε=${fmt(r.metrics.energyAbsorptionEndStrain, 3)} 的积分，非"至密实化吸能"`)] : []),
   '',
-  '## 重复间离散度（同构型 r1/r2/r3，极差/均值 %）',
+  '## 重复间离散度（同构型 r1/r2/r3，样本 CV % = std/均值）',
   '',
   '| 构型 | n | CV(E*) | CV(Rp0.2) | CV(平台σ) |',
   '|---|---|---|---|---|',
@@ -159,12 +191,14 @@ const md = [
   '',
 ].join('\n');
 
-const out = join(ROOT, MOCK ? 'docs/fit-report.mock.md' : 'docs/fit-report.md');
-writeFileSync(out, md, 'utf8');
 const good = rows.filter((r) => r.metrics).length;
-if (JSON_OUT) console.log(JSON.stringify({ ok: good > 0, mock: MOCK, out, good, rows, repeats }, null, 2));
+const out = OUT ? resolve(ROOT, OUT) : join(ROOT, MOCK ? 'docs/fit-report.mock.md' : 'docs/fit-report.md');
 if (!good) {
-  console.error('FAIL 无有效曲线（0 行成功）');
+  // 2026-10-24 实用性审查 #3：0 有效曲线不写报告文件（先判后写）——坏输入不再覆盖既有成功报告
+  if (JSON_OUT) console.log(JSON.stringify({ ok: false, mock: MOCK, out: null, good, rows, repeats }, null, 2));
+  console.error(`FAIL 无有效曲线（0/${rows.length} 行成功）——报告未写入，${out} 保持不变`);
   process.exit(1);
 }
+writeFileSync(out, md, 'utf8');
+if (JSON_OUT) console.log(JSON.stringify({ ok: true, mock: MOCK, out, good, rows, repeats }, null, 2));
 console.log('WROTE', out, 'rows', `${good}/${rows.length}`);

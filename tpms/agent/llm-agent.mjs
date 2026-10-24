@@ -47,7 +47,7 @@ function runCli(toolName, args, cliOpts = {}) {
   // tools.schema 工具名 → CLI 子命令映射（Map 防原型链键穿透，红队 D H-1 同源）
   // tpms_pareto 槽位 snake_case → CLI kebab（schema camelCase≠CLI kebab 映射断裂先例，llm-toolcalling 红队清单）
   const cmdMap = new Map([['tpms_list', 'list'], ['tpms_estimate', 'estimate'], ['tpms_mesh', 'mesh'], ['tpms_scenario', 'scenario'], ['tpms_pareto', 'pareto']]);
-  const slotMap = new Map([['target_e_gpa', 'target-e'], ['target_k_nm2', 'target-k']]);
+  const slotMap = new Map([['target_e_gpa', 'target-e'], ['target_k_nm2', 'target-k'], ['specimen_size_mm', 'specimen-size']]);
   const cmd = cmdMap.get(toolName);
   if (!cmd) return { status: 2, stdout: '', stderr: `未知工具 ${toolName}` };
   const cliArgs = [TPMS, cmd];
@@ -136,13 +136,17 @@ async function main() {
       const { saveSession, recordExecution } = await import('./agent-session.mjs');
       const c = ref.candidate;
       const out = join(dirname(a.session), `mesh-${ref.recId}-cand${ref.ordinal}-${c.type}-p${Math.round(c.porosity * 100)}.stl`);
-      const meshArgs = { type: c.type, porosity: c.porosity, periods: c.cellSize, resolution: 96, out };
+      // 尺寸契约（2026-10-24 审查 #2 评审定案）：候选 cellSize=单胞 mm（inverse-design
+      // DesignParams 语义）——曾被直接错绑为周期数（periods=c.cellSize，几何单胞恒 1mm，
+      // 推荐评估的尺度完全丢失）。现显式 periods=3（官方标定域 k≤5 内；全局默认 6 已登记
+      // 非标定域、推荐不依赖隐式默认）+ 总宽=3×单胞 mm，构建参数与会话/报告完整记录。
+      const meshArgs = { type: c.type, porosity: c.porosity, periods: 3, specimen_size_mm: 3 * c.cellSize, resolution: 96, out };
       if (a.dryRun) {
         console.error(`[dry-run][session] tpms_mesh ${JSON.stringify(meshArgs)}（来自推荐 ${ref.recId} 第 ${ref.ordinal} 项）`);
         if (a.json) console.log(JSON.stringify({ ok: true, mode: 'session-reference', resolvedFrom: { recId: ref.recId, ordinal: ref.ordinal, candidate: c }, args: meshArgs, dryRun: true }, null, 2));
         process.exitCode = 0; return;
       }
-      console.error(`→ [session] 指代绑定：推荐 ${ref.recId} 第 ${ref.ordinal} 项 → tpms_mesh ${c.type} p=${c.porosity} k=${c.cellSize}（确定性提取，不经模型）`);
+      console.error(`→ [session] 指代绑定：推荐 ${ref.recId} 第 ${ref.ordinal} 项 → tpms_mesh ${c.type} p=${c.porosity} 周期=3 总宽=${(3 * c.cellSize).toFixed(2)}mm（单胞 ${c.cellSize}mm——确定性换算，不经模型）`);
       const r = runCli('tpms_mesh', meshArgs);
       let parsed = null;
       try { parsed = JSON.parse(r.stdout); } catch { /* */ }

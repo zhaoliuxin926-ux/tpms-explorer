@@ -155,13 +155,13 @@ const SCHEDULE = [
   ['tissue_growth_audit 组织长入反应扩散（门35）', '组织长入审计', 'tissue_growth_audit.mjs'],
   ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
   ['conformal_fill_audit C5 保形填充（门44，30断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
-  ['experimental_fit_audit ISO 13314 标定与反演（门43，19断言）', '实验曲线反演', 'experimental_fit_audit.mjs'],
+  ['experimental_fit_audit ISO 13314 标定与反演（门43，21断言——+非均匀采样/截断εd 子锚 2026-10-24）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/动态SCHEDULE对拍/禁句/SEO三件哨兵/publish 同源+sync-publish/调色单例/徽章↔tag，CI 基线 313）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（18 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）', 'UI 回归', 'run_all.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
-  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，50断言）', 'CLI 自检', '../agent/selftest.mjs'],
+  ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，56断言）', 'CLI 自检', '../agent/selftest.mjs'],
   ['schema_check 契约与可用域（106 断言实测/98 基线；2026-10-02 C1 后 frd/dg 行为翻转钉 +1）', 'Schema 契约', '../agent/schema_check.mjs'],
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
   ['llm_provider_selftest M3 拦截器自检（69 断言/GUARD 69，离线；+嵌套必填/正文超时/备注双出口钉 2026-10-11）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],

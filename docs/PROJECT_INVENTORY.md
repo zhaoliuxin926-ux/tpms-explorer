@@ -38,7 +38,7 @@ tpms-explorer/
 │   ├── HONESTY_BOUNDARIES.md     # 诚实边界表（自动生成）
 │   ├── regression-matrix.md      # 拦截器覆盖矩阵
 │   ├── LAB_ONE_PAGER.md          # 打印/试验工位卡
-│   ├── fit-report.mock.md        # 曲线示意（非 ISO 正式）
+│   ├── fit-report.mock.md        # mock 自测报告（合成曲线经真实内核路径）
 │   ├── PROJECT_SUMMARY.md        # 项目摘要
 │   ├── blog/ + publish/          # 技术博客 + 粘贴版
 │   ├── career/interview-pack.md  # 求职弹药
@@ -64,7 +64,7 @@ tpms-explorer/
 | 力学 | Gibson-Ashby、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
 | 流体/热 | NS 渗流、LPBF 热-力 | 完整（研究级口径） |
 | 优化 | 逆向设计、水平集拓扑、组织长入、声子能带、SIREN 神经场 | 完整/半（部分拒 custom/C2 族） |
-| 试验 | ISO 13314 反演 UI、fit-batch 示意、上机卡 | 待真实 CSV |
+| 试验 | ISO 13314 反演 UI、fit-batch 批量反演（真实内核）、上机卡 | 待真实 CSV |
 | Agent | NL→schema 拦截→CLI→有界修复（M0–M5） | 完整（回归见矩阵） |
 
 互斥与诚实边界：见 `docs/HONESTY_BOUNDARIES.md`（13 条，由 `bugs.md` 重生）。

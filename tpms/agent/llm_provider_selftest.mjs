@@ -343,7 +343,9 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
     ok('S2 越界指代结构化拒绝（exit2）', rej(sess, '把第五个构建出来', '越界'));
     ok('S2 指代+新参数歧义拒绝（exit2）', rej(sess, '把第一个用孔隙率 80% 构建', '歧义'));
     ok('S2 缺推荐结果拒绝（exit2）', rej(join(dir, 'empty.json'), '把第一个构建出来', '没有任何推荐'), 'empty 会话预写入');
-    wf(join(dir, 'empty.json'), JSON.stringify({ schemaVersion: 1, geometrySemantics: stored.geometrySemantics, created: 'x', updated: 'x', recommendations: [], executions: [] }), 'utf8');
+    // empty 夹具须带当前 bindingSemantics（2026-10-24 尺寸契约：缺该字段=旧语义会话，加载即拒
+    // ——走绑定语义拒绝而非"没有任何推荐"路径）；本用例验证的是 resolveReference 层的空推荐拒绝
+    wf(join(dir, 'empty.json'), JSON.stringify({ schemaVersion: 1, geometrySemantics: stored.geometrySemantics, bindingSemantics: stored.bindingSemantics, created: 'x', updated: 'x', recommendations: [], executions: [] }), 'utf8');
     const rNo = spawnSync(process.execPath, [join(HERE, 'llm-agent.mjs'), '--session', join(dir, 'empty.json'), '把第一个构建出来'], { encoding: 'utf8', timeout: 30_000 });
     ok('S2 缺推荐结果拒绝复核（empty 文件就位后 exit2）', rNo.status === 2 && /没有任何推荐/.test(rNo.stderr || ''));
     wf(join(dir, 'corrupt.json'), '{not json', 'utf8');

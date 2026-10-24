@@ -13,6 +13,7 @@
 
 import type { VoxelModel } from './voxel-model';
 import { downloadText } from './download';
+import { wcToMmFactorByWidth } from '../core/units';
 
 export interface AbaqusExportOptions {
   /** 弹性模量（MPa，mm-N-MPa 单位制；BASE_MODULUS 为 GPa 需 ×1000） */
@@ -30,7 +31,7 @@ export function buildAbaqusInp(model: VoxelModel, opts: AbaqusExportOptions): {
   text: string; nodeCount: number; elemCount: number;
 } {
   const { R, solid, hWc } = model;
-  const scale = opts.specimenSizeMm / (2 * Math.PI);   // wc → mm（总宽 = specimenSizeMm）
+  const scale = wcToMmFactorByWidth(opts.specimenSizeMm);   // wc → mm（总宽 = specimenSizeMm；units.ts 尺寸契约单一真源，2026-10-24 审查 #1）
   const h = hWc * scale;
   const N1 = R + 1;
   const idx3 = (x: number, y: number, z: number) => x + y * N1 + z * N1 * N1;

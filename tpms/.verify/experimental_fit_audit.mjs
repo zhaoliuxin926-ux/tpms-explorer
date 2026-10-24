@@ -234,6 +234,36 @@ rel(9999, E0) > 0.5 ? ok('比较器活性探针（负样本 rel(9999,1200)=7.33 
   M2.plateauStress === M.plateauStress ? ok('同种子确定性（位级一致）') : bad('确定性', `Δ=${M2.plateauStress - M.plateauStress}`);
 }
 
+// ── 2026-10-24 实用性审查 #4/#5 子锚：非均匀采样鲁棒 + 截断曲线 εd 有效性 ──
+{
+  // #4 首点加密：仅在 ε=1e-6 处插一个同解析函数点——旧实现 wPts=windowStrain/首对间距
+  // 外推 15000 点窗口超有效区间，Toe 补偿必 throw（"未找到正斜率弹性段"）
+  const dense = [[1e-6, sigmaAnalytic(1e-6)]];
+  for (let i = 0; i < strains.length; i++) dense.push([strains[i], stresses[i]]);
+  const pd = parseCurve({ text: toCsvPairs(dense) });
+  const cd = compensateToe(pd.strain, pd.stress);
+  const MD = extractIso13314(cd.strain, cd.stress, cd.elasticModulus);
+  rel(MD.elasticModulusE, M.elasticModulusE) <= 0.03
+    ? ok('首点加密 1e-6 非均匀采样 Toe 补偿不崩（E* vs 均匀采样 ≤3%）', `E*=${MD.elasticModulusE.toFixed(1)}`)
+    : bad('首点加密采样 Toe 补偿', `E*=${MD.elasticModulusE.toFixed(1)} vs 均匀 ${M.elasticModulusE.toFixed(1)}`);
+}
+{
+  // #5 截断到 ε=0.43（密实化陡升段 0.45 之前停机）：停机点不得冒充密实化——
+  // 旧实现 η 全局 argmax 恒落末点，把停机位置报成 εd≈0.425
+  const cut = [];
+  for (let i = 0; i < strains.length; i++) { if (strains[i] > 0.43) break; cut.push([strains[i], stresses[i]]); }
+  const pc = parseCurve({ text: toCsvPairs(cut) });
+  const cc = compensateToe(pc.strain, pc.stress);
+  const MC = extractIso13314(cc.strain, cc.stress, cc.elasticModulus);
+  const okNotObs = MC.densificationStatus === 'not-observed' && MC.densificationStrain === null;
+  const keepIdent = rel(MC.elasticModulusE, M.elasticModulusE) <= 0.03 && rel(MC.plateauStress, M.plateauStress) <= 0.02;
+  // W 积分终点=补偿后记录末点（原始 0.43 − 虚拟原点 ≈0.005）
+  const wEndOk = Math.abs(MC.energyAbsorptionEndStrain - cc.strain[cc.strain.length - 1]) <= 1e-9;
+  okNotObs && keepIdent && wEndOk
+    ? ok('截断曲线 εd=not-observed（E*/σpl 保留、W 积分至记录末点并披露）', `W_end=${MC.energyAbsorptionEndStrain.toFixed(4)} E*=${MC.elasticModulusE.toFixed(1)}`)
+    : bad('截断曲线 εd 有效性', `status=${MC.densificationStatus} εd=${MC.densificationStrain} E*=${MC.elasticModulusE.toFixed(1)} σpl=${MC.plateauStress.toFixed(2)} W_end=${MC.energyAbsorptionEndStrain}`);
+}
+
 function toCsv(xs, ys, sep = ',') {
   const lines = [];
   for (let i = 0; i < xs.length; i++) lines.push(`${xs[i]}${sep}${ys[i]}`);
@@ -244,5 +274,5 @@ function toCsvPairs(pairs, sep = ',') {
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 19) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 19（恒真/集体跳过防护）`); process.exit(1); }
+if (pass < 21) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 21（恒真/集体跳过防护；2026-10-24 +非均匀采样/截断εd 两子锚 19→21）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

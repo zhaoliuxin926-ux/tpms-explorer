@@ -198,6 +198,12 @@
       ],
       "description": "孔隙率求解器，默认 exact（解析曲面确定性 MC 积分求根+网格实测割线）。legacy=体素分位二分。hybrid 需 exact。"
      },
+     "specimen_size_mm": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 1000,
+      "description": "试样总宽（mm），默认=periods（1 period=1mm 约定，单胞恒 1mm）。显式给定后 STL 按总宽缩放（单胞=总宽/periods 派生），与 INP/报告同基准（2026-10-24 尺寸契约）。暂不支持与 radial-grad/region-inner/container-mesh/cfd-polyMesh 组合（这些路径有固有毫米尺度，显式给出即结构化拒绝）。tpms_pareto 推荐构建时=3×候选单胞 mm。"
+     },
      "json": {
       "type": "boolean",
       "description": "输出机器可读 JSON"

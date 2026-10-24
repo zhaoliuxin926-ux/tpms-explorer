@@ -228,21 +228,31 @@ try {
     ? ok('J 应力/分形/混合开关接线+网格还原（' + j.base + '→' + j.restored + '）')
     : bad('J 结构开关', JSON.stringify(j).slice(0, 140));
 
-  // F 逆向 solve + apply（标题同步=updateBadges 哨兵）。置于末尾：apply 会落到极端参数态
-  // （如 schwarz k5/P47），前置会污染后续卡的体素化域（windows 慢跑者 I 卡实锤）
+  // F 逆向 solve + apply（2026-10-24 尺寸契约起采用阻断语义：求解器 cellSize=单胞 mm，UI
+  // 「1 周期=1mm」单胞恒 1mm——不可表示时阻断应用+CLI 指引（toast 已阻断应用、标题不变）；
+  // 单胞恰 1mm 的罕见解仍走旧同步路径（title 换族=updateBadges 哨兵，画廊切族另有防回归钉）。
+  // toast 元素 1.5s 自清空——MutationObserver 全程记录防漏读。
   const titleBefore = await page.evaluate(() => document.title);
   await clickBtn('btn-inv-solve');
   await page.waitForFunction(() => /GPa/.test(document.getElementById('inverse-result')?.textContent || ''), null, { timeout: 30000, polling: 800 }).catch(() => {});
   const invNote = await readNote('inverse-result');
   const m1 = invNote.match(/^1\.\s+(\S+[^P]*?)\s*P=/);
+  await page.evaluate(() => {
+    (window).__fToasts = [];
+    new MutationObserver(() => {
+      const x = document.querySelector('#toast')?.textContent ?? '';
+      if (x) (window).__fToasts.push(x);
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
   await clickBtn('btn-inv-apply');
-  await page.waitForFunction((t) => document.title !== t || !document.getElementById('stat-tris'), titleBefore, { timeout: 30000, polling: 800 }).catch(() => {});
+  await page.waitForFunction((t) => document.title !== t || (window).__fToasts?.length > 0, titleBefore, { timeout: 30000, polling: 800 }).catch(() => {});
   await page.waitForTimeout(1500);
   const titleAfter = await page.evaluate(() => document.title);
-  const familyKey = (m1?.[1] || '').trim().split(/\s+/)[0]?.toLowerCase() || '';
-  (m1 && titleAfter !== titleBefore && titleAfter.toLowerCase().includes(familyKey))
-    ? ok('F 逆向应用后标题同步（updateBadges 哨兵）')
-    : bad('F 逆向', `title=${titleAfter} sol=${(m1?.[1] || '').slice(0, 20)}`);
+  const fToasts = await page.evaluate(() => ((window).__fToasts || []).join(' ¶ '));
+  const applied = m1 && titleAfter !== titleBefore && titleAfter.toLowerCase().includes((m1[1] || '').trim().split(/\s+/)[0]?.toLowerCase() || '\0');
+  (applied || /已阻断应用/.test(fToasts))
+    ? ok('F 逆向采用语义（阻断单胞≠1mm+CLI 指引，或可表示时正常应用）', applied ? 'applied' : fToasts.slice(0, 70))
+    : bad('F 逆向', `title=${titleAfter} sol=${(m1?.[1] || '').slice(0, 20)} toasts=${fToasts.slice(0, 80)}`);
 
   // K GPU submit encoder.finish() 静态哨兵（缺 .finish() 曾致 TypeError 被 catch 吞 →
   // GPU 加速自 v3.0 从未真跑、静默 CPU 回退——2026-09-20 真机走查抓出；CI 无 WebGPU

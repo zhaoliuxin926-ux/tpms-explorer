@@ -26,6 +26,25 @@ export function wcToMmFactor(cellSize: number): number {
 }
 
 /**
+ * 以试样总宽（mm）为基准的 wc→mm 换算因子（2026-10-24 实用性审查 #1 尺寸契约统一）。
+ *
+ * 尺寸契约三层量（单一真源，禁止入口各写一套换算）：
+ *   · 总宽 specimenSizeMm —— 显式给定时为唯一基准（STL/INP/报告全部消费本接口）
+ *   · 周期数 periods      —— 几何频率（sin(k·x)），不改变坐标域
+ *   · 单胞 mm = specimenSizeMm / periods —— 派生量，仅披露用
+ *
+ * 【两套 cellSize 同名异义警示】state.cellSize（UI/手动设计）= 周期数（1 period=1mm，
+ * 总宽=k mm）；inverse-design.ts 的 DesignParams.cellSize = 单胞 mm [1,5]。推荐/逆设计
+ * 候选传入构建时必须显式换算（周期数与总宽分开传），不得把单胞 mm 直接写进周期数。
+ *
+ * @param specimenSizeMm 试样总宽（mm）
+ * @returns 每单位 wc 对应的毫米数（总宽 = 2π wc × 因子 = specimenSizeMm）
+ */
+export function wcToMmFactorByWidth(specimenSizeMm: number): number {
+  return specimenSizeMm / (2 * Math.PI);
+}
+
+/**
  * 网格分辨率的「每周期格数」系数。
  * I-WP / F-RD / Neovius 的公式含 cos(2kx) 与 cos³ 积项，特征空间频率高于
  * 基频曲面（谐波至 2k~3k）；相同 R 下每特征周期的格数减少，弦切离散误差

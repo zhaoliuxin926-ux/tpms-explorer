@@ -181,14 +181,18 @@ for (let idx = pick - 1; idx < recs.length; idx++) {
   }
   if (!budgetLeft()) { report.status = 'budget-exhausted'; report.exhaustion = exhausted('候选构建中预算耗尽'); report.exitCode = 4; finish(); }
   const c = recs[idx];
+  // 尺寸契约（2026-10-24 审查 #2 评审定案）：候选 cellSize=单胞 mm，显式 periods=3 +
+  // 总宽=3×单胞（旧错绑 periods=c.cellSize 已弃；k=3 在官方标定域 k≤5 内、不依赖
+  // 已登记非标定域的全局默认 6）
   const stl = join(outDir, `pipeline-cand${idx + 1}-${c.type}-p${Math.round(c.porosity * 100)}.stl`);
-  const rm = runCli(['mesh', '--type', c.type, '--porosity', String(c.porosity), '--periods', String(c.cellSize), '--resolution', '96', '--out', stl], `build-candidate-${idx + 1}`, { type: c.type, porosity: c.porosity, periods: c.cellSize, resolution: 96, out: stl });
+  const rm = runCli(['mesh', '--type', c.type, '--porosity', String(c.porosity), '--periods', '3', '--specimen-size', String(3 * c.cellSize), '--resolution', '96', '--out', stl], `build-candidate-${idx + 1}`, { type: c.type, porosity: c.porosity, periods: 3, specimenSizeMm: 3 * c.cellSize, resolution: 96, out: stl });
   if (!rm) { finish(); }
   if (rm.status === 0 && rm.parsed?.watertight) {
     built = { candidateIndex: idx, candidate: c, stl, mesh: rm.parsed };
     report.layers.meshAcceptance = {
       layer: '网格验收（水密三硬指标+孔隙率网格实测口径）',
-      candidateIndex: idx, type: c.type, porosity: c.porosity, periods: c.cellSize,
+      candidateIndex: idx, type: c.type, porosity: c.porosity,
+      cellSizeMm: c.cellSize, periods: 3, specimenSizeMm: 3 * c.cellSize,
       watertight: rm.parsed.watertight, porosityEstimate: rm.parsed.porosityEstimate,
       deviationPP: Math.abs(rm.parsed.porosityEstimate - c.porosity) * 100, fileBytes: rm.parsed.fileBytes, file: stl,
     };

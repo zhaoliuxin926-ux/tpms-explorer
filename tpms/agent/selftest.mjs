@@ -291,14 +291,27 @@ rmSync(stlPath, { force: true });
   (jm?.rows?.every((r) => Number.isFinite(r.truthE) && Math.abs((r.metrics?.elasticModulusE ?? NaN) - r.truthE) / r.truthE <= 0.06))
     ? ok('fit-batch E* 反演落真值 ±6%（toe 补偿经真实内核）')
     : bad('fit-batch E* 精度', JSON.stringify(jm?.rows?.map((r) => [r.id, r.metrics?.elasticModulusE, r.truthE])));
+  // 2026-10-24 审查 #6：重复 CV 口径=样本 std/均值（n−1）——selftest 独立重算交叉验证
+  //（旧实现极差/均值会把 [100,110,120] 报 18.18%，样本 CV 实为 9.09%）
+  {
+    const g1 = jm?.repeats?.[0];
+    const es = (jm?.rows ?? []).filter((r) => r.metrics && String(r.id).startsWith(g1?.id ?? '\0')).map((r) => r.metrics.elasticModulusE);
+    const n = es.length, m = es.reduce((a, b) => a + b, 0) / n;
+    const cvHand = n >= 2 ? Math.sqrt(es.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1)) / m * 100 : NaN;
+    (g1 && g1.n === n && n >= 3 && Math.abs(g1.cvE - cvHand) < 1e-9)
+      ? ok('fit-batch 重复 CV=样本 std/均值（n−1，与独立手算一致）')
+      : bad('fit-batch CV 口径', `reported=${g1?.cvE} hand=${Number.isFinite(cvHand) ? cvHand.toFixed(4) : 'NaN'} n=${n}`);
+  }
   // CSV 契约用例须位于仓库根内（fit-batch --dir 有路径穿越守卫；仓库根临时目录 + finally 清理）
+  // --out 报告隔离到临时目录（2026-10-24 审查 #3：契约用例曾覆盖正式报告路径 docs/fit-report.md）
   const tmp = mkdtempSync(join(ROOT, 'fitbatch-st-'));
+  const tmpOut = relative(ROOT, join(tmp, 'report.md')) || '.';
   try {
     writeFileSync(join(tmp, 'nohdr.csv'), '0.01,10\n0.02,20\n0.03,30\n0.04,40\n0.05,50\n0.06,60\n0.07,70\n0.08,80\n0.09,90\n0.10,100\n0.11,110\n0.12,120\n', 'utf8');
-    const rn = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    const rn = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--out', tmpOut, '--json'], { encoding: 'utf8', timeout: 120_000 });
     (rn.status === 1 && /表头|列名/.test(rn.stderr + rn.stdout)) ? ok('fit-batch 无表头/列名结构化拒绝（不再默认前两列）') : bad('fit-batch 无表头拒绝', `exit=${rn.status}`);
     writeFileSync(join(tmp, 'nohdr.csv'), 'displacement_mm,force_N\n' + Array.from({ length: 40 }, (_, i) => (i * 0.05).toFixed(3) + ',' + (i * 20).toFixed(1)).join('\n') + '\n', 'utf8');
-    const rd = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    const rd = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--out', tmpOut, '--json'], { encoding: 'utf8', timeout: 120_000 });
     (rd.status === 1 && /尺寸/.test(rd.stderr + rd.stdout)) ? ok('fit-batch 试样尺寸元数据缺失拒绝') : bad('fit-batch 尺寸缺失拒绝', `exit=${rd.status}`);
     writeFileSync(join(tmp, 'nohdr.csv'), ['# lengthMm=30', '# widthMm=20', '# thicknessMm=20', 'displacement_mm,force_N',
       ...Array.from({ length: 501 }, (_, i) => {
@@ -311,14 +324,93 @@ rmSync(stlPath, { force: true });
         else s = 36 + 0.1 * 0.39 + 25 * (Math.exp(18 * (e - 0.45)) - 1);
         return (e * 30).toFixed(5) + ',' + (s * 400).toFixed(3);
       })].join('\n') + '\n', 'utf8');
-    const rh = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--json'], { encoding: 'utf8', timeout: 120_000 });
+    const rh = spawnSync(process.execPath, [FIT, '--dir', relative(ROOT, tmp) || '.', '--out', tmpOut, '--json'], { encoding: 'utf8', timeout: 120_000 });
     const jh = parseLastJson(rh.stdout);
     (rh.status === 0 && /24/.test(jh?.rows?.[0]?.hWarn ?? '')) ? ok('fit-batch H₀ 越档口径告警（30→提示 24 端板口径）') : bad('fit-batch 越档告警', `exit=${rh.status} warn=${(jh?.rows?.[0]?.hWarn ?? '无').slice(0, 50)}`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
 
+// ── 15. 尺寸契约统一验收（2026-10-24 实用性审查 #1/#2：总宽真源+推荐绑定换算+会话语义）──
+{
+  const tmp2 = mkdtempSync(join(ROOT, 'size-st-'));
+  try {
+    // A. scenario specimenSizeMm=20 / periods=2：STL 与 INP 坐标独立读取包围盒均 20mm±2%
+    //（审查复现：曾 STL≈2mm=periods×1mm / INP=20mm 十倍分裂）
+    const pre = join(tmp2, 'sz20');
+    writeFileSync(join(tmp2, 'd20.json'), JSON.stringify({ type: 'gyroid', porosity: 0.65, material: 'tc4', resolution: 48, periods: 2, specimenSizeMm: 20, out: pre }));
+    const r20 = run('scenario', '--design', join(tmp2, 'd20.json'), '--json');
+    const stlSpan = (p) => {
+      const b = readFileSync(p); const n = b.readUInt32LE(80);
+      let mn = 1e9, mx = -1e9;
+      for (let i = 0; i < n; i++) {
+        const o = 84 + i * 50;
+        for (let v = 0; v < 3; v++) for (let c = 0; c < 3; c++) {
+          const x = b.readFloatLE(o + 12 + v * 12 + c * 4);
+          if (x < mn) mn = x; if (x > mx) mx = x;
+        }
+      }
+      return (mx - mn);
+    };
+    const inpSpan = (p) => {
+      let mn = 1e9, mx = -1e9, inNode = false;
+      for (const ln of readFileSync(p, 'utf8').split(/\r?\n/)) {
+        if (ln.startsWith('*')) { inNode = /^\*NODE/i.test(ln); continue; }
+        if (!inNode || !/^\d+,/.test(ln)) continue;
+        const c = ln.split(',').map(Number);
+        for (let k = 1; k <= 3; k++) { if (c[k] < mn) mn = c[k]; if (c[k] > mx) mx = c[k]; }
+      }
+      return (mx - mn);
+    };
+    (r20.status === 0
+      && Math.abs(stlSpan(pre + '.stl') - 20) / 20 <= 0.02
+      && Math.abs(inpSpan(pre + '.inp') - 20) / 20 <= 0.02)
+      ? ok('尺寸契约：scenario specimenSizeMm=20 → STL/INP 独立包围盒均 20mm±2%')
+      : bad('尺寸契约 scenario', `exit=${r20.status} stl=${r20.status === 0 ? stlSpan(pre + '.stl').toFixed(2) : '?'} inp=${r20.status === 0 ? inpSpan(pre + '.inp').toFixed(2) : '?'}`);
+
+    // B. 默认路径零回归：不传新尺寸 vs 显式 --specimen-size=periods → STL 逐位一致
+    //（out 用绝对路径——spawn cwd 不在仓库根时相对子目录路径会落错处）
+    const b1 = join(tmp2, 'def1.stl'), b2 = join(tmp2, 'def2.stl');
+    const r1 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--periods', '2', '--resolution', '48', '--out', b1);
+    const r2 = run('mesh', '--type', 'gyroid', '--porosity', '0.65', '--periods', '2', '--resolution', '48', '--specimen-size', '2', '--out', b2);
+    (r1.status === 0 && r2.status === 0 && statSync(b1).size === statSync(b2).size
+      && readFileSync(b1).equals(readFileSync(b2)))
+      ? ok('尺寸契约：默认（不传）与显式 --specimen-size=periods STL 逐位一致（默认路径零回归）')
+      : bad('默认路径逐位一致', `exit=${r1.status}/${r2.status} size=${r1.status === 0 ? statSync(b1).size : '?'}/${r2.status === 0 ? statSync(b2).size : '?'}`);
+
+    // C. 未支持组合定界：--specimen-size × --radial-grad（固有毫米尺度路径）→ exit2
+    const rc2 = run('mesh', '--type', 'schwarz', '--porosity', '0.6', '--periods', '2', '--resolution', '48', '--radial-grad', '1.25', '--specimen-size', '20', '--out', join(tmp2, 'rej.stl'));
+    (rc2.status === 2 && /specimen-size 暂不支持/.test(rc2.stderr + rc2.stdout))
+      ? ok('尺寸契约：specimen-size × radial-grad 固有尺度组合结构化拒绝（不静默错缩放）')
+      : bad('组合拒绝', `exit=${rc2.status}`);
+
+    // D. 推荐绑定语义（评审定案 periods=3+总宽 3×单胞）：dry-run 参数链 + 旧语义会话加载即拒
+    const { newSession, recordPareto, saveSession } = await import('./agent-session.mjs');
+    const sess = newSession();
+    recordPareto(sess, { target_e_gpa: 2, target_k_nm2: 5 }, {
+      command: 'pareto', targetE: 2, targetKappaM2: 5e-9, top: 3, reachable: true,
+      recommendations: [{ type: 'octo', porosity: 0.85, cellSize: 2, E_GPa: 2.1, kappa_m2: 1.9e-8, dist_log10: 0.1 }],
+    });
+    if (sess.recommendations.length !== 1) { bad('推荐绑定换算', 'recordPareto 未记录（脚手架口径错）'); }
+    const sessPath = join(tmp2, 'sess.json');
+    saveSession(sessPath, sess);
+    const AGENT = join(HERE, 'llm-agent.mjs');
+    const rBind = spawnSync(process.execPath, [AGENT, '--session', sessPath, '--dry-run', '--json', '把第 1 个构建出来'], { encoding: 'utf8', timeout: 60_000 });
+    const jBind = (() => { const d = rBind.stdout ?? ''; const i = d.indexOf('{'); try { return i < 0 ? null : JSON.parse(d.slice(i, d.lastIndexOf('}') + 1)); } catch { return null; } })();
+    (rBind.status === 0 && jBind?.args?.periods === 3 && jBind?.args?.specimen_size_mm === 6)
+      ? ok('推荐绑定：候选单胞 2mm → periods=3 + 总宽 specimen-size 6mm（旧 periods=cellSize 错绑已弃）')
+      : bad('推荐绑定换算', `exit=${rBind.status} args=${JSON.stringify(jBind?.args)} err=${(rBind.stderr || '').slice(0, 80)}`);
+    const old = JSON.parse(readFileSync(sessPath, 'utf8'));
+    delete old.bindingSemantics;
+    writeFileSync(sessPath, JSON.stringify(old));
+    const rOld = spawnSync(process.execPath, [AGENT, '--session', sessPath, '--json', '把第 1 个构建出来'], { encoding: 'utf8', timeout: 60_000 });
+    (rOld.status === 2 && /绑定语义/.test(rOld.stderr + rOld.stdout))
+      ? ok('旧语义会话加载即拒（缺 bindingSemantics——防旧候选按新尺度错执行）')
+      : bad('旧会话拒绝', `exit=${rOld.status}`);
+  } finally { rmSync(tmp2, { recursive: true, force: true }); }
+}
+
 console.log(`\nSELFTEST ${pass} PASS / ${fail} FAIL`);
 // pass 下限守卫（2026-09-13 口径专项补——此前缺失，与 PROJECT_SUMMARY「每门带守卫」宣称对齐；2026-09-26 exact 确定性入账 49→50；
-// 2026-10-20 fit-batch 真实内核验收 5 锚入账 50→55）
-if (pass < 55) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 55`); process.exit(1); }
+// 2026-10-20 fit-batch 真实内核验收 5 锚入账 50→55；2026-10-24 审查 #6 样本 CV 交叉锚 55→56 + 尺寸契约 5 锚 56→61）
+if (pass < 61) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 61`); process.exit(1); }
 process.exit(fail ? 1 : 0);

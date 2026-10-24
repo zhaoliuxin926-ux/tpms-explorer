@@ -32,7 +32,12 @@ export interface Iso13314Metrics {
   firstPeakStress: number;
   firstPeakStrain: number;
   plateauStress: number;
-  densificationStrain: number;
+  /** 密实化应变；η 最大值落在记录末点（未观察到密实化）时为 null（2026-10-24 审查 #5） */
+  densificationStrain: number | null;
+  /** identified = η 内部极值；not-observed = 截断曲线，停机点被误当密实化 */
+  densificationStatus: 'identified' | 'not-observed';
+  /** 吸能 W 的积分上限 ε（=εd 或记录末点，与 status 对应） */
+  energyAbsorptionEndStrain: number;
   energyAbsorptionW: number;
   maxEfficiencyEta: number;
   virtualOriginStrain: number;
@@ -160,16 +165,32 @@ export function compensateToe(strain: Float64Array, stress: Float64Array, window
   // 全窗口斜率预算 + 高斜率带并集回代（消 max-slope 搜索的噪声正偏/winner's curse）：
   // 与最优窗口斜率差 ≤5% 的连续窗口族 ≈ 弹性段核心（低斜率的 toe 过渡/屈服段窗口被带外
   // 排除），对并集全域回归——统计量用满弹性区，偏差趋零。
-  const wPts = Math.max(5, Math.round(windowStrain / Math.max(1e-12, strain[1] - strain[0])));
-  const nWin = Math.max(0, peakIdx + 1 - wPts);
-  const slopes = new Float64Array(nWin);
-  for (let i = 0; i < nWin; i++) {
+  //
+  // 【窗口定位=按应变跨度双指针（2026-10-24 审查 #4）】窗口 [i,j] 覆盖 ≥ windowStrain 的
+  // 应变跨度且 ≤ 首峰；旧实现 wPts=windowStrain/首对间距 按均匀采样外推——首段加密 1e-6 时
+  // 外推 15000 点超有效区间直接 throw。非均匀采样（试验机分段变速采样）下按跨度定位才成立；
+  // 跨度不足或 <5 点的截短尾窗跳过，不冒充完整窗。
+  const winStart: number[] = [];
+  const winEnd: number[] = [];
+  {
+    let j = 1;
+    for (let i = 0; i <= peakIdx; i++) {
+      if (j <= i) j = i + 1;
+      if (strain[peakIdx] - strain[i] < windowStrain) break;   // 尾部跨度不足，更大的 i 更不足
+      while (j < peakIdx && strain[j] - strain[i] < windowStrain) j++;
+      if (j - i + 1 >= 5) { winStart.push(i); winEnd.push(j); }
+    }
+  }
+  const nWin = winStart.length;
+  const slopes: number[] = [];
+  for (let wi = 0; wi < nWin; wi++) {
+    const i0 = winStart[wi], i1 = winEnd[wi], nPts = i1 - i0 + 1;
     let sx = 0, sy = 0;
-    for (let k = i; k < i + wPts; k++) { sx += strain[k]; sy += stress[k]; }
-    const mx = sx / wPts, my = sy / wPts;
+    for (let k = i0; k <= i1; k++) { sx += strain[k]; sy += stress[k]; }
+    const mx = sx / nPts, my = sy / nPts;
     let num = 0, den = 0;
-    for (let k = i; k < i + wPts; k++) { const dx = strain[k] - mx; num += dx * (stress[k] - my); den += dx * dx; }
-    slopes[i] = den > 0 ? num / den : 0;
+    for (let k = i0; k <= i1; k++) { const dx = strain[k] - mx; num += dx * (stress[k] - my); den += dx * dx; }
+    slopes.push(den > 0 ? num / den : 0);
   }
   let bestSlope = -Infinity, bestI = -1;
   for (let i = 0; i < nWin; i++) if (slopes[i] > bestSlope) { bestSlope = slopes[i]; bestI = i; }
@@ -177,7 +198,7 @@ export function compensateToe(strain: Float64Array, stress: Float64Array, window
   let lo = bestI, hiI = bestI;
   while (lo > 0 && slopes[lo - 1] >= bestSlope * 0.95) lo--;
   while (hiI + 1 < nWin && slopes[hiI + 1] >= bestSlope * 0.95) hiI++;
-  const rStart = lo, rEnd = hiI + wPts - 1;
+  const rStart = winStart[lo], rEnd = winEnd[hiI];
   let rs = 0, sys = 0, rn = 0;
   for (let k = rStart; k <= rEnd; k++) { rs += strain[k]; sys += stress[k]; rn++; }
   let eFit = bestSlope;
@@ -276,17 +297,28 @@ export function extractIso13314(strain: Float64Array, stress: Float64Array, elas
   }
 
 
-  // 吸能效率 η(ε)=W(ε)/σ(ε)，εd=argmax η（σ>0 且 ε>0.02 域内全局搜索）
-  let w = 0, bestEta = -Infinity, ed = NaN;
+  // 吸能效率 η(ε)=W(ε)/σ̄(ε)，εd=argmax η（ε>0.02 且 σ̄>0 域内全局搜索）。
+  // σ̄=上方 5 点平滑应力：原始 σ 的噪声毛刺会造伪内部极大，平滑后平台段 η 单调性恢复。
+  // 【有效性判别（2026-10-24 审查 #5）】η 最大值落在记录末点、或末点 η 仍处峰值 98% 以内
+  // ⇒ 截断曲线：平台段 η 单调上升（残余纹波起伏 <1%），停机点不能解释为密实化——标
+  // not-observed，εd=null，吸能积分终点=记录末点并显式披露；真实密实化使 σ 陡升、η 崩
+  // 一个量级，末点 η 显著低于峰值（<98%）才称 identified。
+  let w = 0, bestEta = -Infinity, ed = NaN, bestIdx = -1, lastIdx = -1;
   for (let i = 1; i < strain.length; i++) {
     w += (stress[i - 1] + stress[i]) / 2 * (strain[i] - strain[i - 1]);
-    if (strain[i] > 0.02 && stress[i] > 0) {
-      const eta = w / stress[i];
-      if (eta > bestEta) { bestEta = eta; ed = strain[i]; }
+    if (strain[i] > 0.02 && sm[i] > 0) {
+      const eta = w / sm[i];
+      lastIdx = i;
+      if (eta > bestEta) { bestEta = eta; ed = strain[i]; bestIdx = i; }
     }
   }
-  if (!Number.isFinite(ed)) throw new Error('密实化应变未找到（η 无有效极值）');
-  const wv = trapz(strain, stress, 0, ed);
+  if (bestIdx < 0) throw new Error('密实化应变未找到（η 无有效极值）');
+  const etaEnd = w / sm[lastIdx];
+  const densificationStatus: 'identified' | 'not-observed'
+    = bestIdx < lastIdx && etaEnd < bestEta * 0.98 ? 'identified' : 'not-observed';
+  const densificationStrain = densificationStatus === 'identified' ? ed : null;
+  const wEnd = densificationStatus === 'identified' ? ed : strain[strain.length - 1];
+  const wv = trapz(strain, stress, 0, wEnd);
 
   return {
     elasticModulusE: e,
@@ -294,7 +326,9 @@ export function extractIso13314(strain: Float64Array, stress: Float64Array, elas
     firstPeakStress: peakStress,
     firstPeakStrain: peakStrain,
     plateauStress: plateau,
-    densificationStrain: ed,
+    densificationStrain,
+    densificationStatus,
+    energyAbsorptionEndStrain: wEnd,
     energyAbsorptionW: wv,
     maxEfficiencyEta: bestEta,
     virtualOriginStrain: 0, // 补偿后口径为 0；原始补偿量见 compensateToe().originStrain

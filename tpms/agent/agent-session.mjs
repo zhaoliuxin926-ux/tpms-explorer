@@ -19,11 +19,20 @@ import { randomBytes } from 'node:crypto';
 export const SESSION_SCHEMA_VERSION = 1;
 /** 几何语义标签：任何改变同参数产出几何的修复都必须换标签（v2=2026-10-11 strut 真场修正） */
 export const GEOMETRY_SEMANTICS = 'v2-2026-10-11-true-strut';
+/**
+ * 候选绑定语义（2026-10-24 实用性审查 #2，与文件格式版本 schemaVersion 分离）：
+ *   v1（缺省）= 旧错绑——候选 cellSize（单胞 mm）被直接当周期数传入构建（几何单胞恒 1mm，
+ *              推荐评估的尺度完全丢失）；
+ *   v2 = 现行——推荐构建显式 periods=3 + 总宽 specimenSizeMm=3×单胞 mm。
+ * 旧语义会话的候选在新口径下会以错误尺度执行——加载即拒（明确拒绝，不做隐式迁移）。
+ */
+export const BINDING_SEMANTICS = 'v2-2026-10-24-cellmm-width';
 
 export function newSession() {
   return {
     schemaVersion: SESSION_SCHEMA_VERSION,
     geometrySemantics: GEOMETRY_SEMANTICS,
+    bindingSemantics: BINDING_SEMANTICS,
     created: new Date().toISOString(),
     updated: new Date().toISOString(),
     recommendations: [],
@@ -50,6 +59,9 @@ export function loadSession(path) {
   }
   if (s?.geometrySemantics !== GEOMETRY_SEMANTICS) {
     throw new Error(`会话几何语义版本 ${s?.geometrySemantics} ≠ 当前 ${GEOMETRY_SEMANTICS}——旧候选来自不同几何语义，未经核对不得当作当前结果（S3）。请重新生成推荐`);
+  }
+  if (s?.bindingSemantics !== BINDING_SEMANTICS) {
+    throw new Error(`会话候选绑定语义 ${s?.bindingSemantics ?? 'v1（缺省：单胞mm错绑周期数）'} ≠ 当前 ${BINDING_SEMANTICS}——旧候选按"periods=单胞mm"错绑口径记录，直接执行会得到错误尺度（2026-10-24 审查 #2 已修正为 periods=3+总宽3×单胞mm）。请用 tpms_pareto 重新生成推荐后指代（明确拒绝，不做隐式迁移）`);
   }
   if (!Array.isArray(s.recommendations) || !Array.isArray(s.executions)) {
     throw new Error('会话结构损坏（recommendations/executions 非数组）——拒绝加载');
