@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { MeshPhysicalMaterial } from 'three';
 import { initThree, type ThreeContext } from './three-setup';
 import { getState, setState, applyPreset, buildShareURL, shareFormulaDroppedLast, pushHistory, resetHistory, undo, redo } from './state';
-import { initStateFromURL } from './url-params';
+import { initStateFromURL, parseURLParams } from './url-params';
 import { WorkerBridge, WorkerRequestSupersededError } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
@@ -3449,6 +3449,53 @@ function bindShareAndExport(): void { // 分享链接与 URL
     });
   });
 
+  // ── 导入设计文件（2026-10-24 审查 #8：保存→关闭→导入→重建闭环）──
+  // 解析复用 parseURLParams（分享链接解析器=现成的枚举白名单+域钳制，state_url_audit
+  // 17 断言背书）；formula 字段随后覆盖（设计文件不受 12KB URL 帽）。导入的 customFormula
+  // 经既有方程解析沙箱求值（evaluator_check 37 门），无新增求值面。
+  function applyDesignFile(text: string): void {
+    let d: unknown;
+    try { d = JSON.parse(text); } catch { throw new Error('非有效 JSON 文件'); }
+    const file = d as { format?: unknown; shareUrl?: unknown; formula?: unknown; notCaptured?: unknown };
+    if (file?.format !== 'tpms-design/1.0') {
+      throw new Error(`未知设计文件格式 "${String(file?.format)}"（当前支持 tpms-design/1.0）`);
+    }
+    let search = '';
+    if (typeof file.shareUrl === 'string' && file.shareUrl) {
+      try { search = new URL(file.shareUrl).search; } catch { throw new Error('设计文件 shareUrl 无效（非合法 URL）'); }
+    }
+    const patch = parseURLParams(search);
+    if (typeof file.formula === 'string') patch.customFormula = file.formula;
+    pushHistory();
+    setState(patch);
+    const sImp = getState();
+    syncUI(sImp);
+    updateBadges(sImp.type, sImp.model, sImp.material, sImp.structureMode);
+    scheduleRebuild(false);
+    scheduleHdUpgrade();
+    const nc = Array.isArray(file.notCaptured)
+      ? file.notCaptured.filter((x): x is string => typeof x === 'string' && /容器/.test(x)) : [];
+    flashToast(`已导入设计：${sImp.type} @ ${sImp.porosity}% · k=${sImp.cellSize}${nc.length ? `（注意：${nc.join('；')}）` : ''}`);
+  }
+  {
+    const btnImp = document.getElementById('btn-import');
+    const fileImp = document.getElementById('import-design-file') as HTMLInputElement | null;
+    if (btnImp && fileImp) {
+      btnImp.addEventListener('click', () => fileImp.click());
+      fileImp.addEventListener('change', () => {
+        const f = fileImp.files?.[0];
+        if (!f) return;
+        const rd = new FileReader();
+        rd.onload = () => {
+          try { applyDesignFile(String(rd.result ?? '')); }
+          catch (e) { flashToast('导入失败：' + (e instanceof Error ? e.message : String(e))); }
+          fileImp.value = '';
+        };
+        rd.readAsText(f);
+      });
+    }
+  }
+
   document.getElementById('btn-snap')?.addEventListener('click', () => {
     ctx.composer.render();
     const a = document.createElement('a');
@@ -4853,7 +4900,7 @@ async function enterFigureMode(): Promise<void> {
     const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
     const meshHash = pos ? hashArray(pos) : 'nogeo';
     const expFig = await loadExport();
-    const json = expFig.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed });
+    const json = expFig.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }, buildShareURL());
     downloadBlob(new Blob([json], { type: 'application/json' }), `tpms-figure-${s.type}-p${s.porosity}-${Date.now()}.json`);
 
     // 恢复
@@ -5137,13 +5184,36 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'bibtex': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(exp.generateBibTeX(s, lastPhysicsMetrics, meshHash), `${base}.bib`, 'text/plain');
+        downloadText(exp.generateBibTeX(s, lastPhysicsMetrics, meshHash, buildShareURL()), `${base}.bib`, 'text/plain');
         break;
       }
       case 'json': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(exp.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }), `${base}.json`, 'application/json');
+        downloadText(exp.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }, buildShareURL()), `${base}.json`, 'application/json');
+        break;
+      }
+      case 'design': {
+        // 【设计文件 v1.0】（2026-10-24 审查 #8）：完整设计快照，供「导入设计」恢复——
+        // shareUrl 走全参数分享链接（解析复用 parseURLParams 白名单）；formula 为完整
+        // customFormula（不受分享链接 12KB 基建帽——设计文件里公式即设计本体）；state 为
+        // 人类可读+工具核对的完整快照。notCaptured 诚实披露文件不含的部分。
+        // 纯参数导出：不触发几何重建，也不适用导出水密门（非网格交付）。
+        const shareUrl = buildShareURL();
+        const design = {
+          format: 'tpms-design/1.0',
+          platform: 'TPMS Explorer v1.2.0',
+          savedAt: new Date().toISOString(),
+          shareUrl,
+          formula: s.customFormula,
+          state: s,
+          notCaptured: [
+            ...(meshCont ? ['customContainerStl：自定义容器 STL 原文件不在设计文件内——导入后需重新上传容器'] : []),
+            'radialGradPanel / regionPanel：径向梯度与分区面板属一次性管线设计，参数不进入 AppState/本文件（其导出走面板自身 STL 出口）',
+          ],
+          importHint: '工程版工具栏「导入设计」按钮选择本文件；或直接打开 shareUrl',
+        };
+        downloadText(JSON.stringify(design, null, 2), `tpms-design-${s.type}-p${s.porosity}.json`, 'application/json');
         break;
       }
       default:

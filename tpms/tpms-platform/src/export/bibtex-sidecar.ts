@@ -51,16 +51,18 @@ function escapeBibText(s: string): string {
 }
 
 /**
- * 生成 BibTeX 引用文本（供论文 supplementary 使用）
+ * 生成 BibTeX 引用文本（供论文 supplementary 引用使用）
  * meshHash：基于网格数据的确定性哈希，保证同参数多次导出得到一致 cite key（科研可复现）
+ * shareUrl：按当前状态构造的分享链接（state.buildShareURL）——第三方可直达该设计；
+ *   缺省回退地址栏（2026-10-24 审查 #8：地址栏可能是裸首页，无法补足修改后的设计）
  */
-export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null, meshHash: string): string {
+export function generateBibTeX(state: AppState, metrics: PhysicsMetrics | null, meshHash: string, shareUrl?: string): string {
   const now = new Date().toISOString();
   // 用确定性 meshHash 截断作为 cite key，保证可复现（与 generateJSONSidecar 对齐）
   const hash = meshHash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8) || 'unnamed';
   const doi = DOI_MAP[mapType(state.type)] || '';
   const doiLine = doi ? `  doi = {https://doi.org/${doi}},\n` : '';
-  const url = window.location.href;
+  const url = shareUrl ?? window.location.href;
 
   const title = escapeBibText(
     `TPMS ${state.type} Scaffold: Porosity ${state.porosity}% | Cell Size ${state.cellSize} mm`
@@ -88,15 +90,20 @@ ${doiLine}  keywords = {TPMS, ${state.type}, scaffold, porosity, additive manufa
 /**
  * 生成 JSON sidecar（含 mesh hash 校验值）
  * @param build 构建上下文（分辨率与二分 iso）——第三方按参数重建网格时对齐壁厚/顶点密度所需
+ * @param shareUrl 按当前状态构造的分享链接（state.buildShareURL）；缺省回退地址栏。
+ *   v2.2（2026-10-24 审查 #8）：parameters 补全全部影响几何/构型的配置（endplateMm/isoGrad/
+ *   manifold/stress/hierarchical/neural——此前任一模式启用即失配，文件不足以重建设计）；
+ *   reproducibility.url 改为分享链接（地址栏在"打开默认页→改设计→导出"时无法补足配置）。
  */
 export function generateJSONSidecar(
   state: AppState,
   metrics: PhysicsMetrics | null,
   meshHash: string,
-  build?: { resolution: number; isoUsed: number | null }
+  build?: { resolution: number; isoUsed: number | null },
+  shareUrl?: string,
 ): string {
   return JSON.stringify({
-    version: '2.1',
+    version: '2.2',
     generatedAt: new Date().toISOString(),
     parameters: {
       type: state.type,
@@ -110,6 +117,12 @@ export function generateJSONSidecar(
       gradientDir: state.gradientDir,
       hybrid: state.hybrid,
       customFormula: state.customFormula,
+      endplateMm: state.endplateMm,
+      isoGrad: state.isoGrad,
+      manifold: state.manifold,
+      stress: state.stress,
+      hierarchical: state.hierarchical,
+      neural: state.neural,
     },
     build: {
       resolution: build?.resolution ?? null,
@@ -134,7 +147,7 @@ export function generateJSONSidecar(
     meshHash,
     reproducibility: {
       platform: 'TPMS Explorer v1.2.0',
-      url: window.location.href,
+      url: shareUrl ?? window.location.href,
     },
   }, null, 2);
 }
