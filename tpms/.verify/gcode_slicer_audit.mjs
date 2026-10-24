@@ -33,13 +33,14 @@ const BUNDLE = join(tmpdir(), 'tpms_gcode_audit_bundle.mjs');
     `export { buildVoxelModel } from ${JSON.stringify(join(PLATFORM, 'src/export/voxel-model.ts'))};`,
     `export { directSlice, buildSliceSvg } from ${JSON.stringify(join(PLATFORM, 'src/export/direct-slicer.ts'))};`,
     `export { auditOverhang, searchBuildOrientation } from ${JSON.stringify(join(PLATFORM, 'src/physics/printability-audit.ts'))};`,
+    `export { auditManufacturing } from ${JSON.stringify(join(PLATFORM, 'src/physics/manufacturing-audit.ts'))};`,
   ].join('\n'));
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { sliceMesh, compileGcode, buildSurface, buildVoxelModel, directSlice, buildSliceSvg, auditOverhang, searchBuildOrientation } = await import(pathToFileURL(BUNDLE));
+const { sliceMesh, compileGcode, buildSurface, buildVoxelModel, directSlice, buildSliceSvg, auditOverhang, searchBuildOrientation, auditManufacturing } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -363,8 +364,63 @@ console.log('\n[E] gyroid 真实网格（R=16）');
   try { unlinkSync(stlPath); unlinkSync(openPath); } catch { /* */ }
 }
 
+// ── F8. 制造几何检查（2026-10-24 审查「补齐制造检查」首档：壁厚/孔喉/封闭腔）──
+// 验收几何按审查指定：解析厚板 / 斜板（口径差异）/ 封闭球腔 / 双板缝 + 工艺阈值告警。
+console.log('\n[F8] 制造几何检查（体素级：壁厚双口径/孔喉/封闭腔）');
+{
+  const R = 40, N = R ** 3, h = 0.25; // 体素 0.25mm——量化误差量级即 h（note 披露口径）
+  const mk = () => ({ R, solid: new Uint8Array(N), inside: new Uint8Array(N).fill(1) });
+  const at = (x, y, z) => x + y * R + z * R * R;
+  const near = (v, t, tol) => Number.isFinite(v) && Math.abs(v - t) <= tol;
+
+  // 1. 解析厚板 z∈[15,25)：轴向 z run=10h=2.5mm 精确；medial=2×5h=2.5mm（chamfer 精确轴向上）
+  let m = mk();
+  for (let z = 15; z < 25; z++) for (let y = 0; y < R; y++) for (let x = 0; x < R; x++) m.solid[at(x, y, z)] = 1;
+  const r1 = auditManufacturing(m, h);
+  check('F8a 解析厚板：axial z=2.50mm 精确 + medial≈2.5（±2h 离散）',
+    near(r1.minWallMm.axial[2], 2.5, 1e-9) && near(r1.minWallMm.medial, 2.5, 2 * h),
+    `axial=${r1.minWallMm.axial[2].toFixed(3)} medial=${r1.minWallMm.medial.toFixed(3)}`);
+
+  // 2. 斜板（y 向每 8 体素错 1 层）：medial 旋转不变 ≈2.5；axial z 仍=2.5（轴向厚度不变）但
+  //    上界语义钉：轴向口径恒 ≥ 真实法向厚度（斜壁偏厚）
+  m = mk();
+  for (let y = 0; y < R; y++) { const off = Math.floor(y / 8); for (let z = 15 + off; z < 25 + off; z++) for (let x = 0; x < R; x++) m.solid[at(x, y, z)] = 1; }
+  const r2 = auditManufacturing(m, h);
+  check('F8b 斜板：medial 旋转不变 ≈2.5（±2h）+ axial ≥ 法向（上界语义）',
+    near(r2.minWallMm.medial, 2.5, 2 * h) && r2.minWallMm.axial[2] >= 2.5 - 1e-9,
+    `medial=${r2.minWallMm.medial.toFixed(3)} axial=${r2.minWallMm.axial[2].toFixed(3)}`);
+
+  // 3. 封闭球腔（实心块挖 r<8 球）：唯一孔隙域不触界——closedFrac=1、main=0、工艺告警在位
+  m = mk(); m.solid.fill(1);
+  for (let z = 0; z < R; z++) for (let y = 0; y < R; y++) for (let x = 0; x < R; x++) {
+    const dx = x - 19.5, dy = y - 19.5, dz = z - 19.5;
+    if (dx * dx + dy * dy + dz * dz < 64) m.solid[at(x, y, z)] = 0;
+  }
+  const r3 = auditManufacturing(m, h);
+  check('F8c 封闭球腔：closedFraction=1 + mainPore=0 + 告警披露（排粉/排液风险）',
+    near(r3.closedPoreFraction, 1, 1e-9) && near(r3.mainPoreFraction, 0, 1e-9)
+      && r3.warnings.some((w) => /封闭孔腔/.test(w)) && r3.closedDomains === 1,
+    `closed=${r3.closedPoreFraction.toFixed(3)} main=${r3.mainPoreFraction.toFixed(3)} doms=${r3.closedDomains}`);
+
+  // 4. 双板缝（缝 z∈[20,28) 触 x/y 域界=开放）：封闭=0；多开放域并存时喉=主域口径（mainFrac<1 披露）
+  m = mk();
+  for (const [a, b] of [[10, 20], [28, 38]]) for (let z = a; z < b; z++) for (let y = 0; y < R; y++) for (let x = 0; x < R; x++) m.solid[at(x, y, z)] = 1;
+  const r4 = auditManufacturing(m, h);
+  check('F8d 双板缝：无封闭腔 + 多开放域披露（mainFrac<1）+ 主域喉为有限值',
+    r4.closedPoreFraction === 0 && r4.mainPoreFraction < 1 && Number.isFinite(r4.minThroatMm.medial),
+    `closed=${r4.closedPoreFraction.toFixed(3)} main=${r4.mainPoreFraction.toFixed(3)} throat=${r4.minThroatMm.medial?.toFixed(2)}`);
+
+  // 5. 工艺阈值：1 体素薄板（0.25mm）< 0.4mm 喷嘴口径阈值 → 告警触发；厚板用例未传阈值 → 无壁厚告警（对照）
+  m = mk();
+  for (let y = 0; y < R; y++) for (let x = 0; x < R; x++) m.solid[at(x, y, 20)] = 1;
+  const r5 = auditManufacturing(m, h, { minWallMm: 0.4 });
+  check('F8e 工艺阈值：薄板 0.25mm<0.4 触发告警 + 未传阈值无壁厚告警（对照）',
+    r5.warnings.some((w) => /最小壁厚/.test(w)) && !r1.warnings.some((w) => /最小壁厚/.test(w)),
+    `thin=${JSON.stringify(r5.warnings).slice(0, 70)}`);
+}
+
 console.log(`\nRESULT: ${passCount} PASS / ${failCount} FAIL`);
-  if (passCount < 32) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 32（F7 可打印性审计 +10）'); process.exit(1); }
+  if (passCount < 37) { console.error('GUARD FAIL: 断言执行数 ' + passCount + ' < 基线 37（F7 +10 / F8 制造几何检查 +5，2026-10-24）'); process.exit(1); }
 if (failCount > 0) {
   console.log('失败项:');
   for (const f of failures) console.log('  ✗ ' + f);

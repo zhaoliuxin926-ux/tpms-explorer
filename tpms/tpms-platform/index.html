@@ -1246,6 +1246,19 @@ window.addEventListener('error', function(e) {
       </details>
 
       <details class="sect">
+        <summary class="sect-h">制造几何检查</summary>
+        <div class="field">
+          <div class="field-note">当前设计的体素级制造性：最小壁厚（medial 旋转不变 + 轴向双口径）、主连通域孔喉、封闭孔腔占比、连通性。工艺阈值因设备/材料而异，下方缺省 0.4mm 仅为 FDM 0.4 喷嘴常见工程参考——按实际工艺修改。</div>
+          <div class="opt-row two" style="gap:6px;margin-top:4px">
+            <label style="font-size:.7rem">最小壁厚阈值 mm<input aria-label="工艺最小壁厚阈值" id="mfg-minwall" type="number" value="0.4" min="0.05" step="0.05" style="width:100%"></label>
+            <label style="font-size:.7rem">体素分辨率 R<input aria-label="制造检查体素分辨率" id="mfg-res" type="number" value="48" min="24" max="96" step="8" style="width:100%"></label>
+          </div>
+          <button class="btn" id="btn-mfg" style="width:100%;margin-top:6px">运行制造检查</button>
+          <div class="field-note" id="mfg-result" style="display:none;white-space:pre-line"></div>
+        </div>
+      </details>
+
+      <details class="sect">
         <summary class="sect-h">LPBF 打印工艺与残余应力</summary>
         <div class="field">
           <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>

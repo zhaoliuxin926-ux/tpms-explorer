@@ -680,6 +680,59 @@ function bindExperimentalFit(): void {
 }
 bindExperimentalFit();
 
+// ── 制造几何检查卡（2026-10-24 审查「补齐制造检查」首档：壁厚/孔喉/封闭腔/连通性）──
+// 体素化走 INP 导出同款主线程 buildVoxelModel；mm 尺度=wcToMmFactor(cellSize)（1 period=1mm）。
+function bindManufacturingCard(): void {
+  const btn = document.getElementById('btn-mfg');
+  const outEl = document.getElementById('mfg-result');
+  if (!btn || !outEl) return;
+  btn.addEventListener('click', async () => {
+    const s = getState();
+    if (s.model === 'strut') { flashToast('制造检查暂支持曲面族（线框模式无壁厚语义）'); return; }
+    const num = (id: string, def: number, lo: number, hi: number) => {
+      const v = Number((document.getElementById(id) as HTMLInputElement | null)?.value ?? def);
+      return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
+    };
+    const Rmfg = Math.round(num('mfg-res', 48, 24, 96));
+    const minWall = num('mfg-minwall', 0.4, 0.05, 5);
+    btn.textContent = '体素化中…';
+    await new Promise((r) => setTimeout(r, 40));
+    try {
+      const exp = await loadExport();
+      // 体素化走 targetPorosity 二分（scenario/INP 已验证路径——voxel-model 的 iso 槽位是
+      // bias 语义非等值面值，直传解析 isoStar 会全固相；体素二分与 exact 的 iso 口径差在
+      // 制造检查的 h 级量化误差内，note 已披露）
+      const vox = exp.buildVoxelModel({
+        type: s.type, periods: s.cellSize, weights: s.weights,
+        structureMode: s.structureMode, containerShape: s.containerShape,
+        thickness: s.thickness, targetPorosity: s.porosity / 100, iso: 0,
+        customFormula: s.customFormula, stress: s.stress,
+      }, Rmfg);
+      const hMm = vox.hWc * wcToMmFactor(s.cellSize);
+      const { auditManufacturing } = await import('./physics/manufacturing-audit');
+      const rep = auditManufacturing(vox, hMm, { minWallMm: minWall });
+      const f2 = (v: number | undefined) => (v != null && Number.isFinite(v) ? v.toFixed(3) : '—');
+      const warnTxt = rep.warnings.length
+        ? '\n⚠ ' + rep.warnings.join('\n⚠ ')
+        : '\n✓ 未触发阈值告警（阈值仅几何比对，工艺结论以实际设备/材料为准）';
+      outEl.style.display = 'block';
+      outEl.textContent =
+        '最小壁厚（medial 旋转不变）：' + f2(rep.minWallMm.medial) + ' mm（轴向 x/y/z：'
+          + rep.minWallMm.axial.map((v) => f2(v)).join(' / ') + '，上界口径）\n'
+        + '主域孔喉：medial ' + f2(rep.minThroatMm.medial) + ' mm · 轴向 ' + f2(rep.minThroatMm.axialMin) + ' mm\n'
+        + '封闭孔腔：' + rep.closedDomains + ' 个域 · 占孔隙 ' + (rep.closedPoreFraction * 100).toFixed(2) + '%\n'
+        + '孔隙连通：主域占 ' + (rep.mainPoreFraction * 100).toFixed(1) + '%\n'
+        + '体素 R=' + rep.R + '（h=' + rep.voxelSizeMm.toFixed(4) + ' mm，量化误差量级=h）'
+        + warnTxt;
+    } catch (err) {
+      flashToast('制造检查失败：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      btn.textContent = '运行制造检查';
+    }
+  });
+}
+bindManufacturingCard();
+
 // ── 多目标 Pareto 前沿探索器（2026-10-04 第二十四批）：解析代理扫 26 族 × 参数域 →
 //    非支配前沿（E 力学 × κ 传质 × Sv 生物活性）→ 点击前沿点写回设计参数。
 //    内核复用：paretoFront（ml-surrogate）+ forwardModel（inverse-design，与逆向求解器
