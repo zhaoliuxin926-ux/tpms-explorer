@@ -1,3 +1,4 @@
+/*! TPMS Explorer | MIT License | (c) 2026 zhaoliuxin926-ux | https://github.com/zhaoliuxin926-ux/tpms-explorer/blob/main/LICENSE */
 var e=`// 弹塑性本构并行更新内核 —— WGSL（v6.0 阶段 I）
 // 本文件是 GPU 本构内核的唯一模板源：由 gpu-plasticity-solver.ts 的同套数学
 // （StVK + J2 径向返回，Prandtl-Reuss 流向）逐字镜像为 TS 内联模板
