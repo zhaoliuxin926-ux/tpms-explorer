@@ -1,4 +1,4 @@
-export { exportBinarySTL, exportMultiSolidSTL, buildMultiSolidSTL } from './stl-exporter';
+export { exportBinarySTL, exportMultiSolidSTL, buildMultiSolidSTL, buildBinarySTL } from './stl-exporter';
 export { exportGLB, buildGLB } from './glb-exporter';
 export { export3MF, build3MF } from './3mf-exporter';
 export { exportVTK, exportVTI, buildVTK, buildVTI } from './vtk-exporter';

@@ -4948,6 +4948,23 @@ function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: numb
   return { iso: baseIso(s), targetPorosity: s.porosity / 100 };
 }
 
+/** 设计文件对象构造（审查 #8：导出「设计文件」与「交付包」共用同一真源） */
+function buildDesignFile(s: AppState): Record<string, unknown> {
+  return {
+    format: 'tpms-design/1.0',
+    platform: 'TPMS Explorer v1.2.0',
+    savedAt: new Date().toISOString(),
+    shareUrl: buildShareURL(),
+    formula: s.customFormula,
+    state: s,
+    notCaptured: [
+      ...(meshCont ? ['customContainerStl：自定义容器 STL 原文件不在设计文件内——导入后需重新上传容器'] : []),
+      'radialGradPanel / regionPanel：径向梯度与分区面板属一次性管线设计，参数不进入 AppState/本文件（其导出走面板自身 STL 出口）',
+    ],
+    importHint: '工程版工具栏「导入设计」按钮选择本文件；或直接打开 shareUrl',
+  };
+}
+
 /** 统一导出分发：根据格式调用对应导出器 */
 async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
@@ -4957,7 +4974,7 @@ async function handleExport(fmt: string | null): Promise<void> {
 async function handleExportInner(fmt: string): Promise<void> {
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
-  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode';
+  const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode' || fmt === 'pkg';
   // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
   if (needGeo && !(await ensureExportGradeGeometry(s))) return;
   // 网格交付门（2026-10-24 实用性审查 #7：网页与 CLI 同一口径）：三角网格导出前独立审计
@@ -5194,26 +5211,70 @@ async function handleExportInner(fmt: string): Promise<void> {
         break;
       }
       case 'design': {
-        // 【设计文件 v1.0】（2026-10-24 审查 #8）：完整设计快照，供「导入设计」恢复——
-        // shareUrl 走全参数分享链接（解析复用 parseURLParams 白名单）；formula 为完整
-        // customFormula（不受分享链接 12KB 基建帽——设计文件里公式即设计本体）；state 为
-        // 人类可读+工具核对的完整快照。notCaptured 诚实披露文件不含的部分。
-        // 纯参数导出：不触发几何重建，也不适用导出水密门（非网格交付）。
-        const shareUrl = buildShareURL();
-        const design = {
-          format: 'tpms-design/1.0',
+        downloadText(JSON.stringify(buildDesignFile(s), null, 2), `tpms-design-${s.type}-p${s.porosity}.json`, 'application/json');
+        break;
+      }
+      case 'pkg': {
+        // 【交付包 v1.0】（2026-10-24 审查"完整交付包"方向首档）：一份 ZIP = 完整设计
+        // （design.json，可经「导入设计」恢复=换电脑可复现）+ 水密 STL（needGeo 门+升档
+        // 已过）+ manifest 哈希链（尺寸契约/水密审计实测值/模型口径/逐文件 sha256 前 16
+        // ——每个结果追到输入与版本）。文件名带时间戳：同名导出不混淆另一设计。
+        const designText = JSON.stringify(buildDesignFile(s), null, 2);
+        const pkgPos = baseGeo!.attributes.position.array as Float32Array;
+        const pkgIdx = baseGeo!.index!.array as Uint32Array;
+        const pkgNrm = baseGeo!.attributes.normal?.array as Float32Array | undefined;
+        const pkgScale = meshCont ? meshCont.scale : wcToMmFactor(s.cellSize);
+        const stlBuf = exp.buildBinarySTL(pkgPos, pkgIdx, pkgScale, pkgNrm);
+        const stlBytes = new Uint8Array(stlBuf);
+        const enc = new TextEncoder();
+        const designBytes = enc.encode(designText);
+        const sha16 = async (data: ArrayBuffer | Uint8Array): Promise<string> => {
+          const ab = data instanceof Uint8Array
+            ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+            : data;
+          const dg = await crypto.subtle.digest('SHA-256', ab);
+          return [...new Uint8Array(dg)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+        };
+        const [shaDesign, shaStl] = await Promise.all([sha16(designBytes), sha16(stlBytes)]);
+        const aPkg = auditMeshIndices(pkgPos, pkgIdx);
+        const manifest = {
+          format: 'tpms-delivery/1.0',
           platform: 'TPMS Explorer v1.2.0',
           savedAt: new Date().toISOString(),
-          shareUrl,
-          formula: s.customFormula,
-          state: s,
-          notCaptured: [
-            ...(meshCont ? ['customContainerStl：自定义容器 STL 原文件不在设计文件内——导入后需重新上传容器'] : []),
-            'radialGradPanel / regionPanel：径向梯度与分区面板属一次性管线设计，参数不进入 AppState/本文件（其导出走面板自身 STL 出口）',
+          sizeContract: {
+            totalWidthMm: meshCont ? null : s.cellSize,
+            periods: s.cellSize,
+            cellSizeMm: meshCont ? null : 1,
+            convention: meshCont
+              ? '外部 STL 容器口径：几何随容器原文件毫米尺度（meshCont.scale）'
+              : 'UI「1 周期=1mm」：总宽=周期数 mm，单胞恒 1mm（派生=总宽÷周期）；CLI mesh --specimen-size 可设任意总宽',
+          },
+          meshAudit: { openEdges: aPkg.openEdges, nonManifoldEdges: aPkg.nonManifoldEdges, degenTris: aPkg.degenTris, note: '交付门=与 CLI 同口径，任一非零不交付（此包已通过）' },
+          modelProvenance: {
+            type: s.type, structureMode: s.structureMode, containerShape: s.containerShape,
+            material: s.material, resolution: lastBuildResolution, isoUsed: lastIsoUsed,
+            exactSolver: lastBuildUsedExact, meshHash: hashArray(pkgPos),
+            metrics: lastPhysicsMetrics ? {
+              svRatio: lastPhysicsMetrics.svRatio, gibsonAshbyE: lastPhysicsMetrics.gibsonAshbyE,
+              C1: lastPhysicsMetrics.C1, permeability_mm2: lastPhysicsMetrics.permeability,
+            } : null,
+            note: 'metrics=Gibson-Ashby 网格标定口径（gibson-ashby.ts）；inverse-design 文献带口径不同源（差~27%，2026-10-02 勘正在案）',
+          },
+          files: [
+            { name: 'design.json', bytes: designBytes.byteLength, sha256_16: shaDesign },
+            { name: `${base}.stl`, bytes: stlBytes.byteLength, sha256_16: shaStl },
           ],
-          importHint: '工程版工具栏「导入设计」按钮选择本文件；或直接打开 shareUrl',
+          importHint: 'design.json 经工程版工具栏「导入设计」恢复（或打开其中 shareUrl）',
         };
-        downloadText(JSON.stringify(design, null, 2), `tpms-design-${s.type}-p${s.porosity}.json`, 'application/json');
+        const manifestText = JSON.stringify(manifest, null, 2);
+        const zip = exp.buildStoredZip([
+          { name: 'design.json', data: designBytes },
+          { name: `${base}.stl`, data: stlBytes },
+          { name: 'manifest.json', data: enc.encode(manifestText) },
+        ]);
+        const ts = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+        const zipAb = zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength) as ArrayBuffer;
+        downloadBlob(new Blob([zipAb], { type: 'application/zip' }), `tpms-pkg-${s.type}-p${s.porosity}-${ts}.zip`);
         break;
       }
       default:
