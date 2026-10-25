@@ -150,6 +150,23 @@
   :root[data-theme="light"] .ls-jump{background:rgba(15,23,42,0.04);border-color:rgba(15,23,42,0.08)}
   :root[data-theme="light"] .ls-jump button{color:#64748b}
   :root[data-theme="light"] .ls-jump button.on{color:#fff;background:#0369a1}
+  /* ═══ 批五 任务流卡：设计→候选→制造检查→导出→试验分析 连续入口（审查"以任务组织入口"）═══ */
+  .taskflow{margin:0 0 10px;padding:6px 8px 7px;background:rgba(79,195,247,0.05);
+    border:1px solid rgba(79,195,247,0.12);border-radius:8px}
+  .tf-title{font-size:.6rem;letter-spacing:1.5px;color:#5d7a94;font-weight:700;margin-bottom:5px}
+  .tf-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+  .tf-step{border:0;background:transparent;border-radius:6px;padding:4px 2px 5px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:2px;transition:background .18s}
+  .tf-step:hover{background:rgba(79,195,247,0.1)}
+  .tf-step .tf-t{font-size:.62rem;color:#aebdd3;font-weight:600;line-height:1.15;text-align:center}
+  .tf-step:hover .tf-t{color:#4fc3f7}
+  .tf-step .tf-badge{font-size:.58rem;line-height:1;min-height:9px;font-variant-numeric:tabular-nums}
+  .tf-step .tf-badge.done{color:#34d399}
+  .tf-step .tf-badge.stale{color:#fbbf24}
+  :root[data-theme="light"] .taskflow{background:rgba(15,23,42,0.04);border-color:rgba(15,23,42,0.08)}
+  :root[data-theme="light"] .tf-title{color:#64748b}
+  :root[data-theme="light"] .tf-step .tf-t{color:#475569}
+  :root[data-theme="light"] .tf-step:hover .tf-t{color:#0369a1}
   .sgroup{margin-bottom:2px}
   .sgroup-h{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px;
     padding:6px 2px 5px;border-top:1px solid rgba(79,195,247,0.16);cursor:pointer;user-select:none}
@@ -933,6 +950,17 @@ window.addEventListener('error', function(e) {
         <button data-jump="grp-optimize">优化</button>
         <button data-jump="grp-view">视图</button>
       </nav>
+      <div class="taskflow" id="taskflow">
+        <div class="tf-title">交付任务流 · 每步一键直达</div>
+        <div class="tf-steps" role="navigation" aria-label="交付任务流五步导航">
+          <button class="tf-step" data-step="design" title="设置族/孔隙率/端板等设计参数"><span class="tf-t">① 设计试样</span><span class="tf-badge" data-badge="design">✓</span></button>
+          <button class="tf-step" data-step="candidate" title="Pareto 前沿 / 逆设计：多目标权衡选候选"><span class="tf-t">② 比较候选</span><span class="tf-badge" data-badge="candidate"></span></button>
+          <button class="tf-step" data-step="mfg" title="壁厚/孔喉/封闭腔体素级检查（当前设计）"><span class="tf-t">③ 制造检查</span><span class="tf-badge" data-badge="mfg"></span></button>
+          <button class="tf-step" data-step="export" title="导出中心：STL/3MF/G-code/交付包"><span class="tf-t">④ 导出交付</span><span class="tf-badge" data-badge="export"></span></button>
+          <button class="tf-step" data-step="analyze" title="导入试验机 CSV：ISO 13314 反演与模型对标"><span class="tf-t">⑤ 试验分析</span><span class="tf-badge" data-badge="analyze"></span></button>
+        </div>
+        <div class="field-note" style="margin:5px 0 0;font-size:.58rem;line-height:1.5">✓ 已完成 · ! 结果已过期（设计参数变更后需重做该步；试验分析针对外部数据，不随设计失效）</div>
+      </div>
       <section class="sgroup" id="grp-geometry"><div class="sgroup-h" data-target="grp-geometry" title="跳转到该组"><span class="t">构型设计</span><span class="n">12</span></div>
 
       <details class="sect" open>
@@ -1230,7 +1258,7 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
 
-      <details class="sect">
+      <details class="sect" id="sect-expfit">
         <summary class="sect-h">试验曲线反演</summary>
         <div class="field">
           <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
@@ -1245,7 +1273,7 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
 
-      <details class="sect">
+      <details class="sect" id="sect-mfg">
         <summary class="sect-h">制造几何检查</summary>
         <div class="field">
           <div class="field-note">当前设计的体素级制造性：最小壁厚（medial 旋转不变 + 轴向双口径）、主连通域孔喉、封闭孔腔占比、连通性。工艺阈值因设备/材料而异，下方缺省 0.4mm 仅为 FDM 0.4 喷嘴常见工程参考——按实际工艺修改。</div>

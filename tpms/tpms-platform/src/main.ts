@@ -620,6 +620,61 @@ function drawExpFitCanvas(cv: HTMLCanvasElement, xs: Float64Array, ys: Float64Ar
   ctx.fillText(plateau.toFixed(1), pad + 2, Y(plateau) - 3);
 }
 
+// ── 批五 任务流卡（审查"以任务组织入口"首档）：设计→候选→制造检查→导出→试验分析连续入口 ──
+// 状态口径：③制造检查/④导出记录完成时的设计指纹（geometryStateKey=cacheKey+meshContTag），
+// 显示时与当前指纹比对，设计变更即转 stale（!）——不静默冒充结果仍对当前设计有效；
+// ②Pareto 是全域扫描、⑤试验反演的输入是外部试验数据，均不随当前设计参数失效，不挂指纹。
+const taskFlow = { mfgSig: null as string | null, exportSig: null as string | null, paretoDone: false, expfitDone: false };
+
+function refreshTaskFlow(): void {
+  const sig = geometryStateKey(getState());
+  const badge = (name: string, state: 'done' | 'stale' | 'none', title = ''): void => {
+    const el = document.querySelector<HTMLElement>(`[data-badge="${name}"]`);
+    if (!el) return;
+    el.className = 'tf-badge' + (state === 'none' ? '' : ' ' + state);
+    el.textContent = state === 'done' ? '✓' : state === 'stale' ? '!' : '';
+    el.title = title;
+  };
+  badge('design', 'done');
+  badge('candidate', taskFlow.paretoDone ? 'done' : 'none');
+  badge('mfg', taskFlow.mfgSig == null ? 'none' : taskFlow.mfgSig === sig ? 'done' : 'stale',
+    taskFlow.mfgSig != null && taskFlow.mfgSig !== sig ? '设计已变更，制造检查结果过期——请重跑第③步' : '');
+  badge('export', taskFlow.exportSig == null ? 'none' : taskFlow.exportSig === sig ? 'done' : 'stale',
+    taskFlow.exportSig != null && taskFlow.exportSig !== sig ? '设计已变更，已导出文件不再对应当前设计' : '');
+  badge('analyze', taskFlow.expfitDone ? 'done' : 'none');
+}
+
+function bindTaskFlowCard(): void {
+  const card = document.getElementById('taskflow');
+  if (!card) return;
+  const rail = document.querySelector<HTMLElement>('.panel.controls');
+  const jumpTo = (id: string): void => {
+    const sect = document.getElementById(id);
+    if (!sect || !rail) return;
+    if (sect instanceof HTMLDetailsElement) sect.open = true;
+    rail.scrollTo({ top: sect.offsetTop - 6, behavior: 'smooth' });
+  };
+  card.querySelectorAll<HTMLButtonElement>('.tf-step').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const step = btn.dataset.step;
+      if (step === 'design') {
+        const g = document.getElementById('grp-geometry');
+        if (g && rail) rail.scrollTo({ top: g.offsetTop - 6, behavior: 'smooth' });
+      } else if (step === 'candidate') jumpTo('sect-pareto');
+      else if (step === 'mfg') jumpTo('sect-mfg');
+      else if (step === 'analyze') jumpTo('sect-expfit');
+      else if (step === 'export') {
+        document.getElementById('btn-export')?.click();
+        // tf-step 点击若继续冒泡到 document，会被导出菜单的外点关闭逻辑当成
+        // "菜单外点击"而立即收起（btn-export 的 stopPropagation 只保护它自己的合成事件）
+        e.stopPropagation();
+      }
+    });
+  });
+  refreshTaskFlow();
+}
+bindTaskFlowCard();
+
 function bindExperimentalFit(): void {
   const fileInput = document.getElementById('expfit-file') as HTMLInputElement | null;
   const canvas = document.getElementById('expfit-curve') as HTMLCanvasElement | null;
@@ -656,6 +711,8 @@ function bindExperimentalFit(): void {
         + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · ' + edTxt
         + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%）';
       drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
+      taskFlow.expfitDone = true;
+      refreshTaskFlow();
     } catch (err) {
       out.style.display = 'block';
       out.textContent = '✗ 反演失败：' + (err instanceof Error ? err.message : String(err));
@@ -724,6 +781,8 @@ function bindManufacturingCard(): void {
         + '孔隙连通：主域占 ' + (rep.mainPoreFraction * 100).toFixed(1) + '%\n'
         + '体素 R=' + rep.R + '（h=' + rep.voxelSizeMm.toFixed(4) + ' mm，量化误差量级=h）'
         + warnTxt;
+      taskFlow.mfgSig = geometryStateKey(s);
+      refreshTaskFlow();
     } catch (err) {
       flashToast('制造检查失败：' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -847,6 +906,8 @@ function bindParetoCard(): void {
       points = grid;
       front = paretoFront(grid);
       targetStar = null; targetTop = [];
+      taskFlow.paretoDone = true;
+      refreshTaskFlow();
     // 域适配（log）
     const es = points.map((p) => Math.log10(p.E));
     const ks = points.map((p) => Math.log10(p.kappa));
@@ -855,7 +916,7 @@ function bindParetoCard(): void {
     draw();
     note!.textContent = `扫描完成：${points.length} 设计点 → 非支配前沿 ${front.length} 点（三目标：E↑ 力学 · κ↑ 传质 · Sv↑ 生物活性；解析代理与逆向求解器同源）。点击前沿点写回参数；hover 显示读数。`;
   });
-  btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; targetStar = null; targetTop = []; draw(); });
+  btnClear.addEventListener('click', () => { points = []; front = []; hoverIdx = -1; targetStar = null; targetTop = []; draw(); taskFlow.paretoDone = false; refreshTaskFlow(); });
   // 约束过滤：在可行子集上重算非支配前沿（被支配点在支配者被约束剔除后可能浮出——
   // 不能简单筛原前沿）。κ 输入单位 ×10⁻⁹ m²（骨支架典型量级 1e-10~1e-8）
   const eMinEl = document.getElementById('pareto-emin') as HTMLInputElement | null;
@@ -2519,6 +2580,7 @@ function scheduleRebuild(preview: boolean, skipHistory = false): void {
   if (rebuildTimer) clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(() => {
     rebuildTimer = null;
+    refreshTaskFlow(); // 设计变更后③④按指纹比对转 stale（幂等：指纹未变不翻转）
     rebuild(preview);
   }, preview ? 16 : 150);
 }
@@ -5334,6 +5396,8 @@ async function handleExportInner(fmt: string): Promise<void> {
         return;
     }
     flashToast(`已导出 ${fmt.toUpperCase()}`);
+    taskFlow.exportSig = geometryStateKey(s);
+    refreshTaskFlow();
   } catch (err) {
     flashToast('导出失败：' + (err instanceof Error ? err.message : String(err)));
   }
