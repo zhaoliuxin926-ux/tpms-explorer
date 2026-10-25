@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { MeshPhysicalMaterial } from 'three';
 import { initThree, type ThreeContext } from './three-setup';
-import { getState, setState, applyPreset, buildShareURL, shareFormulaDroppedLast, pushHistory, resetHistory, undo, redo } from './state';
+import { getState, setState, applyPreset, buildShareURL, shareFormulaDroppedLast, pushHistory, resetHistory, undo, redo, type AppStatePatch } from './state';
+import { VALID } from './url-params';
 import { initStateFromURL, parseURLParams } from './url-params';
 import { WorkerBridge, WorkerRequestSupersededError } from './worker/worker-bridge';
 import TpmsWorker from './worker/tpms-worker.ts?worker';
@@ -218,6 +219,60 @@ function buildRequestKey(s: Readonly<AppState>, resolution: number): string {
 /** 几何本身的状态指纹：材质/着色等渲染偏好不应使派生网格失效。 */
 function geometryStateKey(s: Readonly<AppState>): string {
   return cacheKey(s, 0) + meshContTag();
+}
+
+/**
+ * 设计文件 state 快照校验（批十一 P1，防盲信原始 JSON）：递归形状对拍 DEFAULT_STATE
+ * （键存在+类型匹配，未知键/类型漂移丢弃），枚举串走 VALID 白名单，核心数值域钳制
+ * 与 parseURLParams 同域。校验通过的快照以"重置默认再合并"方式应用=替换语义
+ * （缺省键显式回落关闭态，导入不再继承当前页面的端板/混合/渐变等设置）。
+ */
+function sanitizeDesignState(raw: unknown): AppStatePatch {
+  const walk = (src: unknown, defv: unknown): unknown | undefined => {
+    if (typeof defv === 'object' && defv !== null && !Array.isArray(defv)) {
+      if (typeof src !== 'object' || src === null || Array.isArray(src)) return undefined;
+      const out: Record<string, unknown> = {};
+      for (const k of Object.keys(defv as Record<string, unknown>)) {
+        const v = walk((src as Record<string, unknown>)[k], (defv as Record<string, unknown>)[k]);
+        if (v !== undefined) out[k] = v;
+      }
+      return out;
+    }
+    if (Array.isArray(defv)) {
+      if (!Array.isArray(src) || src.length !== defv.length || !src.every(Number.isFinite)) return undefined;
+      return [...src];
+    }
+    if (typeof src !== typeof defv) return undefined;
+    return src;
+  };
+  const patchRaw = walk(raw, DEFAULT_STATE);
+  if (typeof patchRaw !== 'object' || patchRaw === null) throw new Error('state 快照形状非法');
+  const patch = patchRaw as Record<string, unknown>;
+  // 枚举串白名单（对齐 parseURLParams 的 VALID 校验；非法回落默认=键删除）
+  const dropIfBad = (key: string, list: readonly string[], dflt: string) => {
+    if (typeof patch[key] === 'string' && !list.includes(patch[key] as string)) patch[key] = dflt;
+  };
+  dropIfBad('type', VALID.type, 'gyroid');
+  dropIfBad('model', VALID.model, 'surface');
+  dropIfBad('structureMode', VALID.structure, 'solid_network');
+  dropIfBad('containerShape', VALID.container, 'cube');
+  dropIfBad('material', VALID.material, 'auto');
+  dropIfBad('gradientDir', VALID.gradient, 'z');
+  dropIfBad('coloring', VALID.coloring, 'none');
+  // 核心数值域钳制（与 parseURLParams 同域）
+  const clampN = (key: string, lo: number, hi: number, dflt: number): number => {
+    const v = patch[key];
+    const c = typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt;
+    patch[key] = c;
+    return c;
+  };
+  clampN('porosity', 60, 90, 75);
+  patch.cellSize = Math.round(clampN('cellSize', 1, 5, 3));
+  clampN('thickness', 0.5, 2.0, 1.0);
+  clampN('slice', -100, 100, 100);
+  clampN('endplateMm', 0, 3.0, 0);
+  if (patch.specimenSizeMm != null) clampN('specimenSizeMm', 1, 200, 3);
+  return patch as AppStatePatch;
 }
 
 /** 生效 wc→mm 因子（批六）：显式总宽优先，null=自动（1 period=1mm）。 */
@@ -782,6 +837,13 @@ function bindManufacturingCard(): void {
   btn.addEventListener('click', async () => {
     const s = getState();
     if (s.model === 'strut') { flashToast('制造检查暂支持曲面族（线框模式无壁厚语义）'); return; }
+    // 【批十一 P1】体素口径守卫：混合/渐变/端板等配置开启时体素化结果不对应交付几何
+    //（外部评估实证：配置切换而体素 SHA 恒同）——fail-closed 拒绝，不再静默审计均匀几何
+    const voxUnsupported = voxelUnsupportedReasons(s);
+    if (voxUnsupported.length) {
+      flashToast('制造检查暂不支持：' + voxUnsupported.join('、') + '（体素口径为基础均匀多孔段，检查结果将不对应交付几何）——请关闭相关配置后重跑');
+      return;
+    }
     const num = (id: string, def: number, lo: number, hi: number) => {
       const v = Number((document.getElementById(id) as HTMLInputElement | null)?.value ?? def);
       return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
@@ -2469,7 +2531,6 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
       if (R + 1 > maxTier) R = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
     }
   }
-  const iso = baseIso(s);
 
   // 缓存检查
   const key = cacheKey(s, R) + meshContTag();
@@ -2538,8 +2599,13 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     && (s.stress?.preset === undefined || s.stress.preset === 'none')
     && s.type !== 'custom'
     && !meshCont;
-  let isoOut = iso;
-  let targetPorosity: number | undefined = s.isoGrad.enabled ? undefined : s.porosity / 100;
+  // 批十一 P1：iso/目标孔隙率/渐变 spec 三元组单源（resolveBuildTrio）——此前 HD 升档
+  // 与导出级重建经 resolveExportPorosity 二分回退丢 isoGrad（渐变帧/导出变均匀几何）。
+  // 渐变口径=主重建原语（iso=baseIso+二分关闭+makeZGrad 场内偏置），非渐变路径三元组
+  // 恒等于 resolveExportPorosity（字节级不变）。
+  const buildTrio = resolveBuildTrio(s);
+  let isoOut = buildTrio.iso;
+  let targetPorosity: number | undefined = buildTrio.targetPorosity;
   pendingExactFix = null;
   lastBuildUsedExact = false;
   if (exactCapable && !preview) {
@@ -2586,11 +2652,10 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     stress: s.stress,
     hierarchical: s.hierarchical,
     neural: s.neural,
-    // C1 渐变等值场：开启时 targetPorosity 二分必须停用（surface-nets 互斥守卫），
+    // C1 渐变等值场（批十一：spec 由 resolveBuildTrio 单源供给，与 HD/导出重建同口径）：
+    // 开启时 targetPorosity 二分必须停用（surface-nets 互斥守卫），
     // iso 采用 baseIso 基准 + z 向三平台偏移（底 hard / 基准 0 / 顶 soft）。
-    isoGrad: s.isoGrad.enabled
-      ? makeZGrad(s.isoGrad.hard, s.isoGrad.soft, s.isoGrad.band)
-      : undefined,
+    isoGrad: buildTrio.isoGrad,
     ...(meshCont ? meshContParams(R) : {}),
   };
 
@@ -2632,14 +2697,16 @@ function scheduleHdUpgrade(): void {
     // 【2026-10-02 审查 M3】与主重建/导出同一 exact 口径（resolveExportPorosity）：
     // 此前走 baseIso+legacy 体素二分，HD 帧 iso 与 l2 exact 帧口径漂移，且其 isoUsed
     // 会被 worker 结果处理器登记为 lastExactIso（lastBuildUsedExact 未重置）。
-    const expHd = resolveExportPorosity(s);
-    lastBuildUsedExact = expHd.targetPorosity === undefined;
+    // 【批十一 P1】iso/targetPorosity/isoGrad 三元组改 resolveBuildTrio 单源——此前经
+    // resolveExportPorosity 二分回退丢 isoGrad（渐变设计 HD 帧变均匀几何）。
+    const buildTrio = resolveBuildTrio(s);
+    lastBuildUsedExact = buildTrio.targetPorosity === undefined && !s.isoGrad.enabled;
     const params: BuildParams = {
       type: s.type,
-      iso: expHd.iso,
+      iso: buildTrio.iso,
       periods: s.cellSize,
       resolution: fullR,
-      targetPorosity: expHd.targetPorosity as number,
+      targetPorosity: buildTrio.targetPorosity as number,
       weights: s.weights,
       structureMode: s.structureMode,
       containerShape: s.containerShape,
@@ -2654,6 +2721,7 @@ function scheduleHdUpgrade(): void {
       stress: s.stress,
       hierarchical: s.hierarchical,
       neural: s.neural,
+      isoGrad: buildTrio.isoGrad,
       ...(meshCont ? meshContParams(fullR) : {}),
     };
     dispatchFullBuild(params, buildRequestKey(s, fullR));
@@ -3627,17 +3695,31 @@ function bindShareAndExport(): void { // 分享链接与 URL
   function applyDesignFile(text: string): void {
     let d: unknown;
     try { d = JSON.parse(text); } catch { throw new Error('非有效 JSON 文件'); }
-    const file = d as { format?: unknown; shareUrl?: unknown; formula?: unknown; notCaptured?: unknown };
+    const file = d as { format?: unknown; shareUrl?: unknown; formula?: unknown; state?: unknown; notCaptured?: unknown };
     if (file?.format !== 'tpms-design/1.0') {
       throw new Error(`未知设计文件格式 "${String(file?.format)}"（当前支持 tpms-design/1.0）`);
     }
-    let search = '';
-    if (typeof file.shareUrl === 'string' && file.shareUrl) {
-      try { search = new URL(file.shareUrl).search; } catch { throw new Error('设计文件 shareUrl 无效（非合法 URL）'); }
+    // 【批十一 P1】完整状态替换语义（外部评估实证：合并式导入会把当前页面的端板/混合/
+    // 渐变残留进普通设计——同一文件在不同页面恢复出不同几何）。优先 file.state 完整快照
+    //（保存时全量态，形状校验+核心数值域钳制后重置默认再合并=缺省键显式回落关闭）；
+    // 旧文件无 state 时退化 shareUrl 白名单（向后兼容）；两者皆无=无有效载荷，拒收且
+    // 保持原状态。
+    const hasState = !!file.state && typeof file.state === 'object' && !Array.isArray(file.state);
+    const hasShare = typeof file.shareUrl === 'string' && !!file.shareUrl;
+    if (!hasState && !hasShare) {
+      throw new Error('设计文件缺少 state 快照与 shareUrl（无有效设计载荷）——已保持当前设计不变');
     }
-    const patch = parseURLParams(search);
+    let patch: AppStatePatch;
+    if (hasState) {
+      patch = sanitizeDesignState(file.state);
+    } else {
+      let search = '';
+      try { search = new URL(file.shareUrl as string).search; } catch { throw new Error('设计文件 shareUrl 无效（非合法 URL）'); }
+      patch = parseURLParams(search);
+    }
     if (typeof file.formula === 'string') patch.customFormula = file.formula;
     pushHistory();
+    setState(DEFAULT_STATE); // 替换语义第一步：回落默认（缺省键=关闭），再合并校验过的快照
     setState(patch);
     const sImp = getState();
     syncUI(sImp);
@@ -3646,7 +3728,7 @@ function bindShareAndExport(): void { // 分享链接与 URL
     scheduleHdUpgrade();
     const nc = Array.isArray(file.notCaptured)
       ? file.notCaptured.filter((x): x is string => typeof x === 'string' && /容器/.test(x)) : [];
-    flashToast(`已导入设计：${sImp.type} @ ${sImp.porosity}% · k=${sImp.cellSize}${nc.length ? `（注意：${nc.join('；')}）` : ''}`);
+    flashToast(`已导入设计（完整状态替换）：${sImp.type} @ ${sImp.porosity}% · k=${sImp.cellSize}${nc.length ? `（注意：${nc.join('；')}）` : ''}`);
   }
   {
     const btnImp = document.getElementById('btn-import');
@@ -4949,16 +5031,19 @@ async function ensureExportGradeGeometry(s: AppState, overrideR?: number): Promi
     gpuSeq++;
     let res: WorkerResponse;
     // 与主重建/导出中心同一 exact 口径——HD 同步重建若走 legacy 二分，
-    // 导出 STL 会与屏幕 exact 帧 iso 不一致
-    const expPoro = resolveExportPorosity(s);
+    // 导出 STL 会与屏幕 exact 帧 iso 不一致。
+    // 【批十一 P1】iso/targetPorosity/isoGrad 三元组 resolveBuildTrio 单源——此前经
+    // resolveExportPorosity 二分回退丢 isoGrad（渐变设计导出级重建变均匀几何且返回成功）。
+    const expTrio = resolveBuildTrio(s);
     try {
       res = buildSurface({
-        type: s.type, iso: expPoro.iso, periods: s.cellSize, resolution: hdR,
-        targetPorosity: expPoro.targetPorosity as number, weights: s.weights, structureMode: s.structureMode,
+        type: s.type, iso: expTrio.iso, periods: s.cellSize, resolution: hdR,
+        targetPorosity: expTrio.targetPorosity as number, weights: s.weights, structureMode: s.structureMode,
         containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
         hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
         endplateMm: meshCont ? 0 : s.endplateMm,
         mmPerWc: effMm(s), // 批六：导出级同步重建与主重建同因子——漏注入会让导出后的指标面板被 legacy 因子覆写
+        isoGrad: expTrio.isoGrad,
         ...(meshCont ? meshContParams(hdR) : {}), // 红队 A C-3：导出重建路径漏注入——竞态下屏幕 torus 保形、导出 cube 裁剪
         coloring: effectiveColoring(s),
         stress: s.stress,
@@ -4981,7 +5066,7 @@ async function ensureExportGradeGeometry(s: AppState, overrideR?: number): Promi
     lastBuildResolution = hdR;
     lastIsoUsed = res.isoUsed ?? lastIsoUsed;
     lastAppliedGeometryKey = expectedHdKey;
-    if (expPoro.targetPorosity === undefined && res.isoUsed != null && Number.isFinite(res.isoUsed)) {
+    if (expTrio.targetPorosity === undefined && !s.isoGrad.enabled && res.isoUsed != null && Number.isFinite(res.isoUsed)) {
       lastExactIso = { iso: res.isoUsed, stateSig: geometryStateKey(s) };
     }
     levelsetOverrideStateKey = null;
@@ -5103,6 +5188,33 @@ async function enterFigureMode(): Promise<void> {
 
 // ── 导出中心 ─────────────────────────────────────────────
 /** 导出侧孔隙率口径与主重建 exact 路径对齐（INP/RVE 体素 vs STL 网格同参数一致） */
+function resolveBuildTrio(s: AppState): { iso: number; targetPorosity: number | undefined; isoGrad: import('./core/iso-grad').IsoGradSpec | undefined } {
+  // C1 渐变等值场：密度语义由场内 z 偏置承载（makeZGrad），全局目标孔隙率二分必须停用
+  //（surface-nets 互斥守卫）；iso=baseIso 基准——主重建原语，HD 升档/导出级重建共用本单源。
+  if (s.isoGrad.enabled) {
+    return { iso: baseIso(s), targetPorosity: undefined, isoGrad: makeZGrad(s.isoGrad.hard, s.isoGrad.soft, s.isoGrad.band) };
+  }
+  const r = resolveExportPorosity(s);
+  return { iso: r.iso, targetPorosity: r.targetPorosity, isoGrad: undefined };
+}
+
+/**
+ * 体素口径不支持清单（批十一 P1，制造检查与 INP/polyMesh 共用单源）：体素模型为
+ * 基础均匀多孔段语义（VoxelModelParams 无端板覆写/混合/渐变场/分形/神经场自由度），
+ * 这些配置开启时静默体素化=检查或导出的几何不对应交付设计——调用方 fail-closed。
+ */
+function voxelUnsupportedReasons(s: AppState): string[] {
+  const r: string[] = [];
+  if (meshCont) r.push('外部 STL 容器');
+  if (s.hybrid.enabled) r.push('多相混合');
+  if (s.isoGrad.enabled) r.push('渐变等值场');
+  if (s.endplateMm > 0) r.push('加载端板');
+  if (s.structureMode === 'gradient_shell') r.push('梯度双壳');
+  if (s.hierarchical.enabled) r.push('多级分形');
+  if (s.neural.enabled) r.push('隐式神经场');
+  if (s.manifold.kind !== 'identity') r.push('非欧映射');
+  return r;
+}
 function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: number | undefined } {
   const exactCapable =
     s.structureMode === 'solid_network'
@@ -5252,8 +5364,9 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'rvestl': {
         // 【v3.0 阶段 II】周期性 RVE 网格 + PBC 节点配对表：主线程独立构建
         // （wrapped 提取管线，与屏幕几何无关），STL 为开放缝合网格 + JSON 配对表
-        if (s.containerShape !== 'cube' || s.structureMode === 'gradient_shell' || s.hybrid.enabled || s.endplateMm > 0) {
-          flashToast('周期性 RVE 需：立方体容器 + solid/shell 模式 + 关闭混合与端板');
+        if (s.containerShape !== 'cube' || s.structureMode === 'gradient_shell' || s.hybrid.enabled || s.endplateMm > 0
+          || s.isoGrad.enabled || s.hierarchical.enabled || s.neural.enabled) {
+          flashToast('周期性 RVE 需：立方体容器 + solid/shell 模式 + 关闭混合/端板/渐变等值场/分形/神经场（批十一：这些配置不在周期单胞语义内，静默导出=均匀几何冒充）');
           return;
         }
         const rveR = 48;
@@ -5300,6 +5413,13 @@ async function handleExportInner(fmt: string): Promise<void> {
         // 体素化（与屏幕保形几何语义相悖且无提示）——违反无静默回退铁律，改 fail-closed
         if (meshCont) {
           flashToast('外部 STL 容器暂不支持体素网格导出（INP/polyMesh 为 cube/cylinder 口径）——请先移除容器或改用 STL/GLB 导出');
+          return;
+        }
+        // 【批十一 P1】体素模型为均匀多孔段语义（无端板覆写/混合/渐变场/分形/神经场自由度），
+        // 这些配置开启时静默导出=交付几何与 INP 不对应——fail-closed（同 meshCont 先例）
+        const voxUnsupported = voxelUnsupportedReasons(s);
+        if (voxUnsupported.length) {
+          flashToast('体网格导出暂不支持：' + voxUnsupported.join('、') + '（体素口径为基础均匀多孔段）——请关闭相关配置，或改用 STL/GLB 网格导出');
           return;
         }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
