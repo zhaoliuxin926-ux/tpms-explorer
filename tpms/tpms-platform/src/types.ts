@@ -84,6 +84,12 @@ export interface AppState {
   containerShape: ContainerShape;
   porosity: number;
   cellSize: number;
+  /**
+   * 试样总宽 mm（尺寸契约真源量，2026-10-25 批六 UI 独立尺寸）；null = 自动
+   * （1 period=1mm，总宽=周期数 mm——既有默认语义）。显式给定时单胞=总宽/周期数，
+   * 所有 mm 口径消费点（导出/指标/检查/测量）按 wcToMmFactorByWidth 换算。
+   */
+  specimenSizeMm: number | null;
   thickness: number;
   slice: number;
   material: MaterialPreset;
@@ -141,6 +147,7 @@ export const DEFAULT_STATE: AppState = {
   gradientDir: 'z',
   coloring: 'none',
   endplateMm: 0,
+  specimenSizeMm: null,
   sliceAxis: 'z',
   sliceInvert: false,
   isoGrad: { enabled: false, hard: -0.12, soft: 0.12, band: 0.4 },
@@ -238,6 +245,12 @@ export interface BuildParams {
   coloring?: ColoringMode;
   /** 实心加载端板厚度 mm（0 关闭；生效值会被 0.4·cellSize 钳制防两板相接） */
   endplateMm?: number;
+  /**
+   * 【批六 UI 独立尺寸】生效 wc→mm 因子（effectiveMmFactor 产出：显式总宽优先，
+   * legacy=periods/(2π)）。仅供 mm 口径指标（表面积/包络体积/Sv）消费；wc 几何与
+   * 等值求解不感知。缺省 = legacy 语义（与既有构建产物逐位一致）。
+   */
+  mmPerWc?: number;
   /**
    * 【v3.0 阶段 I】WebGPU 预计算的 V 场（N³ = (R+1)³，弧度域，与 CPU 第 2 步同语义）。
    * 由主线程 evaluateFieldGPU 产出后随请求传入；Worker 跳过三角函数热循环直接进入

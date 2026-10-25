@@ -106,6 +106,22 @@ check('分享链接恢复 GPU 偏好', parsed.gpuAccelerate === false);
 check('分享链接恢复 manifold 全参数', parsed.manifold?.kind === 'metric'
   && parsed.manifold.radius === 18 && parsed.manifold.scale === 2.2 && parsed.manifold.axis === 'x');
 
+// 试样总宽（批六 UI 独立尺寸）：自动（null）不写入 URL；显式值写入并回读；
+// 越域值钳制 [1,200]；非法数 → 回落自动（null）。
+setState({ specimenSizeMm: 20 });
+const shareSw = buildShareURL();
+const parsedSw = parseURLParams(new URL(shareSw).search);
+check('分享链接携带显式总宽 sw', new URL(shareSw).searchParams.get('sw') === '20');
+check('URL 恢复显式总宽', parsedSw.specimenSizeMm === 20);
+setState({ specimenSizeMm: null });
+const shareNoSw = buildShareURL();
+check('自动总宽不写入 URL（旧链接保持短小）', new URL(shareNoSw).searchParams.get('sw') === null
+  && parseURLParams(new URL(shareNoSw).search).specimenSizeMm == null);
+const parsedSwClamp = parseURLParams('sw=99999');
+check('越域总宽钳制 [1,200]', parsedSwClamp.specimenSizeMm === 200);
+const parsedSwBad = parseURLParams('sw=abc');
+check('非法总宽回落自动', parsedSwBad.specimenSizeMm == null);
+
 // 超长公式钳制（2026-10-04 补钉）：>12KB 公式写入 URL 会撞请求行基础设施上限
 //（Node 默认 ~14KB，probe_url_fuzz 实测 14KB=200/29KB=431=对方打不开）——生成侧
 // 须跳过 formula 参数并置披露标志（btn-share toast 告知）

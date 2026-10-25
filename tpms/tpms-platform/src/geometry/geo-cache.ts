@@ -52,5 +52,8 @@ export function geoCacheTouch(key: string): void {
 
 export function cacheKey(s: Readonly<AppState>, R: number): string {
   const m = s.manifold;
-  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.isoGrad.enabled ? `IG${s.isoGrad.hard}/${s.isoGrad.soft}b${s.isoGrad.band}` : ''}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
+  // SW 段（批六 UI 独立尺寸）：wc 几何不随总宽变，但缓存条目携带 worker 按生效因子
+  // 算好的 mm 口径指标（surfaceArea/envelopeVolume）——宽度变更必须整键失效重算，
+  // 否则命中旧因子指标静默错误。geometryStateKey 经本函数自动继承（任务流 stale 指纹）。
+  return `${s.type}|${s.model}|${s.cellSize}|${R}|${s.porosity}|${s.structureMode}|${s.containerShape}|${s.thickness}|${s.gradientDir}|${s.isoGrad.enabled ? `IG${s.isoGrad.hard}/${s.isoGrad.soft}b${s.isoGrad.band}` : ''}|${s.hybrid.enabled ? `H${s.hybrid.typeB}@${s.hybrid.axis}c${s.hybrid.blendCenter}w${s.hybrid.blendWidth}f${s.hybrid.blendFunction}` : ''}|${s.customFormula}|${s.weights.join(',')}|EP${s.endplateMm}|SW${s.specimenSizeMm ?? 'auto'}|M${m.kind}r${m.radius}s${m.scale}a${m.axis}|${s.stress.preset !== 'none' ? `SD${s.stress.preset}s${s.stress.strength}a${s.stress.anisotropy}` : ''}|${s.hierarchical.enabled ? `HR${s.hierarchical.microType}n${s.hierarchical.frequency}l${s.hierarchical.amplitude}` : ''}|${s.neural.enabled ? `NR${s.neural.z.map((v) => v.toFixed(2)).join(',')}` : ''}`;
 }

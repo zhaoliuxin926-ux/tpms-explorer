@@ -162,6 +162,8 @@ export function buildShareURL(): string {
   });
   params.set('grad', s.gradientDir);
   if (s.endplateMm > 0) params.set('ep', String(s.endplateMm));
+  // 试样总宽（批六）：仅显式覆盖时写入（自动=1 period=1mm 不占 URL，旧链接保持短小）
+  if (s.specimenSizeMm != null) params.set('sw', String(s.specimenSizeMm));
   // 【阶段 IV】非欧度规空间映射（identity 关闭时不写入，URL 保持简洁）
   if (s.manifold.kind !== 'identity') {
     params.set('mfd', s.manifold.kind);

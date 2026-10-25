@@ -94,6 +94,8 @@ ${doiLine}  keywords = {TPMS, ${state.type}, scaffold, porosity, additive manufa
  *   v2.2（2026-10-24 审查 #8）：parameters 补全全部影响几何/构型的配置（endplateMm/isoGrad/
  *   manifold/stress/hierarchical/neural——此前任一模式启用即失配，文件不足以重建设计）；
  *   reproducibility.url 改为分享链接（地址栏在"打开默认页→改设计→导出"时无法补足配置）。
+ *   v2.3（2026-10-25 批六 UI 独立尺寸）：parameters 补 specimenSizeMm（null=自动 1 period=1mm；
+ *   显式总宽决定全部 mm 口径，导出/指标/检查随行）。
  */
 export function generateJSONSidecar(
   state: AppState,
@@ -103,12 +105,13 @@ export function generateJSONSidecar(
   shareUrl?: string,
 ): string {
   return JSON.stringify({
-    version: '2.2',
+    version: '2.3',
     generatedAt: new Date().toISOString(),
     parameters: {
       type: state.type,
       porosity: state.porosity,
       cellSize: state.cellSize,
+      specimenSizeMm: state.specimenSizeMm,
       thickness: state.thickness,
       weights: state.weights,
       structureMode: state.structureMode,

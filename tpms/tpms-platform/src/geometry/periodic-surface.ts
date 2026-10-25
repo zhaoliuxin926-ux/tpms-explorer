@@ -459,7 +459,8 @@ export function buildPeriodicSurface(params: BuildParams, _pool?: unknown): Work
     const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
     surfaceArea += Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
   }
-  const mmScale = wcToMmFactor(k);
+  // mm 因子（批六）：显式总宽经 BuildParams.mmPerWc 传入，缺省回落 legacy 因子
+  const mmScale = params.mmPerWc ?? wcToMmFactor(k);
   const surfaceAreaMm = surfaceArea * mmScale * mmScale;
   const envelopeMm = Math.pow(L * mmScale, 3);
 

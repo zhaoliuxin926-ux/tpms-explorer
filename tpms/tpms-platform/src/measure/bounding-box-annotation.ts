@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { DISPLAY_SCALE, wcToMmFactor } from '../core/units';
+import { DISPLAY_SCALE, wcToMmFactorByWidth } from '../core/units';
 
 const LABEL_COLOR = '#00ff88';
 const LINE_COLOR = 0x00ff88;
@@ -21,8 +21,8 @@ export class BoundingBoxAnnotation {
     this.scene.add(this.group);
   }
 
-  /** 根据几何体更新标注（geometry 为 wc 空间；cellSize 用于物理 mm 换算） */
-  update(geometry: THREE.BufferGeometry, cellSize: number): void {
+  /** 根据几何体更新标注（geometry 为 wc 空间；totalWidthMm=试样总宽 mm，物理 mm 换算） */
+  update(geometry: THREE.BufferGeometry, totalWidthMm: number): void {
     this.clear();
     if (!geometry.boundingBox) geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
@@ -48,8 +48,8 @@ export class BoundingBoxAnnotation {
     this.line.renderOrder = 999;
     this.group.add(this.line);
 
-    // 三轴尺寸标签：显示尺寸 → wc（÷显示缩放）→ 物理 mm（× cellSize/(2π)，1 period = 1 mm）
-    const f = wcToMmFactor(cellSize);
+    // 三轴尺寸标签：显示尺寸 → wc（÷显示缩放）→ 物理 mm（× 总宽/(2π)；显式总宽优先，自动=1 period=1mm）
+    const f = wcToMmFactorByWidth(totalWidthMm);
     const xmm = (size.x / DISPLAY_SCALE) * f;
     const ymm = (size.y / DISPLAY_SCALE) * f;
     const zmm = (size.z / DISPLAY_SCALE) * f;

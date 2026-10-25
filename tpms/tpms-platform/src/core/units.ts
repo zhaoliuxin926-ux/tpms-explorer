@@ -45,6 +45,14 @@ export function wcToMmFactorByWidth(specimenSizeMm: number): number {
 }
 
 /**
+ * 生效 wc→mm 因子（批六 UI 独立尺寸唯一入口）：显式总宽优先，null 回落
+ * 「1 period=1mm」legacy 因子。所有 mm 口径消费点必须经本函数，禁止各自判断。
+ */
+export function effectiveMmFactor(periods: number, specimenSizeMm: number | null): number {
+  return specimenSizeMm != null ? wcToMmFactorByWidth(specimenSizeMm) : wcToMmFactor(periods);
+}
+
+/**
  * 网格分辨率的「每周期格数」系数。
  * I-WP / F-RD / Neovius 的公式含 cos(2kx) 与 cos³ 积项，特征空间频率高于
  * 基频曲面（谐波至 2k~3k）；相同 R 下每特征周期的格数减少，弦切离散误差

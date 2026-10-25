@@ -822,7 +822,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-BgWhvp3v.js"></script>
+  <script type="module" crossorigin src="./assets/index-Dy5MOoB8.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Dse4tHut.js">
 </head>
 <body>
@@ -1046,6 +1046,14 @@ window.addEventListener('error', function(e) {
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="cell-density">单元密度</span><span class="val" id="cell-size-value">中等</span></div>
           <input aria-label="单元密度" type="range" id="cell-size" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="field">
+          <div class="lbl"><span>试样总宽 (mm)</span><span class="val" id="sw-value">自动</span></div>
+          <div class="opt-row two" style="gap:6px;margin-top:4px">
+            <button class="opt active" id="sw-auto">自动<span class="o-sub">1 周期=1mm</span></button>
+            <input aria-label="试样总宽 mm" type="number" id="sw-mm" placeholder="总宽 mm" min="1" max="200" step="0.5" style="width:100%">
+          </div>
+          <div class="field-note">自动=单胞 1mm（总宽=周期数 mm）。显式总宽决定全部 mm 口径（导出/指标/制造检查/尺寸标注），单胞=总宽÷周期数；Pareto/逆设计采用候选时自动写入 3×单胞。容器 STL 与径向梯度/分区一次性管线走固有尺度，不受此控制。</div>
         </div>
         <div class="field">
           <div class="lbl"><span class="gloss-term" data-term="thickness">壁厚系数</span><span class="val" id="thickness-value">1.0</span></div>

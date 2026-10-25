@@ -228,9 +228,9 @@ try {
     ? ok('J 应力/分形/混合开关接线+网格还原（' + j.base + '→' + j.restored + '）')
     : bad('J 结构开关', JSON.stringify(j).slice(0, 140));
 
-  // F 逆向 solve + apply（2026-10-24 尺寸契约起采用阻断语义：求解器 cellSize=单胞 mm，UI
-  // 「1 周期=1mm」单胞恒 1mm——不可表示时阻断应用+CLI 指引（toast 已阻断应用、标题不变）；
-  // 单胞恰 1mm 的罕见解仍走旧同步路径（title 换族=updateBadges 哨兵，画廊切族另有防回归钉）。
+  // F 逆向 solve + apply（2026-10-24 尺寸契约起采用阻断语义；2026-10-25 批六 UI 独立尺寸
+  // 解锁：应用写回 cellSize=3+specimenSizeMm=3×单胞，title 换族=updateBadges 哨兵。
+  // 断言双分支保留：applied（批六常态）或已阻断应用（legacy 回退路径容错）。
   // toast 元素 1.5s 自清空——MutationObserver 全程记录防漏读。
   const titleBefore = await page.evaluate(() => document.title);
   await clickBtn('btn-inv-solve');

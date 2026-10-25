@@ -46,6 +46,11 @@ export function parseURLParams(search: string): Partial<AppState> {
   if (q.has('cellSize')) {
     state.cellSize = clamp(q.get('cellSize'), 1, 5, 3);
   }
+  // 试样总宽 mm（批六 UI 独立尺寸）：显式总宽覆盖；非法/越界值 → 钳制，非法数 → 自动
+  if (q.has('sw')) {
+    const v = Number(q.get('sw'));
+    if (Number.isFinite(v) && v > 0) state.specimenSizeMm = Math.min(200, Math.max(1, v));
+  }
   if (q.has('thickness')) {
     state.thickness = clamp(q.get('thickness'), 0.5, 2.0, 1.0);
   }

@@ -34,7 +34,7 @@ import { hashArray } from './utils/hash-array';
 import { geoCache, geoCacheSet, geoCacheTouch, cacheKey } from './geometry/geo-cache';
 import { initTheme } from './ui/theme';
 import { flashToast } from './ui/toast';
-import { DISPLAY_SCALE, wcToMmFactor, hdResolution, l2Resolution } from './core/units';
+import { DISPLAY_SCALE, effectiveMmFactor, hdResolution, l2Resolution } from './core/units';
 import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
 import type { YieldCriterionKind } from './physics/yield-surface';
@@ -218,6 +218,16 @@ function buildRequestKey(s: Readonly<AppState>, resolution: number): string {
 /** 几何本身的状态指纹：材质/着色等渲染偏好不应使派生网格失效。 */
 function geometryStateKey(s: Readonly<AppState>): string {
   return cacheKey(s, 0) + meshContTag();
+}
+
+/** 生效 wc→mm 因子（批六）：显式总宽优先，null=自动（1 period=1mm）。 */
+function effMm(s: Readonly<AppState>): number {
+  return effectiveMmFactor(s.cellSize, s.specimenSizeMm);
+}
+
+/** 显式总宽 mm（INP/尺寸契约等以"总宽"为入参的消费点）；null=自动（=周期数 mm）。 */
+function effWidthMm(s: Readonly<AppState>): number {
+  return s.specimenSizeMm ?? s.cellSize;
 }
 
 const SWEEP_BUILD_TIMEOUT_MS = 60_000;
@@ -422,7 +432,7 @@ function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
   const iso = sorted[idx];
   // 容器裁剪（与 surface-nets boundAt 同域：cylinder px²+py²<1 且 |pz|<1）
   // 端板融合（mm→wc 域换算，镜像 surface-nets 端板语义）——曾缺失导致圆柱/端板模型被按立方无端板模拟
-  const epWc = st.endplateMm > 0 ? st.endplateMm / wcToMmFactor(st.cellSize) : 0;
+  const epWc = st.endplateMm > 0 ? st.endplateMm / effMm(st) : 0;
   const solid = new Uint8Array(R * R * R);
   for (let iz = 0; iz < R; iz++) {
     const pz = -1 + (2 * (iz + 0.5)) / R;
@@ -738,7 +748,7 @@ function bindExperimentalFit(): void {
 bindExperimentalFit();
 
 // ── 制造几何检查卡（2026-10-24 审查「补齐制造检查」首档：壁厚/孔喉/封闭腔/连通性）──
-// 体素化走 INP 导出同款主线程 buildVoxelModel；mm 尺度=wcToMmFactor(cellSize)（1 period=1mm）。
+// 体素化走 INP 导出同款主线程 buildVoxelModel；mm 尺度=effMm（显式总宽优先，自动=1 period=1mm）。
 function bindManufacturingCard(): void {
   const btn = document.getElementById('btn-mfg');
   const outEl = document.getElementById('mfg-result');
@@ -765,7 +775,7 @@ function bindManufacturingCard(): void {
         thickness: s.thickness, targetPorosity: s.porosity / 100, iso: 0,
         customFormula: s.customFormula, stress: s.stress,
       }, Rmfg);
-      const hMm = vox.hWc * wcToMmFactor(s.cellSize);
+      const hMm = vox.hWc * effMm(s);
       const { auditManufacturing } = await import('./physics/manufacturing-audit');
       const rep = auditManufacturing(vox, hMm, { minWallMm: minWall });
       const f2 = (v: number | undefined) => (v != null && Number.isFinite(v) ? v.toFixed(3) : '—');
@@ -997,26 +1007,20 @@ function bindParetoCard(): void {
   canvas.addEventListener('click', () => {
     if (hoverIdx < 0 || !front[hoverIdx]) return;
     const p = front[hoverIdx];
-    // 尺寸契约（2026-10-24 实用性审查 #2 UI 链）：Pareto 候选 cellSize=单胞 mm（前向代理
-    // 口径），UI 手动设计为「1 周期=1mm」（单胞恒 1mm）——单胞≠1mm 的候选写入 state.cellSize
-    // 只是改周期数，性能预测（κ∝单胞²）不随周期数缩放，"已采用"即虚假承诺。先阻断该应用
-    // 入口（完整 UI 独立尺寸支持另批实施）；等效构建走 CLI mesh --specimen-size。
-    if (p.cellSize !== 1) {
-      flashToast(`已阻断采用：候选单胞 ${p.cellSize} mm 在 UI「1 周期=1mm」口径下不可表示（UI 单胞恒 1mm；κ∝单胞²，按周期数重建无法兑现预测性能）。CLI 等效构建：mesh --type ${String(p.type).split('×')[0]} --porosity ${p.porosity} --periods 3 --specimen-size ${3 * p.cellSize}`);
-      return;
-    }
-    // hybrid 复合点（type 含 '×@'）：UI hybrid 是空间分区混合（blendCenter=波前坐标），
-    // 无「均匀混合比 b」参数可直接写回——部分写回（族 A/孔隙率/密度）+指引手动配 hybrid
+    // 尺寸契约（2026-10-24 审查 #2 UI 链；批六解锁）：Pareto 候选 cellSize=单胞 mm。
+    // 采用绑定与 CLI 推荐一致：periods=3（k6 非标定域）+ 总宽=3×单胞——单胞 mm 精确
+    // 还原，κ∝单胞² 的预测在最终尺度成立（导出/指标按生效因子换算）。
     const isHybrid = p.type.includes('×');
     const baseType = (isHybrid ? p.type.split('×')[0] : p.type) as never;
-    setState({ type: baseType, porosity: Math.round(p.porosity * 100), cellSize: p.cellSize, customFormula: '' });
+    const adoptWidth = +(3 * p.cellSize).toFixed(2);
+    setState({ type: baseType, porosity: Math.round(p.porosity * 100), cellSize: 3, specimenSizeMm: adoptWidth, customFormula: '' });
     syncUI(getState());
     // 徽标/title 与族按钮路径对齐（第十九批 NL 同型教训：漏 updateBadges → title 滞留旧族名）
     { const sb = getState(); updateBadges(sb.type, sb.model, sb.material, sb.structureMode); }
     scheduleRebuild(false);
     flashToast(isHybrid
-      ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · 单胞 ${p.cellSize}mm=1 周期）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
-      : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 单胞 ${p.cellSize} mm（k=${p.cellSize}，UI 单胞 1mm 口径可表示）· E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`);
+      ? `已采用 hybrid 前沿设计（${p.type} · p=${(p.porosity * 100).toFixed(0)}% · 总宽 ${adoptWidth} mm = 3 周期 × 单胞 ${p.cellSize}mm）：主界面已写入族 A 与参数；混合比 b 与第二族请在「异族拼接」面板手动对齐（b=体平均混合比代理，UI 空间混合需按 blendCenter/Width 近似）`
+      : `已采用前沿设计：${p.type} · 孔隙率 ${(p.porosity * 100).toFixed(0)}% · 总宽 ${adoptWidth} mm（3 周期 × 单胞 ${p.cellSize} mm）· E=${p.E.toFixed(2)}GPa κ=${p.kappa.toExponential(1)} Sv=${p.sea.toFixed(1)}/mm`);
   });
   // 逆设计入口：性能愿望点（E/κ）→ 前沿上 log10 空间最近的 top-3 候选。
   // 愿望通常严格优于全前沿（不可达）——最近候选即可行最优妥协；目标可达时
@@ -1800,7 +1804,7 @@ async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
   }
   const pos = baseGeo.attributes.position.array as Float32Array;
   const idx = baseGeo.index!.array as Uint32Array;
-  const scale = meshCont ? meshCont.scale : wcToMmFactor(sNow.cellSize);
+  const scale = meshCont ? meshCont.scale : effMm(sNow);
   if (fmt === 'stl') exportBinarySTL(pos, idx, `${base}.stl`, scale);
   else export3MF(pos, idx, `${base}.3mf`, scale, { configName: base, porosity: sNow.porosity, endplateMm: sNow.endplateMm, structureMode: sNow.structureMode });
   nlAppend(`助手：已导出 ${base}.${fmt} ✓`);
@@ -2358,6 +2362,7 @@ document.getElementById('btn-ls-apply')?.addEventListener('click', async () => {
       gradientDir: s.gradientDir, hybrid: s.hybrid,
       customFormula: '', preview: false,
       gpuVField: vField,
+      mmPerWc: effMm(s),
     };
     const res = buildSurface(params);
     if (res.type !== 'result' || !res.positions || !res.normals || !res.indices) {
@@ -2550,6 +2555,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     customFormula: s.customFormula,
     preview,
     coloring: effectiveColoring(s),
+    mmPerWc: effMm(s),
     endplateMm: meshCont ? 0 : s.endplateMm,
     stress: s.stress,
     hierarchical: s.hierarchical,
@@ -2614,6 +2620,7 @@ function scheduleHdUpgrade(): void {
       thickness: s.thickness,
       gradientDir: s.gradientDir,
       hybrid: s.hybrid,
+      mmPerWc: effMm(s),
       customFormula: s.customFormula,
       preview: false,
       coloring: effectiveColoring(s),
@@ -2748,7 +2755,7 @@ function applyGeometry(
 
   // 测量工具同步
   if (bboxAnnotation && baseGeo) {
-    bboxAnnotation.update(baseGeo, getState().cellSize);
+    bboxAnnotation.update(baseGeo, effWidthMm(getState()));
   }
   if (caliperTool) {
     caliperTool.dispose();
@@ -3380,9 +3387,32 @@ function bindCoreParamSliders(): void { // 核心参数滑块（孔隙率/单元
     cellEl.addEventListener('change', () => { scheduleRebuild(false); scheduleHdUpgrade(); });
   }
 
+  // 试样总宽（批六 UI 独立尺寸）：显式 mm 覆盖 / 自动按钮。宽度进 cacheKey（SW 段），
+  // 变更即整键失效重算——指标按新因子重出，几何 wc 域不变。
+  {
+    const swInput = document.getElementById('sw-mm') as HTMLInputElement | null;
+    const swAuto = document.getElementById('sw-auto') as HTMLButtonElement | null;
+    const applyWidth = (v: number | null): void => {
+      setState({ specimenSizeMm: v });
+      syncUI(getState());
+      updateBadges(getState().type, getState().model, getState().material, getState().structureMode);
+      scheduleRebuild(false);
+      scheduleHdUpgrade();
+    };
+    swInput?.addEventListener('change', () => {
+      const v = Number(swInput.value);
+      if (!Number.isFinite(v) || v <= 0) { flashToast('总宽需为正数（1–200 mm）；已回退自动'); applyWidth(null); return; }
+      applyWidth(Math.min(200, Math.max(1, v)));
+    });
+    swAuto?.addEventListener('click', () => {
+      if (getState().specimenSizeMm == null) return;
+      applyWidth(null);
+      flashToast('试样总宽已回退自动（1 周期 = 1 mm）');
+    });
+  }
+
   // 滑块：厚度
-  const thickEl = document.getElementById('thickness') as HTMLInputElement;
-  if (thickEl) {
+  const thickEl = document.getElementById('thickness') as HTMLInputElement;  if (thickEl) {
     thickEl.addEventListener('input', () => {
       setState({ thickness: +thickEl.value });
       const v = document.getElementById('thickness-value');
@@ -3732,7 +3762,7 @@ document.getElementById('btn-export')?.addEventListener('click', (e) => {
     const btn = document.getElementById('btn-bbox');
     if (!bboxAnnotation) {
       bboxAnnotation = new BoundingBoxAnnotation(ctx.scene);
-      if (baseGeo) bboxAnnotation.update(baseGeo, getState().cellSize);
+      if (baseGeo) bboxAnnotation.update(baseGeo, effWidthMm(getState()));
       btn?.classList.add('on');
     } else {
       bboxAnnotation.dispose();
@@ -3851,21 +3881,18 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
   document.getElementById('btn-inv-apply')?.addEventListener('click', () => {
     if (!inverseReport) { flashToast('请先执行反演寻优'); return; }
     const best = inverseReport.solutions[0];
-    // 尺寸契约（2026-10-24 实用性审查 #2 UI 链）：求解器 cellSize=单胞 mm（连续 [1,5]），
-    // UI「1 周期=1mm」下单胞恒 1mm——单胞≠1mm 时取整写周期数只会得到另一个 1mm 单胞
-    // 设计，预测性能（κ∝单胞²）不兑现。阻断应用并给 CLI 路径（UI 独立尺寸支持另批）。
-    if (best.params.cellSize !== 1) {
-      flashToast(`已阻断应用：最优解单胞 ${best.params.cellSize.toFixed(2)} mm 在 UI「1 周期=1mm」口径下不可表示（UI 单胞恒 1mm；旧实现取整写周期数=尺度丢失）。CLI 等效构建：mesh --type ${best.type} --porosity ${best.params.porosity.toFixed(3)} --periods 3 --specimen-size ${(3 * best.params.cellSize).toFixed(2)}`);
-      return;
-    }
+    // 尺寸契约（批六解锁）：求解器 cellSize=单胞 mm（连续 [1,5]）。采用绑定与 CLI 推荐
+    // 一致：periods=3 + 总宽=3×单胞——单胞 mm 精确还原，κ∝单胞² 预测在最终尺度兑现。
     // 口径定案（2026-09-22）：求解器保持 [0.02,0.98] 宽域，回 UI 与滑块同域 [60,90] 钳制（NL/红队 D 同策略）
     const rawP = Math.round(best.params.porosity * 100);
     const porosity = Math.max(60, Math.min(90, rawP));
+    const applyWidth = +(3 * best.params.cellSize).toFixed(2);
     pushHistory();
     setState({
       type: best.type,
       porosity,
-      cellSize: 1,
+      cellSize: 3,
+      specimenSizeMm: applyWidth,
     });
     // 与 NL/预设等编程式应用路径统一：setState→syncUI→updateBadges→rebuild→HD
     // （此前缺 updateBadges → 应用后 document.title/徽标滞留旧族名）
@@ -3875,7 +3902,7 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     scheduleRebuild(false);
     scheduleHdUpgrade();
     const clampNote = porosity !== rawP ? `；孔隙率 ${rawP}% 超出 UI 域 [60,90]，已钳制为 ${porosity}%` : '';
-    flashToast(`已应用最优解：${best.type}（P=${porosity}% · 单胞 1mm=k1，UI 可表示）${clampNote}`);
+    flashToast(`已应用最优解：${best.type}（P=${porosity}% · 总宽 ${applyWidth} mm = 3 周期 × 单胞 ${best.params.cellSize.toFixed(2)} mm）${clampNote}`);
   });
 
   // 【v4.0 阶段 V】CT 重构与制造偏差
@@ -4509,6 +4536,17 @@ function syncUI(s: AppState): void {
   if (pv) pv.textContent = `${s.porosity}%`;
   const cv = document.getElementById('cell-size-value');
   if (cv) cv.textContent = ['极低', '低', '中等', '高', '极高'][s.cellSize - 1];
+  // 试样总宽显示（批六）：自动 / 显式值+派生单胞
+  {
+    const swv = document.getElementById('sw-value');
+    const swInput = document.getElementById('sw-mm') as HTMLInputElement | null;
+    const swAuto = document.getElementById('sw-auto') as HTMLButtonElement | null;
+    if (swv) swv.textContent = s.specimenSizeMm != null
+      ? `${s.specimenSizeMm} mm（单胞 ${(s.specimenSizeMm / s.cellSize).toFixed(2)}）`
+      : '自动';
+    if (swInput) swInput.value = s.specimenSizeMm != null ? String(s.specimenSizeMm) : '';
+    if (swAuto) swAuto.classList.toggle('active', s.specimenSizeMm == null);
+  }
   const tv = document.getElementById('thickness-value');
   if (tv) tv.textContent = s.thickness.toFixed(1);
   const sv = document.getElementById('slice-value');
@@ -4894,6 +4932,7 @@ async function ensureExportGradeGeometry(s: AppState, overrideR?: number): Promi
         containerShape: s.containerShape, thickness: s.thickness, gradientDir: s.gradientDir,
         hybrid: s.hybrid, customFormula: s.customFormula, preview: false,
         endplateMm: meshCont ? 0 : s.endplateMm,
+        mmPerWc: effMm(s), // 批六：导出级同步重建与主重建同因子——漏注入会让导出后的指标面板被 legacy 因子覆写
         ...(meshCont ? meshContParams(hdR) : {}), // 红队 A C-3：导出重建路径漏注入——竞态下屏幕 torus 保形、导出 cube 裁剪
         coloring: effectiveColoring(s),
         stress: s.stress,
@@ -5122,23 +5161,23 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'stl': {
         // 与 btn-stl 工具栏入口共用同一 mm 缩放（wc 域 ±π → cellSize mm），两入口产物必须一致
         const stlNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exp.exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), stlNormals);
+        exp.exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : effMm(getState()), stlNormals);
         break;
       }
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exp.exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), vtkNormals);
+        exp.exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : effMm(getState()), vtkNormals);
         break;
       }
       case 'glb': {
         // 彩色 GLB：携带当前顶点色（着色模式开启时）+ mm 缩放，COLOR_0 Float32
         const glbColors = (baseGeo!.getAttribute('color')?.array as Float32Array | undefined) ?? null;
-        exp.exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
+        exp.exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : effMm(getState()), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
         break;
       }
       case '3mf': {
         // 工业格式：mm 尺度 + 端板/构型元数据（切片机可读自定义 metadata）
-        exp.export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), {
+        exp.export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : effMm(getState()), {
           configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
         });
         break;
@@ -5147,7 +5186,7 @@ async function handleExportInner(fmt: string): Promise<void> {
         // 原生切片引擎直出（诚实边界：单壁轮廓 + 扫描线填充，非工业全特征切片器）
         const gPos = baseGeo!.attributes.position.array as Float32Array;
         const gIdx = baseGeo!.index!.array as Uint32Array;
-        const gScale = meshCont ? meshCont.scale : wcToMmFactor(s.cellSize);
+        const gScale = meshCont ? meshCont.scale : effMm(s);
         const mm = new Float32Array(gPos.length);
         let zMin = Infinity, zMax = -Infinity;
         for (let i = 0; i < gPos.length; i += 3) {
@@ -5181,7 +5220,7 @@ async function handleExportInner(fmt: string): Promise<void> {
         // CFD Multi-Patch：与 binary 同一缠绕定向约定 + mm 缩放，OpenFOAM 分块边界
         // （成功提示由函数末尾的通用 toast 统一给出，此处不再叠加）
         const cfdNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exp.exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, meshCont ? meshCont.scale : wcToMmFactor(getState().cellSize), cfdNormals);
+        exp.exportMultiSolidSTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}-cfd.stl`, meshCont ? meshCont.scale : effMm(getState()), cfdNormals);
         break;
       }
       case 'rvestl': {
@@ -5199,12 +5238,13 @@ async function handleExportInner(fmt: string): Promise<void> {
           containerShape: 'cube', thickness: s.thickness, gradientDir: s.gradientDir,
           hybrid: { ...s.hybrid, enabled: false }, customFormula: s.customFormula,
           preview: false, periodicRve: true,
+          mmPerWc: effMm(s),
         });
         if (rveRes.type !== 'result' || rveRes.vertCount === 0 || !rveRes.pbcPairs) {
           flashToast('周期性 RVE 构建失败：当前参数无有效周期曲面');
           return;
         }
-        const scaleRve = wcToMmFactor(s.cellSize);
+        const scaleRve = effMm(s);
         exp.exportBinarySTL(rveRes.positions!, rveRes.indices!, `${base}-pbc-rve.stl`, scaleRve, rveRes.normals);
         const sidecar = {
           format: 'tpms-pbc-rve/1.0',
@@ -5245,7 +5285,7 @@ async function handleExportInner(fmt: string): Promise<void> {
           iso: caePoro.iso, customFormula: s.customFormula,
           stress: s.stress,
         }, caeR);
-        const specimen = s.cellSize;   // 总宽 = cellSize mm（1 period = 1 mm 约定）
+        const specimen = effWidthMm(s);   // 总宽 mm（显式总宽优先；自动=cellSize mm，1 period=1 mm 约定）
         if (fmt === 'inp') {
           const eGPa = BASE_MODULUS[s.material] ?? BASE_MODULUS.tc4;
           const nu = s.material === 'polymer' ? 0.35 : s.material === 'thermal' ? 0.22 : 0.34;
@@ -5338,7 +5378,7 @@ async function handleExportInner(fmt: string): Promise<void> {
         const pkgPos = baseGeo!.attributes.position.array as Float32Array;
         const pkgIdx = baseGeo!.index!.array as Uint32Array;
         const pkgNrm = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        const pkgScale = meshCont ? meshCont.scale : wcToMmFactor(s.cellSize);
+        const pkgScale = meshCont ? meshCont.scale : effMm(s);
         const stlBuf = exp.buildBinarySTL(pkgPos, pkgIdx, pkgScale, pkgNrm);
         const stlBytes = new Uint8Array(stlBuf);
         const enc = new TextEncoder();
@@ -5357,12 +5397,14 @@ async function handleExportInner(fmt: string): Promise<void> {
           platform: 'TPMS Explorer v1.2.0',
           savedAt: new Date().toISOString(),
           sizeContract: {
-            totalWidthMm: meshCont ? null : s.cellSize,
+            totalWidthMm: meshCont ? null : effWidthMm(s),
             periods: s.cellSize,
-            cellSizeMm: meshCont ? null : 1,
+            cellSizeMm: meshCont ? null : effWidthMm(s) / s.cellSize,
             convention: meshCont
               ? '外部 STL 容器口径：几何随容器原文件毫米尺度（meshCont.scale）'
-              : 'UI「1 周期=1mm」：总宽=周期数 mm，单胞恒 1mm（派生=总宽÷周期）；CLI mesh --specimen-size 可设任意总宽',
+              : s.specimenSizeMm != null
+                ? `UI 显式总宽：总宽=${effWidthMm(s)} mm，单胞=总宽÷周期=${(effWidthMm(s) / s.cellSize).toFixed(3)} mm（Pareto/逆设计采用自动写入）`
+                : 'UI「1 周期=1mm」：总宽=周期数 mm，单胞恒 1mm（派生=总宽÷周期）；「结构参数→试样总宽」可设任意总宽',
           },
           meshAudit: { openEdges: aPkg.openEdges, nonManifoldEdges: aPkg.nonManifoldEdges, degenTris: aPkg.degenTris, note: '交付门=与 CLI 同口径，任一非零不交付（此包已通过）' },
           modelProvenance: {

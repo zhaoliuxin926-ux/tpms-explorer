@@ -831,9 +831,10 @@ const { generateBibTeX } = (await imp(BUNDLE));
     && /getElementById\('btn-caliper'\)\?\.addEventListener/.test(mainSrc)
     && /getElementById\('btn-slice-svg'\)\?\.addEventListener/.test(mainSrc)
     && /exportSliceSVG\(baseGeo, localPlane/.test(mainSrc));
-  check('measure 双源 import units（DISPLAY_SCALE + wcToMmFactor）',
+  // 批六（2026-10-25）：bbox 标注改收总宽（wcToMmFactorByWidth），caliper 仍用周期数因子
+  check('measure 双源 import units（DISPLAY_SCALE + wcToMmFactor/ByWidth）',
     /import \{ DISPLAY_SCALE, wcToMmFactor \} from '\.\.\/core\/units'/.test(caliperSrc)
-    && /import \{ DISPLAY_SCALE, wcToMmFactor \} from '\.\.\/core\/units'/.test(bboxSrc));
+    && /import \{ DISPLAY_SCALE, wcToMmFactorByWidth \} from '\.\.\/core\/units'/.test(bboxSrc));
 }
 
 // ── 汇总 ────────────────────────────────────────────────────

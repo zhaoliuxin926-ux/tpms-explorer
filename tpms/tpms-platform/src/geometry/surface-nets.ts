@@ -1471,11 +1471,14 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
   // 11. 几何指标：表面积、包围体积、比表面积 Sv
   // ──────────────────────────────────────────────────────────────
   // 分母（表观体积）：mesh 容器 = 自身散度体积（phys³ × (periods/2)³ = mm³，
-  // 与立方盒 periods³ 同单位系——cube 校验：phys 盒体积 8 × periods³/8 = periods³ ✓）；
-  // cube/cylinder = 解析包络（cylinder πL³/4 自 2026-09 前即正确）
+  // 与立方盒 periods³ 同单位系——cube 校验：phys 盒体积 8 × periods³/8 = periods³ ✓；
+  // 容器有固有 mm 尺度、与显式总宽互斥，不消费 mmPerWc）；
+  // cube/cylinder = 解析包络（cylinder πL³/4 自 2026-09 前即正确）。
+  // mm 因子（批六）：显式总宽经 BuildParams.mmPerWc 传入，缺省回落 legacy 因子。
+  const mmPerWc = params.mmPerWc ?? wcToMmFactor(params.periods);
   const envVolumeMm3 = meshSdf
     ? params.containerVolumePhys! * Math.pow(params.periods / 2, 3)
-    : computeEnvelopeVolume(params.periods, params.containerShape);
+    : computeEnvelopeVolume(mmPerWc, params.containerShape);
   let surfaceArea = 0;
   let envelopeVolume = 0;
   let svRatio = 0;
@@ -1484,7 +1487,7 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
     surfaceArea = computeSurfaceArea(
       positions.subarray(0, vertCount * 3),
       indices.subarray(0, indexCount),
-      params.periods,
+      mmPerWc,
     );
     envelopeVolume = envVolumeMm3;
     svRatio = computeSvRatio(surfaceArea, envelopeVolume);
