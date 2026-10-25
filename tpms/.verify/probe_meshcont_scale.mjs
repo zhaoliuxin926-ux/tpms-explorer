@@ -65,7 +65,10 @@ try {
   await page.waitForTimeout(3500);
   await page.evaluate(() => document.querySelector('#meshcont-file')?.closest('details')?.setAttribute('open', ''));
   const t0 = Date.now();
-  await page.setInputFiles('#meshcont-file', OUT);
+  // 慢 runner 校准（B5 同型）：5120 球大文件 setInputFiles 默认 30s 窗在 windows 慢
+  // runner 上可超时（CI-40180212969 双跑实证）——显式放宽到 180s；上传后的就绪判定
+  // 本就有 120s 轮询窗，不改变语义。
+  await page.setInputFiles('#meshcont-file', OUT, { timeout: 180_000 });
   // A. 活跃度看门狗：120s 内须就绪（5120 三角常态 ~10-20s；留 6×余量防 CI 慢 runner）
   let uploaded = '';
   for (let i = 0; i < 120; i++) {

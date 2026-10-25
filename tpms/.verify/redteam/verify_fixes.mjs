@@ -69,7 +69,19 @@ await page.evaluate(() => {
   ta.dispatchEvent(new Event('input', { bubbles: true }));
   ta.dispatchEvent(new Event('change', { bubbles: true }));
 });
-await page.waitForTimeout(1500);
+// 慢 runner 校准（B5 同型）：固定 1.5s 窗在 windows 慢 runner 下 custom 构建未完成，
+// 取消勾选与 in-flight 构建竞态可触发 worker error（自定义类型需要提供公式）落
+// console.error 被零容忍哨兵误捕（CI-40180212969 windows 实证，ubuntu/macos 全绿）——
+// 改轮询 tris 稳定（连续两读相等）后再取消勾选，消除 in-flight 竞态窗。
+{
+  let prevTris = null;
+  for (let t = 0; t < 90; t++) {
+    const v = await page.evaluate(() => document.querySelector('#stat-tris')?.textContent ?? '');
+    if (prevTris != null && v === prevTris && v !== '') break;
+    prevTris = v;
+    await page.waitForTimeout(500);
+  }
+}
 await domClick('#custom-enabled'); // 取消勾选
 await page.waitForTimeout(400);
 let m2off = await page.evaluate(() => ({
