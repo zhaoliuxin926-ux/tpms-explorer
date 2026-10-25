@@ -48,5 +48,7 @@ fcky 族的壁更薄，后打可把前面积累的参数经验用在难的件上
 CSV 命名 `{S#}_{rep}_{date}.csv` 放入 `specimens/csv/`，然后（AI 侧接手）：
 
 ```bash
-node tpms/agent/fit-batch.mjs   # 示意拟合；正式 ISO 以工程版「试验曲线反演」复核为准
+node tpms/agent/fit-batch.mjs   # 真实内核（experimental-fit 同源）；CSV 需 # 三尺寸元数据行
+                                # （模板见 PHYSICAL_TESTING_PROTOCOL §六）；正式 ISO 以工程版
+                                # 「试验曲线反演」复核为准（UI 可自动预填 L₀/A₀）
 ```
