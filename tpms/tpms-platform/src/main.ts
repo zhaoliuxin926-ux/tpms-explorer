@@ -717,9 +717,17 @@ function bindExperimentalFit(): void {
         : 'εd=未观察到密实化（曲线截断）';
       const wTxt = 'W=' + m.energyAbsorptionW.toFixed(3) + ' MJ/m³'
         + (m.densificationStatus === 'not-observed' ? `（截至记录末点 ε=${(m.energyAbsorptionEndStrain * 100).toFixed(1)}%）` : '');
-      out.textContent = 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
+      // H₀ 档位防呆（批九，对齐 fit-batch 口径）：位移-载荷模式下 L₀ 是应变换算唯一
+      // 基准，越协议档 {12,24,34}±1 时结果头部告警（S1_G60 ×2.5 档=24 非 30）——
+      // 此前 UI 静默接受任意 L₀，忘改默认 12 会把 E* 错一个数量级。
+      const hWarn = isDf && ![12, 24, 34].some((v) => Math.abs(v - l0) <= 1);
+      const hWarnTxt = hWarn
+        ? '⚠ H₀=' + l0 + 'mm 越协议档 {12,24,34}±1（×2.5 档=24 非 30——端板固定 2mm 不随缩放）；E* 应变基准以所填 L₀ 为准，请核对试样实测总高\n'
+        : '';
+      const dimTxt = isDf ? `（位移-载荷口径：L₀=${l0}mm · A₀=${a0}mm²）` : '';
+      out.textContent = hWarnTxt + 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
         + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · ' + edTxt
-        + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%）';
+        + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%） ' + dimTxt;
       drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
       taskFlow.expfitDone = true;
       refreshTaskFlow();
