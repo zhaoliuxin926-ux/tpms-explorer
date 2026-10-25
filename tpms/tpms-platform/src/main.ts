@@ -695,6 +695,24 @@ function bindExperimentalFit(): void {
     try {
       const st = getState();
       const isDf = (document.getElementById('expfit-df') as HTMLInputElement | null)?.checked ?? false;
+      // CSV # 元数据贯通（批十，与 fit-batch 同契约 ^\s*#\s*(\w+)\s*=\s*([\d.]+)）：
+      // df 模式且三尺寸齐时预填 L₀=lengthMm（含端板总高）、A₀=widthMm×thicknessMm——
+      // 口径随数据走，"填错"结构性消失（批九越档 ⚠ 降为最后防线）；无元数据行为不变。
+      let metaFilled = false;
+      if (isDf) {
+        const meta: Record<string, number> = {};
+        for (const line of text.split(/\r?\n/)) {
+          const m = line.match(/^\s*#\s*(\w+)\s*=\s*([\d.]+)/);
+          if (m) meta[m[1]] = Number(m[2]);
+        }
+        if (Number.isFinite(meta.lengthMm) && Number.isFinite(meta.widthMm) && Number.isFinite(meta.thicknessMm)) {
+          const l0El = document.getElementById('expfit-l0') as HTMLInputElement | null;
+          const a0El = document.getElementById('expfit-area') as HTMLInputElement | null;
+          if (l0El) l0El.value = String(meta.lengthMm);
+          if (a0El) a0El.value = String(meta.widthMm * meta.thicknessMm);
+          metaFilled = true;
+        }
+      }
       const l0 = Number((document.getElementById('expfit-l0') as HTMLInputElement | null)?.value ?? 12);
       const a0 = Number((document.getElementById('expfit-area') as HTMLInputElement | null)?.value ?? 100);
       const { fitExperimentalCurve } = await loadExperimentalFit();
@@ -724,7 +742,7 @@ function bindExperimentalFit(): void {
       const hWarnTxt = hWarn
         ? '⚠ H₀=' + l0 + 'mm 越协议档 {12,24,34}±1（×2.5 档=24 非 30——端板固定 2mm 不随缩放）；E* 应变基准以所填 L₀ 为准，请核对试样实测总高\n'
         : '';
-      const dimTxt = isDf ? `（位移-载荷口径：L₀=${l0}mm · A₀=${a0}mm²）` : '';
+      const dimTxt = isDf ? `（位移-载荷口径：L₀=${l0}mm · A₀=${a0}mm²${metaFilled ? ' · 已从 CSV 元数据预填' : ''}）` : '';
       out.textContent = hWarnTxt + 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
         + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · ' + edTxt
         + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%） ' + dimTxt;

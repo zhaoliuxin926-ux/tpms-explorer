@@ -76,6 +76,23 @@ node tpms/agent/tpms.mjs mesh --type fcky    --porosity 0.75 --resolution 96 --p
 每试样一份 CSV，列：`displacement_mm,force_N[,time_s]`；命名 `S{n}_{result}_{repeat}.csv`（如 S1_G60_r1.csv）。
 配套记录：材料牌号/批次、打印参数（层高/喷嘴/固化）、实测尺寸与质量、环境温湿度。
 
+**CSV 模板（`# key=value` 元数据行+表头，2026-10-25 批十定稿）**——三尺寸为**必填**
+（卡尺实测；lengthMm=含端板总高 H₀），fit-batch 缺失即拒算；网页端「试验曲线反演」
+勾选「位移-载荷」后自动从元数据预填 L₀/A₀（无需手填，可再手动覆盖）：
+
+```csv
+# lengthMm=24
+# widthMm=20
+# thicknessMm=20
+displacement_mm,force_N
+0.000,0.000
+0.024,1.372
+...（位移 mm,力 N，按试验机原始采样行序粘贴）
+```
+
+批处理反演（`agent/fit-batch.mjs`）按同契约逐份解析（H₀ 档位 {12,24,34}±1 越档照算+告警）；
+网页端单文件无元数据时仍可手填 L₀/A₀（越档有 ⚠ 兜底）。
+
 **历史实验数据复用指引（2026-09-15）**：本地论文项目已有同族 PLA/TPMS 压缩数据
 （`D:\FEA_Bone_Scaffold\Compression_TestData\batch5\`，K_1 组=均匀 Schwarz P 50% 孔隙，
 几何族与本平台试样同族）——其 `batch5/results/summary_filtered.csv`（处理后的

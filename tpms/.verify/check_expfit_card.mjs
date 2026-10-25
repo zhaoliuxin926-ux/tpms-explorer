@@ -136,6 +136,51 @@ await page.evaluate(() => {
   (document.getElementById('expfit-l0')).value = '12';
   (document.getElementById('expfit-area')).value = '100';
 });
+
+// ── 元数据贯通用例（批十）：CSV 带 # 三尺寸元数据 → L₀/A₀ 自动预填 + 披露 ──
+async function runDfMeta(metaLines) {
+  await page.evaluate(() => { (document.getElementById('expfit-df')).checked = true; });
+  const text = await page.evaluate(([meta]) => {
+    const E0 = 1200, K = 60000;
+    const sig = (e) => {
+      if (e <= 0.01) return K * e * e;
+      if (e <= 0.035) return K * 0.0001 + E0 * (e - 0.01);
+      if (e <= 0.06) { const t = (e - 0.035) / 0.025; const t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * 36 + (t3 - 2 * t2 + t) * 30 + (-2 * t3 + 3 * t2) * 45; }
+      if (e <= 0.08) { const t = (e - 0.06) / 0.02; const t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * 45 + (-2 * t3 + 3 * t2) * 36; }
+      if (e <= 0.45) { const x = e - 0.08; return 36 + 0.08 * x + 1.2 * Math.sin(2 * Math.PI * x / 0.075) * Math.exp(-x / 0.25); }
+      return 36 + 0.08 * 0.37 + 1.2 * Math.sin(2 * Math.PI * 0.37 / 0.075) * Math.exp(-0.37 / 0.25) + 25 * (Math.exp(18 * (e - 0.45)) - 1);
+    };
+    const lines = [...meta];
+    for (let e = 0; e <= 0.4991; e += 0.001) lines.push((e * 24).toFixed(4) + ',' + (sig(e) * 400).toFixed(4));
+    return lines.join('\n');
+  }, [metaLines]);
+  await page.evaluate(([csvText]) => {
+    const file = new File([csvText], 'synthetic-meta.csv', { type: 'text/csv' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const input = document.querySelector('#expfit-file');
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }, [text]);
+  await page.waitForFunction(() => /已从 CSV 元数据预填/.test(document.querySelector('#expfit-result')?.textContent ?? ''), { timeout: 15000 }).catch(() => {});
+  return page.evaluate(() => ({
+    text: document.querySelector('#expfit-result')?.textContent ?? '',
+    l0: document.getElementById('expfit-l0')?.value ?? '',
+    a0: document.getElementById('expfit-area')?.value ?? '',
+  }));
+}
+const dfMeta = await runDfMeta(['# lengthMm=24', '# widthMm=20', '# thicknessMm=20']);
+ok('元数据贯通：L₀/A₀ 输入框自动预填 24/400',
+  dfMeta.l0 === '24' && dfMeta.a0 === '400', `l0=${dfMeta.l0} a0=${dfMeta.a0}`);
+ok('元数据贯通：披露行 + E* 互逆锚 1179',
+  /已从 CSV 元数据预填/.test(dfMeta.text) && /L₀=24mm · A₀=400mm²/.test(dfMeta.text)
+    && (() => { const m = dfMeta.text.match(/E\*=(\d+)/); return m && Math.abs(Number(m[1]) - 1179) / 1179 < 0.02; })(),
+  dfMeta.text.slice(0, 110));
+await page.evaluate(() => {
+  (document.getElementById('expfit-df')).checked = false;
+  (document.getElementById('expfit-l0')).value = '12';
+  (document.getElementById('expfit-area')).value = '100';
+});
 ok('0 pageerror/console.error', errors.length === 0, errors.slice(0, 2).join(' | '));
 
 await browser.close();
