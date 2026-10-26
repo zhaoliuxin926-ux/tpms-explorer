@@ -30,7 +30,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ncs_audit_bundle.mjs');
 {
   const entry = join(tmpdir(), 'tpms_ncs_audit_entry.ts');
   writeFileSync(entry, [
-    `export { solveMicroFEA } from ${JSON.stringify(join(PLATFORM, 'src/physics/micro-fea-solver.ts'))};`,
+    `export { solveMicroFEA, buildElementKe } from ${JSON.stringify(join(PLATFORM, 'src/physics/micro-fea-solver.ts'))};`,
     `export { solveDarcyPermeability } from ${JSON.stringify(join(PLATFORM, 'src/physics/lbm-permeability.ts'))};`,
     `export { estimatePermeability } from ${JSON.stringify(join(PLATFORM, 'src/physics/permeability.ts'))};`,
   ].join('\n'));
@@ -39,7 +39,7 @@ const BUNDLE = join(tmpdir(), 'tpms_ncs_audit_bundle.mjs');
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
 }
-const { solveMicroFEA, solveDarcyPermeability, estimatePermeability } = await import(pathToFileURL(BUNDLE));
+const { solveMicroFEA, buildElementKe, solveDarcyPermeability, estimatePermeability } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -88,26 +88,62 @@ console.log('\n[A] Micro-FEA 全实心块 patch test（ν=0.2）');
   check(`Zener = 1（${res.zenerRatio.toFixed(6)}）`, Math.abs(res.zenerRatio - 1) < 1e-9);
 }
 
+// ── K. 单元刚度解析锚（批十六 P1-05：旧 B 矩阵混合二阶导+2× 系数错误的防回归钉）──
+console.log('\n[K] buildElementKe 仿射场解析锚（E=1, ν=0.2, 单位立方）');
+{
+  const KE = buildElementKe(0.2);
+  const nu = 0.2;
+  const lam = nu / ((1 + nu) * (1 - 2 * nu));
+  const mu = 1 / (2 * (1 + nu));
+  const NODE_XI_REF = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  // NODE_XI 顺序的物理坐标（[0,1]³：(ξ+1)/2 等）
+  const coord = (a) => [(NODE_XI_REF[a][0] + 1) / 2, (NODE_XI_REF[a][1] + 1) / 2, (NODE_XI_REF[a][2] + 1) / 2];
+  const ukv = (fx, fy, fz) => { const u = new Float64Array(24); for (let a = 0; a < 8; a++) { const [x, y, z] = coord(a); u[a*3] = fx(x,y,z); u[a*3+1] = fy(x,y,z); u[a*3+2] = fz(x,y,z); } return u; };
+  const quad = (u) => { let e = 0; for (let i = 0; i < 24; i++) { let s0 = 0; for (let j = 0; j < 24; j++) s0 += KE[i*24+j] * u[j]; e += u[i] * s0; } return e; };
+  // uₓ=y：ε_xy=1/2 ⇒ uᵀKu = μ·V = μ（V=1）——旧实现返回 0
+  const eShear = quad(ukv((x, y) => y, () => 0, () => 0));
+  check(`KE 仿射 uₓ=y → uᵀKeu = μ（${eShear.toFixed(6)} vs ${mu.toFixed(6)}，旧坏值 0）`, Math.abs(eShear - mu) < 1e-9);
+  // uₓ=x：ε_xx=1 ⇒ uᵀKu = λ+2μ（V=1）——旧实现返回 35.5556
+  const eNorm = quad(ukv((x) => x, () => 0, () => 0));
+  check(`KE 仿射 uₓ=x → uᵀKeu = λ+2μ（${eNorm.toFixed(6)} vs ${(lam + 2*mu).toFixed(6)}，旧坏值 35.5556）`, Math.abs(eNorm - (lam + 2 * mu)) < 1e-9);
+  // 刚体平移/旋转零能（K 的核）
+  check('KE 刚体平移零能', Math.abs(quad(ukv(() => 1, () => 1, () => 1))) < 1e-9);
+  check('KE 刚体旋转 u=(−y,x,0) 零能', Math.abs(quad(ukv((x, y) => -y, (x, y) => x, () => 0))) < 1e-9);
+}
+
 // ── B. gyroid 立方对称 + 收敛 + 守卫 ──
 console.log('\n[B] Micro-FEA gyroid（KUBC 法向模量口径）');
 {
-  const R = 20;
+  const R = 12;   // 批十六：真 PCG 求解后控时长（旧 0 迭代假解时 R=20 也瞬时）
   const solid = voxelGyroid(R, -0.1);   // {avg < -0.1}：迷宫固相（贯通）
   let n = 0;
   for (let i = 0; i < R ** 3; i++) n += solid[i];
   const phi = n / R ** 3;
-  const res = solveMicroFEA({ R, solid, nu: 0.2, tol: 1e-6, maxIter: 600 });
-  check(`求解完备（iters ${res.iters.join(',')}；0 迭代 = 仿射场离散平衡平凡工况，合法）`,
-    res.iters.every((it) => it >= 0) && res.iters.length === 6);
+  const res = solveMicroFEA({ R, solid, nu: 0.2, tol: 1e-6, maxIter: 1500 });
+  // 【批十六 P1-05】非平凡工况必须真收敛：旧断言 iters≥0 在残差未初始化（0 迭代假退）
+  // 的坏求解器上恒过——评估实证残差=1/converged=false 仍绿。现要求全部工况迭代>0 且
+  // 收敛（gyroid 剪切/法向波动场均非仿射平衡，b≠0）。
+  check(`全部工况真收敛（iters ${res.iters.join(',')}；converged=${res.converged}）`,
+    res.converged === true && res.iters.every((it) => it > 0) && res.iters.length === 6);
+  check(`残差全部 <tol（${res.residuals.map((r2) => r2.toExponential(1)).join(',')}）`,
+    res.residuals.every((r2) => r2 < 1e-6));
   check(`立方对称 C11=C22=C33（${res.C[0][0].toFixed(6)}/${res.C[1][1].toFixed(6)}/${res.C[2][2].toFixed(6)}）`,
     Math.abs(res.C[0][0] - res.C[1][1]) <= 1e-6 * res.C[0][0] && Math.abs(res.C[1][1] - res.C[2][2]) <= 1e-6 * res.C[2][2]);
   check(`正定（对角全正）`, [0, 1, 2, 3, 4, 5].every((k) => res.C[k][k] > 0));
-  check(`对称度 ${res.symmetryErr.toExponential(2)} ≤1e-9`, res.symmetryErr <= 1e-9);
-  // C44-C66 = φ·μ（Voigt 口径：剪切波动场未激活，见 bugs.md v5.0）
+  // 批十六：对称度阈值对齐 PCG tol（真解后 C 的反对称残差 ~tol 量级；旧 1e-9 是
+  // 0 迭代假解的机器精度假象）
+  check(`对称度 ${res.symmetryErr.toExponential(2)} ≤1e-6（对齐求解容差）`, res.symmetryErr <= 1e-6);
+  // 【批十六 P1-05】真解后 C44 = φμ − 波动能修正（KUBC≤Voigt 上界）——旧断言
+  // 「C44=φμ ≤15%」是在 x≡0 坏解（恰=Voigt 值）上校准的。改为热力学上界+物理下界：
   const mu = 1 / (2 * 1.2);
+  const lam2 = () => 0.2 / (1.2 * 0.6);
   const voigtShear = phi * mu;
-  const shearErr = Math.abs(res.C[3][3] - voigtShear) / voigtShear;
-  check(`C44 = φ·μ Voigt 口径（${res.C[3][3].toFixed(4)} vs ${voigtShear.toFixed(4)}，偏差 ${(shearErr * 100).toFixed(1)}% ≤15%）`, shearErr <= 0.15);
+  check(`C44 ≤ Voigt 上界 φμ（${res.C[3][3].toFixed(4)} ≤ ${voigtShear.toFixed(4)}）`,
+    res.C[3][3] <= voigtShear * (1 + 1e-6));
+  check(`C44 有物理下限（≥0.25·φμ：${res.C[3][3].toFixed(4)}）`, res.C[3][3] >= 0.25 * voigtShear);
+  const voigtC11 = phi * (lam2() + 2 * mu);
+  check(`C11 ≤ Voigt 上界 φ(λ+2μ)（${res.C[0][0].toFixed(4)} ≤ ${voigtC11.toFixed(4)}）`,
+    res.C[0][0] <= voigtC11 * (1 + 1e-6));
   // 非贯通抛错：悬浮球幻影（Ri=12 内偏移球，全为孤岛）
   const Ri = 12;
   const island = new Uint8Array(Ri ** 3);

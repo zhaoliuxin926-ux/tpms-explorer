@@ -155,7 +155,7 @@ const SCHEDULE = [
   ['tissue_growth_audit 组织长入反应扩散（门35）', '组织长入审计', 'tissue_growth_audit.mjs'],
   ['levelset_optimizer_audit 水平集拓扑优化（门36）', '水平集审计', 'levelset_optimizer_audit.mjs'],
   ['conformal_fill_audit C5 保形填充（门44，30断言——口径/B+/方向C 四patch polyMesh）', '流形保形填充', 'conformal_fill_audit.mjs'],
-  ['experimental_fit_audit ISO 13314 标定与反演（门43，21断言——+非均匀采样/截断εd 子锚 2026-10-24）', '实验曲线反演', 'experimental_fit_audit.mjs'],
+  ['experimental_fit_audit ISO 13314 标定与反演（门43，22断言——+非均匀采样/截断εd 子锚 2026-10-24；+双峰第一峰锚 2026-10-26）', '实验曲线反演', 'experimental_fit_audit.mjs'],
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/动态SCHEDULE对拍/禁句/SEO三件哨兵/publish 同源+sync-publish/调色单例/徽章↔tag，CI 基线 313）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（18 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）', 'UI 回归', 'run_all.mjs'],

@@ -4028,6 +4028,19 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
     scheduleHdUpgrade();
     const clampNote = porosity !== rawP ? `；孔隙率 ${rawP}% 超出 UI 域 [60,90]，已钳制为 ${porosity}%` : '';
     flashToast(`已应用最优解：${best.type}（P=${porosity}% · 总宽 ${applyWidth} mm = 3 周期 × 单胞 ${best.params.cellSize.toFixed(2)} mm）${clampNote}`);
+    // 【批十五 P1-04】α 兑现核对：求解器 E 预测显式乘方向因子 α（inverse-design:92），
+    // 但 UI 几何无可直接对应的 α 自由度（应力场引导的 anisotropy 是壁厚-应力耦合语义，
+    // 不是代理的模量放大）——应用后的真实预测须按 α=1 + 应用参数（含钳制孔隙率）代回
+    // 同一代理重算，目标缺口如实披露，不冒充"已采用即达标"。
+    void import('./physics/inverse-design').then(({ forwardModel }) => {
+      const recheck = forwardModel(best.type, porosity / 100, best.params.cellSize, 1);
+      const t = invTargets();
+      const eGap = (t.ETarget ?? 0) > 0 ? (recheck.EGPa / (t.ETarget as number) - 1) * 100 : null;
+      const el = document.getElementById('inverse-result');
+      if (el && eGap != null && Math.abs(eGap) > 1) {
+        el.textContent += `\n⚠ 应用后核对（α 不可几何化，按 α=1 重算同代理）：E*=${recheck.EGPa.toFixed(2)} GPa vs 目标 ${(t.ETarget as number).toFixed(1)} GPa（${eGap > 0 ? '+' : ''}${eGap.toFixed(1)}%）——求解器预测 ${best.prediction.EGPa.toFixed(2)} 含 α=${best.params.anisotropy.toFixed(2)} 放大，UI 几何暂无对应自由度；如需方向增益请评估「应力场引导」近似或降目标。`;
+      }
+    });
   });
 
   // 【v4.0 阶段 V】CT 重构与制造偏差
@@ -5484,6 +5497,7 @@ async function handleExportInner(fmt: string): Promise<void> {
           { type: s.type, solidCount: voxV.solidCount, voidCount: 40 ** 3 - voxV.solidCount },
           `${base}-cae-verification.zip`,
           downloadBlob,
+          effWidthMm(s),   // 【批十七 P1-06】总宽随包贯通（壳脚本缺省/runner --specimen）
         );
         break;
       }

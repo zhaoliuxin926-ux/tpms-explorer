@@ -43,30 +43,30 @@ export function buildElementKe(nu: number): Float64Array {
   const mu = 1 / (2 * (1 + nu));
   const gp = [-1 / Math.sqrt(3), 1 / Math.sqrt(3)];
   const B = new Float64Array(6 * 24);
+  // 【批十六 P1-05 重写】形函数 Nₐ = ⅛(1+ξₐξ)(1+ηₐη)(1+ζₐζ)；体素单元=轴对齐单位立方
+  // （物理域 [0,1]³），J = diag(½) ⇒ ∂N/∂x = 2·∂N/∂ξ = (ξₐ/4)(1+ηₐη)(1+ζₐζ) 等。
+  // 旧实现的对角项系数 0.5（差 2×）且"交叉项"写成了 ∂²N/∂ξ∂η 型混合二阶导——
+  // B 矩阵里它们不是形函数导数（评估解析锚：uₓ=y 应 uᵀKu=μ=0.416667、uₓ=x 应
+  // 2(λ/2+μ)=1.11111，旧值分别 0 与 35.5556）。
   for (const gxi of gp) {
     for (const gyi of gp) {
       for (const gzi of gp) {
         B.fill(0);
         for (let a = 0; a < 8; a++) {
-          const [xi, eta, zeta] = NODE_XI[a];
-          const dNxdx = 0.5 * xi * (1 + gyi * eta) * (1 + gzi * zeta);
-          const dNydy = 0.5 * eta * (1 + gxi * xi) * (1 + gzi * zeta);
-          const dNzdz = 0.5 * zeta * (1 + gxi * xi) * (1 + gyi * eta);
-          const dNxdy = 0.5 * xi * eta * (1 + gzi * zeta);
-          const dNxdz = 0.5 * xi * zeta * (1 + gyi * eta);
-          const dNydx = 0.5 * eta * xi * (1 + gzi * zeta);
-          const dNydz = 0.5 * eta * zeta * (1 + gxi * xi);
-          const dNzdx = 0.5 * zeta * xi * (1 + gyi * eta);
-          const dNzdy = 0.5 * zeta * eta * (1 + gxi * xi);
+          const xi = NODE_XI[a][0], eta = NODE_XI[a][1], zeta = NODE_XI[a][2];
+          const dNdx = (xi / 4) * (1 + eta * gyi) * (1 + zeta * gzi);
+          const dNdy = (eta / 4) * (1 + xi * gxi) * (1 + zeta * gzi);
+          const dNdz = (zeta / 4) * (1 + xi * gxi) * (1 + eta * gyi);
           const i0 = a * 3;
-          B[0 * 24 + i0] = dNxdx;
-          B[1 * 24 + i0 + 1] = dNydy;
-          B[2 * 24 + i0 + 2] = dNzdz;
-          B[3 * 24 + i0] = dNxdy; B[3 * 24 + i0 + 1] = dNydx;
-          B[4 * 24 + i0 + 1] = dNydz; B[4 * 24 + i0 + 2] = dNzdy;
-          B[5 * 24 + i0] = dNxdz; B[5 * 24 + i0 + 2] = dNzdx;
+          B[0 * 24 + i0] = dNdx;
+          B[1 * 24 + i0 + 1] = dNdy;
+          B[2 * 24 + i0 + 2] = dNdz;
+          B[3 * 24 + i0] = dNdy; B[3 * 24 + i0 + 1] = dNdx;      // γ_xy
+          B[4 * 24 + i0 + 1] = dNdz; B[4 * 24 + i0 + 2] = dNdy;  // γ_yz
+          B[5 * 24 + i0] = dNdz; B[5 * 24 + i0 + 2] = dNdx;      // γ_xz
         }
-        // Ke = Bᵀ·C·B（C 为 Voigt 6×6：对角法向 λ+2μ、法向互 λ、剪切 μ）
+        // Ke = Bᵀ·C·B·detJ（C 为 Voigt 6×6：对角法向 λ+2μ、法向互 λ、剪切 μ；detJ = 1/8）
+        const detJ = 0.125;
         for (let i = 0; i < 24; i++) {
           for (let j = 0; j < 24; j++) {
             let s0 = 0;
@@ -81,7 +81,7 @@ export function buildElementKe(nu: number): Float64Array {
                 s0 += bp * c * B[q * 24 + j];
               }
             }
-            KE[i * 24 + j] += s0;
+            KE[i * 24 + j] += s0 * detJ;
           }
         }
       }
@@ -262,7 +262,9 @@ export function solveMicroFEA(params: MicroFEAParams): MicroFEAResult {
     let iter = 0;
     let res = bNorm < 1e-11 ? 0 : 1;
     if (bNorm >= 1e-11) {
-    for (let i = 0; i < nDof; i++) z[i] = r[i] / (diag[i] || 1);
+    // 【批十六 P1-05】残差初始化 r = b − K·x₀（x₀=0 ⇒ r=b）——旧版漏了 r[i]=b[i]，
+    // z/p 全零 ⇒ 首迭代 pAp=0 直接 break（评估实证：非零载荷 0 迭代、residual=1 假收敛）。
+    for (let i = 0; i < nDof; i++) { r[i] = b[i]; z[i] = r[i] / (diag[i] || 1); }
     p.set(z);
     let rz = 0;
     for (let i = 0; i < nDof; i++) rz += r[i] * z[i];

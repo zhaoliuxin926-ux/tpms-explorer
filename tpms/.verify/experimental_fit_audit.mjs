@@ -273,6 +273,23 @@ function toCsvPairs(pairs, sep = ',') {
   return pairs.map(([x, y]) => `${x}${sep}${y}`).join('\n');
 }
 
+// ── 批十八 P2-01 持续回归锚：双峰曲线第一峰值=首个局部峰（评估场景 45@0.06 / 60@0.16）──
+{
+  // 在主合成曲线的平台上叠加第二个更高峰（60 MPa @ ε=0.16）：第一峰语义应取 45@0.06，
+  // 旧实现（区间全域 argmax）返回 60@0.16（高估 33%）。
+  const st2 = stresses.map((s, i) => {
+    const e = strains[i];
+    const second = 60 * Math.exp(-((e - 0.16) ** 2) / (2 * 0.008 ** 2));
+    return Math.max(s, second);
+  });
+  const parsed2 = parseCurve({ text: toCsv(strains, st2) });
+  const comp2 = compensateToe(parsed2.strain, parsed2.stress);
+  const M2 = extractIso13314(comp2.strain, comp2.stress, comp2.elasticModulus);
+  rel(M2.firstPeakStress, 45) <= 0.05 && Math.abs(M2.firstPeakStrain - 0.06) <= 0.015
+    ? ok(`双峰曲线第一峰值=首局部峰（${M2.firstPeakStress.toFixed(1)}@${M2.firstPeakStrain.toFixed(3)}；旧全域 argmax 返 60@0.16）`, '')
+    : bad('双峰第一峰值', `${M2.firstPeakStress.toFixed(1)}@${M2.firstPeakStrain.toFixed(3)}`);
+}
+
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 21) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 21（恒真/集体跳过防护；2026-10-24 +非均匀采样/截断εd 两子锚 19→21）`); process.exit(1); }
+if (pass < 22) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 22（恒真/集体跳过防护；2026-10-24 +非均匀采样/截断εd 子锚 19→21；2026-10-26 +双峰第一峰锚 21→22）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

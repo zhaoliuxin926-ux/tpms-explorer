@@ -51,11 +51,14 @@ const { fitExperimentalCurve } = await import(pathToFileURL(BUNDLE));
 
 const PROTOCOL_TOTALS = [12, 24, 34];   // 原生/×2.5/×3.75 含固定 2×2mm 端板（协议 §四表）
 
-// `# key=value` / `// key: value` 元数据（数值型；parseCurve 会剥离注释行，仅 fit-batch 侧读取）
+// `# key=value` 元数据（数值型；parseCurve 会剥离注释行，仅 fit-batch 侧读取）。
+// 【批十八 P2-02】语法收窄到与 UI/协议 §六 同一白名单（`# key=value`）：旧正则还接受
+// `// key: value`——同一 CLI 合法文件在 UI 端静默回落默认口径（评估实证 E≈993→2000、
+// 平台 36→144 无告警）。单一语法消除跨端口径分裂；缺失报错文案指向协议模板。
 function parseMeta(text) {
   const meta = {};
   for (const line of text.split(/\r?\n/)) {
-    const m = line.match(/^\s*(?:#|\/\/)\s*([A-Za-z_][A-Za-z0-9_]*)\s*[=:]\s*(-?[\d.]+)\s*$/);
+    const m = line.match(/^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?[\d.]+)\s*$/);
     if (m) meta[m[1]] = Number(m[2]);
   }
   return meta;

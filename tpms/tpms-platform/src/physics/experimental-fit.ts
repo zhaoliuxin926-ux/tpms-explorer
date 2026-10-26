@@ -273,13 +273,18 @@ export function extractIso13314(strain: Float64Array, stress: Float64Array, elas
   const rp = proofStress(strain, sm, e);
   if (!Number.isFinite(rp)) throw new Error('Rp0.2 未找到交点（曲线未过 0.2% 偏移线）');
 
-  // 第一峰值：Rp0.2 交点之后、平台区（ε<0.2）内的平滑曲线 argmax
+  // 第一峰值：Rp0.2 交点之后、平台区（ε<0.2）内的**首个**局部极大（带 2% 滞回）——
+  // 【批十八 P2-01】旧实现取该区间全域 argmax：首峰 45MPa@0.06、次峰 60MPa@0.16 的
+  // 双峰曲线返回 60@0.16，"第一峰值"语义错（高估 33%）。滞回判定：平滑曲线自 running
+  // max 回落超过 2% 即定格该位置为第一峰；单调升到区间尾则取区间 argmax（无回落=
+  // 第一峰在边界，保持旧行为）。
   let rpIdx = 0;
   for (let i = 0; i < strain.length; i++) { if (strain[i] > 0.002) { rpIdx = i; break; } }
   let peakIdx = -1, peakSm = -Infinity;
   for (let i = rpIdx; i < strain.length; i++) {
     if (strain[i] >= 0.2) break;
     if (sm[i] > peakSm) { peakSm = sm[i]; peakIdx = i; }
+    else if (peakIdx >= 0 && peakSm - sm[i] > 0.02 * Math.abs(peakSm)) break;   // 首峰后回落 2% ⇒ 定格
   }
   if (peakIdx < 0 || peakSm <= rp) throw new Error('未找到第一屈服峰值');
   const peakStress = stress[peakIdx];

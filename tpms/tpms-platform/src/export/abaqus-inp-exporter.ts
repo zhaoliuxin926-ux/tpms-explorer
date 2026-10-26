@@ -138,6 +138,10 @@ export function buildAbaqusInp(model: VoxelModel, opts: AbaqusExportOptions): {
   push('*OUTPUT, FIELD');
   push('*ELEMENT OUTPUT');
   push('S, E');
+  // 【批十七 P1-06】FIELD 补节点 U/RF：验证包 runner 从 fieldOutputs['RF'] 读反力——
+  // 此前 RF 仅在 HISTORY（S1-S11 协议），runner 契约 KeyError（评估模拟 ODB 实证）
+  push('*NODE OUTPUT');
+  push('U, RF');
   push('*NODE OUTPUT');
   push('U');
   // 历史输出（S1-S11 协议吸收，2026-09-15）：顶面 RF+U 历史是压缩曲线的数据源——

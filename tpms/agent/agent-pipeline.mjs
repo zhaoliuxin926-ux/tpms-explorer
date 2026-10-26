@@ -215,7 +215,9 @@ if (session && built) {
   const { recordExecution, saveSession } = await import('./agent-session.mjs');
   recordExecution(session, {
     fromRecommendation: `pipeline@${new Date().toISOString()}`, candidateIndex: built.candidateIndex, tool: 'tpms_mesh',
-    args: { type: built.candidate.type, porosity: built.candidate.porosity, periods: built.candidate.cellSize, resolution: 96, out: built.stl },
+    // 【批十八 P2-03】执行记录对齐实际构建参数（runCli 实传 periods=3+总宽 3×单胞）——
+    // 旧记录把单胞 mm 写进 periods 且漏总宽，审计/溯源失真（评估夹具实证）
+    args: { type: built.candidate.type, porosity: built.candidate.porosity, periods: 3, specimenSizeMm: 3 * built.candidate.cellSize, resolution: 96, out: built.stl },
     exit: 0, artifacts: [built.stl],
     resultDigest: { porosityEstimate: built.mesh.porosityEstimate, watertight: built.mesh.watertight, fileBytes: built.mesh.fileBytes },
     source: 'agent-pipeline 候选顺延构建',

@@ -3,13 +3,15 @@
  *
  * 内嵌两套自动化求解脚本 + 运行壳 + 对比数据模板，导出中心一键打包 ZIP：
  *  · abaqus_auto_runner.py  —— Abaqus no-GUI 准静态压缩：JobFromInputFile 提交 →
- *    ODB 提取反力-位移曲线 → 自动计算 E_FEM（0~5% 线性拟合）、σ_peak、σ_pl（5~25% 平台均值）
+    ODB 提取反力-位移曲线（FIELD U/RF）→ E_FEM（0~5% 绝对应变线性拟合）、σ_peak；
+    σ_pl（5~25% 绝对）仅在数据覆盖该窗口时有值（sigma_pl_valid 标记）
  *  · openfoam_auto_runner.py —— OpenFOAM simpleFoam 达西渗流：构建 system/0 算例 →
- *    求解 → flowRatePatch 提取 Q → κ = Q·μL/(A·ΔP) + wallShearStress 均值
- *  · run_abaqus.sh / run_openfoam.sh —— 一键壳脚本
+    求解 → flowRatePatch 提取 Q → κ = Q·μL/(A·ΔP) + wallShearStress 均值
+ *  · run_abaqus.sh / run_openfoam.sh —— 一键壳脚本（abaqus 壳缺省试样宽度=导出时设计总宽）
  *  · comparison_template.csv —— 理论预估 vs CAE 对比矩阵模板
  * 诚实边界：Abaqus 脚本为 abq python 2.7 方言（无 f-string）；本机无求解器，
- * 正确性由门禁 19 的格式规范断言 + 与导出器交叉核对守护。
+ * 正确性由门禁 19 的格式规范断言 + 与导出器交叉核对守护；平台 INP 为 5% 线弹性
+ * 单步——sigma_pl/σ_peak 的压溃语义需用户自行扩展 INP 本构与载荷步后才成立。
  */
 
 
@@ -23,9 +25,10 @@ export const ABAQUS_RUNNER = String.raw`# -*- coding: utf-8 -*-
 
 流程:
     1. JobFromInputFile 导入平台导出的 .inp（C3D8 体网格 + NSET_BOTTOM/TOP）
-    2. 施加刚性压盘位移载荷（eps = 0 ~ 0.3，10 个增量步）
-    3. 提取顶部反力 RF 与位移 U3 → 反力-位移曲线 result.csv
-    4. 自动计算 E_FEM（0~5% 应变线性拟合）、sigma_peak（峰值）、sigma_pl（5~25% 平台均值）
+    2. 提交 INP 自带载荷步（平台默认=5% 名义应变、线弹性单步——见诚实边界）
+    3. 提取顶部反力 RF 与位移 U3（FIELD 输出）→ 反力-位移曲线（压为正）
+    4. E_FEM=0~5% 应变（绝对）线性拟合；sigma_peak=全程峰值；sigma_pl=5~25%（绝对）
+       平台均值——数据未覆盖该窗口时置 0 并标 sigma_pl_valid=0（不冒充平台应力）
 """
 import sys
 import os
@@ -65,8 +68,10 @@ for fr in step.frames:
     rv = fr.fieldOutputs['RF'].getSubset(region=odb.rootAssembly.nodeSets['NSET_TOP']).values
     for v in rv:
         rf_sum += v.data3
+    # 【批十七 P1-06】压缩位移为负 → 反力为负；工程口径压应力取正（评估实证：
+    # 负 E/负峰值来自符号约定错配）。disp=-u、force=-ΣRF3。
     disp.append(-u)
-    force.append(rf_sum)
+    force.append(-rf_sum)
 odb.close()
 
 # 应力-应变曲线（名义）
@@ -80,23 +85,25 @@ def _linear_fit(xs, ys):
     k = (n * sxy - sx * sy) / (n * sxx - sx * sx) if n * sxx != sx * sx else 0.0
     return k
 
-# E_FEM：0~5% 应变段线性拟合斜率
-lin_x = [e for e in strain if e <= 0.05 * EPS_MAX]
+# 【批十七 P1-06】窗口语义=绝对应变（注释与代码对齐；旧代码 0.05*EPS_MAX 实为
+# 0~1.5%/1.5~7.5% 与宣称 0~5%/5~25% 不符）。--eps 仅作曲线上限裁剪。
+lin_x = [e for e in strain if e <= 0.05]
 lin_y = stress[:len(lin_x)]
 e_fem = _linear_fit(lin_x, lin_y)
-# sigma_pl：5%~25% 应变平台均值
-pl_y = [s for e, s in zip(strain, stress) if 0.05 * EPS_MAX <= e <= 0.25 * EPS_MAX]
+# sigma_pl：5%~25% 绝对应变平台均值（数据未覆盖则置 0 + valid 标记）
+pl_y = [s for e, s in zip(strain, stress) if 0.05 <= e <= 0.25]
 sigma_pl = sum(pl_y) / len(pl_y) if pl_y else 0.0
+sigma_pl_valid = 1 if pl_y else 0
 sigma_peak = max(stress) if stress else 0.0
 
 with open(OUT, 'w') as fp:
     fp.write('strain,stress_MPa\n')
     for e, s in zip(strain, stress):
         fp.write('%.6f,%.4f\n' % (e, s))
-    fp.write('\n# E_FEM_MPa=%.4f\n# sigma_peak_MPa=%.4f\n# sigma_pl_MPa=%.4f\n'
-             % (e_fem, sigma_peak, sigma_pl))
-print('TPMS verification: E_FEM=%.4f MPa, sigma_peak=%.4f, sigma_pl=%.4f -> %s'
-      % (e_fem, sigma_peak, sigma_pl, OUT))
+    fp.write('\n# E_FEM_MPa=%.4f\n# sigma_peak_MPa=%.4f\n# sigma_pl_MPa=%.4f\n# sigma_pl_valid=%d\n'
+             % (e_fem, sigma_peak, sigma_pl, sigma_pl_valid))
+print('TPMS verification: E_FEM=%.4f MPa, sigma_peak=%.4f, sigma_pl=%.4f (valid=%d) -> %s'
+      % (e_fem, sigma_peak, sigma_pl, sigma_pl_valid, OUT))
 `;
 
 export const OPENFOAM_RUNNER = String.raw`# -*- coding: utf-8 -*-
@@ -241,12 +248,13 @@ if __name__ == '__main__':
     main()
 `;
 
-export const RUN_ABAQUS_SH = `#!/bin/bash
+export const RUN_ABAQUS_SH = (specimenMm = 1) => `#!/bin/bash
 # TPMS Explorer v1.2.0 —— Abaqus 验证一键脚本
-# 用法: ./run_abaqus.sh tpms-gyroid-voxel.inp 1.0
+# 用法: ./run_abaqus.sh tpms-gyroid-voxel.inp <试样宽度 mm>
+# 缺省已按导出时设计填充（批十七 P1-06：总宽随包贯通，runner 不再缺省 1mm）
 set -e
 INP=\${1:-tpms-voxel.inp}
-SPEC=\${2:-1.0}
+SPEC=\${2:-${specimenMm}}
 abaqus cae noGUI=abaqus_auto_runner.py -- --inp "\$INP" --out abaqus_result.csv --specimen "\$SPEC"
 echo "完成: abaqus_result.csv（E_FEM / sigma_peak / sigma_pl）"
 `;
@@ -273,11 +281,11 @@ f1_Hz,Hz,,,
 # rel_error = |theory - cae| / |theory|；verdict: PASS <= 15% (解析代理口径), REVIEW > 15%
 `;
 
-export function buildVerificationSuite(modelInfo: { type: string; solidCount: number; voidCount: number }): Record<string, string> {
+export function buildVerificationSuite(modelInfo: { type: string; solidCount: number; voidCount: number }, specimenMm = 1): Record<string, string> {
   const files: Record<string, string> = {};
   files['abaqus_auto_runner.py'] = ABAQUS_RUNNER;
   files['openfoam_auto_runner.py'] = OPENFOAM_RUNNER;
-  files['run_abaqus.sh'] = RUN_ABAQUS_SH;
+  files['run_abaqus.sh'] = RUN_ABAQUS_SH(specimenMm);
   files['run_openfoam.sh'] = RUN_OPENFOAM_SH;
   files['comparison_template.csv'] = COMPARISON_TEMPLATE;
   files['README.md'] = `# TPMS Explorer v1.2.0 CAE 验证脚本包
@@ -301,8 +309,8 @@ rel_error ≤ 15% 视为解析代理口径 PASS（>15% 请核对单位与试样�
   return files;
 }
 
-export function exportVerificationSuite(modelInfo: { type: string; solidCount: number; voidCount: number }, filename: string, downloadBlobFn: (b: Blob, n: string) => void): void {
-  const files = buildVerificationSuite(modelInfo);
+export function exportVerificationSuite(modelInfo: { type: string; solidCount: number; voidCount: number }, filename: string, downloadBlobFn: (b: Blob, n: string) => void, specimenMm = 1): void {
+  const files = buildVerificationSuite(modelInfo, specimenMm);
   const enc = new TextEncoder();
   const entries = Object.entries(files).map(([name, text]) => ({ name, data: enc.encode(text) }));
   const zip = buildStoredZip(entries);
