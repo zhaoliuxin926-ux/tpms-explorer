@@ -630,7 +630,7 @@ python3 openfoam_auto_runner.py --case tpms-polymesh-case --dp 1.0
 
 - **微观 FEA（J-PCG）**：体素网格 → 6 组单位应变 KUBC 工况 → Jacobi 预条件共轭梯度 → 6×6 Voigt C 矩阵。全实心体素 ν=0.2 patch test 解析精确（C11=λ+2μ, C44=μ, Zener=1）。
 - **FD-Darcy**：z 向压差（p=1/0）SOR 求解变系数扩散方程 → κ=QL/(A·Δp)。单管解析锚点精确命中 1/R²。
-- **口径声明**：微观 FEA 剪切波动场 b=0 为结构性未解（bugs.md v5.0 条目），C44–C66 行为 Voigt 上界口径；FD-Darcy 为标量压力近似（未解析 Stokes 速度场）。
+- **口径声明**（2026-10-26 更正）：微观 FEA 此前"C44–C66 恒为 Voigt 上界"为坏实现的误标（残差未初始化+B 矩阵数学错误，第三轮评估实证）——已修复并加解析锚/真收敛门禁，C44 为真均质化值（≤Voigt 上界）；FD-Darcy 为标量压力近似（未解析 Stokes 速度场）。
 - **分辨率**：FEA 建议 20³（秒级），LBM/Darcy 建议 12~16³（亚秒）。
 
 ## 二十二、三维交互式 CAE 边界条件拾取与载荷工况定义 🆕 原型期 v5.0
