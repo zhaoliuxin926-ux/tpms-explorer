@@ -64,7 +64,8 @@ import pyvista as pv
 # 参数配置
 tpms_type = '${safeId(state.type)}'
 porosity = ${state.porosity}
-cell_size = ${state.cellSize}      # 周期数 k（1 period = 1 mm，模型总宽 = cell_size mm）
+cell_size = ${state.cellSize}      # 周期数 k（频率语义：周期数编码在 sin(k·x) 频率上）
+width_mm = ${state.specimenSizeMm ?? state.cellSize}   # 物理总宽 mm（显式总宽；自动=1 period=1mm 即 cell_size）
 thickness = ${state.thickness}
 weights = [${state.weights.join(', ')}]
 structure_mode = '${safeId(state.structureMode)}'
@@ -387,8 +388,8 @@ F = np.where((bound >= 0) | on_face, -1e-6, np.maximum(F, bound))
 # 【实心加载端板】(与平台 surface-nets endplateMm 同源)：z 带内侧向界内强制实体；
 # z 向最外层豁免保持收口，x/y 出侧壁不生效
 if endplate_mm > 0:
-    t_pl = min(endplate_mm, 0.4 * cell_size)
-    z_band = np.abs(pz) >= (1 - 2 * t_pl / cell_size)
+    t_pl = min(endplate_mm, 0.4 * width_mm)
+    z_band = np.abs(pz) >= (1 - 2 * t_pl / width_mm)
     z_face = (Z == Z.min()) | (Z == Z.max())
     if container == 'cylinder':
         side_in = (px**2 + py**2 - 1) < 0
@@ -399,7 +400,7 @@ if endplate_mm > 0:
 # Marching Cubes 提取等值面（F = 0；坐标为 mm，1 period = 1 mm）
 # pyvista >= 0.44：UniformGrid 已改名 ImageData（旧名 0.48 起移除）；场是网格点值 → point_data
 # （旧写法 cell_data + dimensions=N+1 依赖已移除的自动转换，且引入半格偏移）
-grid = pv.ImageData(dimensions=V.shape, origin=(-cell_size/2, -cell_size/2, -cell_size/2), spacing=(cell_size/(N-1),)*3)
+grid = pv.ImageData(dimensions=V.shape, origin=(-width_mm/2, -width_mm/2, -width_mm/2), spacing=(width_mm/(N-1),)*3)
 grid.point_data['values'] = F.flatten(order='F')
 iso = 0.0
 
@@ -409,7 +410,7 @@ mesh = grid.contour([iso])
 # 单位：mesh.points 为 mm；warp 在弧度域进行（rad = mm·2π/cellSize），R0 同尺度换算
 manifold_kind = '${safeId(state.manifold.kind)}'
 if manifold_kind != 'identity':
-    K2R = 2 * np.pi / cell_size
+    K2R = 2 * np.pi / width_mm
     P = mesh.points * K2R
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     if manifold_kind == 'poincare':
@@ -431,7 +432,7 @@ if manifold_kind != 'identity':
         sc = R0 * np.tan(r / R0 * np.pi / 4) / r
         P[:, 0] *= sc; P[:, 1] *= sc; P[:, 2] *= sc
     elif manifold_kind == 'cylinder':
-        half = np.pi * cell_size * K2R   # 平台 ctx.half 口径（π·cellSize 弧度）
+        half = np.pi * width_mm * K2R   # 平台 ctx.half 口径（弧度半幅；width_mm 物理总宽）
         R0 = ${state.manifold.radius}
         theta = (x + half) / (2 * half) * 2 * np.pi
         rad = R0 + y
@@ -519,7 +520,8 @@ export function buildMatlabScript(state: AppState): string {
 
 tpms_type = '${safeId(state.type)}';
 porosity = ${state.porosity};
-cell_size = ${state.cellSize};      % 周期数 k（1 period = 1 mm，模型总宽 = cell_size mm）
+cell_size = ${state.cellSize};      % 周期数 k（频率语义：周期数编码在 sin(k·x) 频率上）
+width_mm = ${state.specimenSizeMm ?? state.cellSize};   % 物理总宽 mm（显式总宽；自动=cell_size）
 thickness = ${state.thickness};
 weights = [${state.weights.join(', ')}];
 structure_mode = '${safeId(state.structureMode)}';
@@ -921,8 +923,8 @@ F(bound >= 0 | on_face) = -1e-6;
 
 % 【实心加载端板】(与平台 surface-nets endplateMm 同源)
 if endplate_mm > 0
-    t_pl = min(endplate_mm, 0.4 * cell_size);
-    z_band = abs(pz) >= (1 - 2 * t_pl / cell_size);
+    t_pl = min(endplate_mm, 0.4 * width_mm);
+    z_band = abs(pz) >= (1 - 2 * t_pl / width_mm);
     z_face = (Z == min(Z(:))) | (Z == max(Z(:)));
     if strcmp(container, 'cylinder')
         side_in = (px.^2 + py.^2 - 1) < 0;
@@ -934,15 +936,15 @@ end
 iso = 0;
 
 % mm 坐标（1 period = 1 mm）
-Xm = (px / 2) * cell_size;
-Ym = (py / 2) * cell_size;
-Zm = (pz / 2) * cell_size;
+Xm = (px / 2) * width_mm;
+Ym = (py / 2) * width_mm;
+Zm = (pz / 2) * width_mm;
 
 % 【阶段 IV/v4.0】非欧度规映射（与 core/manifold-mapping.ts 同源；'identity' 跳过；
 % 径向族 poincare/hyperbolic 向量化，cylinder/torus/metric 见平台/Python 脚本）
 manifold_kind = '${safeId(state.manifold.kind)}';
 if ~strcmp(manifold_kind, 'identity') && (strcmp(manifold_kind, 'poincare') || strcmp(manifold_kind, 'hyperbolic'))
-    K2R = 2 * pi / cell_size;
+    K2R = 2 * pi / width_mm;
     Xr = Xm * K2R; Yr = Ym * K2R; Zr = Zm * K2R;
     r = sqrt(Xr.^2 + Yr.^2 + Zr.^2); r = max(r, 1e-12);
     if strcmp(manifold_kind, 'poincare')

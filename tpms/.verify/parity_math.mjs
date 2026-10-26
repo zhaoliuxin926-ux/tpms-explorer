@@ -589,7 +589,8 @@ check('脚本: cylinder/容器不用 NaN（SDF 固相包裹）', !/np\.nan/.test
 check('脚本: 容器 F = max(F_mode, bound)', /np\.maximum\(F,\s*bound\)/.test(scriptSrc) && /max\(F,\s*bound\)/.test(scriptSrc));
 check('脚本: 公式频率乘 kk（周期数不丢失）', /kk\s*=\s*cell_size/.test(scriptSrc) && scriptSrc.includes('sin(kk*X)'), '平台周期编码在频率，脚本恒单周期会重建错误结构');
 check('脚本: shell 壳厚由孔隙率二分（非 thickness）', /count_shell/.test(scriptSrc) && /target_solid/.test(scriptSrc));
-check('脚本: 网格坐标输出 mm', /origin=\(-cell_size\/2/.test(scriptSrc) && /cell_size\/\(N-1\)/.test(scriptSrc));
+// 批十四 P1-03：物理总宽拆 width_mm（cell_size 保留频率语义；legacy 等值）
+check('脚本: 网格坐标输出 mm（width_mm 物理总宽）', /origin=\(-width_mm\/2/.test(scriptSrc) && /width_mm\/\(N-1\)/.test(scriptSrc));
 const mainSrc = readFileSync(join(PLATFORM, 'src/main.ts'), 'utf-8');
 check('脚本: pyvista 用 ImageData + point_data（0.44+ API）', scriptSrc.includes('pv.ImageData(dimensions=V.shape') && scriptSrc.includes("point_data['values']"), 'UniformGrid 已在 0.48 移除，cell_data 会 TypeError');
 check('脚本: 插值标识符走 safeId（注入纵深防御）', scriptSrc.includes('function safeId'));

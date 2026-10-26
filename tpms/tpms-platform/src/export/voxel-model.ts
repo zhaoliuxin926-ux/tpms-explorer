@@ -53,6 +53,12 @@ export interface VoxelModel {
 }
 
 export function buildVoxelModel(params: VoxelModelParams, R: number): VoxelModel {
+  // 【批十四 P1-01 fail-closed】targetPorosity 是二分的唯一密度契约——非有限值
+  //（exact 路径 undefined 被 `as number` 掩盖）会让 1-NaN 比较恒 false → 全固相。
+  // 宁拒不算：类型谎言在入口暴露。
+  if (!Number.isFinite(params.targetPorosity) || params.targetPorosity <= 0 || params.targetPorosity >= 1) {
+    throw new Error(`体素模型 targetPorosity 非法（${String(params.targetPorosity)}，需 (0,1) 有限值）`);
+  }
   const N = R;
   const k = params.periods;
   const span = 2 * Math.PI;

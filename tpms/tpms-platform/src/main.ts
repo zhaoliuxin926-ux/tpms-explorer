@@ -229,6 +229,13 @@ function geometryStateKey(s: Readonly<AppState>): string {
  */
 function sanitizeDesignState(raw: unknown): AppStatePatch {
   const walk = (src: unknown, defv: unknown): unknown | undefined => {
+    // 【批十四 P1-02】nullable 字段（如 specimenSizeMm 默认 null）：合法输入=有限数或
+    // null——按 typeof 对拍会把数值 20 当类型不匹配丢弃（评估实证：保存 20mm 导入回退 3mm）
+    if (defv === null) {
+      if (src === null) return null;
+      if (typeof src === 'number' && Number.isFinite(src)) return src;
+      return undefined;
+    }
     if (typeof defv === 'object' && defv !== null && !Array.isArray(defv)) {
       if (typeof src !== 'object' || src === null || Array.isArray(src)) return undefined;
       const out: Record<string, unknown> = {};
@@ -3721,6 +3728,16 @@ function bindShareAndExport(): void { // 分享链接与 URL
     pushHistory();
     setState(DEFAULT_STATE); // 替换语义第一步：回落默认（缺省键=关闭），再合并校验过的快照
     setState(patch);
+    // 【批十四 P1-02】外部容器不在 AppState（重置够不着）且历史上无清除路径——替换语义
+    // 对"文件里没有的外部资源"同样成立：导入即清场，不静默继承另一设计的容器
+    //（评估实证：先传容器再导入普通设计，容器仍激活→制造检查被拒/重存带错 notCaptured）
+    if (meshCont) {
+      meshCont = null;
+      const mcStatus = document.getElementById('meshcont-status');
+      if (mcStatus) mcStatus.textContent = '容器未启用（导入设计已清除外部 STL 容器）';
+      const mcFile = document.getElementById('meshcont-file') as HTMLInputElement | null;
+      if (mcFile) mcFile.value = '';
+    }
     const sImp = getState();
     syncUI(sImp);
     updateBadges(sImp.type, sImp.model, sImp.material, sImp.structureMode);
@@ -5424,10 +5441,13 @@ async function handleExportInner(fmt: string): Promise<void> {
         }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
         const caePoro = resolveExportPorosity(s);
+        // 【批十四 P1-01】targetPorosity 必须是有限值：exactCapable 时 caePoro 返回
+        // undefined，`as number` 掩盖后体素二分 1-undefined=NaN → 全固相（评估实证
+        // 75% 设计导出 64000 单元实心盒）。体素对自身离散场二分=正确口径，显式传设计值。
         const vox = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
-          thickness: s.thickness, targetPorosity: caePoro.targetPorosity as number,
+          thickness: s.thickness, targetPorosity: s.porosity / 100,
           iso: caePoro.iso, customFormula: s.customFormula,
           stress: s.stress,
         }, caeR);
@@ -5453,10 +5473,11 @@ async function handleExportInner(fmt: string): Promise<void> {
           return;
         }
         const suitePoro = resolveExportPorosity(s);
+        // 【批十四 P1-01】同 INP/polyMesh：体素二分需有限 targetPorosity（见上）
         const voxV = exp.buildVoxelModel({
           type: s.type, periods: s.cellSize, weights: s.weights,
           structureMode: s.structureMode, containerShape: s.containerShape,
-          thickness: s.thickness, targetPorosity: suitePoro.targetPorosity as number,
+          thickness: s.thickness, targetPorosity: s.porosity / 100,
           iso: suitePoro.iso, customFormula: s.customFormula, stress: s.stress,
         }, 40);
         exp.exportVerificationSuite(
@@ -5478,7 +5499,7 @@ async function handleExportInner(fmt: string): Promise<void> {
         const { field, dims } = buildVtiField(s);
         // FieldData 携带 re-contour 所需 iso 与 mm 单位（solid 用 isoUsed，shell 类用 0）
         exp.exportVTI(field, dims, `${base}.vti`, {
-          cellSizeMm: s.cellSize,
+          cellSizeMm: effWidthMm(s),   // 【批十四 P1-03】物理总宽（显式优先；此前 s.cellSize 把 20mm 设计缩成 3mm）
           isoUsed: lastIsoUsed,
           type: s.type,
           structureMode: s.structureMode,
