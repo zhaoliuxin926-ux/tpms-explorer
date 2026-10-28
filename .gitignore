@@ -1,5 +1,7 @@
 # 本地开发辅助文件（不上线）
-/agent_memory/
+# 2026-10-26 多设备定案：根 agent_memory/（交接文档）与 plans/ 随仓库跟踪——
+# 任何设备 clone 即得完整开工指引；敏感串扫描已过（无凭证/无 key 模式）。
+# tpms/agent_memory/ 为历史路径残留，维持忽略。
 tpms/agent_memory/
 tpms/.zcode/
 tpms/.diag/
