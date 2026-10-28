@@ -11,6 +11,7 @@ on:
       - 'BENCHMARKS.md'
       - 'SECURITY.md'
       - 'CONTRIBUTING.md'
+      - 'plans/**'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
