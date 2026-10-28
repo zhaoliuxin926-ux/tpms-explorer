@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## 仿真管线 Phase 1 打通（2026-10-28 · 宿舍会话开工首日）
+
+> - **全链路实测通过**：`sim/p0_generate.py`（gyroid network 隐式场→盒 SDF 封闭→MC→trimesh 清洗→pymeshfix 兜底，k2R24p60 = 47.5k 面水密单域/孔隙率偏差 1.14pp）→ `sim/p1_mesh.py`（Gmsh 4.15 HXT discrete 路线 15.4s = 206,961 C3D10/322k 节点 → meshio 5.3 出 .inp → tet10 体积符号 0 非正 PASS）。产物在 sim/out/（已 gitignore）。
+> - **新坑与铁律**（详见 plan 2026-10-28 §3 坑 9 + §7）：①有限域提取周期结构 MC 边界切碎→盒 SDF 相交封闭，且数据域须比盒外扩 ≥2 格；②Gmsh 对密 MC 网格禁用 classifySurfaces(forceParametrizable=True)（几何实体爆炸 >4min），用 createTopology discrete 路线；③MC+SDF 交线产生 dihedral=0 折叠三角对，process(validate=True) 修不掉，pymeshfix 兜底；④trimesh 5.0 无 remove_degenerate_faces、pymeshfix 0.18 拒收 TrackedArray（np.array() 转）。
+> - **sim/ 目录不在 CI paths**（tpms/** 之外）——提交不触发 25min 全量 CI，管线稳定后再议纳入。
+> - **下一步**：Phase 2 力学线（.inp → ABAQUS 求解在工位机：同参数复现 p0+p1 或传文件）；开放三问之"现有网格是实体还是壳单元"仍待用户确认（specimens 全是 solid_network，与用户口述"壳结构"存在出入）。
+
 > ## 宿舍侧初始化完成（2026-10-28 · 宿舍 ZCode 会话，多设备定案首次落地）
 
 > - **仓库态**：宿舍 clone @592c300 → 新增 **b15e27c**（plans/2026-10-28-tpms-simulation-pipeline-research.md：TPMS 仿真管线调研沉淀=宿舍侧项目经验首次按新纪律入库）→ 本 progress push。工作树净，本地 **48 门全绿**（run_ci_suite SUITE_EXIT=0）。

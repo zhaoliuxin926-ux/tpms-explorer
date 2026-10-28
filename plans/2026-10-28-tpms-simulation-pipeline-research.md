@@ -68,6 +68,7 @@ Gmsh Python API               首选 COMSOL（MPh 库脚本化；
 | 6 | 离散刚体压板有节点、贡献动能，污染能量监控 | 压板用**解析刚体**（analytical rigid） |
 | 7 | 细碎 marching-cubes STL 直入 Fluent Meshing wrap 易漏面/自相交 | 先 **OCP(OpenCASCADE) 缝合成 SOLID STEP**，管线设水密性 gate（实战项目 tpms-cold-plate-cfd-automation 的教训） |
 | 8 | translational periodic 要求进出口面网格**共形匹配**，prism 层在周期面也要对齐 | 这是设计管线前就要知道的约束（决定 CFD 网格生成方式），事后无法调试解决；骨支架低 Re 层流下此坑权重下降但共形要求不变 |
+| 9 | **有限域提取周期结构时，marching cubes 把穿越数据边界的固相切成开放面**（不水密、连通域碎裂、体积对不上）——2026-10-28 宿舍实测首跑即触发（watertight=False/comp=2/孔隙率偏 37pp） | 盒 SDF 相交封闭：g=max(c−f, sdf_box)，等值面 g=0 在盒壁自然闭合；**数据域必须比盒外扩 ≥2 格**（盒面落在数据边界上等值面照样被切断，二次实测触发）；marching 面朝向需体积分量符号自动校正。修复后 k2p60 实测：水密+单域+孔隙率偏差 0.90pp（sim/p0_generate.py）。附带发现：k3p75 高孔隙下盒内固相真实断裂 comp=2——坑 3 连通域检查非摆设 |
 
 ## 4. 决策记录
 
@@ -117,10 +118,10 @@ Gmsh Python API               首选 COMSOL（MPh 库脚本化；
 - 骨支架渗透率（ABAQUS 路线先例，TU/e）：https://research.tue.nl/en/publications/permeability-versus-design-in-tpms-scaffolds
 - sheet-TPMS 力学标杆（Al-Ketan & Abu Al-Rub）：10.1002/adem.201800094；能量吸收标杆（Zhang & Feih 2018）：10.1016/j.addma.2018.06.012
 
-## 7. 待验证 MVP（三阶段，未开工）
+## 7. 待验证 MVP（三阶段）
 
-1. **Phase 1 几何水密性验证**：隐式区间提取 → trimesh is_watertight + 连通域检查通过（pymeshfix 仅兜底）。
-2. **Phase 2 力学线打通**：单胞 → Gmsh C3D10/C3D10M → .inp → ABAQUS（Static 与 Explicit 准静态各验一次）。
+1. **Phase 1 几何水密性验证**：✅ **2026-10-28 宿舍实测打通**（gyroid k2 R24 p60：47.5k 面水密单域、孔隙率偏差 1.14pp → Gmsh HXT discrete 路线 15.4s 出 206,961 C3D10/322k 节点 → meshio 出 .inp，tet10 体积符号全正 PASS）。脚本 `sim/p0_generate.py`（生成+清洗+pymeshfix 兜底）、`sim/p1_mesh.py`（划网+转 inp+节点序验证）、`sim/p1_geom_check.py`（外部 STL 体检）。过程中新增坑 9（见 §3）与两个 API 铁律：Gmsh 对数万面片的 marching-cubes 网格禁用 classifySurfaces(forceParametrizable=True)（O(面数) 几何实体爆炸，实测 >4min 未返回），用 createTopology+现成面网格作边界的 discrete 路线；trimesh 5.0 无 remove_degenerate_faces（用 process(validate=True)），pymeshfix 0.18 拒收 TrackedArray（须 np.array() 转纯 ndarray 传 clean_from_arrays）。
+2. **Phase 2 力学线打通**：单胞 → Gmsh C3D10/C3D10M → .inp → ABAQUS（Static 与 Explicit 准静态各验一次）。.inp 产物约 20~80MB，git 不适合传输——两机传递通道待定（文件中心 SMB / 重新在工位跑 p0+p1 即可复现同网格）。
 3. **Phase 3 流体线打通**：负空间流体域提取 → 周期边界网格 → COMSOL/Fluent 算渗透率。
 
 ## 8. 开放问题（下次会话优先回答）
