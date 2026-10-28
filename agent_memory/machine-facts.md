@@ -28,6 +28,13 @@
 - GitHub push：git credential（HTTPS+PAT）；推送超时用
   `git -c http.postBuffer=524288000 -c http.version=HTTP/1.1 push`。
 
+## 宿舍机事实（2026-10-28 实测，宿舍 ZCode 会话）
+
+- Node **26.3.1**（超出 22/25 已验证对；48 门全绿通过）；无 nvm/fnm，切版本需先装管理器。
+- Git Bash 为 **ucrt64 构建**（D:\Program Files\Git，无 mingw64 目录）：credential.helper 编译默认指向不存在的 `mingw64/bin/git-credential-manager.exe`——**系统级 `manager` 实测可用**（凭证走 Windows 凭证管理器）；global 勿写带引号绝对路径（git 把整串当 helper 名：`'credential-D:/...' is not a git command`）。
+- GitHub PAT：fine-grained（仅 tpms-explorer 仓库 Contents RW，90 天）；clone/push/fetch 全链通。
+- 其余纪律同工位：绝对路径、Write/Edit 改源码、中文长消息 commit -F。
+
 ## 环境差异备忘
 
 - Node：工位 25.2.1 / CI 22——跨版本断言只钉语义不钉错误码（spawnSync 行为差异在案）。

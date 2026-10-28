@@ -1,5 +1,13 @@
 # progress — 当前任务进度
 
+> ## 宿舍侧初始化完成（2026-10-28 · 宿舍 ZCode 会话，多设备定案首次落地）
+
+> - **仓库态**：宿舍 clone @592c300 → 新增 **b15e27c**（plans/2026-10-28-tpms-simulation-pipeline-research.md：TPMS 仿真管线调研沉淀=宿舍侧项目经验首次按新纪律入库）→ 本 progress push。工作树净，本地 **48 门全绿**（run_ci_suite SUITE_EXIT=0）。
+> - **Node 26.3.1 实证**：宿舍机超出"22/25 皆可"已验证对，48 门全过——"跨版本只钉语义不钉错误码"纪律再+1；无 nvm/fnm。
+> - **宿舍清单勘误（工位侧 runbook 请补一步）**：CI ci.yml:79-81 才是真源——`cd tpms/.verify && npm install --no-save --no-package-lock playwright@1.61.1`。只跑 `npx playwright install chromium`（仅浏览器二进制）不装包，ui_jump_check / run_all / webgpu-WGSL 三门全因 `ERR_MODULE_NOT_FOUND: 'playwright'` 红（.verify 脚本自 tpms/.verify 向上解析，够不到 tpms-platform 的 node_modules）。
+> - **宿舍机 Git Bash 陷阱**：ucrt64 构建（D:\Program Files\Git），credential.helper 编译默认指向不存在的 mingw64 路径；系统级 `manager` 实测可用（凭证已存 Windows 凭证管理器），**global 勿写带引号绝对路径**（git 把整串当 helper 名→`'credential-D:/...' is not a git command`，push 虽可成但每次噪音）。
+> - TPMS 仿真线（骨支架 sheet 型 / ABAQUS 压缩 / Fluent 渗透率）调研+八坑避坑地图已随 b15e27c 入库，两机共享同一份上下文；开放问题见该 plan §8。
+
 > ## 🔖 新会话开工指引（2026-10-26 ·三轮外部审查全链终态：第三轮 6 P1+4 P2 全数收口）
 >
 > **仓库态**：main=**fd530ae**=origin/main；CI 三平台全绿+Pages 同 HEAD 双绿（7565ca9/8fafdcd 纯文档提交按 paths 过滤只触发 Pages 亦绿）；工作树净。**无未推送/未拍板挂起项**。
