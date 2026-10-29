@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## CI 终态核清（2026-10-29 · 宿舍侧首次完整对账远端 CI）
+
+> - **main=b30c99b：CI 三平台（ubuntu/windows/macos）48 门全绿 + Pages 绿——"双绿才算成"达标**。Windows 慢 runner 约 55 分钟（已知模式，非红）。
+> - 宿舍侧推送 CI 对账补全：b15e27c ✅ / 1300357 ✅ / 0d90d74 cancelled（concurrency 超越，变更被 b30c99b 覆盖验证）/ e851d8f·a049e30·3267668 仅 Pages 全绿 / 28a5fc0 不触发。
+> - 查 CI 的方法：fine-grained PAT（仅 Contents 权限）实测可读 actions runs/jobs API——`git credential fill` 取 token + curl，无需额外授权。
+
 > ## T4 仓库门面打磨（2026-10-29 · 双 AI 协作：反重力审计 × ZCode 整改）
 
 > - **P0 三项全部实锤并修复**：README_EN:96 "46-gate"→48（与首屏 48 矛盾）；QUICKSTART Demo 编号乱序 1-2-4-5-6-3→重排连续；中文 README H1「工作区·总导航」→「TPMS Explorer · 三周期极小曲面结构探索器」+ verification-first 定位句（原"教学工具"定位卖低，与特性矩阵实力不符）。
