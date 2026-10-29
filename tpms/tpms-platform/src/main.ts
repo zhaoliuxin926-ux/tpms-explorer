@@ -747,6 +747,71 @@ function bindTaskFlowCard(): void {
 }
 bindTaskFlowCard();
 
+// ── 批二十 CAE 仿真工作台（静态命令生成器）：设计参数→sim 管线命令链，四点共识见
+//    plans/2026-10-29_批二十-仿真工作台一期.md（显式双列映射不黑盒 / 一期仅 gyroid 诚实降级）──
+function refreshSimBench(): void {
+  const paramEl = document.getElementById('simbench-param');
+  const meshEl = document.getElementById('sb-cmd-mesh');
+  const solveEl = document.getElementById('sb-cmd-solve');
+  const extractEl = document.getElementById('sb-cmd-extract');
+  if (!paramEl || !meshEl || !solveEl || !extractEl) return;
+
+  const s = getState();
+  const k = Math.max(1, Math.round(s.cellSize ?? 3));            // 平台 periods=cellSize（单元密度滑块，1~5）
+  const R = 24;                                                    // sim R=每周期格数，钉 Phase 1 验证档（k2R24 全绿）
+  const por = (s.porosity ?? 60) / 100;
+  const P = Math.round(s.porosity ?? 60);
+  const stem = `sim_gyroid_k${k}_p${P}`;
+  const boxMM = 2 * Math.PI * k;                                   // 几何单位 1:1 视为 mm（一期口径）
+
+  if (s.type !== 'gyroid') {
+    paramEl.innerHTML = `当前曲面族 <b>${s.type}</b> 暂未接入 sim 管线（一期仅 gyroid）——以下命令按 gyroid 参数示例显示，供参照。`;
+  } else {
+    paramEl.innerHTML =
+      `当前设计 → 命令参数（显式映射，不黑盒）：<br>` +
+      `&nbsp;&nbsp;porosity ${P}% → <b>--por ${por.toFixed(2)}</b>（体积分数小数）<br>` +
+      `&nbsp;&nbsp;单元密度 ${k}（=periods）→ <b>--k ${k}</b>（1:1）<br>` +
+      `&nbsp;&nbsp;<b>--R ${R}</b> = 每周期格数（Phase 1 验证档；sim 与平台分辨率语义不同，勿直接换算）`;
+  }
+
+  meshEl.textContent =
+    `python sim/p0_generate.py --k ${k} --R ${R} --por ${por.toFixed(2)}\n` +
+    `python sim/p1_mesh.py sim/out/${stem}.stl --lmax 0.5`;
+  solveEl.textContent =
+    `python sim/p2_static_setup.py sim/out/${stem}.inp\n` +
+    `abaqus job=${stem}_static input=sim/out/${stem}_static.inp cpus=4 interactive`;
+  extractEl.textContent =
+    `abaqus python sim/p2_extract_csv.py --odb ${stem}_static.odb --h ${boxMM.toFixed(2)} --w ${boxMM.toFixed(2)} --out sim/out/${stem}.csv`;
+}
+
+function bindSimBenchCard(): void {
+  const card = document.getElementById('sect-simbench');
+  if (!card) return;
+  refreshSimBench();
+  card.addEventListener('toggle', () => { if ((card as HTMLDetailsElement).open) refreshSimBench(); });
+  card.querySelectorAll<HTMLButtonElement>('.sb-copy').forEach((btn) => {
+    const pre = btn.parentElement?.querySelector('pre');
+    if (!pre) return;
+    const label = btn.textContent ?? '';
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(pre.textContent ?? '');
+        btn.textContent = '✅ 已复制到剪贴板';
+        setTimeout(() => { btn.textContent = label; }, 1500);
+      } catch { btn.textContent = '⚠️ 复制失败（手动选择命令文本）'; }
+    });
+  });
+  const jump = (id: string): void => {
+    const sect = document.getElementById(id);
+    const rail = document.querySelector<HTMLElement>('.panel.controls');
+    if (sect instanceof HTMLDetailsElement) sect.open = true;
+    if (sect && rail) rail.scrollTo({ top: sect.offsetTop - 6, behavior: 'smooth' });
+  };
+  document.getElementById('sb-jump-expfit')?.addEventListener('click', (e) => { e.preventDefault(); jump('sect-expfit'); });
+  document.getElementById('sb-link-from-expfit')?.addEventListener('click', (e) => { e.preventDefault(); jump('sect-simbench'); });
+}
+bindSimBenchCard();
+
 function bindExperimentalFit(): void {
   const fileInput = document.getElementById('expfit-file') as HTMLInputElement | null;
   const canvas = document.getElementById('expfit-curve') as HTMLCanvasElement | null;

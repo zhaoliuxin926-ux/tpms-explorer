@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## 批二十 · CAE 仿真工作台一期（2026-10-29 · 双 AI 协作设计，本地 48 门全绿）
+
+> - **新增平台卡 `sect-simbench`**（仿真与评价组，组头 10→11）：五段链路命令生成器（①Gmsh 前处理 ②ABAQUS 求解 ③契约 CSV 提取 ④反演跳转 ⑤软件环境表+聚合自检），命令随设计参数实时联动（porosity→--por 小数、cellSize→--k、--R 钉验证档 24），每段一键复制；非 gyroid 诚实降级；expfit 卡双向跳转链接。
+> - **设计共识**：collab/antigravity/discuss-2026-10-29-sim-workbench.md（独立卡/显式映射不黑盒/YAGNI 不预埋二期/聚合自检）——ZCode 修正其 resolution 换算公式错误（平台 periods=cellSize、resolution 不在 state 顶层，改为 R 钉 24+勿换算说明）。
+> - **门禁锚更新**：ui_jump_check sim 11→12/total 30→31（2026-10-25 +1 先例同款）；license 戳验证在位；部署链 diff 零差异；**本地 run_ci_suite 48/48 全绿**。
+> - 二期（本地桥）按共识缓行；plan：plans/2026-10-29_批二十-仿真工作台一期.md。
+
 > ## Phase 2 宿舍端就绪：p2 脚本落地（2026-10-29）
 
 > - **sim/p2_static_setup.py**：裸网格 → 完整 Static 算例（ELSET ESOLID GENERATE 注入/NSET 顶底/材料/STATIC 20 增量/双输出）。实测 k2p60：333,886 节点 / 212,209 单元 / 顶底各 3,716 节点 / 尺寸自读 H=W=T=12.5664mm（档位 OK）/ A0=157.91mm² / disp=-0.2513mm；S 输出注释带 sanity 口径（discuss 共识）。

@@ -70,7 +70,7 @@ const counts = await page.evaluate(() => ({
   view: document.querySelectorAll('#grp-view .sect').length,
   total: document.querySelectorAll('.panel.controls .sect').length,
 }));
-ok('分组计数 13/11/1/5 = 30（构型组 +26 族画廊 sect；2026-10-25 sim +1 制造几何检查卡）', counts.geometry === 13 && counts.sim === 11 && counts.optimize === 1 && counts.view === 5 && counts.total === 30, JSON.stringify(counts));
+ok('分组计数 13/12/1/5 = 31（构型组 +26 族画廊 sect；2026-10-25 sim +1 制造几何检查卡；2026-10-29 批二十 sim +1 CAE 仿真工作台）', counts.geometry === 13 && counts.sim === 12 && counts.optimize === 1 && counts.view === 5 && counts.total === 31, JSON.stringify(counts));
 
 // 4. 关键交互元素仍在 controls 内（CI 兼容抽查）
 const probes = await page.evaluate(() => ['btn-plasticity', 'btn-lpbf', 'btn-yield', 'btn-phonon', 'btn-tissue', 'btn-ls-evolve', 'neural-enabled', 'inv-preset', 'custom-formula']

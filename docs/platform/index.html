@@ -167,6 +167,20 @@
   :root[data-theme="light"] .tf-title{color:#64748b}
   :root[data-theme="light"] .tf-step .tf-t{color:#475569}
   :root[data-theme="light"] .tf-step:hover .tf-t{color:#0369a1}
+  /* ═══ 批二十 CAE 仿真工作台（静态命令生成器，discuss-2026-10-29-sim-workbench 四点共识）═══ */
+  .sb-param{margin:6px 0 2px;padding:5px 7px;background:rgba(79,195,247,0.05);border:1px solid rgba(79,195,247,0.12);
+    border-radius:6px;font-size:.64rem;line-height:1.5;color:#aebdd3;font-variant-numeric:tabular-nums}
+  .simbench-step{margin-top:8px;padding-top:7px;border-top:1px dashed var(--panel-border)}
+  .sb-h{font-size:.68rem;font-weight:700;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .sb-tool{font-size:.58rem;font-weight:600;color:#5d7a94;background:rgba(79,195,247,0.08);
+    border:1px solid rgba(79,195,247,0.15);border-radius:5px;padding:1px 6px}
+  .sb-cmd{margin:0;padding:6px 8px;background:rgba(0,0,0,0.25);border:1px solid var(--panel-border);border-radius:6px;
+    font-size:.62rem;line-height:1.55;overflow-x:auto;white-space:pre;color:#9fd8e8;font-family:ui-monospace,Consolas,monospace}
+  :root[data-theme="light"] .sb-cmd{background:rgba(15,23,42,0.04)}
+  :root[data-theme="light"] .sb-param{background:rgba(15,23,42,0.03)}
+  .sb-table{width:100%;border-collapse:collapse;font-size:.62rem;margin:2px 0}
+  .sb-table td{padding:3px 5px;border-bottom:1px solid var(--panel-border);vertical-align:top;line-height:1.45}
+  .sb-table td:first-child{white-space:nowrap;color:var(--ink-2);font-weight:600}
   .sgroup{margin-bottom:2px}
   .sgroup-h{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 4px;
     padding:6px 2px 5px;border-top:1px solid rgba(79,195,247,0.16);cursor:pointer;user-select:none}
@@ -822,7 +836,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-B4jszB2q.js"></script>
+  <script type="module" crossorigin src="./assets/index-C6eTnngo.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Dse4tHut.js">
 </head>
 <body>
@@ -1257,7 +1271,7 @@ window.addEventListener('error', function(e) {
         </div>
       </details>
       </section>
-      <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">10</span></div>
+      <section class="sgroup" id="grp-sim"><div class="sgroup-h" data-target="grp-sim" title="跳转到该组"><span class="t">仿真与评价</span><span class="n">11</span></div>
 
       <details class="sect">
         <summary class="sect-h">弹塑性压溃仿真</summary>
@@ -1281,6 +1295,48 @@ window.addEventListener('error', function(e) {
           <label style="font-size:.7rem;display:flex;align-items:center;gap:6px;margin-top:4px"><input type="checkbox" id="expfit-df"> 输入为位移-载荷（勾选后按 L0/A0 换算）</label>
           <canvas id="expfit-curve" width="280" height="150" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="expfit-result" style="display:none;white-space:pre-line"></div>
+          <div class="field-note" style="margin-top:6px"><a href="#" id="sb-link-from-expfit" style="color:rgba(79,195,247,.9)">需生成仿真对照曲线？→ CAE 仿真工作台</a></div>
+        </div>
+      </details>
+
+      <details class="sect" id="sect-simbench">
+        <summary class="sect-h">CAE 仿真工作台</summary>
+        <div class="field">
+          <div class="field-note">当前设计 → Gmsh C3D10 网格 → ABAQUS Static → 契约 CSV → 反演的命令链生成器（终端执行，命令随左侧参数联动）。一期为命令复制形态——纯静态页面无法启动本地软件，环境安装见 ⑤。</div>
+          <div class="sb-param" id="simbench-param"></div>
+          <div class="simbench-step">
+            <div class="sb-h">① 网格前处理 <span class="sb-tool">Python · Gmsh</span></div>
+            <pre class="sb-cmd" id="sb-cmd-mesh"></pre>
+            <button class="btn sb-copy" style="width:100%;margin-top:4px">📋 复制前处理命令</button>
+          </div>
+          <div class="simbench-step">
+            <div class="sb-h">② ABAQUS 求解 <span class="sb-tool">ABAQUS/Standard</span></div>
+            <pre class="sb-cmd" id="sb-cmd-solve"></pre>
+            <button class="btn sb-copy" style="width:100%;margin-top:4px">📋 复制求解命令</button>
+            <div class="field-note">装配器自动读取几何尺寸（打印行含 H/W/T 与 A0），无需手填。</div>
+          </div>
+          <div class="simbench-step">
+            <div class="sb-h">③ 提取契约 CSV <span class="sb-tool">Abaqus Python</span></div>
+            <pre class="sb-cmd" id="sb-cmd-extract"></pre>
+            <button class="btn sb-copy" style="width:100%;margin-top:4px">📋 复制提取命令</button>
+            <div class="field-note">--h/--w 取 ② 打印的实测 H/W（几何单位 1:1 视为 mm，一期口径）。</div>
+          </div>
+          <div class="simbench-step">
+            <div class="sb-h">④ 反演对照 <span class="sb-tool">ISO 13314</span></div>
+            <div class="field-note">将 ③ 的 CSV 拖入上方「试验曲线反演」卡即得仿真 E*/平台应力，与 Gibson-Ashby 预测同屏对照。<a href="#" id="sb-jump-expfit" style="color:rgba(79,195,247,.9)">→ 跳转反演卡</a></div>
+          </div>
+          <div class="simbench-step">
+            <div class="sb-h">⑤ 软件环境 <span class="sb-tool">安装与自检</span></div>
+            <table class="sb-table">
+              <tr><td>Python ≥3.10</td><td>pip install numpy scipy scikit-image trimesh</td></tr>
+              <tr><td>Gmsh ≥4.13（4.15 实测）</td><td>pip install gmsh meshio pymeshfix</td></tr>
+              <tr><td>ABAQUS/Standard</td><td>学校/课题组许可；abaqus 须在 PATH（工位机已配）</td></tr>
+              <tr><td>COMSOL / Fluent</td><td>流体线 Phase 3 待定（查学校授权）</td></tr>
+            </table>
+            <pre class="sb-cmd" id="sb-cmd-check">python -c "import gmsh; print('Gmsh', gmsh.GMSH_API_VERSION)" &amp;&amp; abaqus whereami</pre>
+            <button class="btn sb-copy" style="width:100%;margin-top:4px">📋 复制自检命令</button>
+            <div class="field-note">Gmsh 4.x 回显=前处理就绪；ABAQUS 版本行=求解就绪；command not found=检查 PATH。</div>
+          </div>
         </div>
       </details>
 
@@ -1665,7 +1721,7 @@ window.addEventListener('error', function(e) {
     }, 800);
   });
 })();
-</script>
+</script>
 
   <!-- AI 设计助手（v6.0 阶段 V） -->
   <button id="nl-fab" title="AI 设计助手" aria-label="AI 设计助手">💬</button>
