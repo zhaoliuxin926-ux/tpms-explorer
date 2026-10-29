@@ -775,7 +775,7 @@ function refreshSimBench(): void {
   }
 
   meshEl.textContent =
-    `python sim/p0_generate.py --k ${k} --R ${R} --por ${por.toFixed(2)}\n` +
+    `python sim/p0_generate.py --k ${k} --R ${R} --por ${por.toFixed(2)} --out sim/out/${stem}.stl\n` +
     `python sim/p1_mesh.py sim/out/${stem}.stl --lmax 0.5`;
   solveEl.textContent =
     `python sim/p2_static_setup.py sim/out/${stem}.inp\n` +
@@ -804,6 +804,7 @@ function bindSimBenchCard(): void {
   const jump = (id: string): void => {
     const sect = document.getElementById(id);
     const rail = document.querySelector<HTMLElement>('.panel.controls');
+    if (id === 'sect-simbench') refreshSimBench();   // 程序赋值 open 不触发 toggle，显式刷新
     if (sect instanceof HTMLDetailsElement) sect.open = true;
     if (sect && rail) rail.scrollTo({ top: sect.offsetTop - 6, behavior: 'smooth' });
   };
@@ -2750,6 +2751,10 @@ function scheduleRebuild(preview: boolean, skipHistory = false): void {
   rebuildTimer = setTimeout(() => {
     rebuildTimer = null;
     refreshTaskFlow(); // 设计变更后③④按指纹比对转 stale（幂等：指纹未变不翻转）
+    { // 批二十：设计变更时若工作台卡展开则同步刷新命令（T6-P1：程序赋值 open 不触发 toggle）
+      const sb = document.getElementById('sect-simbench') as HTMLDetailsElement | null;
+      if (sb?.open) refreshSimBench();
+    }
     rebuild(preview);
   }, preview ? 16 : 150);
 }
