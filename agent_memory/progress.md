@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## T2 审查 + 首次全自动辩论（2026-10-29）
+
+> - **T2 方案采纳（含两处修正）**：①ELSET=MergedCells 事实错误→落地时注入 `*ELSET, ELSET=ESOLID, GENERATE`；②S 输出口径降级为 sanity check。保留：CSV 契约正则级对齐、HISTORY+FIELD 双回退、顶面位移加载生产基线。
+> - **辩论环境建成并首轮运转**（用户零干涉闭环）：ZCode 用 computer-use 向反重力聊天框打字（Ctrl+A+typeText，Send 按钮状态=落地判据；Electron 编辑器 setValue 无效）⇄ getAXState 读其回复 ⇄ 文件落盘精确回传。辩题"minSICN 0.057 vs 它自定 0.1 红线"一轮收敛，共识=口径双轨制（宏观轨当前网格直接用；微观轨须 Gmsh Distance+Threshold 交线带加密）。纪要 collab/antigravity/discuss-2026-10-29-mesh-quality.md，处置表已登记。
+> - **讨论模式规则**（collab/README.md）：[discuss] 前缀、对话体 500 字内、每轮带新论据或让步、5 轮收敛、用户可拍板终止。每场讨论用户只需开头一句话，过程 ZCode 自动循环（发→sleep 等→读→回应）。
+> - **下一步**：p2 脚本落地（按修正版：ESOLID 注入 + 双回退提取 + CSV 契约）→ 工位机 ABAQUS 求解 → fit-batch 反演闭环；T3 未动。
+
 > ## 反重力 T1 评审闭环（2026-10-29 · 协作黑板首单）
 
 > - **S1~S6 全部采纳并实测验证**：①缺陷 A/B 实锤（旧 .inp 混入 TYPE=CPE6 + C3D10MH，ABAQUS datacheck 必挂——ZCode 实现遗漏，plan 坑 4 预警过但没做）；②坐标系重构（整数周期盒 [0,2πk]³ + 数据域外扩 + 盒内统计阈值）实测：孔隙率偏差 **0.90pp→0.02pp**，meshfix 侵蚀 -0.00%；③minSICN 审计上线，修复后 212,209 C3D10 实测 min=0.057、0 个<0.05（反重力报告的 min=1e-3/884 个<0.05 是旧几何快照，S1 修复顺带把质量拉起来了）。处置结论在 collab/README.md 处置记录表。

@@ -28,8 +28,17 @@
 ### T3 · 开放三问意见
 读 plan §8，给独立判断（尤其问题 1：现有 ANSYS 划网是实体四面体还是壳单元——这决定 Phase 2 对标口径；问题 2：打印工艺对壁厚约束的定量影响）。
 
+## 讨论模式（2026-10-29 新增）
+
+双方可发起技术辩论，消息以 `[discuss]` 开头。规则：
+1. 回复用**对话体（500 字内）**，不写报告；每轮必须带新论据或明确让步，禁止纯客套。
+2. 最多 5 轮收敛；收敛后把共识+分歧落盘 `collab/antigravity/discuss-*.md`（反重力写）或由 ZCode 在处置记录登记。
+3. 用户可随时拍板终止辩论。
+
 ## 处置记录
 
 | 日期 | 任务 | 结论 |
 |---|---|---|
 | 2026-10-29 | T1 | **S1~S6 全部采纳**（补丁经 ZCode 审查+实测验证后应用，commit 见 progress）。核心实证：①缺陷 A/B 属实（旧 .inp 实测混入 TYPE=CPE6 + TYPE=C3D10MH，ABAQUS datacheck 必挂）——ZCode 认领实现遗漏责任；②S1 坐标系重构实测兑现：偏差 0.90pp→**0.02pp**（整数周期盒 + 盒内统计阈值）；③附带收益超反重力预期：其报告的旧网格质量数据（minSICN min=1e-3、884 个<0.05）在 S1 修复后实测为 **min=0.057、0 个<0.05**（212,209 tets）——其"Explicit 时间步崩溃"风险论述基于旧快照，严重度大幅下降（Explicit 阶段仍按 minSICN 复查）；④其"R≥120 才能到 0.1pp"的收敛预测仅对旧实现成立。T2 放行，按 README 任务描述推进。 |
+| 2026-10-29 | T2 | **方案采纳（含两处修正后生效）**：①p2_static_setup.py 的 ELSET=MergedCells 为事实错误（meshio 不写该集名）——落地时必须注入 `*ELSET, ELSET=ESOLID, GENERATE` + `*SOLID SECTION, ELSET=ESOLID`；②`*ELEMENT OUTPUT S` 口径降级为全场云图 sanity check，不承诺折痕带应力定量真实性。方案亮点予以保留：CSV 契约正则级对齐、HISTORY+FIELD 双回退提取、顶面位移加载作生产基线（压板接触留作扩展模板）。p2 脚本落地为下一步工作。 |
+| 2026-10-29 | discuss-1（网格质量/应力口径） | **一轮收敛，共识=口径双轨制**：宏观轨（力-位移/E*/fit-batch 反演）当前网格直接合格，无需二次优化；微观轨（局部屈服/疲劳）须 Gmsh Distance+Threshold 交线带加密后才可信。反重力补充量化论据：sliver 体积占比 ~1e-6，对总应变能贡献在噪声内。纪要：collab/antigravity/discuss-2026-10-29-mesh-quality.md。本轮为首次全自动辩论演示（ZCode computer-use 打字 ⇄ 屏幕读取，用户零干涉）。 |
