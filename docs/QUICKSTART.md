@@ -21,7 +21,7 @@ node tpms/agent/tpms.mjs mesh --type gyroid --porosity 0.75 --resolution 64 --pe
 # 见工程版侧栏「G-code 工艺」参数后从导出中心导出
 ```
 
-## Demo 4 · 逆设计一行（性能愿望 → 设计参数，v9.3.0+）
+## Demo 3 · 逆设计一行（性能愿望 → 设计参数，v9.3.0+）
 
 ```bash
 node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5
@@ -29,7 +29,7 @@ node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5
 # 目标可达给最小超标达标点；不可达给最近妥协+log10 距离。确认后走 Demo 2 构建首推荐。
 ```
 
-## Demo 5 · Agent 会话两步走（推荐 → 跨进程指代构建，2026-10-11+）
+## Demo 4 · Agent 会话两步走（推荐 → 跨进程指代构建，2026-10-11+）
 
 ```bash
 node tpms/agent/llm-agent.mjs --provider anthropic --session work.json "推荐 E≥2GPa 且渗透率≥5e-9 的支架"
@@ -39,7 +39,7 @@ node tpms/agent/llm-agent.mjs --session work.json "把第一个构建出来"
 # 代理口径（解析近似非 FE）随候选快照落盘。key 走 TPMS_LLM_* env，绝不入会话文件。
 ```
 
-## Demo 6 · 一步到位管线（推荐→构建→验收→可打印性，2026-10-11+）
+## Demo 5 · 一步到位管线（推荐→构建→验收→可打印性，2026-10-11+）
 
 ```bash
 node tpms/agent/agent-pipeline.mjs --target-e 2 --target-k 5
@@ -49,7 +49,7 @@ node tpms/agent/agent-pipeline.mjs --target-e 2 --target-k 5
 # 全候选拒产 exit3 fail-closed。LLM 编排轮见 llm-agent --max-rounds N。
 ```
 
-## Demo 3 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）
+## Demo 6 · 自然语言 Agent（dry-run 不落盘；真实导出见 Demo 1/2）
 
 ```bash
 node tpms/agent/llm-agent.mjs --provider mock --dry-run --json "孔隙率 75% 的 Gyroid 骨支架"

@@ -1,4 +1,4 @@
-# 工作区 · 总导航
+# TPMS Explorer · 三周期极小曲面结构探索器
 
 > **中文** · [English](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
@@ -15,6 +15,7 @@
 | 🎓 第一次接触 TPMS，想系统入门 | [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md)（五阶学习路径 + 概念动画） |
 | 🖱️ 不想读文字，直接上手玩 | [docs/index.html](docs/index.html)（浏览器打开即用，零安装；说明见 [docs/README-体验说明.md](docs/README-体验说明.md)） |
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
+| ⚖️ 严谨性与学术诚信 | [docs/HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md)（15 条定案诚实边界）· [BENCHMARKS.md](BENCHMARKS.md)（26 族可产性公开基准实测） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
 | 🕘 版本变更 | [docs/RELEASE_NOTES_v1.2.0.md](docs/RELEASE_NOTES_v1.2.0.md)（当前；功能别名 tag v9.4.0 同提交）｜[v1.1.0](docs/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
@@ -26,7 +27,7 @@
 ---
 
 ## 🅰 主项目：TPMS 结构参数探索器
-> 个人长期维护的独立开源项目。可交互的三重周期性极小曲面（TPMS）教学工具，帮初学者快速入门（入门配「三段看懂 TPMS」概念视频：什么是 TPMS / 为什么叫极小 / 它能造什么，B 站源懒加载 + 离线文字讲义兜底）。
+> 个人长期维护的独立开源项目。**验证优先（verification-first）**的交互式三重周期性极小曲面（TPMS）结构平台——从入门教学（「三段看懂 TPMS」概念视频 + 零安装在线体验）到工业级多物理场仿真、水密交付与 AI Agent 闭环，每一处公式与网格由 **48 道 CI 门禁、1000+ 断言**守护。
 > 完整项目已归入独立子目录 `tpms/`，请直接看 **[`tpms/README.md`](tpms/README.md)**（项目中枢）。
 ### 三屏速览（在线即玩）
 
@@ -36,7 +37,9 @@
 
 🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，**六工具**含 `tpms_pareto` 逆设计推荐——"我要 E≥2GPa κ≥5×10⁻⁹ 的支架选什么构型"直达 top-k 设计参数（CLI：`node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`）；**`--session` 显式会话**（2026-10-11）：推荐→退出→"把第一个构建出来"跨进程确定性绑定（指代不经模型，越界/歧义/损坏/语义版本变化全 exit2）；**`agent-pipeline` 有界多步任务**：推荐→选取（拒产按修复预算顺延）→构建→水密验收→悬垂可打印性报告（三层口径分开+预算耗尽 exit4 如实报告）；**`--max-rounds` LLM 有界编排**（工具历史 tool_call_id 关联+逐轮 schema 校验）；回归 43 条双轮 43/43×2（n=2，勿称确定性；含逆设计意图用例）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
-技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）｜ 📺 **操作演示正片**：[B 站 104s（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+🚀 **在线即用（零安装）**：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [工程版工作站](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html)
+
+📺 **深度解读与视频**：[B 站 104s 操作演示（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）
 
 
 ```
@@ -45,10 +48,15 @@
 │   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM/CFD/脚本/AST 沙箱/空间映射/RVE/红队矩阵）
 │   ├── ROADMAP.md          🗺️ 路线图（已定案方向 + 明确不做）
 │   └── platform/           工程版在线部署
-└── tpms/
-    ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
-    ├── prototypes/    MATLAB 早期原型（已归档）
-    └── agent_memory/  项目记忆（gitignored）
+├── tpms/
+│   ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
+│   ├── prototypes/    MATLAB 早期原型（已归档）
+│   └── .verify/       自研审计门禁与 Playwright UI 回归脚本
+├── specimens/     上机试样库（8 组 ×4 件；STL 大文件被 gitignore，README 索引入库）
+├── sim/           高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp，Phase 1 打通）
+├── collab/        多 Agent 协作黑板（ZCode 主控 × 外部 AI 评审：任务审计/技术辩论/处置留痕）
+├── agent_memory/  跨设备交接文档（progress / context / machine-facts，随仓库跟踪）
+└── plans/         分批实施计划与调研沉淀（随仓库跟踪）
 ```
 
 ### 科研与增材制造特性矩阵（v1.2.0 · 稳定序列）
@@ -97,6 +105,7 @@
 | 🌀 径向梯度构型 radial-grad (v9.1→v9.2) | 中心膨胀 K/边缘 1 的度规逆映构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]）；**v9.2 新增 UI 卡**（视图与工具组：MT 预览 R48 + HD STL 导出 R96 内置水密审计门，与 CLI 逐位同源） | cae_mesh_audit F 组 6 断言 + radialgrad 冒烟 7 断言（toast 实证/竞态回归） |
 | 🧩 径向双族分区 region (2026-09-17) | 域内双构型：内区/外区各放一族（如外壳 gyroid+内核 diamond），过渡带 smoothstep 凸组合（同号不变性⟹无额外零面）；两族零面拓扑重组为 surface-nets 结构性非流形（实测 nm 20~52 与 blend 无关）→ MT 管线提取（radial-grad 先例同机理）；UI 卡与 CLI `mesh --region-inner` 同源；rSplit 端点=单族字节级退化锚 | probe_region 10 断言（退化锚/解析锚/连续性/同号不变性）+ region 冒烟 6 断言（CLI 实测矩阵 8/8 watertight） |
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
+| 🧪 高保真 CAE 管线 `sim/` (2026-10-28+) | Python 隐式场（整数周期盒+盒内阈值二分，孔隙率偏差 0.02pp）→ Gmsh HXT **C3D10** 二阶四面体（21 万单元、minSICN>0.05、零翻转）→ ABAQUS `.inp`（meshio 节点序验证）；ABAQUS 求解与流体线（Phase 2/3）推进中，多 Agent 协作评审留痕见 `collab/` | Phase 1 实测（2026-10-28/29）；管线脚本 `sim/p0_generate.py` · `sim/p1_mesh.py` |
 
 > 📝 **Release Notes**：**[v1.0.0（版本纪元重置·稳定序列起点）](docs/RELEASE_NOTES_v1.0.0.md)**｜[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
 >
@@ -121,8 +130,10 @@
 
 ---
 
-## 🗂 开发 / 记忆辅助（不参与交付）
-- `tpms/agent_memory/` —— 项目进度 / 上下文 / 缺陷 / 审计报告（gitignored）
+## 🗂 开发 / 协作辅助（不参与交付）
+- `agent_memory/`（根）—— 跨设备交接文档：progress / context / machine-facts（2026-10-26 起随仓库跟踪，任何设备 clone 即得开工指引）；`tpms/agent_memory/` 为历史路径残留（gitignored）
+- `collab/` —— 多 Agent 异步协作黑板：任务审计报告、技术辩论纪要、处置记录
+- `plans/` —— 分批实施计划与调研沉淀（随仓库跟踪）
 - `tpms/.verify/` —— 自研审计门禁（39 道）+ Playwright UI 回归脚本
 - `tpms/.zcode/plans` —— 计划文件
 - `.git` / `.gitignore`

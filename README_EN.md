@@ -93,7 +93,7 @@ node tpms/.verify/guard_audit.mjs            # meta-gate: audits the gates thems
 node tpms/.verify/docs_consistency_check.mjs # doc-number consistency, 331 assertions (~10s)
 ```
 
-The 46-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
+The 48-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
 
 ## Quick links
 

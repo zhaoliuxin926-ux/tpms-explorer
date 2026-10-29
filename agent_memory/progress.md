@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## T4 仓库门面打磨（2026-10-29 · 双 AI 协作：反重力审计 × ZCode 整改）
+
+> - **P0 三项全部实锤并修复**：README_EN:96 "46-gate"→48（与首屏 48 矛盾）；QUICKSTART Demo 编号乱序 1-2-4-5-6-3→重排连续；中文 README H1「工作区·总导航」→「TPMS Explorer · 三周期极小曲面结构探索器」+ verification-first 定位句（原"教学工具"定位卖低，与特性矩阵实力不符）。
+> - **ZCode 独立发现**：目录树缺 specimens/sim/collab/agent_memory/plans；"记忆辅助"段 gitignored 声明过时（根 agent_memory/plans 已入库）——目录树与辅助段已重写；新增 HONESTY/BENCHMARKS 导航行、链接分层、sim/ 矩阵行（诚实标注实测非门禁）。
+> - **新铁律**：collab/ 已入 docs_consistency 的 md 链接扫描域——协作报告内的相对链接须按 collab/antigravity/ 相对路径写（../../），示例链接禁用 `(...)` 字面占位（会成断链红门禁）。
+> - docs_consistency 本地 332/0+零断链；本提交含 README/docs 触发全量 CI（远端验证）。
+
 > ## T2 审查 + 首次全自动辩论（2026-10-29）
 
 > - **T2 方案采纳（含两处修正）**：①ELSET=MergedCells 事实错误→落地时注入 `*ELSET, ELSET=ESOLID, GENERATE`；②S 输出口径降级为 sanity check。保留：CSV 契约正则级对齐、HISTORY+FIELD 双回退、顶面位移加载生产基线。
