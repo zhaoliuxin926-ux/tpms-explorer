@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## Phase 2 宿舍端就绪：p2 脚本落地（2026-10-29）
+
+> - **sim/p2_static_setup.py**：裸网格 → 完整 Static 算例（ELSET ESOLID GENERATE 注入/NSET 顶底/材料/STATIC 20 增量/双输出）。实测 k2p60：333,886 节点 / 212,209 单元 / 顶底各 3,716 节点 / 尺寸自读 H=W=T=12.5664mm（档位 OK）/ A0=157.91mm² / disp=-0.2513mm；S 输出注释带 sanity 口径（discuss 共识）。
+> - **sim/p2_extract_csv.py**：ABAQUS ODB → fit-batch 契约 CSV（FIELD 为主路径语义确定，HISTORY 聚合为快路径并注明用了哪条；符号 disp=-U3/force=-ΣRF3；档位越档 WARN）。py_compile 过，**待工位 abaqus python 实跑验证**。
+> - **工位执行序列**：git pull → python sim/p0_generate.py --k 2 --R 24 --por 0.60 → python sim/p1_mesh.py sim/out/gyroid_k2_p60.stl → python sim/p2_static_setup.py sim/out/gyroid_k2_p60.inp → abaqus job=gyroid_k2_p60_static cpus=4 interactive → abaqus python sim/p2_extract_csv.py --odb gyroid_k2_p60_static.odb --h 12.5664 --w 12.5664 → node tpms/agent/fit-batch.mjs --dir <csv目录>。
+
 > ## CI 终态核清（2026-10-29 · 宿舍侧首次完整对账远端 CI）
 
 > - **main=b30c99b：CI 三平台（ubuntu/windows/macos）48 门全绿 + Pages 绿——"双绿才算成"达标**。Windows 慢 runner 约 55 分钟（已知模式，非红）。
