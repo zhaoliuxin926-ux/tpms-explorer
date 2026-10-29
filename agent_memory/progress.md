@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## 批二十终态 + Phase 3 几何端首步（2026-10-29）
+
+> - **批二十全绿上线**：3c73a05/3dfd254 CI 三平台+Pages 双绿；T6 交叉审查闭环（P0 文件名断裂/P1 联动盲区已修，P2 幻觉驳回）。
+> - **sim/p3_fluid_domain.py**：孔隙域提取（与 p0 同一等值面取反侧 g=max(f-c,box_sdf)，机制全复用）——k2p75 偏差 0.44pp、k1p60 偏差 1.23pp，全水密。**周期配对口径定案：几何端数据周期保证截线对应，三角剖分计数差属 MC 邻格效应，配对是网格器职责**（Gmsh periodic / COMSOL 周期面对），几何端只做信息输出。**物理发现：gyroid 孔隙域 comp=2（双 labyrinth 互不相通）**——骨支架孔隙网络天然双通道，渗透率/WSS 须分别表征（sheet 双流道特性的 network 侧对应物）。
+> - Phase 3 剩余（卡外部）：CFD 软件定 license（COMSOL vs Fluent）→ 周期网格 + 层流求解 + Darcy 反算 K。
+
 > ## 批二十 · CAE 仿真工作台一期（2026-10-29 · 双 AI 协作设计，本地 48 门全绿）
 
 > - **新增平台卡 `sect-simbench`**（仿真与评价组，组头 10→11）：五段链路命令生成器（①Gmsh 前处理 ②ABAQUS 求解 ③契约 CSV 提取 ④反演跳转 ⑤软件环境表+聚合自检），命令随设计参数实时联动（porosity→--por 小数、cellSize→--k、--R 钉验证档 24），每段一键复制；非 gyroid 诚实降级；expfit 卡双向跳转链接。
