@@ -1,14 +1,7 @@
-# TPMS 结构参数探索器
+# TPMS Explorer · 工程中枢（tpms/）
 
-> 一个可交互的**三重周期极小曲面（TPMS, Triply Periodic Minimal Surfaces）**参数探索器。
-> 个人长期维护的独立开源项目，目标是帮初学者（师弟师妹、跨领域学习者）在 5 分钟内直观理解这个看上去很"数学"的全新领域。
-### 三屏速览（在线即玩）
-
-| 教学版：三段看懂 TPMS 概念视频 | 工程版：radial-grad M(r) 卡（MT 实时预览） | Agent 闭环：自然语言 → 水密交付 |
-|---|---|---|
-| ![教学版概念视频](../docs/screenshots/teaching-video.png) | ![工程版 radial-grad](../docs/screenshots/engineering-rg.png) | ![Agent 终端演示](../docs/screenshots/agent-terminal.png) |
-
-在线入口：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) ｜ [工程版](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+> **面向开发者、二次研究者与贡献者**：工程化平台（Vite + TS + Three.js + WebGPU）、Agent CLI 工具链与自动化验证门禁体系都在本目录。
+> 终端用户体验、在线入口与项目全景请看[仓库主页](../README.md)——48 道 CI 门禁、1000+ 断言的 verification-first 承诺由本中枢兑现。
 
 
 ---
@@ -26,7 +19,7 @@
 
 | 验收维度 | 结果 |
 |---|---|
-| 中英指令回归（37 条） | **glm-5.3-flash 多轮 37/37**（C3 缓解后 n≥2；勿称确定性；五档矩阵 2026-10-01：4-flash 34/37×2 · 5.3-flash 37/37×2 · 5.3 37/37×2） |
+| 中英指令回归（43 条） | **glm-5.3-flash 多轮 43/43**（含 H 组逆设计意图用例；n=2 勿称确定性。历史五档矩阵 2026-10-01 为当时 37 条口径：4-flash 34/37×2 · 5.3-flash 37/37×2） |
 | 对抗指令（路径穿越/越界/注入） | 四模型**零非法执行**（平台拒/模型拒/模型改发合法值三形态均零执行） |
 | 拦截器自身 | 离线确定性门禁 40 断言（含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截） |
 | 闭环驱动器 | 注入缺陷方案 ≤5 轮自动收敛（LLM 只选修复策略，应用与验收全确定性） |
@@ -52,25 +45,25 @@
 ## 目录结构
 
 ```
-（仓库根）
+（仓库根，本目录为 tpms/；基准=仓库根）
 ├── docs/                      ← 主交付：单文件版（GitHub Pages 源目录，双击即开，无构建）
-│   └── screenshots/                ← README 首屏三屏速览与社交预览图（生成器 .verify/gen_showcase_shots.mjs 可复现）
-│   ├── index.html             ← 落地页（项目介绍 + 展示图）
-│   ├── app.html               ← 主应用（Three.js 0.160 本地 vendor bundle，离线双击即开，Surface Nets 重建）
-│   ├── README-体验说明.md     ← 单文件版使用说明
-│   └── shots/                 ← 展示截图
-│       ├── 01~05 官方展示图   ← 被落地页引用，勿移
-│       ├── showcase/          ← 交互场景实拍（新手引导 / 公式演示 / 主视图 / 骨支架 / 公式系数）
-│       └── verify/            ← 自动化验证截图（过程产物）
+│   ├── index.html / app.html       ← 落地页与主应用（Three.js 本地 vendor，离线双击即开）
+│   ├── README-体验说明.md          ← 单文件版使用说明
+│   ├── screenshots/ · shots/       ← 展示图与自动化验证截图（生成器 .verify/gen_showcase_shots.mjs 可复现）
+│   └── platform/                   ← 工程版在线部署（dist 产物）
 │
-└── tpms/                      ← 工程化与开发辅助（不参与 Pages）
-    ├── README.md              ← 你正在看的项目中枢
-    ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185）
-    │   └── 87 个源文件 · Web Worker 重建 · 10+ 种导出格式
-    ├── prototypes/            ← MATLAB 早期原型（已归档，TPMS_Studio_Stable.m）
-    ├── agent_memory/          ← 项目记忆：context / progress / bugs / 审计报告（gitignored）
-    ├── .verify/               ← 回归验证脚本（已入库；run_all.mjs 一键全量 + parity_math.mjs 数学一致性）
-    └── .zcode/                ← 计划文件（gitignored）
+├── tpms/                      ← 工程化与开发辅助（你正在看的中枢）
+│   ├── README.md              ← 本文件
+│   ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185，94 个源文件）
+│   │                          ←   Web Worker 重建 · 10+ 种导出格式（GLB/3MF/VTK/VTI/py/m …）
+│   ├── agent/                 ← AI Agent 与 CLI 工具链（tpms.mjs / llm-agent.mjs / fit-batch.mjs / agent-pipeline.mjs）
+│   ├── .verify/               ← 自动化验证门禁网（run_ci_suite.mjs 48 门调度 / parity_math.mjs / Playwright UI 回归）
+│   └── prototypes/            ← MATLAB 早期原型（已归档）
+│
+├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp）
+├── collab/                    ← 多 Agent 协作黑板（任务审计/技术辩论/处置留痕）
+├── agent_memory/              ← 跨设备交接文档（随仓库跟踪；tpms/agent_memory/ 为历史残留 gitignored）
+└── plans/                     ← 分批实施计划与调研沉淀
 ```
 
 ---
@@ -81,9 +74,9 @@
 |---|---|---|
 | **定位** | 主交付 · 双击即开 | 进阶研究 / 批量导出 |
 | **在线** | 站点首页 | `platform/` 子路径（落地页有入口） |
-| **曲面族** | 8 类经典（教学聚焦） | **24 类**（C2 扩展含 Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等） |
+| **曲面族** | 8 类经典（教学聚焦） | **26 族**（24 TPMS 隐函数 + strut 双族桁架 BCC/Octet；C2 扩展含 Fischer-Koch / Double / Complementary D / Slotted P / F / Q* / W 等） |
 | **构建** | 无（纯 HTML + 本地 vendor bundle） | `npm install && npm run dev` |
-| **导出** | STL / PNG / glTF / OBJ / WebM | STL / VTK / VTI / Python / MATLAB / BibTeX / JSON |
+| **导出** | STL / PNG / glTF / OBJ / WebM | STL / GLB（顶点色）/ 3MF（mm 原生）/ VTK / VTI / Python / MATLAB / BibTeX / JSON |
 | **性能** | 拖动低清预览、松手高清 + 按需渲染 | Web Worker 并行 + 多级 LOD + 按需渲染 |
 | **适合** | 演示、分享链接、离线双击 | 科研复现、参数批量生成 |
 
@@ -91,7 +84,7 @@
 
 ---
 
-## 界面预览
+## 界面预览（单文件教学版——工程版界面见在线 platform 或根 README 三屏速览）
 
 新手引导首屏（教学引导 + 3D 实时预览）：
 ![新手引导首屏](../docs/shots/showcase/01-onboard.png)
@@ -127,7 +120,7 @@
 
 ### 工程版
 - **在线访问**：GitHub Pages 子路径 `platform/`（落地页「工程版（科研进阶）」入口），与线上单文件版同源部署。
-- 本地开发：
+- 本地开发（**仓库根执行**）：
 
 ```bash
 cd tpms/tpms-platform
@@ -158,11 +151,9 @@ npm run dev      # 访问 http://localhost:5173
 
 ---
 
-## 路线图（持续打磨中）
-- [x] 更多曲面族与教学案例：新增 Lidinoid、Split-P 两族，以及催化 / 声学 / 电池电极 3 个场景预设。
-- [x] 导出格式扩展：新增 glTF (.glb) + OBJ 导出。
-- [x] 交互细节与无障碍：滑块 ARIA、按钮 aria-pressed、键盘快捷键帮助层、`prefers-reduced-motion` 适配、浅/深/自动主题切换。
-- [ ] 文档与示例丰富：持续补充截图、公式说明与典型科研/教学使用案例。
+## 路线图
+
+原型期条目已全部完成并沉淀——**现行路线图（已定案方向 + 明确不做）以 [docs/ROADMAP.md](../docs/ROADMAP.md) 为唯一真源**。
 
 > 这是一个长期维护的个人项目。如果你觉得有用，或有想加的功能 / 发现的 bug，欢迎参与共建。
 
@@ -171,12 +162,15 @@ npm run dev      # 访问 http://localhost:5173
 
 ## 🔧 开发流程速查（长期有效，从 agent_memory 提炼）
 
+> **以下命令基准目录均为仓库根**（各块独立终端，勿叠加 cd）。
+
 ### 验证（一键全量）
 ```bash
-cd tpms/.verify && node run_all.mjs     # 18 套 UI 回归（需先起服务，见下）
-node parity_math.mjs                     # 数学/导出一致性（纯 Node，无需浏览器与服务）
+node tpms/.verify/run_ci_suite.mjs     # 48 门全量调度（约 25 分钟，三平台同款）
+cd tpms/.verify && node run_all.mjs    # 仅 18 套 UI 回归（需先起静态服务，见下）
+node tpms/.verify/parity_math.mjs      # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
-UI 回归前置：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
+UI 回归前置（**另开终端、仓库根执行**）：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
 > CI 数量口径：`run_ci_suite.mjs` 调度 **48/48** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `strut_exit_audit` 桁架跨出口矩阵门（2026-10-11 纳管）+ `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 
@@ -192,3 +186,7 @@ cd tpms/tpms-platform && rm -rf dist && npm run build
 
 ### 数学一致性守护
 `.verify/parity_math.mjs` 断言：8 曲面公式三处实现互证（tpms-functions / surface-nets / app.html）、iso 指纹、法线方向、网格拓扑、STL 字节包围盒、导出脚本与平台语义对齐、region-grad 数学锚、measure 三件套 mm 换算静态。**改公式或导出逻辑前先跑它。**
+
+### 贡献与边界文档
+- 贡献检查清单：[CONTRIBUTING.md](../CONTRIBUTING.md) ｜ 诚实边界：[HONESTY_BOUNDARIES.md](../docs/HONESTY_BOUNDARIES.md) ｜ 公开基准：[BENCHMARKS.md](../BENCHMARKS.md)
+- 秒级自检：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性）
