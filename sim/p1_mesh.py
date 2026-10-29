@@ -36,10 +36,18 @@ def make_mesh(stl: Path, lmax: float) -> Path:
         sl = gmsh.model.geo.addSurfaceLoop(surfaces)
         gmsh.model.geo.addVolume([sl])
         gmsh.model.geo.synchronize()
+        gmsh.option.setNumber("Mesh.MeshSizeMax", lmax)      # 修复死参数（discrete 路线下约束内部）
+        gmsh.option.setNumber("Mesh.MeshSizeMin", lmax * 0.05)
         gmsh.option.setNumber("Mesh.Algorithm3D", 10)      # HXT
         gmsh.option.setNumber("Mesh.Optimize", 1)
         t0 = time.time()
         gmsh.model.mesh.generate(3)
+        # S6 质量审计：minSICN（signed inverse condition number，正四面体=1，工程红线~0.1）
+        _, tets, _ = gmsh.model.mesh.getElements(3)
+        quals = np.array(gmsh.model.mesh.getElementQualities(tets[0], "minSICN"))
+        print(f"[quality] minSICN: min={quals.min():.4f} p50={np.median(quals):.3f} "
+              f"<0.01={int((quals < 0.01).sum())} <0.05={int((quals < 0.05).sum())} "
+              f"/ {len(quals)} tets")
         gmsh.model.mesh.setOrder(2)                         # 二阶 → C3D10
         gmsh.write(str(out_msh))
         n3d = len(gmsh.model.mesh.getElements(3, -1)[1][0])
@@ -55,11 +63,18 @@ def to_inp(msh_path: Path) -> Path:
     if not tet10:
         types = {c.type: len(c.data) for c in mesh.cells}
         raise SystemExit(f"[FAIL] 无 tetra10 单元，实际单元类型：{types}")
+    # 只写 tet10：混入的 2D 面单元（triangle6）会被 meshio 映射为 CPE6，
+    # ABAQUS 三维模型直接 fatal（反重力 T1 实测定位——原实现把整个 mesh 传入 write）
+    clean_mesh = meshio.Mesh(points=mesh.points, cells=tet10)
     out_inp = msh_path.with_suffix(".inp")
-    meshio.write(out_inp, mesh, file_format="abaqus")
-    n_cells = sum(len(c.data) for c in tet10)
-    n_nodes = len(mesh.points)
-    print(f"[meshio] tet10={n_cells} nodes={n_nodes} -> {out_inp.name}")
+    meshio.write(out_inp, clean_mesh, file_format="abaqus")
+    # meshio 将 tetra10 硬编码为 C3D10MH（杂交），Static 弹性段规范为 C3D10
+    inp_text = out_inp.read_text(encoding="utf-8")
+    n_mh = inp_text.count("TYPE=C3D10MH")
+    inp_text = inp_text.replace("TYPE=C3D10MH", "TYPE=C3D10")
+    out_inp.write_text(inp_text, encoding="utf-8")
+    print(f"[meshio] tet10={sum(len(c.data) for c in tet10)} nodes={len(mesh.points)} "
+          f"C3D10MH->C3D10 x{n_mh} -> {out_inp.name}")
     return out_inp, mesh
 
 

@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## 反重力 T1 评审闭环（2026-10-29 · 协作黑板首单）
+
+> - **S1~S6 全部采纳并实测验证**：①缺陷 A/B 实锤（旧 .inp 混入 TYPE=CPE6 + C3D10MH，ABAQUS datacheck 必挂——ZCode 实现遗漏，plan 坑 4 预警过但没做）；②坐标系重构（整数周期盒 [0,2πk]³ + 数据域外扩 + 盒内统计阈值）实测：孔隙率偏差 **0.90pp→0.02pp**，meshfix 侵蚀 -0.00%；③minSICN 审计上线，修复后 212,209 C3D10 实测 min=0.057、0 个<0.05（反重力报告的 min=1e-3/884 个<0.05 是旧几何快照，S1 修复顺带把质量拉起来了）。处置结论在 collab/README.md 处置记录表。
+> - **新铁律**：meshio 写 ABAQUS inp 必须只传 tet10（triangle6→CPE6 混入）+ 类型文本规范化（tetra10 硬编码 C3D10MH→C3D10）。
+> - **T2 已放行**（Phase 2 ABAQUS Static 设置清单，硬约束 fit-batch CSV 契约）；T3 未动。
+
 > ## 仿真管线 Phase 1 打通（2026-10-28 · 宿舍会话开工首日）
 
 > - **全链路实测通过**：`sim/p0_generate.py`（gyroid network 隐式场→盒 SDF 封闭→MC→trimesh 清洗→pymeshfix 兜底，k2R24p60 = 47.5k 面水密单域/孔隙率偏差 1.14pp）→ `sim/p1_mesh.py`（Gmsh 4.15 HXT discrete 路线 15.4s = 206,961 C3D10/322k 节点 → meshio 5.3 出 .inp → tet10 体积符号 0 非正 PASS）。产物在 sim/out/（已 gitignore）。

@@ -120,7 +120,7 @@ Gmsh Python API               首选 COMSOL（MPh 库脚本化；
 
 ## 7. 待验证 MVP（三阶段）
 
-1. **Phase 1 几何水密性验证**：✅ **2026-10-28 宿舍实测打通**（gyroid k2 R24 p60：47.5k 面水密单域、孔隙率偏差 1.14pp → Gmsh HXT discrete 路线 15.4s 出 206,961 C3D10/322k 节点 → meshio 出 .inp，tet10 体积符号全正 PASS）。脚本 `sim/p0_generate.py`（生成+清洗+pymeshfix 兜底）、`sim/p1_mesh.py`（划网+转 inp+节点序验证）、`sim/p1_geom_check.py`（外部 STL 体检）。过程中新增坑 9（见 §3）与两个 API 铁律：Gmsh 对数万面片的 marching-cubes 网格禁用 classifySurfaces(forceParametrizable=True)（O(面数) 几何实体爆炸，实测 >4min 未返回），用 createTopology+现成面网格作边界的 discrete 路线；trimesh 5.0 无 remove_degenerate_faces（用 process(validate=True)），pymeshfix 0.18 拒收 TrackedArray（须 np.array() 转纯 ndarray 传 clean_from_arrays）。
+1. **Phase 1 几何水密性验证**：✅ **2026-10-29 修订版全绿**（经反重力 T1 评审修复：坐标系重构为整数周期盒+盒内统计阈值，孔隙率偏差 0.90pp→**0.02pp**；.inp 过滤 2D 面单元（旧版实测混入 CPE6=ABAQUS datacheck 必挂）+ C3D10MH→C3D10 规范化；lmax 生效+minSICN 质量审计上线，212,209 C3D10 实测 minSICN min=0.057/0 个<0.05/p50=0.797，tet10 体积符号 0 非正 PASS；三阶段几何审计 meshfix 侵蚀 -0.00%）。脚本 `sim/p0_generate.py`、`sim/p1_mesh.py`、`sim/p1_geom_check.py`。过程中新增坑 9（见 §3）与铁律：Gmsh 对数万面片 MC 网格禁用 classifySurfaces(forceParametrizable=True)（用 createTopology discrete 路线）；trimesh 5.0 无 remove_degenerate_faces（用 process(validate=True)）；pymeshfix 0.18 拒收 TrackedArray（np.array() 转）；meshio tetra10→C3D10MH 硬编码 + triangle6→CPE6 混入（写 inp 必须只传 tet10 + 类型文本规范化）。
 2. **Phase 2 力学线打通**：单胞 → Gmsh C3D10/C3D10M → .inp → ABAQUS（Static 与 Explicit 准静态各验一次）。.inp 产物约 20~80MB，git 不适合传输——两机传递通道待定（文件中心 SMB / 重新在工位跑 p0+p1 即可复现同网格）。
 3. **Phase 3 流体线打通**：负空间流体域提取 → 周期边界网格 → COMSOL/Fluent 算渗透率。
 

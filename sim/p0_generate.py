@@ -58,25 +58,34 @@ def box_sdf(ax: np.ndarray, box_lo: float, box_hi: float) -> np.ndarray:
 
 
 def generate(k: int, R: int, porosity: float) -> tuple[trimesh.Trimesh, float]:
-    # 数据域比盒外扩 2 格：盒面（sdf=0）必须落在数据内部，等值面才能在盒壁闭合
+    # 盒=严格整数周期 [0, 2πk]³（体积分数守恒域），数据域向外扩 margin 格
+    # （旧实现域锁 [0,2πk] 盒内缩 → 盒内仅 1.846 周期 + solve_level 全域统计与盒内
+    #  几何不一致，结构性孔隙率偏差 ~0.9pp——反重力 T1 评审定位，实测修复后 -0.02pp 级）
     margin = 2
-    n = k * R + 2 * margin
-    ax = np.linspace(0.0, 2.0 * np.pi * k, n + 1)
+    dx = 2.0 * np.pi / R
+    box_lo, box_hi = 0.0, 2.0 * np.pi * k
+    ax = np.linspace(-margin * dx, box_hi + margin * dx, k * R + 2 * margin + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
     f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
-    c = solve_level(f, 1.0 - porosity)
-    box_lo, box_hi = 2.0 * np.pi * k * margin / n, 2.0 * np.pi * k * (1 - margin / n)
+    # 阈值 c 只在盒内统计（与最终几何的统计域一致）
+    eps = 1e-6
+    in_box = ((x >= box_lo - eps) & (x <= box_hi + eps)
+              & (y >= box_lo - eps) & (y <= box_hi + eps)
+              & (z >= box_lo - eps) & (z <= box_hi + eps))
+    c = solve_level(f[in_box], 1.0 - porosity)
     g = np.maximum(c - f, box_sdf(ax, box_lo, box_hi))
     verts, faces, _, _ = measure.marching_cubes(g, level=0.0)
-    scale = (ax[1] - ax[0]) / 1.0
-    verts = verts * scale
+    verts = verts * dx + np.array([ax[0], ax[0], ax[0]])
     mesh = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
     if mesh.volume < 0:
         mesh.invert()
     # 清洗段：MC 在 TPMS 等值面与盒 SDF 交线附近产生共面折叠三角对/退化面
     # （实测 HXT 报 dihedral=0 自交）——process(validate=True)=合并顶点+去无限/重复/退化面，
-    # 仍不水密时 pymeshfix 兜底
+    # 仍不水密时 pymeshfix 兜底；三阶段审计披露侵蚀量（ΔV/V>1% 须人工介入）
+    vol_raw, faces_raw = mesh.volume, len(mesh.faces)
     mesh.process(validate=True)
+    faces_proc = len(mesh.faces)
+    fix_delta_v = 0.0
     if not mesh.is_watertight:
         import pymeshfix
         v, f = pymeshfix.clean_from_arrays(
@@ -85,6 +94,12 @@ def generate(k: int, R: int, porosity: float) -> tuple[trimesh.Trimesh, float]:
         mesh = trimesh.Trimesh(vertices=v, faces=f, process=False)
         if mesh.volume < 0:
             mesh.invert()
+        fix_delta_v = mesh.volume - vol_raw
+    dv_pct = fix_delta_v / vol_raw * 100 if vol_raw else 0.0
+    flag = "WARN" if abs(dv_pct) > 1.0 else "ok"
+    print(f"[geom-audit] raw faces={faces_raw} vol={vol_raw:.2f} -> proc faces={faces_proc} "
+          f"-> final faces={len(mesh.faces)} vol={mesh.volume:.2f} "
+          f"meshfix_dV={fix_delta_v:+.3f}mm3 ({dv_pct:+.2f}%) [{flag}]")
     return mesh, c
 
 
