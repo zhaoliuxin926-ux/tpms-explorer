@@ -10,12 +10,17 @@ T2 方案落地（含讨论修正，见 collab/antigravity/2026-10-29-T2-ABAQUS-
   （fit-batch 档位校验 {12,24,34}±1，越档会告警）；单位制 mm-N-MPa。
 
 用法（仓库根执行）：
-  python sim/p2_static_setup.py sim/out/gyroid_k2_p60.inp [--strain 0.02] [--E 2000] [--nu 0.3] [--h X] [--w X] [--t X]
+  python sim/p2_static_setup.py sim/out/gyroid_k2_p60.inp [--strain 0.02] [--E 2000] [--nu 0.3]
+      [--plastic] [--nlgeom] [--contact] [--h X] [--w X] [--t X]
+  大应变压缩（ISO 13314 全特征）典型组合：--strain 0.30 --nlgeom --plastic --contact
 产物：同目录 <stem>_static.inp，配 ABAQUS：abaqus job=<stem>_static cpus=4 interactive
 """
 import argparse
 import sys
 from pathlib import Path
+
+# 示例 PLA 硬化曲线（true stress MPa – plastic strain，配合默认 E=2000 用，按实际材料改）
+PLA_PLASTIC = [(55.0, 0.0), (58.0, 0.10), (62.0, 0.25), (70.0, 0.45)]
 
 
 def parse_mesh_inp(path: Path):
@@ -43,7 +48,8 @@ def parse_mesh_inp(path: Path):
 
 
 def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
-             h_override=None, w_override=None, t_override=None) -> Path:
+             h_override=None, w_override=None, t_override=None,
+             plastic=False, nlgeom=False, contact=False, contact_stab=False) -> Path:
     lines, nodes, max_eid, n_elems = parse_mesh_inp(mesh_inp)
     xs = [c[0] for c in nodes.values()]
     ys = [c[1] for c in nodes.values()]
@@ -81,9 +87,20 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     buf.append("*MATERIAL, NAME=TPMS_MAT")
     buf.append("*ELASTIC")
     buf.append(f"{E:.2f}, {nu:.4f}")
-    buf.append("*STEP, NAME=COMPRESSION, NLGEOM=NO")
+    if plastic:
+        buf.append("*PLASTIC")
+        for sig, eps_p in PLA_PLASTIC:
+            buf.append(f"{sig:.2f}, {eps_p:.4f}")
+    if contact:
+        # 全域自接触（无摩擦=缺省属性）；C3D10 面限 surface-to-surface 离散——general contact 默认满足
+        buf.append("*CONTACT")
+        buf.append("*CONTACT INCLUSIONS, ALL EXTERIOR")
+    buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}")
     buf.append("*STATIC")
-    buf.append("0.05, 1.0, 1e-5, 0.05")
+    buf.append("0.01, 1.0, 1e-6, 0.05" if (nlgeom or plastic or contact) else "0.05, 1.0, 1e-5, 0.05")
+    if contact_stab:
+        # 深压缩无摩擦滑移收敛辅助（阻尼 ABAQUS 自动）；伪能量 ALLSD 占比须事后 <5% 验证
+        buf.append("*CONTACT CONTROLS, STABILIZE")
     buf.append("*BOUNDARY")
     buf.append("NSET_BOTTOM, 1, 3, 0.0")
     buf.append(f"NSET_TOP, 3, 3, {disp:.6f}")
@@ -100,7 +117,8 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     out.write_text("\n".join(buf) + "\n", encoding="utf-8")
 
     band_ok = any(abs(h - b) <= 1.0 for b in (12.0, 24.0, 34.0))
-    print(f"[setup] {out.name}: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
+    feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact)) if on)) or "LE"
+    print(f"[setup] {out.name}[{feats}]: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
           f"bot={len(bot)} top={len(top)} disp={disp:.4f}mm "
           f"H={h:.4f} W={w:.4f} T={t:.4f} A0={w*t:.2f}mm2 "
           f"{'[档位OK]' if band_ok else '[WARN] lengthMm 越档 {12,24,34}±1，fit-batch 将告警'}")
@@ -113,11 +131,19 @@ def main() -> int:
     ap.add_argument("--strain", type=float, default=0.02)
     ap.add_argument("--E", type=float, default=2000.0, help="弹性模量 MPa（示例聚合物值，按实际材料改）")
     ap.add_argument("--nu", type=float, default=0.3)
+    ap.add_argument("--plastic", action="store_true",
+                    help=f"加 *PLASTIC（示例 PLA 硬化曲线 {PLA_PLASTIC[0][0]:.0f}MPa 起，按实际材料改）")
+    ap.add_argument("--nlgeom", action="store_true", help="几何非线性（大应变压缩必开）")
+    ap.add_argument("--contact", action="store_true",
+                    help="general contact 全域自接触防孔壁穿透（C3D10 限 surface-to-surface，默认满足；无摩擦缺省）")
+    ap.add_argument("--contact-stab", action="store_true",
+                    help="接触稳定化（*CONTACT CONTROLS, STABILIZE，配合 --contact）——深压缩收敛辅助，伪能量须事后验证")
     ap.add_argument("--h", type=float, default=None, help="覆盖 lengthMm（缺省=几何 bbox Z）")
     ap.add_argument("--w", type=float, default=None)
     ap.add_argument("--t", type=float, default=None)
     a = ap.parse_args()
-    assemble(Path(a.mesh_inp), a.strain, a.E, a.nu, a.h, a.w, a.t)
+    assemble(Path(a.mesh_inp), a.strain, a.E, a.nu, a.h, a.w, a.t,
+             a.plastic, a.nlgeom, a.contact, a.contact_stab)
     return 0
 
 

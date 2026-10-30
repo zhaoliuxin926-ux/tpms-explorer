@@ -1,31 +1,26 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-10-30 ·工位 p2 闭环完成：仿真管线 Phase 2 全链实跑打通）
+> ## 🔖 新会话开工指引（2026-10-30 ·工位 p2 双轮闭环：线弹性全链+大应变手动全特征）
 >
-> **仓库态**：main=**ed1c3cb+1**（本会话 p2 修复提交）；前一态 8f70230=origin/main，CI 双绿。工作树净。**无未推送/未拍板挂起项**（本会话提交随收尾 push）。
+> **仓库态**：main=**50fcbb9+1**（本会话大应变轮提交）；50fcbb9 已推送=origin/main。工作树净。**无未推送/未拍板挂起项**（本会话提交随收尾 push）。
 >
-> ### 本会话（10-30 下午）动作：工位 ABAQUS 实跑 p2 闭环 ✅
+> ### 本会话（10-30）动作：仿真管线 Phase 2 双轮实跑 ✅
 >
-> **全链实测通过**（sim/out/ 产物 gitignored）：
-> - p0：51734 面水密 comp=1 dev=0.02pp（T1 修复后水平复现）；p1：**333,886 节点/212,209 C3D10/minSICN=0.0572**——宿舍侧全部预告锚点跨机精确复现（跨机确定性验证完成）；
-> - p2 注入：顶底各 3,716/H=W=T=12.5664/A0=157.91mm²/disp=-0.2513mm 全锚对上；**ABAQUS datacheck COMPLETED + 求解 20 增量全一次收敛**（cpus=4，约 7 分钟）；
-> - 提取：FIELD 主路径 21 点 CSV（末点 0.2513mm/838.97N，力-位移严格线性符合线弹性）；
-> - fit-batch：**契约全链正确消费**（dims=12.5664×3 精读/sha 溯源/H₀ 档位无告警）；ISO 内核按设计拒拟合（线弹性无塑性段→Rp0.2 偏移线与直线平行永无交点）——物理正确非 bug。
+> **轮 1 线弹性闭环（提交 50fcbb9）**：p0-p2-ABAQUS-提取-fit-batch 全链打通；宿舍预告锚点跨机精确复现（333,886 节点/212,209 C3D10/顶底 3,716/A0=157.91mm²/disp=-0.2513mm）；求解 20 增量全收敛；FEA **E\*/Es=0.1328 vs GA 0.0608（2.18×，文献带内）**。修复 p2 两 bug（inp 行内注释非法/ODB set 落 instance 级+Repository 无 .get）。
 >
-> **E\* 对标（改进表第 5 行首个真实数据点落定）**：FEA E\*=265.7MPa（Es=2000 示例聚合物）→ E\*/Es=**0.1328**；平台 GA（开孔泡沫 C1·ρ̄²=0.0608）→ **FEA/GA=2.18×**。TPMS 连续曲面含 membrane 分量高于同密度开孔泡沫 GA 档系文献已知现象（ρ̄=0.4 文献带 0.10~0.15，FEA 落带内）。无量纲口径对标规避材料基准差异。
+> **轮 2 大应变全特征（本提交）**：p2_static_setup.py 加四 flag（--plastic 示例 PLA 硬化/--nlgeom/--contact 全域自接触/--contact-stab）datacheck 全过。两轮求解实验：无 stab 17.2% 应变优雅终止（50.4% time 后 cutback 泥潭 10h）；stab 版 20.8% 终止（46% time 三连 cutback 至 0.0008）——**C3D10+无摩擦 general contact 压到 40%（fit-batch 平台窗口硬门）在 Standard 隐式下不可行，须换 Explicit/C3D10M/加摩擦路线**。截断曲线手动全特征：**Rp0.2=4.69MPa@1.98%、平台σ(5-20.8%)=9.03MPa、E\*=264.1 三轮一致**（265.7/264.8/264.1 跨 NLGEOM/塑性/接触/stab 变量）；**FEA/GA 等比例低估发现：E\*=2.17× 与平台σ=2.16× 同倍**→C1_eff≈0.83/C2_eff≈0.65（gyroid ρ̄=0.4 单点）。stab 影响间实验证 0.08%（重叠点力差）。fit-batch 两道门（Rp0.2 无交点门/ε≥0.40 平台门）在仿真数据上均按设计工作。
 >
-> **本会话修复两处 p2 脚本 bug（宿舍 py_compile 过但未实跑暴露）**：
-> 1. `p2_static_setup.py` L94：`S, E  ** 注释`——ABAQUS inp **行内 `**` 非注释**（只认行首），被解析成非法输出请求 E\*\*SANITYCHECK... datacheck 必挂；改为独立行首注释行。
-> 2. `p2_extract_csv.py`：①flat inp 无 \*INSTANCE→ABAQUS 自动归入唯一 instance（PART-1-1），NSET 落 **instance 级**非 rootAssembly 级——set 解析加两级回退；②abaqus Python Repository 对象**无 .get 方法**（非标准 dict）——改 in+索引。
+> 实验记录：plans/2026-10-30_大应变压缩-全特征验证.md（设计/两轮/对标/工程事实五条）。
 >
 > ### 后续可做方向（按价值排序）
-> 1. **仿真线扩展**：加 \*PLASTIC 材料段（聚合物真实本构）→ 全 ISO 13314 特征（Rp0.2/平台/密实化）可反演——fit-batch 拒收边界即此；或 k/porosity 扫参建 FEA 标定库对 GA C1/C2 修正；
-> 2. **Phase 3 CFD**（卡 license）：COMSOL vs Fluent 定夺→周期网格+层流+Darcy K 反算；
-> 3. **S1_G60 上机**（物料全齐）→ 真实试验 CSV 进 fit-batch（改进表第 5 行试验侧数据点）。
+> 1. **大应变换路线**：ABAQUS/Explicit 准静态（能量比验证）或 C3D10M 重网格 → 40%+ 曲线进 fit-batch 全 ISO 特征（含 εd/W）；
+> 2. **FEA 标定库扫参**：k/porosity 网格（线弹性即可，单点 7 分钟）→ C1_eff/C2_eff 多点拟合修正平台 GA 档；
+> 3. **Phase 3 CFD**（卡 license）：COMSOL vs Fluent 定夺；
+> 4. **S1_G60 上机**（物料全齐）→ 试验侧数据点。
 >
 > ### 等用户输入的挂起项
 > 1. **Phase 3 CFD license**：COMSOL vs Fluent 定夺（流体线卡此）；
-> 2. **开放三问之单元形态**：specimens 全是 solid_network，与用户口述"壳结构"存在出入——待确认（影响 Phase 2 加载方案）；
+> 2. **开放三问之单元形态**：specimens 全是 solid_network，与用户口述"壳结构"存在出入——待确认；
 > 3. 历史拍板项：C1 双口径统一 / pack 清洗 / 博客四 / S1_G60 上机。
 >
 > ### 多设备纪律（machine-facts.md=新设备第一读）
