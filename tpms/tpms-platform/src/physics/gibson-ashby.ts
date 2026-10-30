@@ -110,6 +110,13 @@ export const BASE_YIELD_STRENGTH: Record<string, number> = {
  * - Schwarz P: Berger et al. (2017)
  *
  * 注意：此模型为各向同性近似，实际 TPMS 结构存在各向异性。
+ *
+ * 【FEA 标定披露 2026-10-31】本管线四点 ABAQUS 标定（gyroid k2R24，porosity
+ * 0.5/0.6/0.7 线弹性 + p70 R32 网格收敛判别 +1.7%）：E-star/Es ≈ 1.0·ρ̄^2.2，
+ * 较本模型 C1·ρ̄²（0.38·ρ̄²）高 1.98~2.24×（ρ̄ 0.3~0.5），且 FEA/GA 比随 ρ̄ 降低而
+ * 减小——【指数 2.2 ≠ 2，常数平移拟合不了形状差】。文献带 n≈2.0~2.3（sheet gyroid
+ * FE 口径）实测落带中。公式升级缓行理由：压缩单模量/k 单值标定，推广前须
+ * 8+ 点含 k 维或 S1_G60 试验数据校准（plans/2026-10-30_GA-C1扫参标定.md）。
  */
 export function gibsonAshby(relativeDensity: number, type: string = 'gyroid'): { E_Es: number; sigma_Es: number; C1: number } {
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];

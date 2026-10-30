@@ -250,6 +250,9 @@ function cmdEstimate(a, json) {
     C2,
     anisotropy: core.getAnisotropy(type),
     model: 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
+    feaCalibration: type === 'gyroid'
+      ? '本管线 ABAQUS 四点标定（k2R24，ρ̄ 0.3~0.5，R32 判别 +1.7%）：E*/Es≈1.0·ρ̄^2.2，较 GA 高 1.98~2.24×且比随 ρ̄ 降低而减小（文献带 n≈2.0~2.3 落带中）；公式升级缓行待 8+ 点含 k 维或试验校准（plans/2026-10-30_GA-C1扫参标定.md）'
+      : undefined,
     boundary: '几何相关指标（比表面积/渗透率/孔径/各向异性刚度张量）需网格管线，M1 提供',
   };
   if (json) { console.log(JSON.stringify(out, null, 2)); return; }
@@ -264,6 +267,7 @@ function cmdEstimate(a, json) {
   console.log(`  σ*          = ${out.yieldStrengthMPa.toFixed(1)} MPa`);
   console.log(`  各向异性比  ${out.anisotropy}`);
   console.log('  ───────────────────────────────');
+  if (out.feaCalibration) console.log('  FEA标定: ' + out.feaCalibration);
   console.log('  边界: ' + out.boundary);
 }
 
