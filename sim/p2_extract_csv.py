@@ -18,12 +18,23 @@ def extract_curve(odb_path, h_mm, w_mm, t_mm, out_csv):
     odb = openOdb(odb_path, readOnly=True)
     try:
         step = odb.steps.values()[-1]
-        top = odb.rootAssembly.nodeSets["NSET_TOP"]
+        # flat inp 无 *INSTANCE：ABAQUS 自动归入唯一 instance，NSET 落在 instance 级
+        asm = odb.rootAssembly
+        top = None
+        if "NSET_TOP" in asm.nodeSets:
+            top = asm.nodeSets["NSET_TOP"]
+        else:
+            for inst in asm.instances.values():
+                if "NSET_TOP" in inst.nodeSets:
+                    top = inst.nodeSets["NSET_TOP"]
+                    break
+        if top is None:
+            raise KeyError("NSET_TOP not found in assembly/instance nodeSets")
         n_frames = len(step.frames)
 
         # 快路径尝试：HISTORY 聚合 region（"Node NSET_TOP"）
         path_used = "FIELD"
-        hr = step.historyRegions.get("Node NSET_TOP")
+        hr = step.historyRegions["Node NSET_TOP"] if "Node NSET_TOP" in step.historyRegions else None
         if hr is not None and "RF3" in hr.historyOutputs and "U3" in hr.historyOutputs:
             rf3 = hr.historyOutputs["RF3"].data
             u3 = hr.historyOutputs["U3"].data

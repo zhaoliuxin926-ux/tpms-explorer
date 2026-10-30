@@ -1,27 +1,32 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-10-30 ·工位会话收尾：宿舍 13 提交已同步，下一步=工位 ABAQUS 实跑 p2）
+> ## 🔖 新会话开工指引（2026-10-30 ·工位 p2 闭环完成：仿真管线 Phase 2 全链实跑打通）
 >
-> **仓库态**：main=**8f70230**=origin/main；工位/宿舍同 HEAD，工作树净。CI 双绿：b30c99b 三平台 48 门全绿（后续 sim/collab/docs 提交按 paths 过滤或被覆盖验证，宿舍侧已逐笔对账）。**无未推送/未拍板挂起项**。
-> **工位会话（10-30）动作**：git pull 同步宿舍侧 10-28~29 全部推进（仿真管线 Phase 1-3+批二十+双 AI 协作 T1-T6，详见下方各块）——本会话仅同步+交接，未改产品代码。
+> **仓库态**：main=**ed1c3cb+1**（本会话 p2 修复提交）；前一态 8f70230=origin/main，CI 双绿。工作树净。**无未推送/未拍板挂起项**（本会话提交随收尾 push）。
 >
-> ### 新会话第一优先：工位 ABAQUS 实跑 p2 验证（仿真闭环最后一环）
+> ### 本会话（10-30 下午）动作：工位 ABAQUS 实跑 p2 闭环 ✅
 >
-> p2 脚本（p2_static_setup.py+p2_extract_csv.py）宿舍侧 py_compile 过但**未实跑**——工位机有 ABAQUS，是唯一能闭环的机器。执行序列：
-> ```bash
-> python sim/p0_generate.py --k 2 --R 24 --por 0.60
-> python sim/p1_mesh.py sim/out/gyroid_k2_p60.stl
-> python sim/p2_static_setup.py sim/out/gyroid_k2_p60.inp
-> abaqus job=gyroid_k2_p60_static cpus=4 interactive
-> abaqus python sim/p2_extract_csv.py --odb gyroid_k2_p60_static.odb --h 12.5664 --w 12.5664
-> node tpms/agent/fit-batch.mjs --dir <csv目录>
-> ```
-> 验证锚（宿舍侧 p2 实测预告）：333,886 节点/212,209 C3D10/顶底各 3,716 节点/H=W=12.5664mm/A0=157.91mm²/disp=-0.2513mm；CSV 走 fit-batch 契约（# 三尺寸元数据行）。跑通后：fit-batch 反演结果 vs 平台 GA 预测对标（改进表第 5 行首个真实数据点）。
+> **全链实测通过**（sim/out/ 产物 gitignored）：
+> - p0：51734 面水密 comp=1 dev=0.02pp（T1 修复后水平复现）；p1：**333,886 节点/212,209 C3D10/minSICN=0.0572**——宿舍侧全部预告锚点跨机精确复现（跨机确定性验证完成）；
+> - p2 注入：顶底各 3,716/H=W=T=12.5664/A0=157.91mm²/disp=-0.2513mm 全锚对上；**ABAQUS datacheck COMPLETED + 求解 20 增量全一次收敛**（cpus=4，约 7 分钟）；
+> - 提取：FIELD 主路径 21 点 CSV（末点 0.2513mm/838.97N，力-位移严格线性符合线弹性）；
+> - fit-batch：**契约全链正确消费**（dims=12.5664×3 精读/sha 溯源/H₀ 档位无告警）；ISO 内核按设计拒拟合（线弹性无塑性段→Rp0.2 偏移线与直线平行永无交点）——物理正确非 bug。
+>
+> **E\* 对标（改进表第 5 行首个真实数据点落定）**：FEA E\*=265.7MPa（Es=2000 示例聚合物）→ E\*/Es=**0.1328**；平台 GA（开孔泡沫 C1·ρ̄²=0.0608）→ **FEA/GA=2.18×**。TPMS 连续曲面含 membrane 分量高于同密度开孔泡沫 GA 档系文献已知现象（ρ̄=0.4 文献带 0.10~0.15，FEA 落带内）。无量纲口径对标规避材料基准差异。
+>
+> **本会话修复两处 p2 脚本 bug（宿舍 py_compile 过但未实跑暴露）**：
+> 1. `p2_static_setup.py` L94：`S, E  ** 注释`——ABAQUS inp **行内 `**` 非注释**（只认行首），被解析成非法输出请求 E\*\*SANITYCHECK... datacheck 必挂；改为独立行首注释行。
+> 2. `p2_extract_csv.py`：①flat inp 无 \*INSTANCE→ABAQUS 自动归入唯一 instance（PART-1-1），NSET 落 **instance 级**非 rootAssembly 级——set 解析加两级回退；②abaqus Python Repository 对象**无 .get 方法**（非标准 dict）——改 in+索引。
+>
+> ### 后续可做方向（按价值排序）
+> 1. **仿真线扩展**：加 \*PLASTIC 材料段（聚合物真实本构）→ 全 ISO 13314 特征（Rp0.2/平台/密实化）可反演——fit-batch 拒收边界即此；或 k/porosity 扫参建 FEA 标定库对 GA C1/C2 修正；
+> 2. **Phase 3 CFD**（卡 license）：COMSOL vs Fluent 定夺→周期网格+层流+Darcy K 反算；
+> 3. **S1_G60 上机**（物料全齐）→ 真实试验 CSV 进 fit-batch（改进表第 5 行试验侧数据点）。
 >
 > ### 等用户输入的挂起项
 > 1. **Phase 3 CFD license**：COMSOL vs Fluent 定夺（流体线卡此）；
 > 2. **开放三问之单元形态**：specimens 全是 solid_network，与用户口述"壳结构"存在出入——待确认（影响 Phase 2 加载方案）；
-> 3. 历史拍板项：C1 双口径统一 / pack 清洗 / 博客四 / S1_G60 上机（物料全齐：LAB_ONE_PAGER+协议模板+32 件水密 8/8）。
+> 3. 历史拍板项：C1 双口径统一 / pack 清洗 / 博客四 / S1_G60 上机。
 >
 > ### 多设备纪律（machine-facts.md=新设备第一读）
 > 开工 `git pull` → 干活 → 收尾 push（交接文档随收尾同步）；hub=导师部署仅工位接入；大文件走文件中心不走 git；PAT 轮换若已执行需两机各自更新凭证。
