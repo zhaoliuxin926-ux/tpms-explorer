@@ -49,7 +49,8 @@ def parse_mesh_inp(path: Path):
 
 def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
              h_override=None, w_override=None, t_override=None,
-             plastic=False, nlgeom=False, contact=False, contact_stab=False) -> Path:
+             plastic=False, nlgeom=False, contact=False, contact_stab=False,
+             friction=0.0) -> Path:
     lines, nodes, max_eid, n_elems = parse_mesh_inp(mesh_inp)
     xs = [c[0] for c in nodes.values()]
     ys = [c[1] for c in nodes.values()]
@@ -93,8 +94,17 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
             buf.append(f"{sig:.2f}, {eps_p:.4f}")
     if contact:
         # 全域自接触（无摩擦=缺省属性）；C3D10 面限 surface-to-surface 离散——general contact 默认满足
+        if friction > 0.0:
+            # 摩擦耗散缓冲切向接触冲击（深压缩收敛辅助）；模型级属性+全域挂接
+            buf.append(f"*SURFACE INTERACTION, NAME=IFRICTION")
+            buf.append("*FRICTION")
+            buf.append(f"{friction:.3f}")
         buf.append("*CONTACT")
         buf.append("*CONTACT INCLUSIONS, ALL EXTERIOR")
+        if friction > 0.0:
+            # 两空数据项=default all-inclusive surface 自接触；Standard 下模型级
+            buf.append("*CONTACT PROPERTY ASSIGNMENT")
+            buf.append(", , IFRICTION")
     buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}")
     buf.append("*STATIC")
     buf.append("0.01, 1.0, 1e-6, 0.05" if (nlgeom or plastic or contact) else "0.05, 1.0, 1e-5, 0.05")
@@ -117,7 +127,8 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     out.write_text("\n".join(buf) + "\n", encoding="utf-8")
 
     band_ok = any(abs(h - b) <= 1.0 for b in (12.0, 24.0, 34.0))
-    feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact)) if on)) or "LE"
+    feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact),
+                                       (f"MU{friction:g}", friction > 0.0)) if on)) or "LE"
     print(f"[setup] {out.name}[{feats}]: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
           f"bot={len(bot)} top={len(top)} disp={disp:.4f}mm "
           f"H={h:.4f} W={w:.4f} T={t:.4f} A0={w*t:.2f}mm2 "
@@ -138,12 +149,14 @@ def main() -> int:
                     help="general contact 全域自接触防孔壁穿透（C3D10 限 surface-to-surface，默认满足；无摩擦缺省）")
     ap.add_argument("--contact-stab", action="store_true",
                     help="接触稳定化（*CONTACT CONTROLS, STABILIZE，配合 --contact）——深压缩收敛辅助，伪能量须事后验证")
+    ap.add_argument("--friction", type=float, default=0.0,
+                    help="摩擦系数（配合 --contact，>0 时挂 IFRICTION 属性到全域自接触）——切向耗散收敛辅助")
     ap.add_argument("--h", type=float, default=None, help="覆盖 lengthMm（缺省=几何 bbox Z）")
     ap.add_argument("--w", type=float, default=None)
     ap.add_argument("--t", type=float, default=None)
     a = ap.parse_args()
     assemble(Path(a.mesh_inp), a.strain, a.E, a.nu, a.h, a.w, a.t,
-             a.plastic, a.nlgeom, a.contact, a.contact_stab)
+             a.plastic, a.nlgeom, a.contact, a.contact_stab, a.friction)
     return 0
 
 
