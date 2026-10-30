@@ -1,5 +1,31 @@
 # progress — 当前任务进度
 
+> ## 🔖 新会话开工指引（2026-10-30 ·工位会话收尾：宿舍 13 提交已同步，下一步=工位 ABAQUS 实跑 p2）
+>
+> **仓库态**：main=**8f70230**=origin/main；工位/宿舍同 HEAD，工作树净。CI 双绿：b30c99b 三平台 48 门全绿（后续 sim/collab/docs 提交按 paths 过滤或被覆盖验证，宿舍侧已逐笔对账）。**无未推送/未拍板挂起项**。
+> **工位会话（10-30）动作**：git pull 同步宿舍侧 10-28~29 全部推进（仿真管线 Phase 1-3+批二十+双 AI 协作 T1-T6，详见下方各块）——本会话仅同步+交接，未改产品代码。
+>
+> ### 新会话第一优先：工位 ABAQUS 实跑 p2 验证（仿真闭环最后一环）
+>
+> p2 脚本（p2_static_setup.py+p2_extract_csv.py）宿舍侧 py_compile 过但**未实跑**——工位机有 ABAQUS，是唯一能闭环的机器。执行序列：
+> ```bash
+> python sim/p0_generate.py --k 2 --R 24 --por 0.60
+> python sim/p1_mesh.py sim/out/gyroid_k2_p60.stl
+> python sim/p2_static_setup.py sim/out/gyroid_k2_p60.inp
+> abaqus job=gyroid_k2_p60_static cpus=4 interactive
+> abaqus python sim/p2_extract_csv.py --odb gyroid_k2_p60_static.odb --h 12.5664 --w 12.5664
+> node tpms/agent/fit-batch.mjs --dir <csv目录>
+> ```
+> 验证锚（宿舍侧 p2 实测预告）：333,886 节点/212,209 C3D10/顶底各 3,716 节点/H=W=12.5664mm/A0=157.91mm²/disp=-0.2513mm；CSV 走 fit-batch 契约（# 三尺寸元数据行）。跑通后：fit-batch 反演结果 vs 平台 GA 预测对标（改进表第 5 行首个真实数据点）。
+>
+> ### 等用户输入的挂起项
+> 1. **Phase 3 CFD license**：COMSOL vs Fluent 定夺（流体线卡此）；
+> 2. **开放三问之单元形态**：specimens 全是 solid_network，与用户口述"壳结构"存在出入——待确认（影响 Phase 2 加载方案）；
+> 3. 历史拍板项：C1 双口径统一 / pack 清洗 / 博客四 / S1_G60 上机（物料全齐：LAB_ONE_PAGER+协议模板+32 件水密 8/8）。
+>
+> ### 多设备纪律（machine-facts.md=新设备第一读）
+> 开工 `git pull` → 干活 → 收尾 push（交接文档随收尾同步）；hub=导师部署仅工位接入；大文件走文件中心不走 git；PAT 轮换若已执行需两机各自更新凭证。
+
 > ## 批二十终态 + Phase 3 几何端首步（2026-10-29）
 
 > - **批二十全绿上线**：3c73a05/3dfd254 CI 三平台+Pages 双绿；T6 交叉审查闭环（P0 文件名断裂/P1 联动盲区已修，P2 幻觉驳回）。
