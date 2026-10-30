@@ -12,13 +12,11 @@
 >
 > **轮 3 GA 扫参标定（139f59e）**：porosity 三点+p70 R32 判别（+1.7% 网格收敛）→**gyroid 刚度指数 ≈2.2 钉死为物理**（GA 2.0；文献带 2.0~2.4 落中）；等比例假设密度维证伪（C1_eff 非常数）；estimate 公式升级建议（E\*/Es≈1.0·ρ̄^2.2）待用户拍板。
 >
-> **轮 4 摩擦软化判别（进行中）**：p2 新增 `--friction MU`（SURFACE INTERACTION/FRICTION/CONTACT PROPERTY ASSIGNMENT 全域挂接链，datacheck 过）。μ=0.3 版 45% 目标求解挂后台（job gyroid_k2_p60_p45f）：**26% time 零 cutback**（无摩擦版同区间已 cut）——稳定性收益真实；**代价=非对称求解器 20×慢**（增量 11 苦战 10-20min/个），0.9 time 判据落点 1h+。守望任务挂着，**终判随通知补录，提交与求解解耦**。
+> **轮 4 摩擦软化判别（终判落地）**：p2 新增 `--friction MU`（全域挂接链 datacheck 过）。μ=0.3 版终态：**增量 38 @ 39.7% time（17.9% 应变）五连 cutback 至 1e-6 硬失败**——切向粘滑突变引入自己的收敛问题。三路线定界终表（无摩擦 50.4%/stab 46%/摩擦 39.7% time，全部 17~21% 应变死）：**C3D10+general contact 在 Standard 隐式下 ε≥0.40 不可达，Explicit 准静态成唯一剩余路线**（留后续：C3D10M/C3D4 重网格+质量缩放新工程线）。五 flag inp 语法资产沉淀完毕。
 >
-> 实验记录：plans/2026-10-30_大应变压缩-全特征验证.md（含轮 3/4）+ plans/2026-10-30_GA-C1扫参标定.md。
+> **轮 5 estimate 披露决策（0f67ef3）**：用户授权自主决策+两轮文献检索（sheet gyroid FE 口径 n≈2.0~2.3 带，实测 2.2 落中）→ **披露级采纳**（gibson-ashby.ts JSDoc+estimate CLI feaCalibration 字段 gyroid-only）+ **公式替换缓行**（门槛=8+ 点含 k 维或 S1 试验校准）；selftest 61/0；坑：TS 注释内 `E*/Es` 含 `*/` 终止 JSDoc。
 >
-> ### 新会话第一查（若守望通知未及处理）
->
-> `sim/out/gyroid_k2_p60_p45f.sta` 终态：①time=1.0/0.9+ SUCCESSFULLY → 提取 CSV 进 fit-batch 全 ISO 特征（Rp0.2/平台/W/εd 四量）→ C2 侧闭环；②中途 ERROR → 摩擦版定界收口（Standard 隐式全路线否定，Explicit 成唯一出路）；③仍 lck → 续挂或 terminate 取截断曲线手动判。
+> 实验记录：plans/2026-10-30_大应变压缩-全特征验证.md（含三路线定界终表）+ plans/2026-10-30_GA-C1扫参标定.md（含决策落地）。
 >
 > ### 后续可做方向（按价值排序）
 > 1. **p45f 终判收口**（见上三态处理）；
