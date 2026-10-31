@@ -29,7 +29,9 @@ m 总质量（0.001 g）→ protocol §五 公式（端板修正）→ 记入 CS
 
 1. CSV 放入 `specimens/csv/`；**首部加三行卡尺实测元数据（fit-batch 缺失即拒算）**——
    照 protocol §六 模板：`# lengthMm=24` / `# widthMm=20` / `# thicknessMm=20`
-   （数值按本件实测填，lengthMm=含端板总高 H₀）
-2. `node tpms/agent/fit-batch.mjs` → `docs/fit-report.md`（experimental-fit 真实内核，2026-10-20 起；H₀ 档位 {12,24,34}±1 越档照算+告警；εd 有效性/W 积分终点/样本 CV 口径见报告头，2026-10-24）
+   （数值按本件实测填，lengthMm=含端板总高 H₀）；
+   **可选对照行**：`# porosity=0.60`（启用 FEA 幂律对照列，gyroid 缺省——报告自动给
+   预测值与 FEA/试验比，S1/S2 直接适用；S3/S4 diamond 待标定扩展）
+2. `node tpms/agent/fit-batch.mjs` → `docs/fit-report.md`（experimental-fit 真实内核，2026-10-20 起；H₀ 档位 {12,24,34}±1 越档照算+告警；εd 有效性/W 积分终点/样本 CV 口径见报告头，2026-10-24；FEA 幂律对照列 2026-10-31 起）
 3. **必须**在工程版「试验曲线反演」复核后再写报告（勾「位移-载荷」上传 CSV——带元数据行时 **L₀/A₀ 自动预填**，无需手填；越档有 ⚠ 兜底）
 4. 与平台数字孪生/Gibson-Ashby 预测对标（protocol §六）

@@ -42,12 +42,12 @@ const PLATFORM = join(HERE, '../tpms-platform');
 const BUNDLE = join(tmpdir(), 'tpms_fitbatch_expfit.mjs');
 {
   const entry = join(tmpdir(), 'tpms_fitbatch_entry.ts');
-  writeFileSync(entry, `export { fitExperimentalCurve } from ${JSON.stringify(join(PLATFORM, 'src/physics/experimental-fit.ts'))};`);
+  writeFileSync(entry, `export { fitExperimentalCurve } from ${JSON.stringify(join(PLATFORM, 'src/physics/experimental-fit.ts'))};\nexport { plateauStress, gibsonAshby } from ${JSON.stringify(join(PLATFORM, 'src/physics/gibson-ashby.ts'))};`);
   const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
   const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
   if (r.status !== 0) { console.error('FAIL experimental-fit 内核打包失败（rolldown）:', (r.stderr || '').slice(0, 200)); process.exit(1); }
 }
-const { fitExperimentalCurve } = await import(pathToFileURL(BUNDLE));
+const { fitExperimentalCurve, plateauStress, gibsonAshby } = await import(pathToFileURL(BUNDLE));
 
 const PROTOCOL_TOTALS = [12, 24, 34];   // 原生/×2.5/×3.75 含固定 2×2mm 端板（协议 §四表）
 
@@ -58,8 +58,9 @@ const PROTOCOL_TOTALS = [12, 24, 34];   // 原生/×2.5/×3.75 含固定 2×2mm 
 function parseMeta(text) {
   const meta = {};
   for (const line of text.split(/\r?\n/)) {
-    const m = line.match(/^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?[\d.]+)\s*$/);
-    if (m) meta[m[1]] = Number(m[2]);
+    // 值类型：数字（三尺寸/porosity）或标识符（type=gyroid）——批十八单一语法不变
+    const m = line.match(/^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?[\d.]+|[A-Za-z_][A-Za-z0-9_]*)\s*$/);
+    if (m) meta[m[1]] = /^-?[\d.]+$/.test(m[2]) ? Number(m[2]) : m[2];
   }
   return meta;
 }
@@ -78,7 +79,29 @@ function fitOneCsv(text, id) {
     : `H₀=${dims.lengthMm}mm 不匹配协议档 {12,24,34}±1（×2.5 档=24 非 30——端板固定 2mm 不随缩放，2026-10-20 修正；本行照算，E* 应变基准以实测 H₀ 为准，建议核对端板/缩放）`;
   try {
     const r = fitExperimentalCurve({ text, inputType: 'displacement-force', columnX: 'displacement_mm', columnY: 'force_N', specimenDimensions: dims });
-    return { id, dims, hWarn, metrics: r.metrics };
+    // FEA 幂律对照（2026-10-31，docs/fea-calibration.md）：# porosity=0.60 [# type=gyroid] 启用；
+    // 仅 gyroid 有标定证据（k≥2 域 ρ̄∈[0.3,0.5]）；缺 porosity=不加对照（行为向后兼容）
+    let fea = null;
+    const por = meta.porosity;
+    const type = typeof meta.type === 'string' ? meta.type : 'gyroid';
+    if (Number.isFinite(por) && por > 0 && por < 1) {
+      const rho = 1 - por;
+      const pl = plateauStress(rho, type);
+      const ga = gibsonAshby(rho, type);
+      if (pl !== undefined) {
+        const inDomain = rho >= 0.25 && rho <= 0.55;
+        fea = {
+          type,
+          rho,
+          inDomain,
+          eEs: ga.E_Es,
+          rp02: ga.sigma_Es,
+          plateau: pl,
+          note: inDomain ? null : `ρ̄=${rho.toFixed(2)} 越标定域 [0.25,0.55]（对照值仅供参考）`,
+        };
+      }
+    }
+    return { id, dims, hWarn, metrics: r.metrics, fea };
   } catch (e) {
     return { id, dims, hWarn, error: `内核拟合失败：${e.message}` };
   }
@@ -177,11 +200,20 @@ const md = [
   '',
   '## 单件特征',
   '',
-  '| 试样 | H₀ (mm) | E* (MPa) | Rp0.2 (MPa) | 首峰 (MPa) | 平台σ (MPa) | ε_d | W (MJ/m³) | 告警 |',
-  '|---|---|---|---|---|---|---|---|---|',
-  ...rows.map((r) => r.error
-    ? `| ${r.id} | — | FAIL | ${r.error.slice(0, 60)} | | | | | |`
-    : `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`),
+  '| 试样 | H₀ (mm) | E* (MPa) | Rp0.2 (MPa) | 首峰 (MPa) | 平台σ (MPa) | ε_d | W (MJ/m³) | 幂律预测 E*/平台σ | FEA/试验 E*/平台σ | 告警 |',
+  '|---|---|---|---|---|---|---|---|---|---|---|',
+  ...rows.map((r) => {
+    if (r.error) return `| ${r.id} | — | FAIL | ${r.error.slice(0, 60)} | | | | | | | |`;
+    const f = r.fea;
+    const ES_MPA = 2000, SYS_MPA = 55;   // 示例 PLA 口径（docs/fea-calibration.md；实际材料不同按比例换算）
+    const feaPred = f ? `${fmt(f.eEs * ES_MPA, 1)} / ${fmt(f.plateau * SYS_MPA, 2)}` : '—';
+    const feaRatio = f && r.metrics
+      ? `${(f.eEs * ES_MPA / r.metrics.elasticModulusE).toFixed(2)}× / ${(f.plateau * SYS_MPA / r.metrics.plateauStress).toFixed(2)}×`
+      : '—';
+    return `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${feaPred} | ${feaRatio} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`;
+  }),
+  ...(rows.some((r) => r.fea?.note) ? ['', ...rows.filter((r) => r.fea?.note).map((r) => `- ⚠ ${r.id}：${r.fea.note}（幂律对照行同样仅供量级参考）`)] : []),
+  ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径：sheet gyroid FEA 标定（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，Explicit C3D10M 下限口径）；比=预测/试验，E* 侧乘 Es=2 GPa、平台侧乘 σys=55 MPa 换算'] : []),
   ...(rows.some((r) => r.hWarn) ? ['', ...rows.filter((r) => r.hWarn).map((r) => `- ⚠ ${r.id}：${r.hWarn}`)] : []),
   ...(rows.some((r) => r.error) ? ['', ...rows.filter((r) => r.error).map((r) => `- ✗ ${r.id}：${r.error}`)] : []),
   ...(rows.some((r) => r.metrics?.densificationStatus === 'not-observed') ? ['', ...rows.filter((r) => r.metrics?.densificationStatus === 'not-observed').map((r) => `- ⚠ ${r.id}：未观察到密实化（曲线截断，η 极值落记录末点）——εd 不适用；W=${fmt(r.metrics.energyAbsorptionW, 3)} MJ/m³ 系截至记录末点 ε=${fmt(r.metrics.energyAbsorptionEndStrain, 3)} 的积分，非"至密实化吸能"`)] : []),

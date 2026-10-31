@@ -84,11 +84,18 @@ node tpms/agent/tpms.mjs mesh --type fcky    --porosity 0.75 --resolution 96 --p
 # lengthMm=24
 # widthMm=20
 # thicknessMm=20
+# porosity=0.60
+# type=gyroid
 displacement_mm,force_N
 0.000,0.000
 0.024,1.372
 ...（位移 mm,力 N，按试验机原始采样行序粘贴）
 ```
+
+**可选对照元数据（2026-10-31 新增）**：`# porosity=0.60`（0~1 小数）启用 fit-batch 的
+**FEA 幂律对照列**（sheet gyroid 标定：E\*/Rp0.2/平台σ 预测值+FEA/试验比，见
+docs/fea-calibration.md；type 缺省 gyroid，diamond 等族标定扩展后按 `# type=diamond`
+指定）；无该行=报告无对照列（行为向后兼容）。标定适用域 k≥2、ρ̄∈[0.25,0.55]。
 
 批处理反演（`agent/fit-batch.mjs`）按同契约逐份解析（H₀ 档位 {12,24,34}±1 越档照算+告警）；
 网页端单文件无元数据时仍可手填 L₀/A₀（越档有 ⚠ 兜底）。
