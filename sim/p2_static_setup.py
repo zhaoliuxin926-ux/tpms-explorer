@@ -157,7 +157,7 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     band_ok = any(abs(h - b) <= 1.0 for b in (12.0, 24.0, 34.0))
     feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact),
                                        (f"MU{friction:g}", friction > 0.0),
-                                       (f"EXPL{explicit_ms:g}ms", bool(explicit_ms))) if on)) or "LE"
+                                       (f"EXPL{(explicit_ms or 0):g}ms", bool(explicit_ms))) if on)) or "LE"
     print(f"[setup] {out.name}[{feats}]: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
           f"bot={len(bot)} top={len(top)} disp={disp:.4f}mm "
           f"H={h:.4f} W={w:.4f} T={t:.4f} A0={w*t:.2f}mm2 "

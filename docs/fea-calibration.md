@@ -43,8 +43,15 @@
   （与平台 tpms-functions.ts 同源四项式），diamond p60 验证 52,194 面水密 dev=0.89pp；
 - 同参口径（gyroid 轮一致：Explicit T=5ms/dt=2e-7/μ=0.3，k2R24）；
 - ⚠ **p50 前处理拒绝**（2 单元几何畸变过限，Explicit 前处理严于 Standard；管线缺
-  datacheck 门的教训）——p50 计划 `--lmax` 加密重跑，先收 p60/p70 两点；
-- 结果：（待回填）
+  datacheck 门的教训）——**--lmax 0.8 加密重跑同 2 单元畸变拒收（几何固有特征加密不消，
+  两次实测）→ p50 记录为 Explicit 前处理不可行点**；Standard 线弹性容忍畸变，三点 E\* 侧
+  Standard 补齐（p50=373.3/p60=224.6/p70=121.3 MPa）；
+- **E\* 三点拟合（Standard 口径）：E\*/Es ≈ 0.851·ρ̄^2.20**——指数与 gyroid（2.25）互证
+  （同为连续曲面网络标度），系数低 17%（diamond 同密度更柔，物理合理）；
+  强度侧 Explicit 仅两点（p60/p70：平台 8.1/4.5 MPa、Rp0.2 4.8/2.8）样本不足暂不入库；
+- **代码入库待定**：C1_MAP[diamond]/GA_EXPONENT_MAP[diamond] 更新会触发全族标度律锚
+  （selftest"标度律 E∝ρ̄²"用 diamond 写死）校准链——等强度侧补齐或 Codex 确认后随
+  独立轮落地（estimate diamond 预测当前仍为 GA 0.42·ρ̄²）。
 
 ## 口径与适用域（诚实边界；2026-11-01 独立复核更正）
 
