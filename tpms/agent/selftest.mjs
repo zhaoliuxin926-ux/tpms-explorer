@@ -25,12 +25,13 @@ const near = (a, b, eps = 1e-12) => Math.abs(a - b) < eps;
 const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
 const est = (...args) => JSON.parse(run('estimate', ...args, '--json').stdout);
 
-// ── 1. estimate：常数独立复刻（文献注释值硬编码：gyroid C1=0.38, C2=0.3, tc4 E=110 σ=880）──
+// ── 1. estimate：常数独立复刻（FEA 标定幂律硬编码：gyroid C1=1.02 n=2.25 / Rp0.2 0.54 n=2.02 / 平台 1.64 n=2.41；tc4 E=110 σ=880）──
 const j = est('--type', 'gyroid', '--porosity', '0.65', '--material', 'tc4');
-near(j.E_over_Es, 0.38 * 0.35 * 0.35) ? ok('E*/Es 独立复刻 0.38·0.35²') : bad('E*/Es', String(j.E_over_Es));
-near(j.youngsModulusGPa, 0.38 * 0.35 * 0.35 * 110) ? ok('E* GPa = E*/Es × 110') : bad('E*GPa', String(j.youngsModulusGPa));
-near(j.sigma_over_sigmas, 0.3 * Math.pow(0.35, 1.5)) ? ok('σ*/σs 独立复刻 0.3·0.35^1.5') : bad('σ*/σs', String(j.sigma_over_sigmas));
-near(j.yieldStrengthMPa, 0.3 * Math.pow(0.35, 1.5) * 880) ? ok('σ* MPa = σ*/σs × 880') : bad('σ*MPa', String(j.yieldStrengthMPa));
+near(j.E_over_Es, 1.02 * Math.pow(0.35, 2.25)) ? ok('E*/Es 独立复刻 1.02·0.35^2.25') : bad('E*/Es', String(j.E_over_Es));
+near(j.youngsModulusGPa, 1.02 * Math.pow(0.35, 2.25) * 110) ? ok('E* GPa = E*/Es × 110') : bad('E*GPa', String(j.youngsModulusGPa));
+near(j.sigma_over_sigmas, 0.54 * Math.pow(0.35, 2.02)) ? ok('σ*/σs 独立复刻 Rp0.2 口径 0.54·0.35^2.02') : bad('σ*/σs', String(j.sigma_over_sigmas));
+near(j.yieldStrengthMPa, 0.54 * Math.pow(0.35, 2.02) * 880) ? ok('σ* MPa = Rp0.2 口径 × 880') : bad('σ*MPa', String(j.yieldStrengthMPa));
+near(j.plateau_over_sigmas, 1.64 * Math.pow(0.35, 2.41)) ? ok('平台σ 独立复刻 1.64·0.35^2.41') : bad('平台σ', String(j.plateau_over_sigmas));
 
 // ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)²，与常数取值无关 ──
 const ra = est('--type', 'diamond', '--porosity', '0.5');

@@ -3,7 +3,8 @@ import { estimatePermeability } from './permeability';
 import { estimatePoreStats } from './pore-analysis';
 
 const C1_MAP: Record<string, number> = {
-  gyroid: 0.38,
+  gyroid: 1.02, // 【2026-10-31 FEA 标定替换】0.38→1.02（Standard C3D10 四点+R32 判别；见 fea-calibration.md）
+  // gyroid: 0.38, // 旧 GA 开孔泡沫档（保留注释供对照；estimate feaCalibration 字段携带 GA 对照值）
   diamond: 0.42,
   schwarz: 0.35,
   iwp: 0.44,
@@ -31,6 +32,18 @@ const C1_MAP: Record<string, number> = {
   ws: 0.38, // C2 第六批：文献带内估值
   custom: 0.38,  // default to gyroid value,
   strutbcc: 0.06, strutoctet: 1.2, // strut 族：bcc 弯曲主导（Deshpande 域）；octet 拉伸主导 E≈0.3ρ线性律——与 ρ² 框架形状律不适配，登记 ρ≈0.25 等效切线（精确值请走 FE）
+};
+
+// per-family 标度指数：缺省 2（Gibson-Ashby 弯曲档）；gyroid 由 FEA 标定为 2.25
+// （sheet 曲面 membrane 分量；文献带 2.0~2.3 交叉验证，k≥2 域 ρ̄∈[0.3,0.5]）
+const GA_EXPONENT_MAP: Record<string, number> = {
+  gyroid: 2.25,
+};
+
+// gyroid 强度双口径（FEA Explicit 三点标定，2026-10-31）：屈服 Rp0.2 与平台应力
+// 指数分化（2.02 bending 型 / 2.41 薄壁屈曲加权）——单一 GA σ 公式两量都拟合不了
+const FEA_STRENGTH: Record<string, { rp02: [number, number]; plateau: [number, number] }> = {
+  gyroid: { rp02: [0.54, 2.02], plateau: [1.64, 2.41] },
 };
 
 // Gibson & Ashby (1997) 开孔泡沫塑性坍塌：σ*/σs ≈ 0.3·ρ^1.5（弯曲主导经典值，原书
@@ -120,9 +133,20 @@ export const BASE_YIELD_STRENGTH: Record<string, number> = {
  */
 export function gibsonAshby(relativeDensity: number, type: string = 'gyroid'): { E_Es: number; sigma_Es: number; C1: number } {
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
-  const E_Es = C1 * Math.pow(relativeDensity, 2);
-  const sigma_Es = C2 * Math.pow(relativeDensity, 1.5);
+  const exp = GA_EXPONENT_MAP[type] ?? 2;
+  const E_Es = C1 * Math.pow(relativeDensity, exp);
+  // σ 主口径：gyroid=FEA Rp0.2（0.2% 偏移屈服，语义匹配"yield"）；其他族=GA 0.3·ρ̄^1.5
+  const fea = FEA_STRENGTH[type];
+  const sigma_Es = fea
+    ? fea.rp02[0] * Math.pow(relativeDensity, fea.rp02[1])
+    : C2 * Math.pow(relativeDensity, 1.5);
   return { E_Es, sigma_Es, C1 };
+}
+
+/** 平台应力口径（FEA Explicit 三点标定）：gyroid-only，其他族 undefined（无 FEA 证据不外推） */
+export function plateauStress(relativeDensity: number, type: string): number | undefined {
+  const fea = FEA_STRENGTH[type];
+  return fea ? fea.plateau[0] * Math.pow(relativeDensity, fea.plateau[1]) : undefined;
 }
 
 /**
@@ -153,8 +177,9 @@ export function computeGradientRange(
   const topRelDensity = 1 - topPorosity / 100;
 
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
-  const minE = C1 * Math.pow(bottomRelDensity, 2);   // 底部（多孔）弹性模量最低
-  const maxE = C1 * Math.pow(topRelDensity, 2);      // 顶部（致密）弹性模量最高
+  const exp = GA_EXPONENT_MAP[type] ?? 2;
+  const minE = C1 * Math.pow(bottomRelDensity, exp);   // 底部（多孔）弹性模量最低
+  const maxE = C1 * Math.pow(topRelDensity, exp);      // 顶部（致密）弹性模量最高
   const avgE = (minE + maxE) / 2;
 
   return { minE, maxE, avgE };
@@ -177,6 +202,7 @@ export function computePhysicsMetrics(
   const relativeDensity = 1 - porosityFraction;
 
   const { E_Es, sigma_Es, C1 } = gibsonAshby(relativeDensity, type);
+  const plateau = plateauStress(relativeDensity, type);   // gyroid-only（FEA 标定），其他族 undefined
   // 'auto' 不在材质表内：解析为默认基体（tc4），避免静默回退导致展示材质名与实际不一致
   const resolvedMaterial = material === 'auto' ? 'tc4' : material;
   const baseE = BASE_MODULUS[resolvedMaterial] || BASE_MODULUS.tc4;
@@ -193,6 +219,7 @@ export function computePhysicsMetrics(
     relativeDensity,
     youngsModulusGPa: E_Es * baseE,
     yieldStrengthMPa: sigma_Es * baseSigma,
+    plateauStressMPa: plateau !== undefined ? plateau * baseSigma : undefined,
     gibsonAshbyE: E_Es,
     gibsonAshbySigma: sigma_Es,
     C1,
@@ -285,7 +312,8 @@ export function estimateAnisotropicStiffness(
   tort?: TortuosityTriple,
 ): AnisotropicStiffness {
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
-  const E_iso = C1 * relativeDensity * relativeDensity;
+  const expIso = GA_EXPONENT_MAP[type] ?? 2;
+  const E_iso = C1 * Math.pow(relativeDensity, expIso);
   const nu = POISSON_TPMS;
 
   // 迂曲调制（τ 未提供/未贯通方向 → 以 τ̄ 替代 = 调制因子 1）

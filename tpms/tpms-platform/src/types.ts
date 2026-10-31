@@ -300,7 +300,8 @@ export interface PhysicsMetrics {
   svRatio: number;           // mm⁻¹
   relativeDensity: number;   // 1 - porosity
   youngsModulusGPa: number;  // GPa (假设基体材料)
-  yieldStrengthMPa: number;  // MPa
+  yieldStrengthMPa: number;  // MPa（gyroid=FEA Rp0.2 口径；其他族=GA σ*）
+  plateauStressMPa?: number; // MPa（gyroid-only FEA 平台应力；其他族 undefined）
   gibsonAshbyE: number;      // E*/Es
   gibsonAshbySigma: number;  // σ*/σs
   C1: number;                // 拓扑特定 Gibson-Ashby 常数

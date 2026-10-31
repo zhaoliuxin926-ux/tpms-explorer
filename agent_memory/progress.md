@@ -19,9 +19,11 @@
 >
 > **轮 8 k 维尺寸效应（本提交）**：k1（1 胞，H₀=6.28mm 越档如实告警）vs k2 同 por 0.6——**k1 显著偏软（E\* -16%/平台σ -31%/W -29%），与经典"少胞偏刚"相反**——1 胞顶底切到曲面单一相位（bot 937 vs top 738 节点不对称），薄弱相位暴露在加载面；**标定组适用域定案 k≥2**，支架设计准则"每边 ≥2 周期"实证；k3 因 8 格/周期保真度不足留后续。
 >
+> **轮 10 estimate 替换（本提交）**：用户拍板"按推荐做"→ gyroid 主口径换 FEA 幂律（per-family 指数机制 GA_EXPONENT_MAP：C1_MAP[gyroid]=1.02/n=2.25；σ 主口径=Rp0.2 0.54·ρ̄^2.02；新字段 plateau_over_sigmas/plateauStrengthMPa=1.64·ρ̄^2.41 双列披露；GA 对照值保留 feaCalibration 字段；**其他 25 族不动**——无 FEA 证据不外推）。selftest 61→62/0（三断言校准+平台σ新增）；schema_check 113/0；diamond/schwarz 断言不受影响；LLM 回归 43 条待跑（工位 env 无 key——宿舍/用户侧跑或下次配 key）；benchmarks.mjs §3 补 gyroid 例外披露（BENCHMARKS.md 待下次生成携带）。
+>
 > ### 后续可做方向（按价值排序）
-> 1. **estimate 公式升级证据链齐**（4+3 点+k 域标注）——用户拍板替换时机；
-> 2. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）→ 试验侧 vs 幂律标定组对比。
+> 1. **LLM 回归 43 条补跑**（需 TPMS_LLM_KEY 三 env 套件，key 只经环境变量）；
+> 2. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）→ 试验侧 vs 幂律标定组对比（试样 k8R96≡标定组 k2R24 同 12 格/周期口径，直接可比）。
 >
 > ### 等用户输入的挂起项
 > 1. **Phase 3 CFD license**；2. **单元形态确认**；3. C1 双口径/pack 清洗/博客四。

@@ -248,10 +248,15 @@ function cmdEstimate(a, json) {
     yieldStrengthMPa: sigma_Es * core.BASE_YIELD_STRENGTH[material],
     C1,
     C2,
+    plateau_over_sigmas: core.plateauStress ? core.plateauStress(rel, type) : undefined,
+    plateauStrengthMPa: core.plateauStress && core.plateauStress(rel, type) !== undefined
+      ? core.plateauStress(rel, type) * core.BASE_YIELD_STRENGTH[material] : undefined,
     anisotropy: core.getAnisotropy(type),
-    model: 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
+    model: type === 'gyroid'
+      ? 'FEA 标定幂律（sheet gyroid，k≥2 域 ρ̄∈[0.3,0.5]）: E*/Es=1.02·ρ̄^2.25, σ*/σs=0.54·ρ̄^2.02 (Rp0.2), 平台σ*=1.64·ρ̄^2.41'
+      : 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
     feaCalibration: type === 'gyroid'
-      ? '本管线 ABAQUS 四点标定（k2R24，ρ̄ 0.3~0.5，R32 判别 +1.7%）：E*/Es≈1.0·ρ̄^2.2，较 GA 高 1.98~2.24×且比随 ρ̄ 降低而减小（文献带 n≈2.0~2.3 落带中）；公式升级缓行待 8+ 点含 k 维或试验校准（plans/2026-10-30_GA-C1扫参标定.md）'
+      ? '【2026-10-31 已替换为 FEA 标定幂律】本管线 ABAQUS 八轮标定（Standard 四点 E*+Explicit 三点全特征+k≥2 域；Rp0.2 跨求解范式 0.9% 一致）。GA 对照值（旧口径）：E*/Es=0.38·ρ̄²=' + (0.38 * rel * rel).toFixed(4) + '、σ*/σs=0.3·ρ̄^1.5=' + (0.3 * Math.pow(rel, 1.5)).toFixed(4) + '——FEA/GA 刚度 1.98~2.24×、强度侧指数 2.0/2.41 vs GA 1.5（强度刚度解耦）。详见 docs/fea-calibration.md'
       : undefined,
     boundary: '几何相关指标（比表面积/渗透率/孔径/各向异性刚度张量）需网格管线，M1 提供',
   };
