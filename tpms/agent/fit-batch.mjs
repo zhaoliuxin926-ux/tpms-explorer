@@ -89,7 +89,10 @@ function fitOneCsv(text, id) {
       const pl = plateauStress(rho, type);
       const ga = gibsonAshby(rho, type);
       if (pl !== undefined) {
-        const inDomain = rho >= 0.25 && rho <= 0.55;
+        // 标定域 = 实测三点域（docs/fea-calibration.md）：ρ̄∈[0.3,0.5]；域外=外推披露
+        // 材料口径 = 示例 PLA（Es=2GPa/σys=55MPa）——实际材料不同按比例换算
+        const inDomain = rho >= 0.3 && rho <= 0.5;
+        const matMatched = '示例 PLA（Es=2GPa/σys=55MPa 口径）';
         fea = {
           type,
           rho,
@@ -97,7 +100,8 @@ function fitOneCsv(text, id) {
           eEs: ga.E_Es,
           rp02: ga.sigma_Es,
           plateau: pl,
-          note: inDomain ? null : `ρ̄=${rho.toFixed(2)} 越标定域 [0.25,0.55]（对照值仅供参考）`,
+          note: inDomain ? null : `ρ̄=${rho.toFixed(2)} 越标定域 [0.3,0.5]（外推披露，对照值仅供量级参考）`,
+          materialNote: `材料口径=${matMatched}；仿真标定口径（network gyroid，Explicit C3D10M）`,
         };
       }
     }
@@ -213,7 +217,7 @@ const md = [
     return `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${feaPred} | ${feaRatio} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`;
   }),
   ...(rows.some((r) => r.fea?.note) ? ['', ...rows.filter((r) => r.fea?.note).map((r) => `- ⚠ ${r.id}：${r.fea.note}（幂律对照行同样仅供量级参考）`)] : []),
-  ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径：sheet gyroid FEA 标定（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，Explicit C3D10M 下限口径）；比=预测/试验，E* 侧乘 Es=2 GPa、平台侧乘 σys=55 MPa 换算'] : []),
+  ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径：network gyroid FEA 标定（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，Explicit C3D10M 口径较 Standard 低 17%——归因待敏感性验证）；比=预测/试验，材料=示例 PLA（Es=2GPa/σys=55MPa，实际材料不同按比例换算）；来源=仿真标定曲线，物理试验 CSV 请在工程版复核'] : []),
   ...(rows.some((r) => r.hWarn) ? ['', ...rows.filter((r) => r.hWarn).map((r) => `- ⚠ ${r.id}：${r.hWarn}`)] : []),
   ...(rows.some((r) => r.error) ? ['', ...rows.filter((r) => r.error).map((r) => `- ✗ ${r.id}：${r.error}`)] : []),
   ...(rows.some((r) => r.metrics?.densificationStatus === 'not-observed') ? ['', ...rows.filter((r) => r.metrics?.densificationStatus === 'not-observed').map((r) => `- ⚠ ${r.id}：未观察到密实化（曲线截断，η 极值落记录末点）——εd 不适用；W=${fmt(r.metrics.energyAbsorptionW, 3)} MJ/m³ 系截至记录末点 ε=${fmt(r.metrics.energyAbsorptionEndStrain, 3)} 的积分，非"至密实化吸能"`)] : []),

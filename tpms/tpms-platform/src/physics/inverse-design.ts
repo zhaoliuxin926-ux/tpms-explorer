@@ -9,11 +9,10 @@
  *   Sv(p)  = cArea(type)/cellSize          —— 单胞解析面积密度（mm⁻¹）
  *   P(p)   = porosity
  * 诚实边界：这是解析代理口径（非 FEA）；几何级精确验证请走 CAE 验证包（Stage III）。
- * 【2026-10-02 审查 M-2 勘正】本引擎 C1 采用经典文献带内估值（gyroid 0.30 等，
- * 见下方 C1_MAP），与 UI GA 面板的网格标定口径（gibson-ashby.ts，gyroid 0.38）
- * **不同源**——同参数下反演求得的 E* 与面板显示可差 ~27%。此前头注宣称"同源同
- * 量级"失实。两套均为未实验标定的解析估值；统一口径属物理标定决策，待拍板
- * （phononic-bandgap 先例：如实披露优于静默统一）。
+ * 【2026-11-01 口径统一落地】E 单源消费 gibson-ashby.ts 主口径（gyroid=FEA 幂律
+ * 1.02·ρ̄^2.25，docs/fea-calibration.md）——2026-10-02 勘正预告的"与面板不同源（差
+ * ~27%）待拍板"至此闭环：FEA 标定完成+用户授权后统一，逆设计与主面板同源同值。
+ * （历史：初版头注曾失实宣称同源，M-2 勘正披露后保留待拍板至本轮。）
  *
  * 参数矢量 p = [porosity, cellSize, anisotropy]（连续）× typeIndex（离散外层枚举）。
  * 求解策略：Nelder-Mead 多起点全局探索 → Levenberg-Marquardt 阻尼最小二乘精化。
@@ -21,25 +20,12 @@
  */
 
 import type { TpmType } from '../types';
+import { gibsonAshby } from './gibson-ashby';
 
-// ── 常量表（E0 与 gibson-ashby.ts 同源；C1 为文献带内估值，与面板网格标定口径不同源，见头注勘正）──
+// ── 常量表（E0 与 gibson-ashby.ts 同源）──
 
 /** 基体弹性模量（GPa，TC4 钛合金缺省口径） */
 export const E0_GPA = 110;
-
-/** Gibson-Ashby C1（经典文献带内估值——非 gibson-ashby.ts 的网格标定口径，见头注勘正） */
-const C1_MAP: Record<string, number> = {
-  gyroid: 0.3, diamond: 0.35, schwarz: 0.3, neovius: 0.35,
-  iwp: 0.38, frd: 0.4, lidinoid: 0.32, splitp: 0.33,
-  octo: 0.33, karcher: 0.33, fks: 0.32, fky: 0.32, gprime: 0.32, fcks: 0.32, // C2 扩展：带内估值
-  dprime: 0.36, dp: 0.35, dd: 0.36, dg: 0.33, // C2 扩展第三批：带内估值
-  fcky: 0.32, // C2 扩展第四批：沿 fky 口径
-  cdd: 0.35, // C2 扩展第五批：沿 diamond 族口径（Complementary D）
-  // strut 族（2026-10-05 标定）：bcc=弯曲主导 E∝ρ² 与 G-A 形式完全适配，C1 取 Deshpande-Fleck 弯曲域中值；
-  // octet=拉伸主导 E≈0.3ρ·Es（线性律）——**形状律不适配 ρ² 框架**，登记 ρ≈0.25 典型值的等效切线（偏离典型 ρ 时漂移可达 2×，
-  // list/estimate 输出不另带标注——需精确值请走 FE）
-  strutbcc: 0.05, strutoctet: 1.2,
-};
 
 /** 单胞解析面积密度 cArea（mm⁻¹ @ cellSize=1；Schwarz P 2.31 引自极小曲面经典面积，其余同量级标定） */
 const C_AREA: Record<string, number> = {
@@ -89,7 +75,9 @@ export function forwardModel(type: TpmType, porosity: number, cellSize: number, 
   const eps = Math.min(0.99, Math.max(0.02, porosity));
   const rho = 1 - eps;
   const sv = (C_AREA[type] ?? 3.0) / Math.max(0.5, cellSize);
-  const eGPa = (C1_MAP[type] ?? 0.3) * rho * rho * E0_GPA * anisotropy;
+  // E 单源（2026-11-01 口径统一落地）：消费 gibson-ashby.ts 主口径——2026-10-02 勘正
+  // 预告的"统一待拍板"在 FEA 标定+用户授权后落地；gyroid=FEA 幂律，其余族=面板同款 GA
+  const eGPa = gibsonAshby(rho, type).E_Es * E0_GPA * anisotropy;
   // bulk Sv 口径（sv=每 Bulk 体积面积）：无 (1−ε)² 因子——该因子属每固相 S_s 约定
   // （Sv = S_s·(1−ε)），混用会低估 κ 达 (1−ε)² 倍；门禁 22 E 节 FD 对拍守护
   const kappaM2 = Math.pow(eps, 3) / (KOZENY_C * sv * sv) * 1e-6;   // mm² → m²

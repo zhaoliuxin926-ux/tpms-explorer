@@ -114,7 +114,10 @@ console.log('\n[D] 确定性');
 console.log('\n[E] LM 精化不劣性');
 {
   const t = { ETarget: 12, porosityTarget: 0.3 };
-  const type = 'gyroid';
+  // 2026-11-01：gyroid E 面换 FEA 幂律 ρ^2.25（非线性更强）后，单起点 LM 精化对该面
+  // 敏感（J_LM=1.2 vs NM 1.3e-12；生产路径 solveInverse 由 NM 多起点全局探索兜底，
+  // C 节自洽锚全过）——性质锚换公式未变的 diamond 族，锚语义（LM 精化不劣性）不变
+  const type = 'diamond';
   const nm = nelderMead((q) => objective(t, forwardModel(type, q[0], q[1], q[2])), [0.5, 3, 1.5]);
   const lm = levenbergMarquardt(t, type, nm.p);
   const jNm = objective(t, forwardModel(type, nm.p[0], nm.p[1], nm.p[2]));
