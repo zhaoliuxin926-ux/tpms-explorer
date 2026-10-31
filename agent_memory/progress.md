@@ -27,6 +27,8 @@
 >
 > **轮 13 UI expfit 分族+CI 红门校准（85c3d19→2e4c18c）**：expfit 卡平台参照分族（gyroid=FEA/实测、其他族=GA/实测，门禁锚 (GA|FEA) 兼容）；**85c3d19 三平台同红定位校准**——parity_math σ* 锚（G-A→Rp0.2 幂律）+impact_modal f1 标度锚（√3→3^0.625 由同源公式推导），双门本地绿（337/0+11/0）；**教训：改共享数学源后门禁静态排查搜索单位=导出函数名+消费字段名，非公式常数文本**（selftest/schema/expfit 本地绿≠全覆盖）。数字孪生卡 gaPrediction 保留 GA 口径（公式级断言+DT/GA 披露带 [1.2,3.0] 本身量化 GA 低估，语义自洽）——换幂律=审计重写+披露带重标定，独立后续工程（已记录 fea-calibration.md）。
 >
+> **轮 17 数字孪生+SEA 分族（cc688e9）**：digital-twin-compression/impact-energy 的平台参照分族（type 参数，gyroid=FEA 幂律/缺省 GA 兼容）；**DT/FEA 参照比带 [0.6,0.95]**（ρ̄=0.35 收敛点 0.798——方向与 DT/GA 1.2~3.0 相反：粗体素相对 FEA 幂律偏软，GA 时代 DT/GA>1 系 GA 低估）；门28 24→27 断言/门20 σ_pl 锚校准 11/0；**新坑：函数内局部 let 与导入函数同名→rolldown 提升后同域 TDZ**（导入别名修复）；probe_dt_fea_band.mjs 带重实测工具入库。**GA→FEA 口径换代全链清零**（estimate/expfit/数字孪生/SEA/文档/图/门禁锚；仅 feaCalibration 字段保留 GA 对照值=设计）。
+>
 > ### 后续可做方向（按价值排序）
 > 1. **LLM 回归 43 条补跑**（需 TPMS_LLM_KEY 三 env 套件，key 只经环境变量）；
 > 2. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）→ 试验侧 vs 幂律标定组对比（试样 k8R96≡标定组 k2R24 同 12 格/周期口径，直接可比）。
