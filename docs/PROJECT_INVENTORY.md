@@ -38,6 +38,9 @@ tpms-explorer/
 │   ├── HONESTY_BOUNDARIES.md     # 诚实边界表（自动生成）
 │   ├── regression-matrix.md      # 拦截器覆盖矩阵
 │   ├── LAB_ONE_PAGER.md          # 打印/试验工位卡
+│   ├── fea-calibration.md        # FEA 标定组（sheet gyroid 幂律+双求解器+k≥2 域）
+│   ├── fit-report.md             # ISO 反演报告（最近一次仿真/试验 CSV）
+│   ├── fit-report-expl.md        # Explicit 四点全特征报告
 │   ├── fit-report.mock.md        # mock 自测报告（合成曲线经真实内核路径）
 │   ├── PROJECT_SUMMARY.md        # 项目摘要
 │   ├── blog/ + publish/          # 技术博客 + 粘贴版
