@@ -19,7 +19,13 @@
 >
 > **轮 8 k 维尺寸效应（本提交）**：k1（1 胞，H₀=6.28mm 越档如实告警）vs k2 同 por 0.6——**k1 显著偏软（E\* -16%/平台σ -31%/W -29%），与经典"少胞偏刚"相反**——1 胞顶底切到曲面单一相位（bot 937 vs top 738 节点不对称），薄弱相位暴露在加载面；**标定组适用域定案 k≥2**，支架设计准则"每边 ≥2 周期"实证；k3 因 8 格/周期保真度不足留后续。
 >
-> **轮 10 estimate 替换（本提交）**：用户拍板"按推荐做"→ gyroid 主口径换 FEA 幂律（per-family 指数机制 GA_EXPONENT_MAP：C1_MAP[gyroid]=1.02/n=2.25；σ 主口径=Rp0.2 0.54·ρ̄^2.02；新字段 plateau_over_sigmas/plateauStrengthMPa=1.64·ρ̄^2.41 双列披露；GA 对照值保留 feaCalibration 字段；**其他 25 族不动**——无 FEA 证据不外推）。selftest 61→62/0（三断言校准+平台σ新增）；schema_check 113/0；diamond/schwarz 断言不受影响；LLM 回归 43 条待跑（工位 env 无 key——宿舍/用户侧跑或下次配 key）；benchmarks.mjs §3 补 gyroid 例外披露（BENCHMARKS.md 待下次生成携带）。
+> **轮 10 estimate 替换（b4cb29c+c1edba5）**：用户拍板"按推荐做"→ gyroid 主口径换 FEA 幂律（per-family 指数机制 GA_EXPONENT_MAP：C1_MAP[gyroid]=1.02/n=2.25；σ 主口径=Rp0.2 0.54·ρ̄^2.02；新字段 plateau_over_sigmas/plateauStrengthMPa=1.64·ρ̄^2.41 双列披露；GA 对照值保留 feaCalibration 字段；**其他 25 族不动**——无 FEA 证据不外推）。selftest 61→62/0（三断言校准+平台σ新增）；schema_check 113/0；diamond/schwarz 断言不受影响；部署链同步；数值验证 gyroid p60 E*/Es=0.1298 vs ABAQUS 实测 0.1328（2.3% 拟合误差内）。LLM 回归 43 条待跑（工位 Windows 用户/机器级 env 均无 key——需用户手动 export 三件套）。
+>
+> **轮 11 S1 上机前尺寸效应复核（92c4c0d）**：32 件试样 periods 全=8（k≥2 准则余量 4×）；口径巧合 S1_G60=k8 R96=12 格/周期≡标定组 k2 R24 同档——试验点与标定曲线直接可比；k2→k8 残余漂移未测（方向已知 k 增收敛）已披露 fea-calibration.md。
+>
+> **轮 12 标定组产品化（5cb4275）**：docs/fea-calibration.md（结论表+四发现+口径域+复现链）+docs/figures/calibration_curves.png（双 panel 论文级图）+sim/plot_calibration.py 生成器+PROJECT_INVENTORY 三条目。注意：BENCHMARKS.md §1-§5 是 benchmarks.mjs 生成域（手动编辑会被覆盖）——标定组走独立文档。
+>
+> **轮 13 UI expfit 分族+CI 红门校准（85c3d19→2e4c18c）**：expfit 卡平台参照分族（gyroid=FEA/实测、其他族=GA/实测，门禁锚 (GA|FEA) 兼容）；**85c3d19 三平台同红定位校准**——parity_math σ* 锚（G-A→Rp0.2 幂律）+impact_modal f1 标度锚（√3→3^0.625 由同源公式推导），双门本地绿（337/0+11/0）；**教训：改共享数学源后门禁静态排查搜索单位=导出函数名+消费字段名，非公式常数文本**（selftest/schema/expfit 本地绿≠全覆盖）。数字孪生卡 gaPrediction 保留 GA 口径（公式级断言+DT/GA 披露带 [1.2,3.0] 本身量化 GA 低估，语义自洽）——换幂律=审计重写+披露带重标定，独立后续工程（已记录 fea-calibration.md）。
 >
 > ### 后续可做方向（按价值排序）
 > 1. **LLM 回归 43 条补跑**（需 TPMS_LLM_KEY 三 env 套件，key 只经环境变量）；
