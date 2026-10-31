@@ -21,6 +21,8 @@ from pathlib import Path
 
 # 示例 PLA 硬化曲线（true stress MPa – plastic strain，配合默认 E=2000 用，按实际材料改）
 PLA_PLASTIC = [(55.0, 0.0), (58.0, 0.10), (62.0, 0.25), (70.0, 0.45)]
+# PLA 密度（mm-tonne-s-N-MPa 制）：1240 kg/m³ = 1.24e-9 tonne/mm³（Explicit 必需）
+PLA_DENSITY = 1.24e-9
 
 
 def parse_mesh_inp(path: Path):
@@ -50,8 +52,13 @@ def parse_mesh_inp(path: Path):
 def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
              h_override=None, w_override=None, t_override=None,
              plastic=False, nlgeom=False, contact=False, contact_stab=False,
-             friction=0.0) -> Path:
+             friction=0.0, explicit_ms=None, mass_dt=None) -> Path:
     lines, nodes, max_eid, n_elems = parse_mesh_inp(mesh_inp)
+    if explicit_ms:
+        # Explicit 无 C3D10：换修正二阶四面体 C3D10M（大变形+接触鲁棒）
+        lines = [ln.replace("TYPE=C3D10", "TYPE=C3D10M", 1)
+                 if ln.strip().startswith("*ELEMENT") and "TYPE=C3D10" in ln and "TYPE=C3D10M" not in ln
+                 else ln for ln in lines]
     xs = [c[0] for c in nodes.values()]
     ys = [c[1] for c in nodes.values()]
     zs = [c[2] for c in nodes.values()]
@@ -92,6 +99,9 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
         buf.append("*PLASTIC")
         for sig, eps_p in PLA_PLASTIC:
             buf.append(f"{sig:.2f}, {eps_p:.4f}")
+    if explicit_ms:
+        buf.append("*DENSITY")
+        buf.append(f"{PLA_DENSITY:.3e}")
     if contact:
         # 全域自接触（无摩擦=缺省属性）；C3D10 面限 surface-to-surface 离散——general contact 默认满足
         if friction > 0.0:
@@ -105,13 +115,27 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
             # 两空数据项=default all-inclusive surface 自接触；Standard 下模型级
             buf.append("*CONTACT PROPERTY ASSIGNMENT")
             buf.append(", , IFRICTION")
-    buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}")
-    buf.append("*STATIC")
-    buf.append("0.01, 1.0, 1e-6, 0.05" if (nlgeom or plastic or contact) else "0.05, 1.0, 1e-5, 0.05")
+    if explicit_ms:
+        # Explicit 准静态：SMOOTH STEP 幅值（时间轴=绝对步时间，终点=步时长！）+ VARIABLE MASS SCALING
+        buf.append("*AMPLITUDE, NAME=RAMPSMOOTH, DEFINITION=SMOOTH STEP")
+        buf.append("0.0, 0.0, %.6e, 1.0" % (explicit_ms * 1e-3))
+    if explicit_ms:
+        buf.append("*STEP, NAME=COMPRESSION")   # Explicit 恒大变形，无 NLGEOM 参数
+    else:
+        buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}")
+    if explicit_ms:
+        buf.append("*DYNAMIC, EXPLICIT")
+        # 自动时间增量数据行：字段1空、字段2=时间周期（首字段填值会被当 dt 触错）
+        buf.append(f", {explicit_ms * 1e-3:.6e}")
+        if mass_dt:
+            buf.append("*VARIABLE MASS SCALING, DT=%.1e, TYPE=BELOW MIN, FREQUENCY=10" % mass_dt)
+    else:
+        buf.append("*STATIC")
+        buf.append("0.01, 1.0, 1e-6, 0.05" if (nlgeom or plastic or contact) else "0.05, 1.0, 1e-5, 0.05")
     if contact_stab:
         # 深压缩无摩擦滑移收敛辅助（阻尼 ABAQUS 自动）；伪能量 ALLSD 占比须事后 <5% 验证
         buf.append("*CONTACT CONTROLS, STABILIZE")
-    buf.append("*BOUNDARY")
+    buf.append("*BOUNDARY" + (", AMPLITUDE=RAMPSMOOTH" if explicit_ms else ""))
     buf.append("NSET_BOTTOM, 1, 3, 0.0")
     buf.append(f"NSET_TOP, 3, 3, {disp:.6f}")
     buf.append("*OUTPUT, FIELD")
@@ -123,12 +147,17 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     buf.append("*OUTPUT, HISTORY")
     buf.append("*NODE OUTPUT, NSET=NSET_TOP")
     buf.append("U3, RF3")
+    if explicit_ms:
+        # 准静态判据能量：ALLKE/ALLIE<10%；ALLPW/ALLCW≈0（接触/约束罚功）
+        buf.append("*ENERGY OUTPUT")
+        buf.append("ALLKE, ALLIE, ALLPW, ALLCW")
     buf.append("*END STEP")
     out.write_text("\n".join(buf) + "\n", encoding="utf-8")
 
     band_ok = any(abs(h - b) <= 1.0 for b in (12.0, 24.0, 34.0))
     feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact),
-                                       (f"MU{friction:g}", friction > 0.0)) if on)) or "LE"
+                                       (f"MU{friction:g}", friction > 0.0),
+                                       (f"EXPL{explicit_ms:g}ms", bool(explicit_ms))) if on)) or "LE"
     print(f"[setup] {out.name}[{feats}]: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
           f"bot={len(bot)} top={len(top)} disp={disp:.4f}mm "
           f"H={h:.4f} W={w:.4f} T={t:.4f} A0={w*t:.2f}mm2 "
@@ -151,12 +180,17 @@ def main() -> int:
                     help="接触稳定化（*CONTACT CONTROLS, STABILIZE，配合 --contact）——深压缩收敛辅助，伪能量须事后验证")
     ap.add_argument("--friction", type=float, default=0.0,
                     help="摩擦系数（配合 --contact，>0 时挂 IFRICTION 属性到全域自接触）——切向耗散收敛辅助")
+    ap.add_argument("--explicit", type=float, default=None, metavar="T_MS",
+                    help="ABAQUS/Explicit 准静态模式：T_MS=加载时间（毫秒），SMOOTH STEP 幅值+C3D10M+自动密度；大应变（Standard 三路线否定后唯一路线）")
+    ap.add_argument("--mass-dt", type=float, default=None, metavar="DT",
+                    help="变质量缩放目标稳定时间步（秒，配合 --explicit，如 2e-7）——步数=T/dt，事后验 ALLKE/ALLIE<10%%")
     ap.add_argument("--h", type=float, default=None, help="覆盖 lengthMm（缺省=几何 bbox Z）")
     ap.add_argument("--w", type=float, default=None)
     ap.add_argument("--t", type=float, default=None)
     a = ap.parse_args()
     assemble(Path(a.mesh_inp), a.strain, a.E, a.nu, a.h, a.w, a.t,
-             a.plastic, a.nlgeom, a.contact, a.contact_stab, a.friction)
+             a.plastic, a.nlgeom, a.contact, a.contact_stab, a.friction,
+             a.explicit, a.mass_dt)
     return 0
 
 

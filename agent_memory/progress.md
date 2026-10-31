@@ -1,22 +1,29 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-10-31 ·工位四轮推进：闭环+定界+扫参指数 2.2+摩擦轮挂长跑）
+> ## 🔖 新会话开工指引（2026-10-31 ·仿真管线 Phase 2 全闭环：Explicit 全 ISO 特征达成）
 >
-> **仓库态**：main=**139f59e+1**（本会话摩擦轮提交）；139f59e 已推送=origin/main。工作树净（除 p45f 求解中）。
+> **仓库态**：main=**7809b47+1**（本会话 Explicit 终局提交）；7809b47 已推送。CI：0f67ef3 触发全量跑中（守望挂着）。
 >
-> ### 本会话（10-30~31）动作：仿真管线四轮实跑 ✅
+> ### 本会话（10-30~31）动作：仿真管线六轮实跑 ✅
 >
-> **轮 1 线弹性闭环（50fcbb9）**：p0-p2-ABAQUS-提取-fit-batch 全链打通；宿舍锚点跨机精确复现；E\*/Es=0.1328 vs GA 0.0608（2.18×）；修复 p2 两 bug。
+> **轮 1 线弹性闭环（50fcbb9）**：全链打通+锚点跨机复现+E\*/Es=0.1328（GA 2.18×）+修 2 bug。
+> **轮 2 大应变定界（8591c0d）**：四 flag；Standard 隐式压不到 ε≥0.40；截断手动全特征；等比例发现。
+> **轮 3 GA 扫参（139f59e）**：三点+p70 R32 判别（+1.7%）→**指数 2.2 钉死**（文献带 2.0~2.3 落中）。
+> **轮 4 摩擦终判（9197ca2+7809b47）**：μ=0.3 硬失败@39.7% time→**Standard 隐式三路线全否定，Explicit 唯一**。
+> **轮 5 estimate 披露（0f67ef3）**：文献验证→披露级采纳（JSDoc+CLI feaCalibration gyroid-only），公式缓行（门槛=8+ 点含 k 维或 S1 校准）。
+> **轮 6 Explicit 全闭环（本提交）**：p2 `--explicit T_MS`+`--mass-dt`（C3D10M/DENSITY/SMOOTH STEP/VARIABLE MASS SCALING/ENERGY OUTPUT）。**三个 Explicit 方言坑**：①`*DYNAMIC, EXPLICIT` 数据行字段 1 必须空（填值被当 Δt 双 FATAL）；②`AMPLITUDE=` 是 `*BOUNDARY` 关键字参数非数据行字段（写数据行→boundary 被静默丢弃→零变形，datacheck 不报！靠 U@TOP 全零诊断）；③SMOOTH STEP 时间轴=绝对步时间（`(0,0,1,1)` 是 1 秒 ramp 而步仅 5ms→位移只走 0.007%）。正式轮 T=5ms/dt=2e-7/37 分钟：**末段 KE/IE=0.85% 准静态通过**（mean 7% 系早期分母污染；ALLPW≈0；质量缩放 46× 兜底）。**fit-batch 全 ISO 特征 ok:true**（docs/fit-report.md+来源披露行）：E\*=221.6（C3D10M 偏软 17% 下限披露）/**Rp0.2=4.73 vs Standard 4.69 跨范式 0.9% 一致**/首峰 9.22@18.4%/平台 10.01（GA 2.40×）/εd not-observed/W=4.150。**仿真管线 Phase 2 全闭环：双求解器→全 ISO 特征→GA 对标。**
 >
-> **轮 2 大应变定界（8591c0d）**：p2 四 flag；两轮实验——C3D10+无摩擦 general contact 压不到 ε≥0.40 硬门（cutback 泥潭），截断曲线手动全特征 Rp0.2=4.69MPa/平台σ=9.03MPa/E\* 三轮一致；FEA/GA 等比例低估发现（2.17×/2.16×）；stab 间实验证 0.08%。
+> 实验记录：plans/2026-10-30_大应变压缩-全特征验证.md（轮 5 Explicit 全记录）+ plans/2026-10-30_GA-C1扫参标定.md。
 >
-> **轮 3 GA 扫参标定（139f59e）**：porosity 三点+p70 R32 判别（+1.7% 网格收敛）→**gyroid 刚度指数 ≈2.2 钉死为物理**（GA 2.0；文献带 2.0~2.4 落中）；等比例假设密度维证伪（C1_eff 非常数）；estimate 公式升级建议（E\*/Es≈1.0·ρ̄^2.2）待用户拍板。
+> ### 后续可做方向（按价值排序）
+> 1. **Explicit C2 侧扫参**（路线已通，单点 37 分钟）→ 平台 GA C2 修正证据链；
+> 2. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）→ 试验侧数据点 vs FEA 侧对比。
 >
-> **轮 4 摩擦软化判别（终判落地）**：p2 新增 `--friction MU`（全域挂接链 datacheck 过）。μ=0.3 版终态：**增量 38 @ 39.7% time（17.9% 应变）五连 cutback 至 1e-6 硬失败**——切向粘滑突变引入自己的收敛问题。三路线定界终表（无摩擦 50.4%/stab 46%/摩擦 39.7% time，全部 17~21% 应变死）：**C3D10+general contact 在 Standard 隐式下 ε≥0.40 不可达，Explicit 准静态成唯一剩余路线**（留后续：C3D10M/C3D4 重网格+质量缩放新工程线）。五 flag inp 语法资产沉淀完毕。
+> ### 等用户输入的挂起项
+> 1. **Phase 3 CFD license**；2. **单元形态确认**；3. C1 双口径/pack 清洗/博客四。
 >
-> **轮 5 estimate 披露决策（0f67ef3）**：用户授权自主决策+两轮文献检索（sheet gyroid FE 口径 n≈2.0~2.3 带，实测 2.2 落中）→ **披露级采纳**（gibson-ashby.ts JSDoc+estimate CLI feaCalibration 字段 gyroid-only）+ **公式替换缓行**（门槛=8+ 点含 k 维或 S1 试验校准）；selftest 61/0；坑：TS 注释内 `E*/Es` 含 `*/` 终止 JSDoc。
->
-> 实验记录：plans/2026-10-30_大应变压缩-全特征验证.md（含三路线定界终表）+ plans/2026-10-30_GA-C1扫参标定.md（含决策落地）。
+> ### 多设备纪律（machine-facts.md=新设备第一读）
+> 开工 `git pull` → 干活 → 收尾 push；hub=导师部署仅工位接入；大文件走文件中心不走 git。
 >
 > ### 后续可做方向（按价值排序）
 > 1. **p45f 终判收口**（见上三态处理）；
