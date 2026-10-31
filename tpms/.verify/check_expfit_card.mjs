@@ -71,7 +71,7 @@ const canvasVisible = await page.evaluate(() => {
 });
 let pass = 0, fail = 0;
 const ok = (n, c, d = '') => { c ? pass++ : fail++; console.log((c ? 'PASS' : 'FAIL'), n, d); };
-ok('指标文本渲染（E*/σpl/εd/GA 比）', /E\*=\d/.test(resultText) && /σpl=\d/.test(resultText) && /GA\/实测=\d/.test(resultText), resultText.slice(0, 90));
+ok('指标文本渲染（E*/σpl/εd/解析比）', /E\*=\d/.test(resultText) && /σpl=\d/.test(resultText) && /(GA|FEA)\/实测=\d/.test(resultText), resultText.slice(0, 90));
 ok('E* 恢复 ≈1200（±3%）', (() => { const m = resultText.match(/E\*=(\d+)/); return m && Math.abs(Number(m[1]) - 1200) / 1200 < 0.03; })());
 ok('canvas 已显示', canvasVisible);
 

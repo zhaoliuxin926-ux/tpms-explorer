@@ -13,7 +13,7 @@ import { WorkerBridge, WorkerRequestSupersededError } from './worker/worker-brid
 import TpmsWorker from './worker/tpms-worker.ts?worker';
 import type { WorkerResponse, AppState, BuildParams, MaterialPreset } from './types';
 import type { ColoringMode, SliceAxis } from './types';
-import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH } from './physics/gibson-ashby';
+import { computePhysicsMetrics, estimateAnisotropicStiffness, BASE_MODULUS, BASE_YIELD_STRENGTH, plateauStress } from './physics/gibson-ashby';
 import { analyzeTortuosity3D } from './physics/tortuosity';
 import { makeZGrad } from './core/iso-grad';
 import { radialGradTransform, schwarzPPhase, radialGradThresholdAt } from './core/radial-grad';
@@ -853,8 +853,12 @@ function bindExperimentalFit(): void {
       const pf = Math.max(0.05, Math.min(0.98, st.porosity / 100));
       const mat = st.material === 'auto' ? 'tc4' : st.material;
       const syield = BASE_YIELD_STRENGTH[mat] ?? 880;
-      const gaPlateau = 0.3 * Math.pow(1 - pf, 1.5) * syield; // Gibson-Ashby 开孔式平台应力估算
-      const ratio = gaPlateau / m.plateauStress;
+      // 平台参照分族（2026-10-31 与 estimate 替换同构）：gyroid=FEA 标定幂律，其他族=GA 开孔式
+      const rhoBar = 1 - pf;
+      const feaPlDimless = plateauStress(rhoBar, st.type);
+      const plateauRef = (feaPlDimless ?? 0.3 * Math.pow(rhoBar, 1.5)) * syield;
+      const ratio = plateauRef / m.plateauStress;
+      const ratioTag = feaPlDimless != null ? 'FEA/实测' : 'GA/实测';
       out.style.display = 'block';
       // εd/W 有效性口径（2026-10-24 审查 #5）：截断曲线 η 极值落末点=未观察到密实化，
       // εd 不给伪确定值；W 标注实际积分终点（记录末点），不冒称"至密实化吸能"
@@ -873,7 +877,7 @@ function bindExperimentalFit(): void {
       const dimTxt = isDf ? `（位移-载荷口径：L₀=${l0}mm · A₀=${a0}mm²${metaFilled ? ' · 已从 CSV 元数据预填' : ''}）` : '';
       out.textContent = hWarnTxt + 'E*=' + m.elasticModulusE.toFixed(1) + ' MPa · Rp0.2=' + m.proofStressRp02.toFixed(2)
         + ' MPa · σpl=' + m.plateauStress.toFixed(2) + ' MPa · ' + edTxt
-        + ' · ' + wTxt + ' · GA/实测=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%） ' + dimTxt;
+        + ' · ' + wTxt + ' · ' + ratioTag + '=' + ratio.toFixed(2) + '×（' + st.type + '@' + st.porosity + '%） ' + dimTxt;
       drawExpFitCanvas(canvas, r.cleanedCurve.strain, r.cleanedCurve.stress, m.plateauStress, m.densificationStrain, m.proofStressRp02, m.elasticModulusE);
       taskFlow.expfitDone = true;
       refreshTaskFlow();
