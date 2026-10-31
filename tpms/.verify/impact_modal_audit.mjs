@@ -80,8 +80,8 @@ console.log('\n[C] 吸能效率与平台应力');
 {
   const cr = computeCrush(0.3, 'gyroid');
   check(`η(ε_d) ∈ (0,1]（${cr.etaAtEpsilonD.toFixed(3)}）`, cr.etaAtEpsilonD > 0 && cr.etaAtEpsilonD <= 1);
-  // 平台应力同源：σ_pl = 0.3·880·ρ̄^1.5（C2 与 gibson-ashby.ts 一致）
-  const expect = 0.3 * 880 * Math.pow(0.3, 1.5);
+  // 平台应力同源：gyroid=FEA 平台幂律 1.64·880·ρ̄^2.41（2026-10-31 替换，docs/fea-calibration.md）
+  const expect = 1.64 * 880 * Math.pow(0.3, 2.41);
   check(`σ_pl 同源（${cr.sigmaPl.toFixed(2)} vs ${expect.toFixed(2)} MPa）`, Math.abs(cr.sigmaPl - expect) < 1e-9);
   // 效率函数可用
   const eta = energyEfficiency(0.3, 0.3, 'gyroid');

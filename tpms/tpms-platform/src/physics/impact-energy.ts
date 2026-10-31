@@ -18,7 +18,7 @@
  */
 
 import type { TpmType } from '../types';
-import { gibsonAshby } from './gibson-ashby';
+import { gibsonAshby, plateauStress as feaPlateauStress } from './gibson-ashby';
 
 /** 基体材料（缺省 TC4） */
 export const RHO_S_GCMM3 = 4.43;      // g/cm³（TC4）
@@ -46,7 +46,8 @@ export interface CrushResult {
 export function computeCrush(relativeDensity: number, type: TpmType, sigmaYsMPa = 880): CrushResult {
   const rho = Math.min(0.9, Math.max(0.03, relativeDensity));
   const ga = gibsonAshby(rho, type);
-  const sigmaPl = C2 * sigmaYsMPa * Math.pow(rho, 1.5);
+  // σ_pl 分族（2026-10-31 与 estimate 替换同构）：gyroid=FEA 平台幂律，其余=GA 开孔式
+  const sigmaPl = (feaPlateauStress(rho, type) ?? C2 * Math.pow(rho, 1.5)) * sigmaYsMPa;
   const eStar = ga.E_Es * E0_GPA * 1000;               // MPa
   const epsilonD = Math.max(0.05, Math.min(0.85, 1 - 1.4 * rho));
   const epsilonY = sigmaPl / eStar;

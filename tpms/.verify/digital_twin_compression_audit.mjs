@@ -105,6 +105,18 @@ console.log('\n[C] 数字孪生压溃（R=6 · σy/E=0.008 · 2.5%）');
   check(`平台应力比跨工况稳定 ≤10%（${res.dtRatio.toFixed(4)} vs ${res2.dtRatio.toFixed(4)}）`, ratioDiff <= 0.10, ratioDiff.toFixed(4));
   check(`DT/GA 标定比在披露带内 [1.2, 3.0]（实测 ${res.calibrationRatio.toFixed(3)}）`, res.calibrationRatio > 1.2 && res.calibrationRatio < 3.0);
   check('塑性韧性耗散非负', res.plasticToughness >= 0, String(res.plasticToughness));
+
+  // ══ C2. FEA 幂律参照分族（2026-10-31，docs/fea-calibration.md）══
+  // type='gyroid' 时参照=平台应力幂律 1.64·ρ̄^2.41；DT/FEA 带由 probe_dt_fea_band 实测：
+  // ρ̄=0.35 收敛点 0.798（ρ̄ 0.25~0.4 三点 0.56~0.83，未收敛点截断窗口不作依据）——
+  // 方向与 DT/GA 相反：粗体素相对 FEA 幂律偏软（GA 时代 DT/GA>1 系 GA 低估所致）
+  {
+    const solid = voxelizeGyroid(6, 0.35);
+    const resF = dt.runCompressionDigitalTwin({ R: 6, solid, porosity: 0.65, sigmaYRatio: 0.008, hardening: 0.05, steps: 6, maxStrain: 0.025, tol: 1e-5, type: 'gyroid' });
+    check(`FEA 参照预测一致（ρ̄=0.35 → ${resF.gaPrediction.toFixed(5)}）`, Math.abs(resF.gaPrediction - 1.64 * Math.pow(0.35, 2.41)) < 1e-12);
+    check(`DT/FEA 参照比在披露带内 [0.6, 0.95]（实测 ${resF.calibrationRatio.toFixed(3)}）`, resF.calibrationRatio > 0.6 && resF.calibrationRatio < 0.95);
+    check('缺省（不传 type）保持 GA 口径（向后兼容）', Math.abs(res.gaPrediction - 0.3 * Math.pow(0.35, 1.5)) < 1e-15);
+  }
 }
 
 // ══ D. 渐进压溃失效（单元生死）══

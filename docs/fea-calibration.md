@@ -46,10 +46,11 @@
 - εd 未观察（45% 应变未密实化）——W 系截至 ε=0.451 积分，非"至密实化吸能"；
 - Standard 隐式压至 ε≥0.40 不可达（三路线 17~21% 应变死点齐，见大应变 plan 定界终表）；
 - estimate CLI 的 `feaCalibration` 字段（gyroid）自动携带本表结论；
-- **数字孪生压溃卡保留 GA 口径（2026-10-31 评估后如实记录）**：`gaPrediction=0.3·ρ̄^1.5`
-  被 digital_twin_compression_audit 公式级断言钉死（1e-15 闭合），其 DT/GA 披露带
-  [1.2, 3.0] 本身量化的是 GA 低估幅度（语义自洽）——换 FEA 幂律需审计重写+披露带重新
-  多点标定，属独立后续工程（GPU 求解器研究级预览功能，非 estimate 主口径）；
+- **数字孪生压溃卡与 SEA 卡已分族迁移（2026-10-31 第二批）**：`type` 参数使平台参照走
+  FEA 幂律（gyroid），缺省保持 GA 向后兼容；**DT/FEA 参照比实测带 [0.6, 0.95]**
+  （ρ̄=0.35 收敛点 0.798；ρ̄ 0.25~0.4 三点 0.56~0.83，未收敛点截断窗口不作依据）——
+  方向与 DT/GA（1.2~3.0）相反：粗体素相对 FEA 幂律**偏软**（GA 时代 DT/GA>1 系 GA
+  低估所致）；门 28 扩至 27 断言/门 20 σ_pl 锚同步；probe_dt_fea_band.mjs 为带重实测工具；
 - 复现：`sim/p0_generate.py → p1_mesh.py → p2_static_setup.py --explicit 5.0 --mass-dt 2e-7
   --plastic --contact --friction 0.3 → abaqus → p2_extract_csv.py → fit-batch.mjs`；
   图：`python sim/plot_calibration.py`。

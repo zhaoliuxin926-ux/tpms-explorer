@@ -600,7 +600,7 @@ function runPlasticityDemo(): boolean {
       const t0 = performance.now();
       const res = runCompressionDigitalTwin({
         R, solid, porosity: st0.porosity / 100, sigmaYRatio: syRel, failureStrain: 0.02,
-        hardening: 0.05, steps: 8, maxStrain: 0.04, tol: 1e-5,
+        hardening: 0.05, steps: 8, maxStrain: 0.04, tol: 1e-5, type: st0.type,
       });
       const dt = ((performance.now() - t0) / 1000).toFixed(1);
       const last = { maxPEEQ: res.peeq.length ? res.peeq.reduce((a, b) => Math.max(a, b), 0) : 0 };
@@ -631,7 +631,7 @@ function runPlasticityDemo(): boolean {
       }
       drawPlasticityCurve(res);
       if (out) {
-        out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain != null ? res.collapseStrain.toFixed(3) : '首步'}` : '未收敛步'}`} · ${dt}s · `          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · GA 预测比 ${res.gaPrediction.toFixed(3)}（DT/GA=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
+        out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain != null ? res.collapseStrain.toFixed(3) : '首步'}` : '未收敛步'}`} · ${dt}s · `          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · 解析参照比 ${res.gaPrediction.toFixed(3)}（DT/参照=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
           + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`
           + (pruned > 0 ? ` · 已剔除 ${pruned} 个不承载孤立体素（粗网格碎片）` : '');
         // 不收敛时的可操作指引（2026-09-20 探针+深回溯/非单调线搜索/解析体素化三修后实测：

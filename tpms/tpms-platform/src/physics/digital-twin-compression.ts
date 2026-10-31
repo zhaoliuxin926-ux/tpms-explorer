@@ -15,6 +15,7 @@
  */
 
 import { solvePlasticityCompression, type PlasticityResult, type PlasticityStepResult } from './gpu-plasticity-solver';
+import { plateauStress as feaPlateauStress } from './gibson-ashby';
 
 /** Gibson-Ashby 平台应力系数（与 gibson-ashby.ts 的 C2 同源同值） */
 export const GA_C2 = 0.3;
@@ -65,6 +66,9 @@ export interface CompressionTwinParams {
   steps?: number;
   maxStrain?: number;
   tol?: number;
+  /** 曲面类型：提供时平台参照走 FEA 标定幂律（gyroid=1.64·ρ̄^2.41，docs/fea-calibration.md），
+   *  缺省保持 GA 0.3·ρ̄^1.5（其他 25 族无 FEA 证据，行为不变） */
+  type?: string;
   /** 台账：每步被杀死的单元数 */
   onDeath?: (step: number, killed: number, totalDead: number) => void;
 }
@@ -107,7 +111,9 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
   const A0 = R * R;               // 初始截面（E0=1, h=1 → 单位换算相消；ε = Δu/L0 由求解器直接给出）
   const failureStrain = params.failureStrain ?? 0.05;
   const rho = Math.max(0.01, 1 - params.porosity);
-  const gaRatio = GA_C2 * Math.pow(rho, 1.5);   // σ_pl/σ_sy 文献口径
+  // 平台参照分族（2026-10-31 与 estimate 替换同构）：gyroid=FEA 标定幂律，其余/缺省=GA
+  const feaPl = params.type ? feaPlateauStress(rho, params.type) : undefined;
+  const refRatio = feaPl ?? GA_C2 * Math.pow(rho, 1.5);   // σ_pl/σ_sy 解析参照
 
   const deathTimeline: Array<{ strain: number; killed: number }> = [];
   let totalDead = 0;
@@ -200,9 +206,9 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
   return {
     curve,
     plateauStress,
-    gaPrediction: gaRatio,
+    gaPrediction: refRatio,
     dtRatio,
-    calibrationRatio: Number.isFinite(dtRatio) ? dtRatio / gaRatio : NaN,
+    calibrationRatio: Number.isFinite(dtRatio) ? dtRatio / refRatio : NaN,
     totalDead,
     deathTimeline,
     plasticToughness: plas.steps[plas.steps.length - 1]?.energy.wPl ?? 0,
