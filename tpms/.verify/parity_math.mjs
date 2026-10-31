@@ -616,8 +616,9 @@ const { gibsonAshby } = (await imp(BUNDLE));
 {
   const rho = 0.25;
   const g = gibsonAshby(rho, 'gyroid');
-  check('G-A σ* = 0.3·ρ^1.5（Gibson&Ashby 1997 开孔泡沫量级）', Math.abs(g.sigma_Es - 0.3 * Math.pow(rho, 1.5)) < 1e-12, `${fmt(g.sigma_Es)}`);
-  check('G-A σ* 量级合理 (≤0.6·ρ^1.5)', g.sigma_Es <= 0.6 * Math.pow(rho, 1.5), '原值 1.5 高估 6.5×');
+  // 2026-10-31 gyroid σ 主口径已替换为 FEA Rp0.2 幂律（docs/fea-calibration.md）；其他族仍 GA
+  check('FEA Rp0.2 σ* = 0.54·ρ^2.02（Explicit 三点标定）', Math.abs(g.sigma_Es - 0.54 * Math.pow(rho, 2.02)) < 1e-12, `${fmt(g.sigma_Es)}`);
+  check('FEA σ* 量级合理 (≤0.6·ρ^1.5)', g.sigma_Es <= 0.6 * Math.pow(rho, 1.5), '原值 1.5 高估 6.5×');
 }
 
 // BibTeX 转义（mock window）

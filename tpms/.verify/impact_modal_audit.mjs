@@ -116,9 +116,10 @@ console.log('\n[D] 前 6 阶模态 + 正交对称性');
   const f1a = computeModal(0.15, 'gyroid', 30).f1;
   const f1b = computeModal(0.45, 'gyroid', 30).f1;
   check(`f1 随 ρ̄ 递增（${f1a.toFixed(0)} → ${f1b.toFixed(0)} Hz）`, f1b > f1a);
-  // 标度：等效梁 E∝ρ̄² ⇒ f ∝ √(E/ρ) ∝ √ρ̄，比值 = √(0.45/0.15) = √3
+  // 标度：f ∝ √(E*/ρ*)；gyroid E*∝ρ̄^2.25（FEA 标定，2026-10-31）⇒ f ∝ ρ̄^0.625，比值 = 3^0.625
+  // （旧 √3 假设 E∝ρ̄² GA 弯曲档——被 per-family 指数取代，期望值由同源公式推导）
   const scale = f1b / f1a;
-  check(`√(E/ρ) 标度（比值 ${scale.toFixed(4)} ≈ √3 = 1.7321）`, Math.abs(scale - Math.sqrt(3)) < 0.01);
+  check(`√(E/ρ) 标度（比值 ${scale.toFixed(4)} ≈ 3^0.625 = ${Math.pow(3, 0.625).toFixed(4)}）`, Math.abs(scale - Math.pow(3, 0.625)) < 0.01);
 }
 
 // ── E. 峰值一致性 ──
