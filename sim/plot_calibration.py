@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FEA 标定组论文级图表：sheet gyroid 幂律 vs Gibson-Ashby 对照。
+"""FEA 标定组论文级图表：network（solid）gyroid 幂律 vs Gibson-Ashby 对照。
 
 数据源：plans/2026-10-30_GA-C1扫参标定.md（Standard 线弹性四点 + Explicit 三点全特征）。
 输出：sim/out/calibration_curves.png（两 panel：刚度 / 强度）。
@@ -69,7 +69,7 @@ ax.set_title("(b) Strength scaling (decoupled exponents)")
 ax.grid(True, which="both", alpha=0.25)
 ax.legend(fontsize=7.5, loc="upper left")
 
-fig.suptitle("Sheet gyroid TPMS: FEA calibration vs Gibson-Ashby "
+fig.suptitle("Network (solid) gyroid TPMS: FEA calibration vs Gibson-Ashby "
              "(k$\\geq$2 domain, $\\sigma_{ys}$=55 MPa, $E_s$=2 GPa)", fontsize=11)
 fig.tight_layout()
 out = Path(__file__).parent / "out" / "calibration_curves.png"

@@ -110,19 +110,28 @@ console.log('\n[D] 确定性');
   check('同输入两次求解逐位一致', same);
 }
 
-// ── E. LM 精化不劣于 NM ──
-console.log('\n[E] LM 精化不劣性');
+// ── E. 优化器性质锚（2026-11-01 按 Codex 复核三条件重构）──
+console.log('\n[E] 优化器性质锚');
 {
-  const t = { ETarget: 12, porosityTarget: 0.3 };
-  // 2026-11-01：gyroid E 面换 FEA 幂律 ρ^2.25（非线性更强）后，单起点 LM 精化对该面
-  // 敏感（J_LM=1.2 vs NM 1.3e-12；生产路径 solveInverse 由 NM 多起点全局探索兜底，
-  // C 节自洽锚全过）——性质锚换公式未变的 diamond 族，锚语义（LM 精化不劣性）不变
-  const type = 'diamond';
-  const nm = nelderMead((q) => objective(t, forwardModel(type, q[0], q[1], q[2])), [0.5, 3, 1.5]);
-  const lm = levenbergMarquardt(t, type, nm.p);
-  const jNm = objective(t, forwardModel(type, nm.p[0], nm.p[1], nm.p[2]));
-  const jLm = objective(t, forwardModel(type, lm.p[0], lm.p[1], lm.p[2]));
-  check(`J_LM ${jLm.toExponential(3)} ≤ J_NM ${jNm.toExponential(3)} + 1e-12`, jLm <= jNm + 1e-12);
+  // ①可达目标例：用合法参数生成目标（旧 E=12/P=0.3 在 gyroid 新幂律下 α≥0.2386
+  //   低于合法下限 0.5 = 目标越界——NM 找域外解、LM 投影回合法域，两者解不同
+  //   约束问题，初版误诊为"LM 退化"）
+  for (const type of ['gyroid', 'diamond']) {
+    const truth = forwardModel(type, 0.3, 2.0, 1.0);
+    const t = { ETarget: truth.EGPa, porosityTarget: 0.3 };
+    const nm = nelderMead((q) => objective(t, forwardModel(type, q[0], q[1], q[2])), [0.5, 3, 1.5]);
+    const lm = levenbergMarquardt(t, type, nm.p);
+    const jNm = objective(t, forwardModel(type, nm.p[0], nm.p[1], nm.p[2]));
+    const jLm = objective(t, forwardModel(type, lm.p[0], lm.p[1], lm.p[2]));
+    check(`${type} 可达目标：成本有限且不退化（${Math.min(jNm, jLm).toExponential(3)}）`, Number.isFinite(Math.min(jNm, jLm)) && Math.min(jNm, jLm) < 1);
+    check(`${type} 从 NM 初值 LM 精化活性（成本确实下降：${jNm.toExponential(2)} → ${jLm.toExponential(2)}）`, jLm <= jNm);
+  }
+  // ②不可达例（保留）：合法参数/有限成本/不退化
+  const tBad = { ETarget: 12, porosityTarget: 0.3 };
+  const nmB = nelderMead((q) => objective(tBad, forwardModel('gyroid', q[0], q[1], q[2])), [0.5, 3, 1.5]);
+  const lmB = levenbergMarquardt(tBad, 'gyroid', nmB.p);
+  const pB = lmB.p, jB = objective(tBad, forwardModel('gyroid', pB[0], pB[1], pB[2]));
+  check('不可达目标：返回合法参数且成本有限', pB.every(Number.isFinite) && Number.isFinite(jB));
 }
 
 // ── F. UI 应用口径哨兵（2026-09-22 定案）──

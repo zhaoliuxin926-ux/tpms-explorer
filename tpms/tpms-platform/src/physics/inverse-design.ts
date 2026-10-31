@@ -299,7 +299,11 @@ export function solveInverse(targets: DesignTargets): InverseReport {
     for (const start of [[0.5, 3, 1.5], [0.75, 2, 1.0]] as Vec3[]) {
       const nm = nelderMead((q) => objective(targets, forwardModel(type, clampP(q[0]), clampC(q[1]), clampA(q[2]))), start);
       const lm = levenbergMarquardt(targets, type, nm.p);
-      const cand = { p: lm.p, j: objective(targets, forwardModel(type, clampP(lm.p[0]), clampC(lm.p[1]), clampA(lm.p[2]))) };
+      // NM/LM 择优（2026-11-01 独立复核发现）：LM 在无 κ 约束时 cellSize 维 Jacobian
+      // 奇异可原地返回——此前无条件采用 lm.p 会丢失 NM 更优解
+      const nmJ = objective(targets, forwardModel(type, clampP(nm.p[0]), clampC(nm.p[1]), clampA(nm.p[2])));
+      const lmJ = objective(targets, forwardModel(type, clampP(lm.p[0]), clampC(lm.p[1]), clampA(lm.p[2])));
+      const cand = lmJ <= nmJ ? { p: lm.p, j: lmJ } : { p: nm.p, j: nmJ };
       if (cand.j < P_TOL) cand.j = 0;   // 数值噪声清零
       if (!best || cand.j < best.j) best = cand;
     }

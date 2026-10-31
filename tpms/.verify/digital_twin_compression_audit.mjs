@@ -114,7 +114,10 @@ console.log('\n[C] 数字孪生压溃（R=6 · σy/E=0.008 · 2.5%）');
     const solid = voxelizeGyroid(6, 0.35);
     const resF = dt.runCompressionDigitalTwin({ R: 6, solid, porosity: 0.65, sigmaYRatio: 0.008, hardening: 0.05, steps: 6, maxStrain: 0.025, tol: 1e-5, type: 'gyroid' });
     check(`FEA 参照预测一致（ρ̄=0.35 → ${resF.gaPrediction.toFixed(5)}）`, Math.abs(resF.gaPrediction - 1.64 * Math.pow(0.35, 2.41)) < 1e-12);
-    check(`DT/FEA 参照比在披露带内 [0.6, 0.95]（实测 ${resF.calibrationRatio.toFixed(3)}）`, resF.calibrationRatio > 0.6 && resF.calibrationRatio < 0.95);
+    // 2026-11-01 Codex 复核降格：带=[0.6,0.95] 系固定 R6 算例回归容差（单收敛点+摊码
+    // 敏感：名义 ρ̄=0.35 实际固相 71/216=0.3287，换分母口径比变 0.798→0.928）——
+    // 非跨密度/分辨率标定带；成带前须匹配实际密度/本构/边界/应变窗口+多收敛点
+    check(`DT/FEA 参照比在固定 R6 算例回归容差 [0.6, 0.95] 内（实测 ${resF.calibrationRatio.toFixed(3)}；单收敛点，口径敏感）`, resF.calibrationRatio > 0.6 && resF.calibrationRatio < 0.95);
     check('缺省（不传 type）保持 GA 口径（向后兼容）', Math.abs(res.gaPrediction - 0.3 * Math.pow(0.35, 1.5)) < 1e-15);
   }
 }
