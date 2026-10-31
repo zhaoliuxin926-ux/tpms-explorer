@@ -1,4 +1,6 @@
 // 验证：逆设计 forwardModel 与主面板 estimate 同源同值（用户复核第 2 点闭环）
+// 限定条件（2026-11-01 Codex 复核）：TC4、solid 模式、α=1 的前向核对——其他材料/模式/
+// 各向异性下数值不同，同源一致性由单源实现（同一 gibsonAshby 函数）保证
 import { writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
