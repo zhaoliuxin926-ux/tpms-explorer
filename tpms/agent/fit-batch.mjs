@@ -68,10 +68,33 @@ function parseMeta(text) {
 
 function fitOneCsv(text, id) {
   const firstLine = (text.split(/\r?\n/).find((l) => l.trim() && !/^\s*(?:#|\/\/)/.test(l)) ?? '');
-  if (!/displacement\s*_?\s*mm/i.test(firstLine) || !/force\s*_?\s*N/i.test(firstLine)) {
-    return { id, error: `缺表头列名（契约：displacement_mm,force_N[,time_s]——协议 §六）首行="${firstLine.slice(0, 60)}"` };
+  const isSS = /strain/i.test(firstLine) && /stress/i.test(firstLine);
+  if (!isSS && (!/displacement\s*_?\s*mm/i.test(firstLine) || !/force\s*_?\s*N/i.test(firstLine))) {
+    return { id, error: `缺表头列名（契约：displacement_mm,force_N[,time_s] 或 strain,stress_MPa——协议 §六）首行="${firstLine.slice(0, 60)}"` };
   }
   const meta = parseMeta(text);
+  if (isSS) {
+    // strain-stress 模式（历史/文献曲线直读）：应变直接给，H₀/尺寸/档位校验不适用
+    try {
+      const r = fitExperimentalCurve({ text, inputType: 'strain-stress', columnX: 'strain', columnY: 'stress_MPa' });
+      let fea = null;
+      const por = meta.porosity;
+      const type = typeof meta.type === 'string' ? meta.type : null;
+      if (Number.isFinite(por) && por > 0 && por < 1 && type) {
+        const rho = 1 - por;
+        const pl = plateauStress(rho, type);
+        const ga = gibsonAshby(rho, type);
+        if (pl !== undefined) {
+          const inDomain = rho >= 0.3 && rho <= 0.5;
+          fea = { type, rho, inDomain, eEs: ga.E_Es, rp02: ga.sigma_Es, plateau: pl,
+                  note: inDomain ? null : `ρ̄=${rho.toFixed(2)} 越标定域 [0.3,0.5]` };
+        }
+      }
+      return { id, dims: null, hWarn: null, metrics: r.metrics, fea, source: typeof meta.source === 'string' ? meta.source : null, ss: true };
+    } catch (e) {
+      return { id, dims: null, hWarn: null, error: `内核拟合失败：${e.message}`, ss: true };
+    }
+  }
   const dims = { lengthMm: meta.lengthMm, widthMm: meta.widthMm, thicknessMm: meta.thicknessMm };
   const missing = Object.entries(dims).filter(([, v]) => !Number.isFinite(v) || v <= 0).map(([k]) => k);
   if (missing.length) return { id, error: `试样尺寸元数据缺失/非法（# lengthMm=… widthMm=… thicknessMm=…，卡尺实测含端板）缺 ${missing.join(',')}` };
@@ -215,7 +238,7 @@ const md = [
     const feaRatio = f && r.metrics
       ? `${(f.eEs * ES_MPA / r.metrics.elasticModulusE).toFixed(2)}× / ${(f.plateau * SYS_MPA / r.metrics.plateauStress).toFixed(2)}×`
       : '—';
-    return `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${feaPred} | ${feaRatio} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`;
+    return `| ${r.id} | ${r.dims ? fmt(r.dims.lengthMm, 1) : 'ss'} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${feaPred} | ${feaRatio} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`;
   }),
   ...(rows.some((r) => r.fea?.note) ? ['', ...rows.filter((r) => r.fea?.note).map((r) => `- ⚠ ${r.id}：${r.fea.note}（幂律对照行同样仅供量级参考）`)] : []),
   ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径（参照身份分列，2026-11-01 Codex 复核）：**E\\* 预测列=Standard 线弹性四点幂律（1.02·ρ̄^2.25）**；**平台σ 预测列=Explicit 三点幂律（1.64·ρ̄^2.41）**——两指标参照口径不同源（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，network gyroid）；比=预测/试验，材料=示例 PLA（Es=2GPa/σys=55MPa，实际材料不同按比例换算）；标定曲线来源=仿真，物理试验 CSV 请在工程版复核'] : []),
