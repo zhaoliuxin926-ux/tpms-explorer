@@ -29,9 +29,12 @@
 >
 > **轮 17 数字孪生+SEA 分族（cc688e9）**：digital-twin-compression/impact-energy 的平台参照分族（type 参数，gyroid=FEA 幂律/缺省 GA 兼容）；**DT/FEA 参照比带 [0.6,0.95]**（ρ̄=0.35 收敛点 0.798——方向与 DT/GA 1.2~3.0 相反：粗体素相对 FEA 幂律偏软，GA 时代 DT/GA>1 系 GA 低估）；门28 24→27 断言/门20 σ_pl 锚校准 11/0；**新坑：函数内局部 let 与导入函数同名→rolldown 提升后同域 TDZ**（导入别名修复）；probe_dt_fea_band.mjs 带重实测工具入库。**GA→FEA 口径换代全链清零**（estimate/expfit/数字孪生/SEA/文档/图/门禁锚；仅 feaCalibration 字段保留 GA 对照值=设计）。
 >
+> **轮 18-19 双 AI 对接（Codex 四轮复核）+diamond 扩展**：Codex（ChatGPT 桌面 app，computer-use 短消息+collab/codex/ 文件双通道）四轮独立复核全部落实——①四点复核（sheet→network 术语/R=每周期格数/能量 0.85% 系 sta 列误读/逆设计 2.70× 分叉）e1c1733；②LM 真因（目标越界+投影语义）+line302 无择优生产缺陷修复+DT/FEA 带降格 f3d1298；③LM 验收修正（投影统一+真活性断言=三目标激活 cellSize 维+jInit 严格下降，初版 jLm<=jNm 恒真无效）+fit-batch 来源分列（# source= 键）d60d175；④diamond 阶段定稿（p50 三份网格 Explicit 一致拒收措辞+STL 哈希冻结+FE/STL 体积比全 1.0+两族实测密度统一重拟合 gyroid 0.9914·ρ̄^2.2028/diamond 0.7871·ρ̄^2.0709）750dd56。diamond E\* 三点候选数据入库暂缓（Codex 批准：刚度可独立放行，前提=网格质量证据+密度口径定案），主公式替换继续暂缓。p0 --type diamond 补交 44bb65f（漏提交复现链断裂教训）。**Codex Plus 额度耗尽（15:13 重置）**——第四轮表态（主密度口径/p50 三选一）中断，collab 文件挂起待续。
+>
 > ### 后续可做方向（按价值排序）
-> 1. **LLM 回归 43 条补跑**（需 TPMS_LLM_KEY 三 env 套件，key 只经环境变量）；
-> 2. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）→ 试验侧 vs 幂律标定组对比（试样 k8R96≡标定组 k2R24 同 12 格/周期口径，直接可比）。
+> 1. **Codex 额度恢复后**（15:13 后）：读 collab 文件第四轮回执→两表态（主密度口径/p50 三选一）→diamond 入库独立轮（标度律锚校准）；
+> 2. **LLM 回归 43 条补跑**（需 TPMS_LLM_KEY 三 env）；
+> 3. **Phase 3 CFD**（卡 license）；**S1_G60 上机**（卡用户）。
 >
 > ### 等用户输入的挂起项
 > 1. **Phase 3 CFD license**；2. **单元形态确认**；3. C1 双口径/pack 清洗/博客四。
