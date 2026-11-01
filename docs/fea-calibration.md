@@ -46,9 +46,10 @@
   最大角 180°，d60le_p50.dat:1016）——R24 缺省/放宽 lmax0.8/真加密 lmax0.3（176,689
   单元，畸变 2→3 个同量级）**三份网格被 Explicit 前处理一致拒收**：Gmsh tet10 管线对
   diamond p50 几何特征（等值面-盒边界交线）的产出限制，非密度参数可解；Standard 线
-  弹性容忍（三点 E\* 已收，p50 点带 2 近退化单元的证据瑕疵如实披露）；**下一步选项**：
-  强度侧维持两点+披露（初步标定够用）/Explicit 换 C3D4M 或 Netgen 优化重剖/几何圆角
-  （改几何不采纳）；
+  弹性容忍（三点 E\* 已收，p50 点带 2 近退化单元的证据瑕疵如实披露）；**下一步选项
+  （2026-11-01 Codex 第五轮定案）**：本阶段停止 p50 补算并归档；~~Explicit 换 C3D4M~~
+  （**C3D4M 不存在于 Explicit 单元索引——初版选项错误撤回**）；Netgen 优化重剖不排期；
+  几何圆角（改几何不采纳）；
 - **E\* 三点拟合（Standard 口径，名义密度）：E\*/Es ≈ 0.8509·ρ̄^2.1979**（Codex 独立回归一致）；
   **密度定义敏感性披露**：STL 实测固相 0.4987/0.3911/0.2898 vs 名义 0.5/0.4/0.3——换实测
   密度重拟合指数变 ≈2.07（Codex 复算）——**密度口径固定前 2.20 不与 gyroid 2.25 作"互证"
@@ -87,8 +88,11 @@
   作"互证"强断言；两族同口径（实测）下指数差 0.13（2.20 vs 2.07），同口径（名义）下
   差 0.05——哪种口径物理更正确属后续方法学决策（实测=FE 实解几何，名义=solve_level
   目标；FE/STL 体积比 1.0 已核对，实测口径具备背书条件）；
-- **标定域内两族刚度差（实测口径）**：同 ρ̄ 下 diamond/gyroid 系数比 0.7871/0.9914
-  ≈ **0.79**（diamond 更柔 ~21%，与文献 C1 排序一致）；
+- **标定域内两族刚度差（实测口径，曲线比）**：diamond/gyroid =
+  (0.7871/0.9914)·ρ̄^(2.0709−2.2028) → ρ̄=0.3~0.5 内 **低 7%~13%**（含指数差贡献；
+  系数单独比 0.79 不等于曲线差——2026-11-01 二次更正，同款系数比误用勿再犯）；
+- **逐点残差定义**：`ln(E_data/E_fit)`（三点拟合内对数残差，±0.0073 内）——**非网格
+  误差或模型验证精度**；
 - 强度侧：Explicit 两点逐点存档（p60 平台 8.1/Rp0.2 4.8；p70 平台 4.5/Rp0.2 2.8
   MPa），**暂不发强度幂律**；
 - **放行条件（Codex 定）**：刚度单独放行、不等强度第三点；依据=刚度自身质量证据
@@ -143,3 +147,24 @@
 `sim/p0_generate.py → p1_mesh.py → p2_static_setup.py --explicit 5.0 --mass-dt 2e-7
 --plastic --contact --friction 0.3 → abaqus → p2_extract_csv.py → fit-batch.mjs`；
 图：`python sim/plot_calibration.py`；DT/FEA 带重实测：`tpms/.verify/probe_dt_fea_band.mjs`。
+
+## 附录：算例资产绑定清单（2026-11-01 Codex 第五轮留证要求）
+
+> STL sha12 = 生成该求解的初始几何哈希；INP"被覆盖"=同名文件被后续配置重写
+> （STL 哈希+确定性管线为历史输入归属证据链）；CSV sha12=提取产物哈希。
+> 体积可复跑：`python sim/probe_volume_check.py`（FE/STL 体积比六件全 1.000000）。
+
+| 算例 | STL sha12 | INP 现状 | ODB | CSV sha12 | 口径 |
+|---|---|---|---|---|---|
+| gyroid p50 LE | 402bf44c4dd2 | 在 | ✓ | 62d03567f67c | E\* Standard |
+| gyroid p60 LE | 3609c5192e3d | 在 | ✓ | 36d014bb637c | E\* Standard |
+| gyroid p70 LE | a74114184690 | 在 | ✓ | 67a05c9bf123 | E\* Standard |
+| gyroid p60 EXPL | 3609c5192e3d | 已被 LE 版覆盖 | ✓ | 4b2675fb428e | 全特征 Explicit |
+| gyroid p50 EXPL | 402bf44c4dd2 | 已被 LE 版覆盖 | ✓ | e5198136ce11 | 全特征 Explicit |
+| gyroid p70 EXPL | a74114184690 | 已被 LE 版覆盖 | ✓ | 0bdaa0db1ea4 | 全特征 Explicit |
+| gyroid k1 EXPL | fe79dc21e604 | 在 | ✓ | da0937d3eb4a | 尺寸效应点 |
+| diamond p50 LE | 249758190e06 | 已被 fine 版覆盖 | ✓ | f2423778d588 | E\* Standard（近退化瑕疵） |
+| diamond p60 LE | 3cb93a21c905 | 已被 LE 版覆盖 | ✓ | 01a50d138c7d | E\* Standard |
+| diamond p70 LE | 9a5d4e64124a | 已被 LE 版覆盖 | ✓ | d5b93bb9b2b2 | E\* Standard |
+| diamond p60 EXPL | 3cb93a21c905 | 已被 LE 版覆盖 | ✓ | 6b7fc81d48e2 | 强度 Explicit |
+| diamond p70 EXPL | 9a5d4e64124a | 已被 LE 版覆盖 | ✓ | 251de4efb9ed | 强度 Explicit |
