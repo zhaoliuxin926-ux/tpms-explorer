@@ -2,7 +2,15 @@
 
 > ## 🔖 新会话开工指引（2026-11-01 深夜 ·双 AI 对接六轮+历史数据反演+口径换代全链完成 ·最新交接）
 >
-> **仓库态**：main=**b36d91d**（Toe 采样依赖修复）=已推送。CI：各轮逐笔绿/取消链正常（最新全量跑中，以最后 push SUCCESS 为准）。工作树净（除 sim/out 产物）。**⚠ 待拍板**：git 历史清洗（force push）——轮 20 交接与 038c423/822e502 提交消息含未发表数据派生数值（组均值/对照，当前版本已定性化但旧提交历史仍在），与 pack 清洗同议（仓库私有当前无暴露，**转公开前必须清洗**）。
+> **仓库态**：main=**2098067**（**历史已清洗重写**：filter-repo 清除未发表派生数值后 force push——**提交哈希全链已变**，宿舍机严禁直接 pull/push，须重新 clone 或 fetch+reset --hard origin/main 对齐，详见下方清洗回执）。**仓库已转私有**（2026-11-01，public 期间暴露窗口的第三方副本不可追溯——Codex 措辞纪律）。**pack 清洗合并完成**（filter-repo repack，size-pack 67.9MiB）。工作树净。
+
+> ### ⚠ 宿舍机对齐步骤（新会话第一动作若在宿舍）
+> 旧历史的宿舍 clone **不能 pull**（会 merge 旧历史推回）。执行：
+> `git fetch origin && git reset --hard origin/main`（本地未推送工作先 stash 备份）；
+> 或最稳：重新 clone。CI：force push 触发新全量跑中。
+
+> ### 历史清洗回执（Codex 第五轮第 4 点+B 方案拍板执行）
+> ①匿名 API 200 复现确认 public（此前"私有"判断错，machine-facts 已更正）→转私有（API，匿名 404 双验证）；②mirror 备份本地留存；③filter-repo 清洗（038c423/822e502 消息+progress blob 派生数值→定性表述；消息 0 残留+HEAD blob 0+全历史目标串 0；消息字节经 GitHub API 解码中文正常——GBK 显示层假象不误判）；④pack 清洗合并（repack 67.9MiB）；⑤force push main 重写后链；⑥措辞纪律采纳：不写"立即消除全部历史痕迹"——public 期间第三方副本不可追溯。
 >
 > ### 上一会话（10-31~11-01）二十三轮提交总账
 >
