@@ -78,7 +78,7 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     'docs/paper/latex/main.tex',
   ];
   // job_narrative 在 gitignored 记忆区，存在则一并扫（面试材料不许漂）
-  const optional = ['tpms/agent_memory/job_narrative.md'];
+  const optional = ['agent_memory/job_narrative.md'];
   const banned = [
     [/位级一致|逐位一致/, '「位级/逐位一致」夸大（实为容差对拍）'],
     [/56[^\n]{0,40}3\.4×/, '56→15ms 误写 3.4×（应为 ≈3.7×）'],
@@ -90,7 +90,7 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     [/~3(?:50|53)KB\s*gzip|首屏[^\n]{0,10}35\dKB/, '首屏 35xKB gzip（分包后 ~283KB：three 182+主包 101）'],
     // 2026-10-02 审查第 4 次门数漂移 + 单数字旧口径禁句（此前只禁 106/49/33 组合形态，
     // 单独出现的 45 道/35 断言/10 套/1.3MB/三十六章 全部漏网——本轮清扫后加钉）；
-    // schema_check 现值 108（10-02 时 106；10-04 strut 双族族数断言 24→25→26 各+1 →
+    // schema_check 现值 113（2026-11-02 无参实测；历史 10-02 时 106 → 108 → 逐批 +1 →
     // 10-05 第四十八批 interview-pack 写实测新值 108 被「禁 108」旧哨兵误抓，实证哨兵未随
     // 断言集变化连带——翻转后禁旧值 106，只钉「括号宣称」窄形态（如「106 断言（GUARD…」/
     // '106 assertions ('）：已发布博客时点快照「# 106 断言：」冒号形态合法豁免）
@@ -103,7 +103,7 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
     [/三十六章|36 chapters/, 'WORKFLOW_GUIDE 章数旧值 36（现 37）'],
     // 2026-10-03 第十批：README 60 秒自证段自描述数字漂移（197/GUARD 180 实为 313/313——
     // 讽刺点：教访客跑文档一致性门的命令行自己数字是错的；钉范围外漂移又一例）
-    [/docs_consistency[^\n]{0,24}197|19[78]\s*断言[^\n]{0,6}README↔代码|197\s*assertions?|guard\s*180|GUARD\s*180/, 'docs_consistency 断言旧值 197/下限 180（现基线 313=干净 clone 口径；本机另有 gitignored job_narrative.md 贡献 16 条）'],
+    [/docs_consistency[^\n]{0,24}197|19[78]\s*断言[^\n]{0,6}README↔代码|197\s*assertions?|guard\s*180|GUARD\s*180/, 'docs_consistency 断言旧值 197/下限 180（现基线 349；2026-11-01 整理后 job_narrative 随 agent_memory 入库，本机=CI 同口径）'],
   ];
   const scanList = targets.concat(optional.filter((rel) => existsSync(path.join(ROOT, rel))));
   for (const rel of scanList) {
@@ -115,13 +115,13 @@ console.log('\n[B] 过期/夸大口径扫描（发布物）');
   }
   // 2026-10-03 第十批正向钉：README 60 秒自证段的自描述数字与干净 clone 实测值强绑定
   // （禁句只防旧值回潮；正向钉防断言集变化时 README 忘同步——本门加断言必连带 README 双语。
-  // 口径：331=干净 clone 稳态（2026-10-06 红队 C 干净 clone 实测；348-本机 17 个 gitignored md
-  // 差源精确对账；旧 332 因哨兵翻转批断言集变动过期）；GUARD 下限仍 313（下限只防坍塌））
+  // 口径：349=干净 clone 稳态（2026-11-01 全仓整理轮实测；job_narrative.md 随 agent_memory/ 入库
+  // 后本机=CI 同口径；旧 331/348 因 gitignored 扫描差与断言集增长过期）；GUARD 下限仍 313（下限只防坍塌））
   {
     const rdCn = read('README.md'); const rdEn = read('README_EN.md');
-    /331 断言/.test(rdCn) ? ok('README 自证段 docs 断言数=331（干净 clone 稳态同步）') : bad('README 自证段缺「331 断言」（本门断言集变化须连带 README 双语+此钉）');
-    /331 assertions/.test(rdEn) ? ok('README_EN 自证段 docs 断言数=331') : bad('README_EN 自证段缺「331 assertions」（本门断言集变化须连带）');
-    /332 断言（README/.test(rdCn) || /332 assertions/.test(rdEn) ? bad('README 自证段残留旧值 332', '干净 clone 实测 331（2026-10-06）') : ok('README 双语无 332 旧值残留');
+    /349 断言/.test(rdCn) ? ok('README 自证段 docs 断言数=349（干净 clone 稳态同步）') : bad('README 自证段缺「349 断言」（本门断言集变化须连带 README 双语+此钉）');
+    /349 assertions/.test(rdEn) ? ok('README_EN 自证段 docs 断言数=349') : bad('README_EN 自证段缺「349 assertions」（本门断言集变化须连带）');
+    /332 断言（README/.test(rdCn) || /332 assertions/.test(rdEn) ? bad('README 自证段残留旧值 332', '干净 clone 实测 349（2026-11-01）') : ok('README 双语无 332 旧值残留');
   }
   // 37/37 必须带 n=1 或 single/best-of 限定（防统计→确定）
   for (const rel of scanList) {
@@ -196,8 +196,8 @@ console.log('\n[C2] 调色预设结构');
     : bad('索引池上界回退', '期望 ensureIndices(min(18M, R*R*R*18))');
 
   // RELEASE_NOTES 一律带「发布时点快照」边界（防当轮门禁数被读成现态）
-  const rnFiles = readdirSync(path.join(ROOT, 'docs')).filter((f) => f.startsWith('RELEASE_NOTES'));
-  const rnMissing = rnFiles.filter((f) => !read('docs/' + f).includes('发布时点快照'));
+  const rnFiles = readdirSync(path.join(ROOT, 'docs/releases')).filter((f) => f.startsWith('RELEASE_NOTES'));
+  const rnMissing = rnFiles.filter((f) => !read('docs/releases/' + f).includes('发布时点快照'));
   rnMissing.length === 0
     ? ok(`RELEASE_NOTES 快照边界全覆盖（${rnFiles.length} 份）`)
     : bad('RELEASE_NOTES 缺快照边界', rnMissing.join(','));
@@ -370,8 +370,8 @@ console.log(`\nDOCS-CONSISTENCY ${pass} PASS / ${fail} FAIL`);
     : bad('md 断链', broken.slice(0, 5).join(' | '));
 }
 
-// pass 下限守卫：基线=CI 环境实测 313（2026-10-02 SEO 哨兵+动态 SCHEDULE 对拍+禁句扩面后钉；
-// 本机另有 gitignored 的 job_narrative.md 贡献 ~16 条故本地 329>313——CI checkout 无该文件）
+// pass 下限守卫：基线=CI 环境实测 313（2026-10-02 钉，防断言面坍塌的下限而非现值；
+// 2026-11-01 整理后 job_narrative 随 agent_memory 入库，本机=CI 同口径实测 349——349>313 下限语义不变）
 if (pass < 313) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 313`); process.exit(1); }
 if (fail > 0) {
   console.log('失败项:');

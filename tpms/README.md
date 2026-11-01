@@ -62,7 +62,7 @@
 │
 ├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp）
 ├── collab/                    ← 多 Agent 协作黑板（任务审计/技术辩论/处置留痕）
-├── agent_memory/              ← 跨设备交接文档（随仓库跟踪；tpms/agent_memory/ 为历史残留 gitignored）
+├── agent_memory/              ← 跨设备交接文档（progress/context/machine-facts，随仓库跟踪）
 └── plans/                     ← 分批实施计划与调研沉淀
 ```
 
@@ -167,10 +167,10 @@ npm run dev      # 访问 http://localhost:5173
 ### 验证（一键全量）
 ```bash
 node tpms/.verify/run_ci_suite.mjs     # 48 门全量调度（约 25 分钟，三平台同款）
-cd tpms/.verify && node run_all.mjs    # 仅 18 套 UI 回归（需先起静态服务，见下）
+cd tpms/.verify && node run_all.mjs    # 仅 18 套 UI 回归（run_all 自起 4814/8125 静态服务，无需手动开服）
 node tpms/.verify/parity_math.mjs      # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
-UI 回归前置（**另开终端、仓库根执行**）：`cd docs && python -m http.server 8123`（用 localhost 不要 127.0.0.1；Playwright 用系统 Chrome channel:'chrome'）。工程版验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
+工程版单独验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
 > CI 数量口径：`run_ci_suite.mjs` 调度 **48/48** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `strut_exit_audit` 桁架跨出口矩阵门（2026-10-11 纳管）+ `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 

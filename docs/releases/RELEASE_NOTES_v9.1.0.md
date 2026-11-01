@@ -65,4 +65,4 @@ v9.1 pushes the v9.0 end-to-end chain toward *manufacturing-grade deliverables*:
 
 ---
 
-*验证底座：44 道 CI 门禁（1,000+ 断言）三平台矩阵全绿；本版全部功能宣称与实测命令一一对应，明细见 [BENCHMARKS.md](../BENCHMARKS.md) v9.1 节与 [ROADMAP](../tpms/agent/ROADMAP.md)。*
+*验证底座：44 道 CI 门禁（1,000+ 断言）三平台矩阵全绿；本版全部功能宣称与实测命令一一对应，明细见 [BENCHMARKS.md](../../BENCHMARKS.md) v9.1 节与 [ROADMAP](../../tpms/agent/ROADMAP.md)。*

@@ -1,12 +1,13 @@
 # 本地开发辅助文件（不上线）
 # 2026-10-26 多设备定案：根 agent_memory/（交接文档）与 plans/ 随仓库跟踪——
 # 任何设备 clone 即得完整开工指引；敏感串扫描已过（无凭证/无 key 模式）。
-# tpms/agent_memory/ 为历史路径残留，维持忽略。
-tpms/agent_memory/
+# 2026-11-01 全仓整理：tpms/agent_memory/ 残留目录已收编删除（bugs §一→根 bugs.md，
+# 求职材料→根 agent_memory/），生成器 gen-boundary-table.mjs 已改读 agent_memory/bugs.md。
 tpms/.zcode/
 tpms/.diag/
 .workbuddy/
 .mimocode/
+.zcode/
 
 # 控制台输出误存
 /sc_c.txt
@@ -88,7 +89,7 @@ audit_ubuntu/
 # 根/agent/.verify 下 *-verified/*.solved.stl 为 CLI 默认落盘名，可 tpms.mjs mesh 重生成
 specimens/*
 
-# ����Ӵ�����ʱ���
+# 红队控制台输出误存（rt = red team）
 .rt_*.txt
 
 tpms/.verify/_schema_tmp_*

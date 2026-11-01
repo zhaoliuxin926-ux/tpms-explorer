@@ -15,7 +15,7 @@ const CHECK = process.argv.includes('--check');
 
 function resolve(a, b) { return join(a, b); }
 
-const bugs = readFileSync(join(ROOT, 'tpms/agent_memory/bugs.md'), 'utf8');
+const bugs = readFileSync(join(ROOT, 'agent_memory/bugs.md'), 'utf8');
 const start = bugs.indexOf('## 一、已定案边界');
 const end = bugs.search(/^## 二、/m);
 if (start < 0 || end < 0) {
@@ -35,7 +35,7 @@ for (const m of section.matchAll(/^(\d+)\. \*\*(.+?)\*\*[：:]\s*([\s\S]*?)(?=\n
 const md = [
   '# 诚实边界表（自动生成）',
   '',
-  `> 由 \`node tpms/agent/gen-boundary-table.mjs\` 从 \`tpms/agent_memory/bugs.md\` §一 重生（${new Date().toISOString().slice(0, 10)}）。`,
+  `> 由 \`node tpms/agent/gen-boundary-table.mjs\` 从 \`agent_memory/bugs.md\` §一 重生（${new Date().toISOString().slice(0, 10)}）。`,
   '> **改边界只改 bugs.md 定案，再跑本脚本**；禁止手改本表导致双源漂移。',
   '',
   '| # | 边界 | 说明（摘要） |',

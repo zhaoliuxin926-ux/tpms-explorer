@@ -97,7 +97,7 @@ jobs:
         run: npx vite build
 
       # 【2026-10-02 审查 H-1 结构缺口收口】Pages 部署的是 commit 进仓库的 docs/platform，
-      # 而下方 46 门测的是 runner 内重建副本——两者此前无强约束：忘 commit 重建产物 = CI 全绿
+      # 而下方 48 门测的是 runner 内重建副本——两者此前无强约束：忘 commit 重建产物 = CI 全绿
       # + 线上陈旧。此步在替换前对拍重建产物与 commit 产物（排除 .map），不一致即红。
       - name: Deployed-artifact parity (docs/platform vs rebuilt dist)
         run: |
@@ -129,7 +129,7 @@ jobs:
       # 弃用 `| tee`：GH bash 自带 -e -o pipefail，长输出下 tee 偶发 EPIPE 会让全绿套件
       # 被判 exit 1（2026-09-24~28 连续四天随机平台假红实录，macOS #216 日志 45/45 全绿
       # 但步骤 exit 1 实锤）。输出直落文件 + 完整日志进 artifact + 尾部内联展示。
-      - name: Run 46-gate suite
+      - name: Run 48-gate suite
         working-directory: tpms/tpms-platform
         run: |
           set +e

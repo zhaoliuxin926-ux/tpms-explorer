@@ -46,13 +46,12 @@ tpms-explorer/
 │   ├── blog/ + publish/          # 技术博客 + 粘贴版
 │   ├── career/interview-pack.md  # 求职弹药
 │   ├── paper/                    # SoftwareX 材料（投稿搁置）
-│   └── RELEASE_NOTES_v*.md       # v2.4–v9.2 档案 + v1.0.0–1.0.3
+│   └── releases/                 # RELEASE_NOTES_v*.md ×17（版本档案）
 ├── specimens/                    # 物理试样 STL（gitignored）
 └── tpms/
     ├── tpms-platform/            # Vite+TS 源码（main.ts 等）
     ├── agent/                    # CLI、Agent、工具脚本
-    ├── .verify/                  # 71 个审计/门禁脚本
-    └── agent_memory/             # 进度/上下文/缺陷/计划（gitignored）
+    └── .verify/                  # 审计/门禁脚本（run_ci_suite 48 门）
 ```
 
 ---
@@ -79,7 +78,7 @@ tpms-explorer/
 | 层 | 内容 | 当前值 |
 |---|---|---|
 | 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****48 门**（main 现态，2026-10-11 strut_exit_audit+llm_driver_selftest 入列；**tag v1.0.3 时为 44**，docs_consistency/guard_audit 于 tag 后入列） |
-| 断言示例 | parity 332 / schema 106（GUARD 98） / webgpu 119 / docs_consistency **332**（GUARD 313） | GUARD 锁下限 |
+| 断言示例 | parity 337 / schema 113（GUARD 98） / webgpu 119 / docs_consistency **349**（GUARD 313） | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |

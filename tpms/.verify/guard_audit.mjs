@@ -26,7 +26,7 @@ function bad(name, detail = '') { fail++; failures.push(name + (detail ? ` — $
 
 // ── 收集门禁源文件（.verify 顶层 + agent + redteam 子目录；排除本文件自身与调度器/服务器）──
 const SELF = 'guard_audit.mjs';
-const EXCLUDE = new Set([SELF, 'run_ci_suite.mjs', 'static-server.mjs', 'run_all.mjs', '_verify_mode.mjs', 'diag_server_windows.mjs']);
+const EXCLUDE = new Set([SELF, 'run_ci_suite.mjs', 'static-server.mjs', 'run_all.mjs', 'diag_server_windows.mjs']);
 const files = [];
 for (const f of readdirSync(HERE)) {
   if (f.endsWith('.mjs') && !EXCLUDE.has(f)) files.push({ rel: f, path: join(HERE, f) });

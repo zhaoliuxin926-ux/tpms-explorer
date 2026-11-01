@@ -18,7 +18,7 @@
 | ⚖️ 严谨性与学术诚信 | [docs/HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md)（15 条定案诚实边界）· [BENCHMARKS.md](BENCHMARKS.md)（26 族可产性公开基准实测） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
-| 🕘 版本变更 | [docs/RELEASE_NOTES_v1.2.0.md](docs/RELEASE_NOTES_v1.2.0.md)（当前；功能别名 tag v9.4.0 同提交）｜[v1.1.0](docs/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 同目录） |
+| 🕘 版本变更 | [v1.2.0](docs/releases/RELEASE_NOTES_v1.2.0.md)（当前；功能别名 tag v9.4.0 同提交）｜[v1.1.0](docs/releases/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/releases/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/releases/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 见 docs/releases/） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
@@ -107,7 +107,7 @@
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
 | 🧪 高保真 CAE 管线 `sim/` (2026-10-28+) | Python 隐式场（整数周期盒+盒内阈值二分，孔隙率偏差 0.02pp）→ Gmsh HXT **C3D10** 二阶四面体（21 万单元、minSICN>0.05、零翻转）→ ABAQUS `.inp`（meshio 节点序验证）；ABAQUS 求解与流体线（Phase 2/3）推进中，多 Agent 协作评审留痕见 `collab/` | Phase 1 实测（2026-10-28/29）；管线脚本 `sim/p0_generate.py` · `sim/p1_mesh.py` |
 
-> 📝 **Release Notes**：**[v1.0.0（版本纪元重置·稳定序列起点）](docs/RELEASE_NOTES_v1.0.0.md)**｜[v9.1.0](docs/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/RELEASE_NOTES_v3.0.0.md)
+> 📝 **Release Notes**：**[v1.0.0（版本纪元重置·稳定序列起点）](docs/releases/RELEASE_NOTES_v1.0.0.md)**｜[v9.1.0](docs/releases/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/releases/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/releases/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/releases/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/releases/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/releases/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/releases/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/releases/RELEASE_NOTES_v3.0.0.md)
 >
 > 📖 **实战指南**：[《TPMS 科研与增材制造实战指南》](docs/WORKFLOW_GUIDE.md)——
 > 端板压缩试验流程、切片参数建议、snappyHexMesh 配置范例、PyVista 二次后处理。
@@ -117,13 +117,13 @@
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
 - 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 48/48（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest 三项 CLI 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门）。
-- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 331 断言（干净 clone 口径），GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
+- 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 349 断言，GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 - **60 秒自证（访客/面试官，无需 npm install——以下两门纯 node:fs 零依赖）**：
 
   ```bash
   git clone --depth 1 https://github.com/zhaoliuxin926-ux/tpms-explorer && cd tpms-explorer
   node tpms/.verify/guard_audit.mjs            # 元门：审计门禁自体（恒真扫描+GUARD 账实，~2s）
-  node tpms/.verify/docs_consistency_check.mjs # 文档数字一致性 331 断言（README↔代码↔GUARD 对拍，~10s）
+  node tpms/.verify/docs_consistency_check.mjs # 文档数字一致性 349 断言（README↔代码↔GUARD 对拍，~10s）
   ```
 
   48 门不是徽章嘴说的——这两条命令让你亲眼看到门禁在审计门禁自己。
@@ -131,7 +131,7 @@
 ---
 
 ## 🗂 开发 / 协作辅助（不参与交付）
-- `agent_memory/`（根）—— 跨设备交接文档：progress / context / machine-facts（2026-10-26 起随仓库跟踪，任何设备 clone 即得开工指引）；`tpms/agent_memory/` 为历史路径残留（gitignored）
+- `agent_memory/`（根）—— 跨设备交接文档：progress / context / machine-facts（2026-10-26 起随仓库跟踪，任何设备 clone 即得开工指引）
 - `collab/` —— 多 Agent 异步协作黑板：任务审计报告、技术辩论纪要、处置记录
 - `plans/` —— 分批实施计划与调研沉淀（随仓库跟踪）
 - `tpms/.verify/` —— 自研审计门禁（39 道）+ Playwright UI 回归脚本
