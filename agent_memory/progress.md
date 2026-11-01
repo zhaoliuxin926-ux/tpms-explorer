@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**5bbb4da 已推送**（全仓整理轮：探针清理/RELEASE_NOTES 归档/agent_memory 收编/钉值链 331→349/文案修正；对抗式审查九项复核+必修项全落地）。工作树净。
+> **仓库态**：main=**1032c86 已推送**（5bbb4da 全仓整理 + eb56456 diamond 刚度入库 + 1032c86 parity 产物同步）。**CI 事件**：2026-11-01 15:11 UTC 起 runner 侧劣化——四个 run 跨三提交（含 docs-only 的 9b3362d）run_all 在 ubuntu/windows 同签名红（verify 单文件版 #ob-skip click 超时/页导航中断），macOS 三连全绿+本地四次全量绿+parity 门三平台过=代码无关实锤；处置=等 runner 恢复后重跑（最新 run 失败 job 可 rerun），绝不 rerun 中间。工作树净。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。
@@ -23,6 +23,16 @@
 > ### diamond 刚度入库轮 + 探针不可行记录（2026-11-02，紧随整理轮）
 > - **diamond 刚度入库落地**（Codex 第四轮批准"刚度单独放行"前提全满足）：C1_MAP[diamond] 0.42→0.8509 + GA_EXPONENT_MAP[diamond]=2.1979（名义口径，与 gyroid 代码先例一致；实测口径 0.7871/2.0709 双披露）；tpms.mjs estimate model/feaCalibration diamond 分支；selftest 标度律锚 (0.5/0.2)^2.1979 + schwarz 缺省档 ρ² 不变量锚（62→63）；FEA_STRENGTH 未加（强度两点暂不发幂律）。本地 48 门全量绿（SUITE_EXIT=0）。
 > - **条件匹配 DT 探针不可行实锤**：probe_dt_fea_matched k2R24 单档 P=0.6 >130min CPU 未完成（进程满负荷非挂死；tol 1e-5×13,824 体素×32 步 PCG 代价超预期；11-01"后台跑中"未回填实为同一不可行性）。四选项挂 Codex 表态（collab/codex/ 回执），本机不再自行重试。
+>
+> ### 铁律速查（整理轮后恢复精简版；全量见 archive/progress_2026-10.md）
+> - **平台 src 变更必须同提交重建 docs/platform**（部署链：规范 cwd vite build → rm -rf docs/platform && cp -r dist → 删 *.map → diff 零差异才提交；漏了=CI parity 三平台齐红，2026-11-02 eb56456 实锤）
+> - 构建必须规范 cwd（`bash -c "cd <abs>/tpms/tpms-platform && node node_modules/vite/bin/vite.js build"`；license-headers 按 cwd 解析）
+> - 发版链：本地 48 门→推→CI+Pages 双绿才算成；**中间环境性红由最后 push 的 SUCCESS 超越，绝不 rerun 中间旧 run**（最新 run 的失败 job 可 rerun）
+> - docs_consistency 正向钉=README 双语+gate 三行+PROJECT_INVENTORY，断言集变化全链同步；计数以实测为准（schema=113 无参实测，注释会 stale）
+> - bash 一律绝对路径；改源码用 Write/Edit（bash 内嵌引号转义损文件）；管道 `| tail` 吃退出码；gh run watch 限流，查 CI 用 git credential fill+API（**仓库转私有后匿名 API 404**）
+> - git 显示层 GBK 乱码≠存储损坏（python utf-8 解码判定，严禁显示层 amend）
+> - UI 数值断言取 HD 收敛终值；toast 1.5s 自清空（MutationObserver）；慢 runner 环境红三连定性链=ubuntu/macos/本地绿+零源码变更+跨提交同签名
+> - git add 显式路径（agent_memory/ 与 plans/ 已入库，.zcode/ 已 ignore）
 >
 > ### 多设备纪律（machine-facts.md=新设备第一读）
 > 开工 `git pull` → 干活 → 收尾 push；hub=导师部署仅工位接入；大文件走文件中心不走 git。
