@@ -214,9 +214,11 @@ rel(9999, E0) > 0.5 ? ok('比较器活性探针（负样本 rel(9999,1200)=7.33 
 // 标定比
 {
   const r = fitExperimentalCurve({ text: toCsv(strains, stresses) }, { dtPlateau: 61.2, gaPlateau: 28.8 });
-  const dtOk = Math.abs(r.scaling.dtVsExpRatio - 61.2 / M.plateauStress) < 1e-12;
-  const gaOk = Math.abs(r.scaling.gaVsExpRatio - 28.8 / M.plateauStress) < 1e-12;
-  dtOk && gaOk ? ok('DT/GA 双向标定比（已知输入精确闭合）') : bad('标定比');
+  // 2026-11-01 抽稀预处理后 r.metrics 与独立参考 M 不再逐位同值（设计内）——
+  // 本断言语义=API 自洽（注入值/内核实测=输出比率），改用 r 自身平台应力闭合
+  const dtOk = Math.abs(r.scaling.dtVsExpRatio - 61.2 / r.metrics.plateauStress) < 1e-12;
+  const gaOk = Math.abs(r.scaling.gaVsExpRatio - 28.8 / r.metrics.plateauStress) < 1e-12;
+  dtOk && gaOk ? ok('DT/GA 双向标定比（已知输入精确闭合，API 自洽口径）') : bad('标定比');
 }
 // GA 锚点联通（gibson-ashby 导入可用性——平台侧预测对接面）
 {
@@ -288,6 +290,24 @@ function toCsvPairs(pairs, sep = ',') {
   rel(M2.firstPeakStress, 45) <= 0.05 && Math.abs(M2.firstPeakStrain - 0.06) <= 0.015
     ? ok(`双峰曲线第一峰值=首局部峰（${M2.firstPeakStress.toFixed(1)}@${M2.firstPeakStrain.toFixed(3)}；旧全域 argmax 返 60@0.16）`, '')
     : bad('双峰第一峰值', `${M2.firstPeakStress.toFixed(1)}@${M2.firstPeakStrain.toFixed(3)}`);
+}
+
+// ── 采样不变性锚（2026-11-01 Codex 第六轮：Toe ±10 平滑的应变尺度依赖——batch5 实测
+// 原始 0/35、400 点 35/35；内核入口统一受控抽稀 ≤400 点后，同曲线跨采样密度反演应稳定）──
+console.log('\n[采样不变性] 同曲线 400/1600 点两密度反演');
+{
+  const N = 1600, E_MAX = 0.5;
+  const strains = new Array(N);
+  for (let i = 0; i < N; i++) strains[i] = (E_MAX * i) / (N - 1);
+  const stresses = strains.map(sigmaAnalytic);
+  const to400 = strains.filter((_, i) => i % 4 === 0);
+  const st400 = stresses.filter((_, i) => i % 4 === 0);
+  const rA = fitExperimentalCurve({ text: toCsv(to400, st400) }).metrics;
+  const rB = fitExperimentalCurve({ text: toCsv(strains, stresses) }).metrics;
+  const dE = Math.abs(rA.elasticModulusE - rB.elasticModulusE) / rB.elasticModulusE;
+  const dPl = Math.abs(rA.plateauStress - rB.plateauStress) / rB.plateauStress;
+  dE <= 0.025 ? ok(`E* 跨采样密度差 ≤2.5%（实测 ${(dE * 100).toFixed(2)}%）`) : bad(`E* 跨采样密度差`, `${(dE * 100).toFixed(2)}%`);
+  dPl <= 0.025 ? ok(`平台σ 跨采样密度差 ≤2.5%（实测 ${(dPl * 100).toFixed(2)}%）`) : bad(`平台σ 跨采样密度差`, `${(dPl * 100).toFixed(2)}%`);
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);

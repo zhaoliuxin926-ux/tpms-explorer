@@ -341,8 +341,27 @@ export function extractIso13314(strain: Float64Array, stress: Float64Array, elas
 }
 
 /** 全管线：解析 → Toe 补偿 → ISO 特征 → 双向标定比 */
+/** 统一受控抽稀上限（2026-11-01）：试验机原始采样（万点级/小应变跨度）会击穿 Toe
+ * 检测的固定 ±10 点平滑窗口应变尺度（batch5 35 件实证：原始 0/35、400 点 35/35——
+ * 采样依赖根因=Codex 第六轮定位 experimental-fit Toe ±10 平滑）。400 点方案实测稳定
+ * （配对样本 E\* 变化 ±2.5% 内）；入口统一预处理使所有输入路径同尺度，保留首末点。 */
+const MAX_POINTS = 400;
+
+function decimate(strain: Float64Array, stress: Float64Array): { strain: Float64Array; stress: Float64Array } {
+  if (strain.length <= MAX_POINTS) return { strain, stress };
+  const n = MAX_POINTS;
+  const step = (strain.length - 1) / (n - 1);
+  const s = new Float64Array(n), f = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const j = Math.round(i * step);
+    s[i] = strain[j]; f[i] = stress[j];
+  }
+  return { strain: s, stress: f };
+}
+
 export function fitExperimentalCurve(input: RawCurveInput, predictions?: { dtPlateau?: number; gaPlateau?: number }): CalibrationResult {
-  const { strain, stress } = parseCurve(input);
+  let { strain, stress } = parseCurve(input);
+  ({ strain, stress } = decimate(strain, stress));
   const comp = compensateToe(strain, stress);
   const metrics = extractIso13314(comp.strain, comp.stress, comp.elasticModulus);
   const withOrigin: Iso13314Metrics = { ...metrics, virtualOriginStrain: comp.originStrain };
