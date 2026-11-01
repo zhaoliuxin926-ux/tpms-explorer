@@ -5,7 +5,8 @@ import { estimatePoreStats } from './pore-analysis';
 const C1_MAP: Record<string, number> = {
   gyroid: 1.02, // 【2026-10-31 FEA 标定替换】0.38→1.02（Standard C3D10 四点+R32 判别；见 fea-calibration.md）
   // gyroid: 0.38, // 旧 GA 开孔泡沫档（保留注释供对照；estimate feaCalibration 字段携带 GA 对照值）
-  diamond: 0.42,
+  diamond: 0.8509, // 【2026-11-02 FEA 标定入库】0.42→0.8509（Standard C3D10 三点 k2R24 名义密度口径；实测密度敏感性 0.7871·ρ̄^2.0709 见 docs/fea-calibration.md；Codex 第四轮批准刚度单独放行）
+  // diamond: 0.42, // 旧 GA 开孔泡沫档（保留注释供对照）
   schwarz: 0.35,
   iwp: 0.44,
   frd: 0.40,
@@ -36,8 +37,10 @@ const C1_MAP: Record<string, number> = {
 
 // per-family 标度指数：缺省 2（Gibson-Ashby 弯曲档）；gyroid 由 FEA 标定为 2.25
 // （sheet 曲面 membrane 分量；文献带 2.0~2.3 交叉验证，k≥2 域 ρ̄∈[0.3,0.5]）
+// diamond 2.1979 同为 FEA Standard 三点名义密度口径（2026-11-02 入库；实测密度敏感性 2.0709）
 const GA_EXPONENT_MAP: Record<string, number> = {
   gyroid: 2.25,
+  diamond: 2.1979,
 };
 
 // gyroid 强度双口径（FEA Explicit 三点标定，2026-10-31）：屈服 Rp0.2 与平台应力

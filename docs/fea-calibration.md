@@ -57,9 +57,12 @@
   **系数比≠曲线比**：按当前两拟合线，标定域内刚度差 11%~14%（初版"系数低 17%"系
   系数口径，非同密度曲线差）；
   强度侧 Explicit 仅两点（p60/p70：平台 8.1/4.5 MPa、Rp0.2 4.8/2.8）样本不足暂不入库；
-- **代码入库待定**：C1_MAP[diamond]/GA_EXPONENT_MAP[diamond] 更新会触发全族标度律锚
-  （selftest"标度律 E∝ρ̄²"用 diamond 写死）校准链——等强度侧补齐或 Codex 确认后随
-  独立轮落地（estimate diamond 预测当前仍为 GA 0.42·ρ̄²）。
+- **代码入库（2026-11-02 刚度单独放行轮落地）**：C1_MAP[diamond] 0.42→0.8509 /
+  GA_EXPONENT_MAP[diamond]=2.1979（名义密度口径，与 gyroid 代码先例一致；实测密度敏感性
+  0.7871·ρ̄^2.0709 双披露）；estimate `model`/`feaCalibration` 双字段 diamond 分支（GA 0.42 对照值保留）；
+  selftest 标度律锚改 (0.5/0.2)^2.1979 + 新增 schwarz 缺省档 ρ² 不变量锚（63/0）；
+  FEA_STRENGTH 不加（强度侧两点暂不发幂律）。estimate diamond 预测由 GA 0.42·ρ̄² 更新为
+  FEA 0.8509·ρ̄^2.1979（ρ̄=0.6 时 ≈1.79× 上修）。
 
 ## diamond 阶段定稿（2026-11-01，Codex 第四轮批准范围）
 

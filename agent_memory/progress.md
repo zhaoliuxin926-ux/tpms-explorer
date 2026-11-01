@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main@0c4d559 + 整理轮未提交变更（探针清理/RELEASE_NOTES 归档/agent_memory 收编/文案修正——见下「全仓整理轮」）。工作树有大量 staged+unstaged 改动待一次整理提交。
+> **仓库态**：main=**5bbb4da 已推送**（全仓整理轮：探针清理/RELEASE_NOTES 归档/agent_memory 收编/钉值链 331→349/文案修正；对抗式审查九项复核+必修项全落地）。工作树净。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。
@@ -15,10 +15,14 @@
 >
 > ### 新会话第一优先
 >
-> 1. **CI 确认**（整理提交 push 后全量 48 门）；
-> 2. **Codex 续对接**：条件匹配探针结果回填 collab → DT/FEA 带语义判定；diamond 入库时点（主公式暂缓中）；
+> 1. **CI 确认**（5bbb4da 整理提交 attempt2 重跑中；diamond 入库提交随其后 push）；
+> 2. **Codex 续对接**：collab/codex/2026-11-02-diamond-stiffness-ingest-zcode-response.md 两项待表态——①代码侧密度口径（名义 vs 实测）；②条件匹配 DT 探针不可行（单档 >130min CPU）的四选项（降 tol/R12/维持 R6 现状/FEA 侧产出）；
 > 3. **LLM 回归 43 条**（需 TPMS_LLM_KEY 三 env，Windows 用户/机器级均无——用户手动 export）；
 > 4. **S1_G60 上机**（卡用户）：CSV（df+三尺寸+可选 # porosity=）回传即反演+幂律叠图；**CFD license**/单元形态拍板。
+>
+> ### diamond 刚度入库轮 + 探针不可行记录（2026-11-02，紧随整理轮）
+> - **diamond 刚度入库落地**（Codex 第四轮批准"刚度单独放行"前提全满足）：C1_MAP[diamond] 0.42→0.8509 + GA_EXPONENT_MAP[diamond]=2.1979（名义口径，与 gyroid 代码先例一致；实测口径 0.7871/2.0709 双披露）；tpms.mjs estimate model/feaCalibration diamond 分支；selftest 标度律锚 (0.5/0.2)^2.1979 + schwarz 缺省档 ρ² 不变量锚（62→63）；FEA_STRENGTH 未加（强度两点暂不发幂律）。本地 48 门全量绿（SUITE_EXIT=0）。
+> - **条件匹配 DT 探针不可行实锤**：probe_dt_fea_matched k2R24 单档 P=0.6 >130min CPU 未完成（进程满负荷非挂死；tol 1e-5×13,824 体素×32 步 PCG 代价超预期；11-01"后台跑中"未回填实为同一不可行性）。四选项挂 Codex 表态（collab/codex/ 回执），本机不再自行重试。
 >
 > ### 多设备纪律（machine-facts.md=新设备第一读）
 > 开工 `git pull` → 干活 → 收尾 push；hub=导师部署仅工位接入；大文件走文件中心不走 git。

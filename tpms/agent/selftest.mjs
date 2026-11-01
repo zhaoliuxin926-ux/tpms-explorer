@@ -33,10 +33,14 @@ near(j.sigma_over_sigmas, 0.54 * Math.pow(0.35, 2.02)) ? ok('σ*/σs 独立复�
 near(j.yieldStrengthMPa, 0.54 * Math.pow(0.35, 2.02) * 880) ? ok('σ* MPa = Rp0.2 口径 × 880') : bad('σ*MPa', String(j.yieldStrengthMPa));
 near(j.plateau_over_sigmas, 1.64 * Math.pow(0.35, 2.41)) ? ok('平台σ 独立复刻 1.64·0.35^2.41') : bad('平台σ', String(j.plateau_over_sigmas));
 
-// ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)²，与常数取值无关 ──
+// ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)^n，n 取 GA_EXPONENT_MAP（缺省 2）──
 const ra = est('--type', 'diamond', '--porosity', '0.5');
 const rb = est('--type', 'diamond', '--porosity', '0.8');
-near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（diamond 0.5 vs 0.8）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
+// diamond 指数 2.1979=FEA Standard 三点名义口径（2026-11-02 入库；与 gibson-ashby.ts GA_EXPONENT_MAP 同步）
+near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 2.1979)) ? ok('标度律 E∝ρ̄^2.1979（diamond 0.5 vs 0.8，FEA 口径）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
+const ra2 = est('--type', 'schwarz', '--porosity', '0.5');
+const rb2 = est('--type', 'schwarz', '--porosity', '0.8');
+near(ra2.E_over_Es / rb2.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（schwarz 0.5 vs 0.8，缺省档不变量）') : bad('标度律 schwarz', `${ra2.E_over_Es}/${rb2.E_over_Es}`);
 
 // ── 3. 退化极限：ρ̄→1 时 E*/Es→C1、σ*/σs→C2（schwarz: C1=0.35, C2=0.3）──
 const rf = est('--type', 'schwarz', '--porosity', '0');

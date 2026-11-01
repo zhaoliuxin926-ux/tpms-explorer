@@ -254,10 +254,14 @@ function cmdEstimate(a, json) {
     anisotropy: core.getAnisotropy(type),
     model: type === 'gyroid'
       ? 'FEA 标定幂律（network gyroid，k≥2 域 ρ̄∈[0.3,0.5]）: E*/Es=1.02·ρ̄^2.25, σ*/σs=0.54·ρ̄^2.02 (Rp0.2), 平台σ*=1.64·ρ̄^2.41'
-      : 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
+      : type === 'diamond'
+        ? 'FEA 标定幂律（network diamond，Standard 三点 k2R24，k≥2 域 ρ̄∈[0.3,0.5]）: E*/Es=0.8509·ρ̄^2.1979（名义密度口径；实测密度敏感性 0.7871·ρ̄^2.0709）。强度侧两点样本不足暂走 GA'
+        : 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
     feaCalibration: type === 'gyroid'
       ? '【2026-10-31 已替换为 FEA 标定幂律】本管线 ABAQUS 八轮标定（Standard 四点 E*+Explicit 三点全特征+k≥2 域；Rp0.2 跨求解范式 0.9% 一致）。GA 对照值（旧口径）：E*/Es=0.38·ρ̄²=' + (0.38 * rel * rel).toFixed(4) + '、σ*/σs=0.3·ρ̄^1.5=' + (0.3 * Math.pow(rel, 1.5)).toFixed(4) + '——FEA/GA 刚度 1.98~2.24×、强度侧指数 2.0/2.41 vs GA 1.5（强度刚度解耦）。详见 docs/fea-calibration.md'
-      : undefined,
+      : type === 'diamond'
+        ? '【2026-11-02 刚度已替换为 FEA 标定幂律】Standard C3D10 三点 k2R24（Codex 批准刚度单独放行；p50 前处理拒收已归档）。GA 对照值（旧口径）：E*/Es=0.42·ρ̄²=' + (0.42 * rel * rel).toFixed(4) + '——FEA/GA 刚度 ≈1.7×（ρ̄=0.4）。强度侧 Explicit 两点暂不发幂律。详见 docs/fea-calibration.md'
+        : undefined,
     boundary: '几何相关指标（比表面积/渗透率/孔径/各向异性刚度张量）需网格管线，M1 提供',
   };
   if (json) { console.log(JSON.stringify(out, null, 2)); return; }
