@@ -29,6 +29,21 @@ def gyroid_field(k: int, R: int) -> tuple[np.ndarray, np.ndarray]:
     return f, ax
 
 
+def diamond_field(k: int, R: int) -> tuple[np.ndarray, np.ndarray]:
+    """无量纲 diamond 场（与平台 tpms-functions.ts 同源四项式）。域 [0, 2πk]³。"""
+    n = k * R
+    ax = np.linspace(0.0, 2.0 * np.pi * k, n + 1)
+    x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
+    f = (np.sin(x) * np.sin(y) * np.sin(z)
+         + np.sin(x) * np.cos(y) * np.cos(z)
+         + np.cos(x) * np.sin(y) * np.cos(z)
+         + np.cos(x) * np.cos(y) * np.sin(z))
+    return f, ax
+
+
+FIELDS = {"gyroid": gyroid_field, "diamond": diamond_field}
+
+
 def solve_level(f: np.ndarray, solid_fraction: float) -> float:
     """二分等值面 level c 使采样固相占比 mean(f>=c) → solid_fraction。"""
     lo, hi = float(f.min()), float(f.max())
@@ -57,7 +72,7 @@ def box_sdf(ax: np.ndarray, box_lo: float, box_hi: float) -> np.ndarray:
     return outside + inside
 
 
-def generate(k: int, R: int, porosity: float) -> tuple[trimesh.Trimesh, float]:
+def generate(k: int, R: int, porosity: float, ftype: str = "gyroid") -> tuple[trimesh.Trimesh, float]:
     # 盒=严格整数周期 [0, 2πk]³（体积分数守恒域），数据域向外扩 margin 格
     # （旧实现域锁 [0,2πk] 盒内缩 → 盒内仅 1.846 周期 + solve_level 全域统计与盒内
     #  几何不一致，结构性孔隙率偏差 ~0.9pp——反重力 T1 评审定位，实测修复后 -0.02pp 级）
@@ -66,7 +81,14 @@ def generate(k: int, R: int, porosity: float) -> tuple[trimesh.Trimesh, float]:
     box_lo, box_hi = 0.0, 2.0 * np.pi * k
     ax = np.linspace(-margin * dx, box_hi + margin * dx, k * R + 2 * margin + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
-    f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
+    # 场分族（2026-10-31）：gyroid 原式；diamond 与平台 tpms-functions.ts 同源四项式
+    if ftype == "diamond":
+        f = (np.sin(x) * np.sin(y) * np.sin(z)
+             + np.sin(x) * np.cos(y) * np.cos(z)
+             + np.cos(x) * np.sin(y) * np.cos(z)
+             + np.cos(x) * np.cos(y) * np.sin(z))
+    else:
+        f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
     # 阈值 c 只在盒内统计（与最终几何的统计域一致）
     eps = 1e-6
     in_box = ((x >= box_lo - eps) & (x <= box_hi + eps)
@@ -105,6 +127,7 @@ def generate(k: int, R: int, porosity: float) -> tuple[trimesh.Trimesh, float]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--type", type=str, default="gyroid", choices=sorted(FIELDS), help="曲面类型（gyroid/diamond）")
     ap.add_argument("--k", type=int, default=2)
     ap.add_argument("--R", type=int, default=24)
     ap.add_argument("--por", type=float, default=0.60)
@@ -112,12 +135,12 @@ def main() -> int:
     args = ap.parse_args()
 
     t0 = time.time()
-    mesh, c = generate(args.k, args.R, args.por)
+    mesh, c = generate(args.k, args.R, args.por, args.type)
     bbox = mesh.bounds[1] - mesh.bounds[0]
     actual_por = 1.0 - mesh.volume / float(np.prod(bbox))
     comps = len(mesh.split(only_watertight=False))
 
-    out = Path(args.out) if args.out else REPO / "sim" / "out" / f"gyroid_k{args.k}_p{int(args.por*100)}.stl"
+    out = Path(args.out) if args.out else REPO / "sim" / "out" / f"{args.type}_k{args.k}_p{int(args.por*100)}.stl"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(trimesh.exchange.stl.export_stl(mesh))
 
