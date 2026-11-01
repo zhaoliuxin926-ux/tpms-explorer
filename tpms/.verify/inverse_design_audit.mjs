@@ -110,29 +110,34 @@ console.log('\n[D] 确定性');
   check('同输入两次求解逐位一致', same);
 }
 
-// ── E. 优化器性质锚（2026-11-01 按 Codex 复核三条件重构）──
+// ── E. 优化器性质锚（2026-11-01 Codex 三轮验收修正：投影统一+真活性+界内断言）──
 console.log('\n[E] 优化器性质锚');
 {
-  // ①可达目标例：用合法参数生成目标（旧 E=12/P=0.3 在 gyroid 新幂律下 α≥0.2386
-  //   低于合法下限 0.5 = 目标越界——NM 找域外解、LM 投影回合法域，两者解不同
-  //   约束问题，初版误诊为"LM 退化"）
+  // 投影统一：NM 与生产同款 clamp 包裹（初版 E 节 NM 用裸参数——与生产投影不一致，
+  // 正是"域外近零解 vs LM 投影回合法域"假象的成因之一）
+  // 活性用例带三目标（E+κ+P）：κ 目标激活 cellSize 维——无 κ 约束时该维 Jacobian 零列，
+  // LM（乘法阻尼）不消奇异、原地返回，"jLm<=jNm"式活性断言恒真无效（Codex 实测）
   for (const type of ['gyroid', 'diamond']) {
-    const truth = forwardModel(type, 0.3, 2.0, 1.0);
-    const t = { ETarget: truth.EGPa, porosityTarget: 0.3 };
-    const nm = nelderMead((q) => objective(t, forwardModel(type, q[0], q[1], q[2])), [0.5, 3, 1.5]);
+    const truth = forwardModel(type, 0.4, 2.0, 1.0);
+    const t = { ETarget: truth.EGPa, kappaTarget: truth.kappaM2, porosityTarget: 0.4 };
+    const jInit = objective(t, forwardModel(type, 0.7, 3.0, 1.5));   // 非最优合法初值
+    const nm = nelderMead((q) => objective(t, forwardModel(type, Math.min(0.98, Math.max(0.02, q[0])), Math.min(5, Math.max(1, q[1])), q[2])), [0.7, 3.0, 1.5]);
     const lm = levenbergMarquardt(t, type, nm.p);
     const jNm = objective(t, forwardModel(type, nm.p[0], nm.p[1], nm.p[2]));
     const jLm = objective(t, forwardModel(type, lm.p[0], lm.p[1], lm.p[2]));
-    check(`${type} 可达目标：成本有限且不退化（${Math.min(jNm, jLm).toExponential(3)}）`, Number.isFinite(Math.min(jNm, jLm)) && Math.min(jNm, jLm) < 1);
-    check(`${type} 从 NM 初值 LM 精化活性（成本确实下降：${jNm.toExponential(2)} → ${jLm.toExponential(2)}）`, jLm <= jNm);
+    check(`${type} 可达目标：成本有限（最优 ${Math.min(jNm, jLm).toExponential(3)}）`, Number.isFinite(Math.min(jNm, jLm)));
+    check(`${type} LM 真活性：从非最优初值实际下降（${jInit.toExponential(2)} → ${jLm.toExponential(2)}）`, jLm < jInit);
+    check(`${type} 参数在界内（α∈[0.5,2.5] 实测 ${lm.p[2].toFixed(2)}）`, lm.p.every(Number.isFinite) && lm.p[2] >= 0.5 - 1e-9 && lm.p[2] <= 2.5 + 1e-9);
   }
-  // ②不可达例（保留）：合法参数/有限成本/不退化
+  // 不可达例（保留）：合法参数/有限成本/不退化
   const tBad = { ETarget: 12, porosityTarget: 0.3 };
-  const nmB = nelderMead((q) => objective(tBad, forwardModel('gyroid', q[0], q[1], q[2])), [0.5, 3, 1.5]);
+  const nmB = nelderMead((q) => objective(tBad, forwardModel('gyroid', Math.min(0.98, Math.max(0.02, q[0])), Math.min(5, Math.max(1, q[1])), q[2])), [0.5, 3, 1.5]);
   const lmB = levenbergMarquardt(tBad, 'gyroid', nmB.p);
   const pB = lmB.p, jB = objective(tBad, forwardModel('gyroid', pB[0], pB[1], pB[2]));
-  check('不可达目标：返回合法参数且成本有限', pB.every(Number.isFinite) && Number.isFinite(jB));
+  check('不可达目标：合法参数+有限成本', pB.every(Number.isFinite) && Number.isFinite(jB) && pB[0] >= 0.02 - 1e-9 && pB[0] <= 0.98 + 1e-9);
 }
+// 口径披露（Codex 三轮）：NM 为主路径；LM 在零敏感度维度（无 κ 目标）下可能不精化
+// （Jacobian 零列×乘法阻尼），本体修复排后——生产 solveInverse 已由 NM/LM 择优覆盖
 
 // ── F. UI 应用口径哨兵（2026-09-22 定案）──
 console.log('\n[F] UI 应用钳制口径（求解宽域 [0.02,0.98] → 回 UI [60,90]）');

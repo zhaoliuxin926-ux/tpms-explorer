@@ -58,8 +58,9 @@ const PROTOCOL_TOTALS = [12, 24, 34];   // 原生/×2.5/×3.75 含固定 2×2mm 
 function parseMeta(text) {
   const meta = {};
   for (const line of text.split(/\r?\n/)) {
-    // 值类型：数字（三尺寸/porosity）或标识符（type=gyroid）——批十八单一语法不变
-    const m = line.match(/^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?[\d.]+|[A-Za-z_][A-Za-z0-9_]*)\s*$/);
+    // 值类型：数字（三尺寸/porosity）或标识符（type=gyroid/source=abaqus-sim，含连字符/点）
+    // ——批十八单一 # key=value 语法不变
+    const m = line.match(/^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?[\d.]+|[A-Za-z_][-A-Za-z0-9_.]*)\s*$/);
     if (m) meta[m[1]] = /^-?[\d.]+$/.test(m[2]) ? Number(m[2]) : m[2];
   }
   return meta;
@@ -105,7 +106,7 @@ function fitOneCsv(text, id) {
         };
       }
     }
-    return { id, dims, hWarn, metrics: r.metrics, fea };
+    return { id, dims, hWarn, metrics: r.metrics, fea, source: typeof meta.source === 'string' ? meta.source : null };
   } catch (e) {
     return { id, dims, hWarn, error: `内核拟合失败：${e.message}` };
   }
@@ -192,7 +193,7 @@ const fmt = (x, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : '—');
 const md = [
   `# ISO 13314 曲线批量反演报告（experimental-fit 内核）`,
   '',
-  `> 模式：${MOCK ? '**mock 自测曲线**（合成位移-载荷，非试验数据；走与真实 CSV 相同路径）' : '试验 CSV'} · ${new Date().toISOString().slice(0, 10)}`,
+  `> 模式：${MOCK ? '**mock 自测曲线**（合成位移-载荷，非试验数据；走与真实 CSV 相同路径）' : (rows.some((r) => r.source) ? 'CSV（来源逐份见溯源表 # source= 列）' : '试验 CSV（未提供 # source= 元数据——若为仿真曲线请在溯源表自行标注）')} · ${new Date().toISOString().slice(0, 10)}`,
   '> **口径**：内核=平台 `experimental-fit.ts`（Toe 补偿+ISO 13314 特征，门 43 独立审计）；位移→应变以实测 H₀（含端板）为基准——压机柔度与端板变形使 E\* 为**下限口径**；正式引用前以工程版「试验曲线反演」复核（协议 §七预处理建议）。',
   `> **分析配置**：位移→应变基准=实测 H₀（# lengthMm）；H₀ 档位校验 {12,24,34}±1（越档照算+告警）；εd=吸能效率 η 内部极值（截断曲线 η 极值落记录末点=未观察到密实化，εd 不适用，W 积分至记录末点并标注）；重复间离散度=样本 CV（std/均值，n−1）；输入 ${rows.length} 份（逐份溯源见下）。`,
   '',
@@ -200,7 +201,7 @@ const md = [
   '',
   '| 输入文件 | sha256(前16) | 数据类型 | H₀/宽/厚 (mm) |',
   '|---|---|---|---|',
-  ...rows.map((r) => `| ${r.src} | ${r.sha} | ${MOCK ? 'mock 合成' : '试验 CSV'} | ${fmt(r.dims?.lengthMm, 1)}/${fmt(r.dims?.widthMm, 1)}/${fmt(r.dims?.thicknessMm, 1)} |`),
+  ...rows.map((r) => `| ${r.src} | ${r.sha} | ${MOCK ? 'mock 合成' : (r.source ?? '未标注（缺 # source=）')} | ${fmt(r.dims?.lengthMm, 1)}/${fmt(r.dims?.widthMm, 1)}/${fmt(r.dims?.thicknessMm, 1)} |`),
   '',
   '## 单件特征',
   '',
@@ -217,7 +218,7 @@ const md = [
     return `| ${r.id} | ${fmt(r.dims.lengthMm, 1)} | ${fmt(r.metrics.elasticModulusE)} | ${fmt(r.metrics.proofStressRp02)} | ${fmt(r.metrics.firstPeakStress)} | ${fmt(r.metrics.plateauStress)} | ${r.metrics.densificationStrain == null ? '未观察' : fmt(r.metrics.densificationStrain, 3)} | ${fmt(r.metrics.energyAbsorptionW, 3)} | ${feaPred} | ${feaRatio} | ${r.hWarn ? '⚠ H₀ 越档' : ''} |`;
   }),
   ...(rows.some((r) => r.fea?.note) ? ['', ...rows.filter((r) => r.fea?.note).map((r) => `- ⚠ ${r.id}：${r.fea.note}（幂律对照行同样仅供量级参考）`)] : []),
-  ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径：network gyroid FEA 标定（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，Explicit C3D10M 口径较 Standard 低 17%——归因待敏感性验证）；比=预测/试验，材料=示例 PLA（Es=2GPa/σys=55MPa，实际材料不同按比例换算）；来源=仿真标定曲线，物理试验 CSV 请在工程版复核'] : []),
+  ...(rows.some((r) => r.fea) ? ['- ℹ 幂律对照口径（参照身份分列，2026-11-01 Codex 复核）：**E\\* 预测列=Standard 线弹性四点幂律（1.02·ρ̄^2.25）**；**平台σ 预测列=Explicit 三点幂律（1.64·ρ̄^2.41）**——两指标参照口径不同源（docs/fea-calibration.md，k≥2 域 ρ̄∈[0.3,0.5]，network gyroid）；比=预测/试验，材料=示例 PLA（Es=2GPa/σys=55MPa，实际材料不同按比例换算）；标定曲线来源=仿真，物理试验 CSV 请在工程版复核'] : []),
   ...(rows.some((r) => r.hWarn) ? ['', ...rows.filter((r) => r.hWarn).map((r) => `- ⚠ ${r.id}：${r.hWarn}`)] : []),
   ...(rows.some((r) => r.error) ? ['', ...rows.filter((r) => r.error).map((r) => `- ✗ ${r.id}：${r.error}`)] : []),
   ...(rows.some((r) => r.metrics?.densificationStatus === 'not-observed') ? ['', ...rows.filter((r) => r.metrics?.densificationStatus === 'not-observed').map((r) => `- ⚠ ${r.id}：未观察到密实化（曲线截断，η 极值落记录末点）——εd 不适用；W=${fmt(r.metrics.energyAbsorptionW, 3)} MJ/m³ 系截至记录末点 ε=${fmt(r.metrics.energyAbsorptionEndStrain, 3)} 的积分，非"至密实化吸能"`)] : []),
