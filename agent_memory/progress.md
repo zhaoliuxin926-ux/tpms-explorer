@@ -4,7 +4,7 @@
 >
 > **仓库态**：main=**3e40a69+ 已推送**（f8b71bb stale 修正 + 3e40a69 diamond 主公式回滚 + 本提交 Codex 第八轮意见处置）。**Codex 第八轮四条已全落**：①宿舍对齐改**纯离线 bundle**（backup-\* 分支会把待清洗历史变成远端可达引用——已删该方案）；②diamond 再放行条件收紧=**同几何局部修复后的 E\* 敏感性证据**（两点拟合对照明确不足）；③DT 探针"粗体素偏软"方向性归因撤回（平台窗前未收敛不可判物理），**DT/FEA 维持固定 R6 算例回归容差**；④CI 秒败根因=**账单状态阻止任务启动**（check-run 注释：近期支付失败或支出限额需提高——具体待 Billing），等用户手动登录网页确认后 rerun 41381733898。工作树净。
 >
-> **待用户**：GitHub 网页手动登录（Edge 已留登录页）→ 查 Settings→Billing（支付失败 vs 限额）→ 恢复后 rerun/空 push 三平台验证。
+> **待用户**：~~登录查 Billing~~（2026-11-02 computer-use 已查）。**Billing 一手读数**：账户=**GitHub Free**（免费计划；Next payment due=-）；11 月 metered usage=$0、按仓库计费维度 "No usage found"；深层支付页触发 2FA 重验证（未碰）。**定性**：Free 私有仓库 included 2000 min/月 + spending limit 默认 $0 + 免费账户无支付方式 → included 耗尽即拒（秒败零日志、被拒 job 不产生 usage→metered $0 自洽；时间线吻合：11/1 重置→两天 ~9 全量×3 平台、win/mac 2× 计费+rerun→11/2 03:11 UTC 起秒败）。**非"支付失败"型**。精确分钟数自看路径=Settings→Billing→Usage。**恢复四选项**：(a) 等 12/1 重置（零成本，本地 48 门替代验证）；(b) 升 Pro $4/月（3000 min）；(c) 绑卡+spending limit（按量）；(d) **历史清洗后转回 public（Actions 永久免费）**——前置=2098067 blob+pack 清洗已挂账。**billing 恢复前勿推 docs/**|tpms/**（触发 CI=秒败红噪音）；agent_memory/** 提交不触发 CI 安全。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。
