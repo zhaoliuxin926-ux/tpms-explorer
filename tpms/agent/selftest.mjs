@@ -36,8 +36,8 @@ near(j.plateau_over_sigmas, 1.64 * Math.pow(0.35, 2.41)) ? ok('平台σ 独立�
 // ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)^n，n 取 GA_EXPONENT_MAP（缺省 2）──
 const ra = est('--type', 'diamond', '--porosity', '0.5');
 const rb = est('--type', 'diamond', '--porosity', '0.8');
-// diamond 指数 2.1979=FEA Standard 三点名义口径（2026-11-02 入库；与 gibson-ashby.ts GA_EXPONENT_MAP 同步）
-near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 2.1979)) ? ok('标度律 E∝ρ̄^2.1979（diamond 0.5 vs 0.8，FEA 口径）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
+// diamond 主公式暂缓入库（2026-11-02 Codex 复核）——缺省档 ρ² 不变量；FEA 候选指数存档 fea-calibration.md
+near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（diamond 0.5 vs 0.8，缺省档）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
 const ra2 = est('--type', 'schwarz', '--porosity', '0.5');
 const rb2 = est('--type', 'schwarz', '--porosity', '0.8');
 near(ra2.E_over_Es / rb2.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（schwarz 0.5 vs 0.8，缺省档不变量）') : bad('标度律 schwarz', `${ra2.E_over_Es}/${rb2.E_over_Es}`);

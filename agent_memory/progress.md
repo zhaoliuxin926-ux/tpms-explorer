@@ -20,8 +20,9 @@
 > 3. **LLM 回归 43 条**（需 TPMS_LLM_KEY 三 env，Windows 用户/机器级均无——用户手动 export）；
 > 4. **S1_G60 上机**（卡用户）：CSV（df+三尺寸+可选 # porosity=）回传即反演+幂律叠图；**CFD license**/单元形态拍板。
 >
-> ### diamond 刚度入库轮 + 条件匹配探针回填（2026-11-02，紧随整理轮）
-> - **diamond 刚度入库落地**（Codex 第四轮批准"刚度单独放行"前提全满足）：C1_MAP[diamond] 0.42→0.8509 + GA_EXPONENT_MAP[diamond]=2.1979（名义口径，与 gyroid 代码先例一致；实测口径 0.7871/2.0709 双披露）；tpms.mjs estimate model/feaCalibration diamond 分支；selftest 标度律锚 (0.5/0.2)^2.1979 + schwarz 缺省档 ρ² 不变量锚（62→63）；FEA_STRENGTH 未加（强度两点暂不发幂律）。本地 48 门全量绿（SUITE_EXIT=0）。
+> ### diamond 刚度入库轮→回滚 + 条件匹配探针回填（2026-11-02，紧随整理轮）
+> - **diamond 主公式入库（eb56456）经 Codex 复核后已回滚**——"刚度单独放行"=数据层面可发布，主公式替换（影响平台预测）当时明确暂缓；缺"p50 近退化单元对 E\* 拟合影响"定量分析。回滚：C1_MAP 回 0.42/GA_EXPONENT_MAP 删条目/estimate feaCalibration 改候选披露/selftest 锚回 ρ²（schwarz 锚保留 63 断言）/fea-calibration.md 记再放行条件/docs-platform 重建。候选值存档待补证据后独立轮再入库。
+> - **Codex 复核连带**：2026-11-01 清洗回执复述被清洗数值一处改定性（全仓唯一命中；2098067 旧 blob 残留**挂后续历史清理**，与 pack 清洗同议）；machine-facts.md 宿舍对齐补全（未推送提交先备份分支/bundle；stash 只保未提交改动明示；新 clone 无 upstream 处理）。
 > - **条件匹配 DT 探针完成回填（2026-11-02 凌晨）**：~5.5h CPU 后两档全出——P=0.6 DT/FEA=0.644、P=0.65=0.720（refPred/dtRatio 见 collab/codex 回执）；**两档均带坍塌旗标**（failureStrain=1.0 关单元生死仍在 ε≈4-5% 坍塌，未达平台窗——dtRatio 平台语义存疑）+同 ρ̄ 跨分辨率漂移 0.720 vs R6 先例 0.798（~10%，粗体素偏软方向一致）。解释权留 Codex（回执三观察+四选项）。计算代价修正：可行但重（单档 2.5-3h CPU）。
 >
 > ### 铁律速查（整理轮后恢复精简版；全量见 archive/progress_2026-10.md）

@@ -169,7 +169,7 @@ probe_dt_fea_matched.mjs：几何 k2（R24 体素=2 周期×12 格/周期）/ σ
    记录也错已更正）→ **已转私有**（API PATCH，匿名 404+认证 private=True 双验证）；
 2. **离线备份**：mirror clone 至本地非共享路径（清洗前全历史留存）；
 3. **清洗**：git filter-repo（replace-message+blob callback）——038c423/822e502 提交消息
-   与 progress 历史 blob 的派生数值（（三组派生数值——已按 2026-11 历史清洗策略定性化））替换为定性表述；
+   与 progress 历史 blob 的三组派生数值（组均值/组间偏差类）替换为定性表述；
    验证：消息 0 残留+HEAD blob 0+全历史目标串 0；消息字节经 GitHub API 解码中文正常
    （GBK 显示层假象不误判）；**pack 清洗合并完成**（filter-repo repack，size-pack 67.9MiB）；
 4. **force push**：main 4c23a06→9b3362d（重写后链）——CI 历史重启；
