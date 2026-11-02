@@ -20,9 +20,9 @@
 > 3. **LLM 回归 43 条**（需 TPMS_LLM_KEY 三 env，Windows 用户/机器级均无——用户手动 export）；
 > 4. **S1_G60 上机**（卡用户）：CSV（df+三尺寸+可选 # porosity=）回传即反演+幂律叠图；**CFD license**/单元形态拍板。
 >
-> ### diamond 刚度入库轮 + 探针不可行记录（2026-11-02，紧随整理轮）
+> ### diamond 刚度入库轮 + 条件匹配探针回填（2026-11-02，紧随整理轮）
 > - **diamond 刚度入库落地**（Codex 第四轮批准"刚度单独放行"前提全满足）：C1_MAP[diamond] 0.42→0.8509 + GA_EXPONENT_MAP[diamond]=2.1979（名义口径，与 gyroid 代码先例一致；实测口径 0.7871/2.0709 双披露）；tpms.mjs estimate model/feaCalibration diamond 分支；selftest 标度律锚 (0.5/0.2)^2.1979 + schwarz 缺省档 ρ² 不变量锚（62→63）；FEA_STRENGTH 未加（强度两点暂不发幂律）。本地 48 门全量绿（SUITE_EXIT=0）。
-> - **条件匹配 DT 探针不可行实锤**：probe_dt_fea_matched k2R24 单档 P=0.6 >130min CPU 未完成（进程满负荷非挂死；tol 1e-5×13,824 体素×32 步 PCG 代价超预期；11-01"后台跑中"未回填实为同一不可行性）。四选项挂 Codex 表态（collab/codex/ 回执），本机不再自行重试。
+> - **条件匹配 DT 探针完成回填（2026-11-02 凌晨）**：~5.5h CPU 后两档全出——P=0.6 DT/FEA=0.644、P=0.65=0.720（refPred/dtRatio 见 collab/codex 回执）；**两档均带坍塌旗标**（failureStrain=1.0 关单元生死仍在 ε≈4-5% 坍塌，未达平台窗——dtRatio 平台语义存疑）+同 ρ̄ 跨分辨率漂移 0.720 vs R6 先例 0.798（~10%，粗体素偏软方向一致）。解释权留 Codex（回执三观察+四选项）。计算代价修正：可行但重（单档 2.5-3h CPU）。
 >
 > ### 铁律速查（整理轮后恢复精简版；全量见 archive/progress_2026-10.md）
 > - **平台 src 变更必须同提交重建 docs/platform**（部署链：规范 cwd vite build → rm -rf docs/platform && cp -r dist → 删 *.map → diff 零差异才提交；漏了=CI parity 三平台齐红，2026-11-02 eb56456 实锤）
