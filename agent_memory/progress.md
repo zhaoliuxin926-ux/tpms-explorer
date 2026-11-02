@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**5f8791c 已推送**（+ 本提交 docs 修正）。**CI 事件终态定性（2026-11-02 10:30 补全 attempt-3 取证）**：11-01 15:11 UTC 起 GitHub windows/ubuntu runner 车队性能劣化 ~4×（schema_check 3199.7s vs ubuntu 736s），级联超时——attempt-3 全部失败均为超时形态（流形保形/UI 回归撞 run_ci_suite 内部 3600s 单门帽 exit=n/a；schema 两断言 ETIMEDOUT+SIGTERM+空 stdout；零断言失配；失败门组合逐 attempt 不同=非确定性）；**同代码 macOS 三连绿+本地 Windows 48/48×2**。仓库侧无可修项、不调内部帽（防真挂死检测弱化）。**处置**：本提交（docs/**）触发新全量 run 兼作恢复探针；fleet 恢复前 CI 保持环境性红属预期，恢复后最后一次 push 转绿即闭环（接棒纪律，绝不 rerun 中间）。工作树净。
+> **仓库态**：main=**3e40a69 已推送**（f8b71bb stale 修正 + 3e40a69 diamond 主公式回滚/回执改定性/宿舍对齐补全——Codex 第七轮复核四条全处置）。**CI 状态（2026-11-02 11:20）**：fleet 劣化已过（探针 run f8b71bb 的 **ubuntu+macOS 双绿**、windows 被回滚提交 concurrency 正常抢占）；但回滚提交 run 41381733898 **三平台 1-3 秒秒败、零步骤零日志**（job 启动级拒绝，代码无关——**疑 Actions 分钟配额/消费限额耗尽**，昨日至今 ~9 个全量 run×3 平台、windows/macOS 2× 计费；usage API 需账号权限无法确证）。**等用户网页确认 Settings→Billing**；配额恢复后网页 rerun 该 run 或空 push 即完成三平台验证（本地 48 门全量绿×2+selftest 63/0+docs 349/0+PARITY-OK 背书内容无恙）。工作树净。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。
