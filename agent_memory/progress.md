@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**2c271e2 已 force push**（第二次历史清洗完成：2098067 引入的派生数值 blob 经 filter-repo replace-text 清除——全历史目标串 0 事件（log -S 三串全空+固定串 -F 全域 0 命中）；HEAD tree 内容不变；tags 全部早于污染点未重写；mirror 备份 D:\GITHUB\tpms-scrub2-backup-mirror.git；**paper figures 的"命中"系 git grep 正则通配误报（171.4 的 . 匹配任意字符——甄别时用 -F 固定串）**）。**⚠ 宿舍机再次严禁 pull**（对齐序见 machine-facts）。**下一步=用户网页转 public**（Settings→General→Danger Zone→Change visibility→Public）——转后 Actions 永久免费，首跑即完成回滚链三平台验证。CI 触发禁令解除前勿推 docs/**|tpms/**（billing 未恢复期秒败）。
+> **仓库态（2026-11-02 收官）**：main=**e9aaba6**（2c271e2 清洗重写链+回执+空提交时点标记）。**发版链全闭环**：本地 48 门全量绿×N → **CI 三平台 48 门全绿**（run 41403481320 attempt2，转 public 后 billing 免除）→ **Pages 同 HEAD 双绿**（三入口 200+线上 asset=HEAD index-CPr4Vo3Q.js）。**二次清洗+转公开全链**：2098067 派生数值 blob 清零（全历史目标串 0 事件；paper figures"命中"系 git grep 正则通配误报——甄别用 -F）→ force push 2c271e2（tags 未动，全部早于污染点）→ **API 转公开成功**（PATCH /repos 200，token 权限够）→ **Pages 转私有时被禁、转回未自动恢复——POST /pages {source: main//docs} 重新启用**（201→building→三入口恢复）。billing 事件永久解决（public Actions 免费）。**⚠ 宿舍机对齐**（新 force push 严禁 pull，machine-facts 对齐序）；转 public 前旧 SHA（2098067 等）GitHub 缓存或仍可按 SHA 读——平台边界措辞纪律不变。
 
 > **CI 恢复决策（2026-11-02 用户拍板选 d）**：等 12/1/升 Pro/绑卡 三选项弃用——**清洗+转 public 路线**（Actions 免费不限量+作品集公开+挂账清零三合一）。
 >
