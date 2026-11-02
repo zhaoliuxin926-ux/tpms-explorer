@@ -1,6 +1,6 @@
 # TPMS Explorer 项目全貌总结（v1.2.0）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **48 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **24** ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **48 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **26**（24 TPMS + 2 桁架） ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 docs/releases/RELEASE_NOTES_v*.md（17 份）。
 
 ---
@@ -23,7 +23,7 @@
 │   ├── index.html             ← 落地页（特性卡片 + 应用场景 + 展示图）
 │   ├── app.html               ← 单文件教学版（双击即开，8 经典族，无构建）
 │   ├── platform/              ← 工程版构建产物（Vite dist 同步，Pages 部署目标）
-│   ├── WORKFLOW_GUIDE.md      ← 实战指南（36 章（TOC））
+│   ├── WORKFLOW_GUIDE.md      ← 实战指南（37 章（TOC））
 │   ├── releases/              ← RELEASE_NOTES_v*.md ×17（版本发布说明档案）
 │   ├── paper/                 ← SoftwareX 投稿包（main.tex + PDF + 导览 + Cover Letter + 清单）
 │   ├── PROJECT_SUMMARY.md     ← 本文件
@@ -143,7 +143,7 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 ## 六、文档体系
 
 - **README.md / README_EN.md**：定位 + 文件导航 + 特性矩阵（48 门徽章 1000+）+ LEARNING_PATH 入口
-- **WORKFLOW_GUIDE.md**：36 章（TOC）实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
+- **WORKFLOW_GUIDE.md**：37 章（TOC）实战指南（几何→分形/逆向→FEA/DICOM/G-code→弹塑性/孪生→v7 生成式五件套）
 - **docs/releases/RELEASE_NOTES_v*.md**：17 份版本发布说明
 - **BENCHMARKS.md**：26 族 × R{48,96} 可产性/偏差/耗时公开矩阵（复跑约 10-20 分钟，确定性）
 - **paper/**：SoftwareX 投稿包（已对齐 v8.0；pdflatex 0 错误）

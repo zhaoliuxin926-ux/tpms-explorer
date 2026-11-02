@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**4e89f3c 已推送**（5bbb4da 全仓整理 + eb56456 diamond 刚度入库 + 1032c86 parity 产物同步 + 本提交）。**CI 事件终态定性（2026-11-02 06:58）**：11-01 15:11 UTC 起 GitHub windows+ubuntu runner 车队性能劣化——五个 run 跨三提交（含 docs-only 的 9b3362d）超时类红；windows 重跑 artifact 实锤=离线 LLM 拦截器自检 TimeoutError 13/13 失败 + Schema 契约 2826s（ubuntu 同门 736s，慢 4×）+ UI waitForSelector 超时；**同代码 macOS 三连全绿+本地四次全量绿**。仓库侧无可修项。**新会话第一动作**：runner 恢复后重跑 run 41345130043 的失败 job（windows/ubuntu；ubuntu 经 API rerun 两次 403=token 权限面，可走「空 push 触发全量」或网页 rerun）。工作树净。
+> **仓库态**：main=**5f8791c 已推送**（+ 本提交 docs 修正）。**CI 事件终态定性（2026-11-02 10:30 补全 attempt-3 取证）**：11-01 15:11 UTC 起 GitHub windows/ubuntu runner 车队性能劣化 ~4×（schema_check 3199.7s vs ubuntu 736s），级联超时——attempt-3 全部失败均为超时形态（流形保形/UI 回归撞 run_ci_suite 内部 3600s 单门帽 exit=n/a；schema 两断言 ETIMEDOUT+SIGTERM+空 stdout；零断言失配；失败门组合逐 attempt 不同=非确定性）；**同代码 macOS 三连绿+本地 Windows 48/48×2**。仓库侧无可修项、不调内部帽（防真挂死检测弱化）。**处置**：本提交（docs/**）触发新全量 run 兼作恢复探针；fleet 恢复前 CI 保持环境性红属预期，恢复后最后一次 push 转绿即闭环（接棒纪律，绝不 rerun 中间）。工作树净。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。

@@ -14,7 +14,7 @@
   | 形态 | 入口 | 定位 |
   |---|---|---|
   | 教学版单文件 | `docs/app.html` | 8 族经典，file:// 双击，功能冻结 |
-  | 工程版 SPA | `tpms/tpms-platform` → `docs/platform/` | 24 族 + 全链仿真/导出 |
+  | 工程版 SPA | `tpms/tpms-platform` → `docs/platform/` | 26 族（24 TPMS + 2 桁架）+ 全链仿真/导出 |
   | CLI / Agent | `tpms/agent/` | 脚本化、门禁、LLM tool-calling |
   | Pages | https://zhaoliuxin926-ux.github.io/tpms-explorer/ | 在线零安装 |
 
@@ -60,10 +60,10 @@ tpms-explorer/
 
 | 域 | 能力 | 状态 |
 |---|---|---|
-| 几何 | 24 族 level-set；水密 Surface Nets + MT 双提取器；exact 孔隙率（solid_network；shell 为体素二分近似） | 完整 |
+| 几何 | 26 族（24 level-set + 2 桁架 SDF）；水密 Surface Nets + MT 双提取器；exact 孔隙率（solid_network；shell 为体素二分近似） | 完整 |
 | 构型 | hybrid / isoGrad / region / radial-grad / C5 保形容器 | 完整（互斥硬拒） |
 | 导出 | STL/GLB/3MF/VTK/VTI/CFD STL/RVE/INP/OpenFOAM/CAE 包/脚本/BibTeX/JSON/**G-code** | 完整（G-code 单壁+扫描填充） |
-| 力学 | Gibson-Ashby、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
+| 力学 | Gibson-Ashby（其余 24 族）+ FEA 标定幂律（gyroid/diamond，见 fea-calibration.md）、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
 | 流体/热 | NS 渗流、LPBF 热-力 | 完整（研究级口径） |
 | 优化 | 逆向设计、水平集拓扑、组织长入、声子能带、SIREN 神经场 | 完整/半（部分拒 custom/C2 族） |
 | 试验 | ISO 13314 反演 UI、fit-batch 批量反演（真实内核）、上机卡 | 待真实 CSV |
