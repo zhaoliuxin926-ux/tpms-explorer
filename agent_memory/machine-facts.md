@@ -34,8 +34,11 @@
 - Git Bash 为 **ucrt64 构建**（D:\Program Files\Git，无 mingw64 目录）：credential.helper 编译默认指向不存在的 `mingw64/bin/git-credential-manager.exe`——**系统级 `manager` 实测可用**（凭证走 Windows 凭证管理器）；global 勿写带引号绝对路径（git 把整串当 helper 名：`'credential-D:/...' is not a git command`）。
 - GitHub PAT：fine-grained（仅 tpms-explorer 仓库 Contents RW，90 天）；clone/push/fetch 全链通。
 - **历史清洗后对齐（2026-11-01 force push 起，旧 clone 的强纪律）**：旧 clone **严禁 `git pull`**
-  （会把旧历史 merge 回主线）。完整对齐序：①**未推送提交先备份**——`stash` 只保未提交改动，
-  已提交未推送的须先 `git push origin main:backup-$(date +%m%d)`（或 `git bundle create ../pre-align.bundle main`）；②`git stash push -u`（未提交改动）；③`git fetch origin && git reset --hard origin/main`；④`git stash pop`（有冲突即弃：以远端为准，旧工作已在备份）。最稳=重新 clone。
+  （会把旧历史 merge 回主线）。完整对齐序：①**未推送提交只做离线备份**——`git bundle create
+  ../pre-align-$(date +%m%d).bundle main`（**禁止 push backup-\* 分支到远端**：旧提交携带待清洗
+  历史，会把污染重新变成远端可达引用——2026-11-02 Codex 复核修正）；`stash` 只保未提交改动
+  （两层分开备份）；②`git stash push -u`（未提交改动）；③`git fetch origin && git reset --hard
+  origin/main`；④`git stash pop`（有冲突即弃：以远端为准，旧工作已在 bundle/stash）。最稳=重新 clone。
   新 clone 的 main 可能未配 upstream（`git pull` 报 no tracking information）——用
   `git branch --set-upstream-to=origin/main main` 或直接 `git fetch && git reset --hard origin/main`。
 - 其余纪律同工位：绝对路径、Write/Edit 改源码、中文长消息 commit -F。

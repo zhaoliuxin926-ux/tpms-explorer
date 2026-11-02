@@ -2,7 +2,9 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**3e40a69 已推送**（f8b71bb stale 修正 + 3e40a69 diamond 主公式回滚/回执改定性/宿舍对齐补全——Codex 第七轮复核四条全处置）。**CI 状态（2026-11-02 11:20）**：fleet 劣化已过（探针 run f8b71bb 的 **ubuntu+macOS 双绿**、windows 被回滚提交 concurrency 正常抢占）；但回滚提交 run 41381733898 **三平台 1-3 秒秒败、零步骤零日志**（job 启动级拒绝，代码无关——**疑 Actions 分钟配额/消费限额耗尽**，昨日至今 ~9 个全量 run×3 平台、windows/macOS 2× 计费；usage API 需账号权限无法确证）。**等用户网页确认 Settings→Billing**；配额恢复后网页 rerun 该 run 或空 push 即完成三平台验证（本地 48 门全量绿×2+selftest 63/0+docs 349/0+PARITY-OK 背书内容无恙）。工作树净。
+> **仓库态**：main=**3e40a69+ 已推送**（f8b71bb stale 修正 + 3e40a69 diamond 主公式回滚 + 本提交 Codex 第八轮意见处置）。**Codex 第八轮四条已全落**：①宿舍对齐改**纯离线 bundle**（backup-\* 分支会把待清洗历史变成远端可达引用——已删该方案）；②diamond 再放行条件收紧=**同几何局部修复后的 E\* 敏感性证据**（两点拟合对照明确不足）；③DT 探针"粗体素偏软"方向性归因撤回（平台窗前未收敛不可判物理），**DT/FEA 维持固定 R6 算例回归容差**；④CI 秒败根因=**账单状态阻止任务启动**（check-run 注释：近期支付失败或支出限额需提高——具体待 Billing），等用户手动登录网页确认后 rerun 41381733898。工作树净。
+>
+> **待用户**：GitHub 网页手动登录（Edge 已留登录页）→ 查 Settings→Billing（支付失败 vs 限额）→ 恢复后 rerun/空 push 三平台验证。
 >
 > ### 全仓整理轮（2026-11-02，ZCode 执行）
 > 1. **探针清理**：删 14 个一次性探针/旧产物（.verify 下 _verify_mode/probe_consistency_p1/probe_delivery_pkg/p3/probe_design_roundtrip/probe_empty_retain/probe_export_gate/probe_mfg_card/probe_specimen/probe_taskflow/probe_cae_contract/probe_inverse_alpha/probe_fwd_unified/benchmarks-latest.json）+ guard_audit EXCLUDE 同步；有消费方的探针全保留（probe_dt_fea_matched/band、probe_taskflow_e2e 等）。
