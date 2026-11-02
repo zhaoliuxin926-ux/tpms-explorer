@@ -2,7 +2,9 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态**：main=**3e40a69+ 已推送**（f8b71bb stale 修正 + 3e40a69 diamond 主公式回滚 + 本提交 Codex 第八轮意见处置）。**Codex 第八轮四条已全落**：①宿舍对齐改**纯离线 bundle**（backup-\* 分支会把待清洗历史变成远端可达引用——已删该方案）；②diamond 再放行条件收紧=**同几何局部修复后的 E\* 敏感性证据**（两点拟合对照明确不足）；③DT 探针"粗体素偏软"方向性归因撤回（平台窗前未收敛不可判物理），**DT/FEA 维持固定 R6 算例回归容差**；④CI 秒败根因=**账单状态阻止任务启动**（check-run 注释：近期支付失败或支出限额需提高——具体待 Billing），等用户手动登录网页确认后 rerun 41381733898。工作树净。
+> **仓库态**：main=**2c271e2 已 force push**（第二次历史清洗完成：2098067 引入的派生数值 blob 经 filter-repo replace-text 清除——全历史目标串 0 事件（log -S 三串全空+固定串 -F 全域 0 命中）；HEAD tree 内容不变；tags 全部早于污染点未重写；mirror 备份 D:\GITHUB\tpms-scrub2-backup-mirror.git；**paper figures 的"命中"系 git grep 正则通配误报（171.4 的 . 匹配任意字符——甄别时用 -F 固定串）**）。**⚠ 宿舍机再次严禁 pull**（对齐序见 machine-facts）。**下一步=用户网页转 public**（Settings→General→Danger Zone→Change visibility→Public）——转后 Actions 永久免费，首跑即完成回滚链三平台验证。CI 触发禁令解除前勿推 docs/**|tpms/**（billing 未恢复期秒败）。
+
+> **CI 恢复决策（2026-11-02 用户拍板选 d）**：等 12/1/升 Pro/绑卡 三选项弃用——**清洗+转 public 路线**（Actions 免费不限量+作品集公开+挂账清零三合一）。
 >
 > **待用户**：~~登录查 Billing~~（2026-11-02 computer-use 已查）。**Billing 一手读数**：账户=**GitHub Free**（免费计划；Next payment due=-）；11 月 metered usage=$0、按仓库计费维度 "No usage found"；深层支付页触发 2FA 重验证（未碰）。**定性**：Free 私有仓库 included 2000 min/月 + spending limit 默认 $0 + 免费账户无支付方式 → included 耗尽即拒（秒败零日志、被拒 job 不产生 usage→metered $0 自洽；时间线吻合：11/1 重置→两天 ~9 全量×3 平台、win/mac 2× 计费+rerun→11/2 03:11 UTC 起秒败）。**非"支付失败"型**。精确分钟数自看路径=Settings→Billing→Usage。**恢复四选项**：(a) 等 12/1 重置（零成本，本地 48 门替代验证）；(b) 升 Pro $4/月（3000 min）；(c) 绑卡+spending limit（按量）；(d) **历史清洗后转回 public（Actions 永久免费）**——前置=2098067 blob+pack 清洗已挂账。**billing 恢复前勿推 docs/**|tpms/**（触发 CI=秒败红噪音）；agent_memory/** 提交不触发 CI 安全。
 >
