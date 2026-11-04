@@ -166,7 +166,8 @@ export interface PlasticityParams {
    * Green-Lagrange 应变 detF=√det(2E+I) 计算，<0.3 即显著压缩局部化）。
    */
   onPcgDiag?: (d: { step: number; newtonIter: number; pcgIters: number;
-                    pApMin: number; converged: boolean; detFMin: number }) => void;
+                    pApMin: number; converged: boolean; detFMin: number;
+                    pNormMax?: number }) => void;
 }
 
 export interface PlasticityStepContext {
@@ -597,10 +598,12 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
    * 诊断（onPcgDiag 埋点 2026-11-04）：pApMin=迭代中最小 p^T·K_T·p；spdBroke=保护性中断 */
   let pcgDiagPApMin = Infinity;
   let pcgDiagSpcBroke = false;
+  let pcgDiagPNormMax = 0;   // ‖p‖ 轨迹（Gemini 预言验证：零空间死循环时 >1e10）
   function solveIncrement(r: Float64Array, out: Float64Array, tolOverride?: number): number {
     const tolPcg = tolOverride ?? pcgTol;
     pcgDiagPApMin = Infinity;
     pcgDiagSpcBroke = false;
+    pcgDiagPNormMax = 0;
     let bNorm = 0;
     pcgB.fill(0, 0, nDof);
     for (let nd = 0; nd < nNodes; nd++) {
@@ -625,6 +628,9 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       let pAp = 0;
       for (let i = 0; i < nDof; i++) pAp += pcgP[i] * pcgAp[i];
       if (pAp < pcgDiagPApMin) pcgDiagPApMin = pAp;
+      let pn = 0;
+      for (let i = 0; i < nDof; i++) pn += pcgP[i] * pcgP[i];
+      if (pn > pcgDiagPNormMax) pcgDiagPNormMax = pn;   // 平方范数（开方在消费侧）
       if (!(pAp > 1e-300)) { pcgDiagSpcBroke = true; break; }
       const alpha = rz / pAp;
       let rr2 = 0, rzN = 0;
@@ -754,7 +760,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       if (params.onPcgDiag) {
         params.onPcgDiag({ step: curDiagStep, newtonIter: iter + 1, pcgIters: pcgIt,
           pApMin: pcgDiagPApMin, converged: pcgDiagSpcBroke ? false : pcgIt < pcgMaxIter,
-          detFMin: diagDetFMin() });
+          detFMin: diagDetFMin(), pNormMax: pcgDiagPNormMax });
       }
       // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
       // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
