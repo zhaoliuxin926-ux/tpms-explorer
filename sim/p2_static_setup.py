@@ -20,7 +20,12 @@ import sys
 from pathlib import Path
 
 # 示例 PLA 硬化曲线（true stress MPa – plastic strain，配合默认 E=2000 用，按实际材料改）
-PLA_PLASTIC = [(55.0, 0.0), (58.0, 0.10), (62.0, 0.25), (70.0, 0.45)]
+# >0.45 延伸段 = 70 MPa 恒定显式化（*PLASTIC 缺省 extrapolation=CONSTANT，表外恒为末值——
+# SIMULIA 文档口径；显式化使大应变 PEEQ 监控有据，不引入新硬化假设。Explicit 对表格
+# 材料自动正则化，表范围变化不承诺与短表逐位一致——2026-11-04 对齐 AM-Competition
+# PG_prepare__PA12_v2 披露口径）
+PLA_PLASTIC = [(55.0, 0.0), (58.0, 0.10), (62.0, 0.25), (70.0, 0.45),
+               (70.0, 0.60), (70.0, 0.80)]
 # PLA 密度（mm-tonne-s-N-MPa 制）：1240 kg/m³ = 1.24e-9 tonne/mm³（Explicit 必需）
 PLA_DENSITY = 1.24e-9
 
@@ -138,19 +143,30 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     buf.append("*BOUNDARY" + (", AMPLITUDE=RAMPSMOOTH" if explicit_ms else ""))
     buf.append("NSET_BOTTOM, 1, 3, 0.0")
     buf.append(f"NSET_TOP, 3, 3, {disp:.6f}")
-    buf.append("*OUTPUT, FIELD")
+    # 输出分辨率（2026-11-04 吸收 PG v2：默认 10-20 帧对曲线特征提取不足——
+    # FIELD 200 帧与 H-RP 等价通道 2000 点，E*/Rp0.2/平台窗提取精度直接受益）
+    buf.append("*OUTPUT, FIELD, NUMBER INTERVAL=200")
     buf.append("*NODE OUTPUT")
     buf.append("U, RF")
     buf.append("** sanity check 口径：折痕带 minSICN<0.1 单元的局部应力不作定量依据（discuss-2026-10-29 共识）")
     buf.append("*ELEMENT OUTPUT")
     buf.append("S, E")
-    buf.append("*OUTPUT, HISTORY")
+    # 顶面 NSET history = 力-位移高分辨率源（位移加载下 U3 各节点同值；RF3 逐节点，
+    # 由 p2_extract_csv 求和——PG v2 的 H-RP 等价物）。注意：HISTORY 不支持 NUMBER
+    # INTERVAL（FIELD 专属——datacheck 实证），用 TIME INTERVAL 等时间距 ~2000 点
+    hist_dt = (explicit_ms * 1e-3 if explicit_ms else 1.0) / 2000.0
+    buf.append("*OUTPUT, HISTORY, TIME INTERVAL=%.4e" % hist_dt)
     buf.append("*NODE OUTPUT, NSET=NSET_TOP")
     buf.append("U3, RF3")
     if explicit_ms:
-        # 准静态判据能量：ALLKE/ALLIE<10%；ALLPW/ALLCW≈0（接触/约束罚功）
+        # 准静态判据能量全家桶（PG v2 口径，2026-11-04 datacheck 修正）：ALLKE/ALLIE<10% 主判据；
+        # ALLPW/ALLCW 罚功；ALLAE=人工能量（C3D10M 无沙漏模式，预期≈0，作"证据为零"披露）；
+        # ALLVD/ALLFD=粘性/摩擦耗散；ETOTAL=能量守恒审计。DMASS 本版 Abaqus *ENERGY OUTPUT
+        # 不收（datacheck 实证 ERR）——质量缩放加质证据走 .sta 的 PERCENT CHNG MASS 列
         buf.append("*ENERGY OUTPUT")
-        buf.append("ALLKE, ALLIE, ALLPW, ALLCW")
+        buf.append("ALLKE, ALLIE, ALLPW, ALLCW, ALLAE, ALLVD, ALLFD, ETOTAL")
+        # 长作业断点保护（PG v2 同款：OVERLAY 单态+60 区间——标定组批量/大单元作业保险）
+        buf.append("*RESTART, WRITE, OVERLAY, NUMBER INTERVAL=60")
     buf.append("*END STEP")
     out.write_text("\n".join(buf) + "\n", encoding="utf-8")
 
