@@ -28,9 +28,11 @@ if (!existsSync(path.join(DEPLOYED, 'index.html'))) {
   process.exit(2);
 }
 
-// ── Pages dist hash 一致性守卫（只警告不失败）──
-// CI Deploy 步会 rm+cp 覆盖 docs/platform；本地可能只有部署产物没有 dist，
-// 故 dist 缺失时跳过，不一致也仅提示，绝不导致 exit。
+// ── Pages dist hash 一致性守卫（2026-11-04 升级为硬门）──
+// 历史：只警告不失败（本地可能只有部署产物没有 dist，故 dist 缺失时跳过）。
+// 升级依据：eb56456/b8a526f 两次实锤——改平台 src 忘记重建 docs/platform 直接 push，
+// CI parity 步三平台齐红。dist 存在且 hash 不一致时现在直接判失败（dist 不存在仍跳过，
+// 保留"只跑门不开发"场景的可用性）。
 {
   const assetHash = (file) => {
     const m = readFileSync(file, 'utf8').match(/assets\/index-([A-Za-z0-9_-]+)\.js/);
@@ -41,7 +43,9 @@ if (!existsSync(path.join(DEPLOYED, 'index.html'))) {
     const deployedHash = assetHash(path.join(DEPLOYED, 'index.html'));
     const distHash = assetHash(distIndex);
     if (deployedHash && distHash && deployedHash !== distHash) {
-      console.warn(`${C.ylw}⚠ docs/platform 与 dist hash 不一致（${deployedHash} vs ${distHash}）——改 src 后忘记重建部署？本地跑门用 docs/platform，CI 会自行覆盖${C.rst}`);
+      console.error(`${C.red}✗ docs/platform 与 dist hash 不一致（${deployedHash} vs ${distHash}）——改 src 后必须重建部署再提交${C.rst}`);
+      console.error(`${C.red}  修复：cd tpms/tpms-platform && npx vite build && cd ../.. && rm -rf docs/platform && cp -r tpms/tpms-platform/dist docs/platform && find docs/platform -name '*.map' -delete${C.rst}`);
+      process.exit(1);
     }
   }
 }
