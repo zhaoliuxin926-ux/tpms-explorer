@@ -2,7 +2,7 @@
 
 > ## 🔖 新会话开工指引（2026-11-02 · 全仓整理轮）
 >
-> **仓库态（2026-11-02 收官）**：main=**e9aaba6**（2c271e2 清洗重写链+回执+空提交时点标记）。**发版链全闭环**：本地 48 门全量绿×N → **CI 三平台 48 门全绿**（run 41403481320 attempt2，转 public 后 billing 免除）→ **Pages 同 HEAD 双绿**（三入口 200+线上 asset=HEAD index-CPr4Vo3Q.js）。**二次清洗+转公开全链**：2098067 派生数值 blob 清零（全历史目标串 0 事件；paper figures"命中"系 git grep 正则通配误报——甄别用 -F）→ force push 2c271e2（tags 未动，全部早于污染点）→ **API 转公开成功**（PATCH /repos 200，token 权限够）→ **Pages 转私有时被禁、转回未自动恢复——POST /pages {source: main//docs} 重新启用**（201→building→三入口恢复）。billing 事件永久解决（public Actions 免费）。**⚠ 宿舍机对齐**（新 force push 严禁 pull，machine-facts 对齐序）；转 public 前旧 SHA（2098067 等）GitHub 缓存或仍可按 SHA 读——平台边界措辞纪律不变。
+> **仓库态（2026-11-04）**：main=**36b1ad7**（Gemini 三问评审归档+双实证）。**协作通道切换：Codex 停用（2026-11-04，用户仅剩 Gemini）——Gemini 升格唯一外部评审**（用户代贴；`collab/gemini/`）。原挂 Codex 的三项表态转 Gemini：①代码层密度口径（实测+映射 vs 名义先例——γ 机制已实证）②diamond 再放行实验判据③统计报告规范；另两项 ZCode 保留意见（贝叶斯先验中心 2.0 偏向/network 语义重写双项分解）请 Gemini 回应。Gemini 无仓库上下文，出题必须自包含（2026-11-04 三问模板在案）。**发版链全闭环**：本地 48 门全量绿×N → **CI 三平台 48 门全绿**（run 41403481320 attempt2，转 public 后 billing 免除）→ **Pages 同 HEAD 双绿**（三入口 200+线上 asset=HEAD index-CPr4Vo3Q.js）。**二次清洗+转公开全链**：2098067 派生数值 blob 清零（全历史目标串 0 事件；paper figures"命中"系 git grep 正则通配误报——甄别用 -F）→ force push 2c271e2（tags 未动，全部早于污染点）→ **API 转公开成功**（PATCH /repos 200，token 权限够）→ **Pages 转私有时被禁、转回未自动恢复——POST /pages {source: main//docs} 重新启用**（201→building→三入口恢复）。billing 事件永久解决（public Actions 免费）。**⚠ 宿舍机对齐**（新 force push 严禁 pull，machine-facts 对齐序）；转 public 前旧 SHA（2098067 等）GitHub 缓存或仍可按 SHA 读——平台边界措辞纪律不变。
 
 > **CI 恢复决策（2026-11-02 用户拍板选 d）**：等 12/1/升 Pro/绑卡 三选项弃用——**清洗+转 public 路线**（Actions 免费不限量+作品集公开+挂账清零三合一）。
 >
