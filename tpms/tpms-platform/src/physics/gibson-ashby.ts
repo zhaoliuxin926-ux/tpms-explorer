@@ -3,9 +3,9 @@ import { estimatePermeability } from './permeability';
 import { estimatePoreStats } from './pore-analysis';
 
 const C1_MAP: Record<string, number> = {
-  gyroid: 1.02, // 【2026-10-31 FEA 标定替换】0.38→1.02（Standard C3D10 四点+R32 判别；见 fea-calibration.md）
+  gyroid: 0.9914, // 【2026-11-04 口径换代（Gemini 签发）】实测口径 0.38→0.9914（STL 实测密度拟合；名义对照 1.0236·ρ^2.2504 见 fea-calibration.md）；入口经 NOMINAL_TO_MEASURED 幂律映射
   // gyroid: 0.38, // 旧 GA 开孔泡沫档（保留注释供对照；estimate feaCalibration 字段携带 GA 对照值）
-  diamond: 0.42, // FEA 三点候选（Standard k2R24 名义口径 0.8509·ρ̄^2.1979，实测口径 0.7871·ρ̄^2.0709）已存档 docs/fea-calibration.md——【2026-11-02 Codex 复核：放行条件缺"近退化单元对刚度影响"定量证据，主公式替换暂缓，平台预测维持 GA 档】
+  diamond: 0.7871, // 【2026-11-04 口径换代（Gemini 签发）】实测口径 0.42→0.7871·ρ^2.0709（p50 放行证据链闭合 2026-11-04：|ΔE*|=0.0006%）；名义对照 0.8509·ρ^2.1979
   schwarz: 0.35,
   iwp: 0.44,
   frd: 0.40,
@@ -34,12 +34,26 @@ const C1_MAP: Record<string, number> = {
   strutbcc: 0.06, strutoctet: 1.2, // strut 族：bcc 弯曲主导（Deshpande 域）；octet 拉伸主导 E≈0.3ρ线性律——与 ρ² 框架形状律不适配，登记 ρ≈0.25 等效切线（精确值请走 FE）
 };
 
-// per-family 标度指数：缺省 2（Gibson-Ashby 弯曲档）；gyroid 由 FEA 标定为 2.25
-// （sheet 曲面 membrane 分量；文献带 2.0~2.3 交叉验证，k≥2 域 ρ̄∈[0.3,0.5]）
-// diamond 候选指数 2.1979（名义）/2.0709（实测）存档未入库——放行条件见 docs/fea-calibration.md
+// per-family 标度指数：缺省 2（Gibson-Ashby 弯曲档）；FEA 标定族=STL 实测密度口径
+// （2026-11-04 换代：gyroid 2.2028/diamond 2.0709；指数不确定度 CI95=±0.081 见 fea-calibration.md）
 const GA_EXPONENT_MAP: Record<string, number> = {
-  gyroid: 2.25,
+  gyroid: 2.2028,
+  diamond: 2.0709,
 };
+
+// 名义→实测密度幂律映射（FEA 标定族专用；2026-11-04 Gemini 裁定 1+签发核准）：
+// ρ̂_meas = κ·ρ_nom^γ——把 MC 弦截断几何畸变（γ 链式法则实证：名义指数=实测指数×γ）
+// 从物理指数中分离；换网格分辨率/管线后只需重标 κ/γ，物理律不动。
+// 端到端表观幂比=γ·n（diamond 1.0624×2.0709≈2.20≡名义指数，自洽旁证）。
+// 中点残差（幂律映射 2 参数过 2 端点）：ρ=0.4 处 ~+0.6% 密度 → E* ~0.5%，文档披露。
+const NOMINAL_TO_MEASURED: Record<string, { k: number; g: number }> = {
+  gyroid: { k: 1.01461, g: 1.02161 },  // 代数反解自双口径拟合对（γ=2.2504/2.2028；端点自洽 0.4996/0.2966）
+  diamond: { k: 1.04157, g: 1.06235 }, // 端点解（Gemini 签发核验误差 0）
+};
+function mappedRho(rho: number, type: string): number {
+  const m = NOMINAL_TO_MEASURED[type];
+  return m ? m.k * Math.pow(rho, m.g) : rho;
+}
 
 // gyroid 强度双口径（FEA Explicit 三点标定，2026-10-31）：屈服 Rp0.2 与平台应力
 // 指数分化（2.02 bending 型 / 2.41 薄壁屈曲加权）——单一 GA σ 公式两量都拟合不了
@@ -133,13 +147,14 @@ export const BASE_YIELD_STRENGTH: Record<string, number> = {
  * 8+ 点含 k 维或 S1_G60 试验数据校准（plans/2026-10-30_GA-C1扫参标定.md）。
  */
 export function gibsonAshby(relativeDensity: number, type: string = 'gyroid'): { E_Es: number; sigma_Es: number; C1: number } {
+  const rho = mappedRho(relativeDensity, type);
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
   const exp = GA_EXPONENT_MAP[type] ?? 2;
-  const E_Es = C1 * Math.pow(relativeDensity, exp);
+  const E_Es = C1 * Math.pow(rho, exp);
   // σ 主口径：gyroid=FEA Rp0.2（0.2% 偏移屈服，语义匹配"yield"）；其他族=GA 0.3·ρ̄^1.5
   const fea = FEA_STRENGTH[type];
   const sigma_Es = fea
-    ? fea.rp02[0] * Math.pow(relativeDensity, fea.rp02[1])
+    ? fea.rp02[0] * Math.pow(rho, fea.rp02[1])
     : C2 * Math.pow(relativeDensity, 1.5);
   return { E_Es, sigma_Es, C1 };
 }
@@ -147,7 +162,7 @@ export function gibsonAshby(relativeDensity: number, type: string = 'gyroid'): {
 /** 平台应力口径（FEA Explicit 三点标定）：gyroid-only，其他族 undefined（无 FEA 证据不外推） */
 export function plateauStress(relativeDensity: number, type: string): number | undefined {
   const fea = FEA_STRENGTH[type];
-  return fea ? fea.plateau[0] * Math.pow(relativeDensity, fea.plateau[1]) : undefined;
+  return fea ? fea.plateau[0] * Math.pow(mappedRho(relativeDensity, type), fea.plateau[1]) : undefined;
 }
 
 /**
@@ -174,8 +189,8 @@ export function computeGradientRange(
   const bottomPorosity = Math.min(95, porosity + 15);
   const topPorosity = Math.max(5, porosity - 15);
 
-  const bottomRelDensity = 1 - bottomPorosity / 100;
-  const topRelDensity = 1 - topPorosity / 100;
+  const bottomRelDensity = mappedRho(1 - bottomPorosity / 100, type);
+  const topRelDensity = mappedRho(1 - topPorosity / 100, type);
 
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
   const exp = GA_EXPONENT_MAP[type] ?? 2;
@@ -314,7 +329,7 @@ export function estimateAnisotropicStiffness(
 ): AnisotropicStiffness {
   const C1 = C1_MAP[type] ?? C1_MAP['gyroid'];
   const expIso = GA_EXPONENT_MAP[type] ?? 2;
-  const E_iso = C1 * Math.pow(relativeDensity, expIso);
+  const E_iso = C1 * Math.pow(mappedRho(relativeDensity, type), expIso);
   const nu = POISSON_TPMS;
 
   // 迂曲调制（τ 未提供/未贯通方向 → 以 τ̄ 替代 = 调制因子 1）

@@ -25,19 +25,22 @@ const near = (a, b, eps = 1e-12) => Math.abs(a - b) < eps;
 const run = (...args) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
 const est = (...args) => JSON.parse(run('estimate', ...args, '--json').stdout);
 
-// ── 1. estimate：常数独立复刻（FEA 标定幂律硬编码：gyroid C1=1.02 n=2.25 / Rp0.2 0.54 n=2.02 / 平台 1.64 n=2.41；tc4 E=110 σ=880）──
+// ── 1. estimate：常数独立复刻（2026-11-04 口径换代，Gemini 签发：实测口径+幂律映射。
+// gyroid C1=0.9914 n=2.2028 κ=1.01461 γ=1.02161 / Rp0.2 0.54 n=2.02 / 平台 1.64 n=2.41；tc4 E=110 σ=880）──
 const j = est('--type', 'gyroid', '--porosity', '0.65', '--material', 'tc4');
-near(j.E_over_Es, 1.02 * Math.pow(0.35, 2.25)) ? ok('E*/Es 独立复刻 1.02·0.35^2.25') : bad('E*/Es', String(j.E_over_Es));
-near(j.youngsModulusGPa, 1.02 * Math.pow(0.35, 2.25) * 110) ? ok('E* GPa = E*/Es × 110') : bad('E*GPa', String(j.youngsModulusGPa));
-near(j.sigma_over_sigmas, 0.54 * Math.pow(0.35, 2.02)) ? ok('σ*/σs 独立复刻 Rp0.2 口径 0.54·0.35^2.02') : bad('σ*/σs', String(j.sigma_over_sigmas));
-near(j.yieldStrengthMPa, 0.54 * Math.pow(0.35, 2.02) * 880) ? ok('σ* MPa = Rp0.2 口径 × 880') : bad('σ*MPa', String(j.yieldStrengthMPa));
-near(j.plateau_over_sigmas, 1.64 * Math.pow(0.35, 2.41)) ? ok('平台σ 独立复刻 1.64·0.35^2.41') : bad('平台σ', String(j.plateau_over_sigmas));
+const rhoHat = 1.01461 * Math.pow(0.35, 1.02161);   // ρ̂_meas=κ·ρ_nom^γ（映射复刻）
+near(j.E_over_Es, 0.9914 * Math.pow(rhoHat, 2.2028)) ? ok('E*/Es 独立复刻 0.9914·ρ̂^2.2028（实测口径+映射）') : bad('E*/Es', String(j.E_over_Es));
+near(j.E_over_Es, 0.0964038, 1e-6) ? ok('E*/Es 手算常数钉 0.0964038（双锚防映射公式被改坏）') : bad('E*/Es 常数钉', String(j.E_over_Es));
+near(j.youngsModulusGPa, 0.9914 * Math.pow(rhoHat, 2.2028) * 110) ? ok('E* GPa = E*/Es × 110') : bad('E*GPa', String(j.youngsModulusGPa));
+near(j.sigma_over_sigmas, 0.54 * Math.pow(rhoHat, 2.02)) ? ok('σ*/σs 独立复刻 Rp0.2 口径 0.54·ρ̂^2.02') : bad('σ*/σs', String(j.sigma_over_sigmas));
+near(j.yieldStrengthMPa, 0.54 * Math.pow(rhoHat, 2.02) * 880) ? ok('σ* MPa = Rp0.2 口径 × 880') : bad('σ*MPa', String(j.yieldStrengthMPa));
+near(j.plateau_over_sigmas, 1.64 * Math.pow(rhoHat, 2.41)) ? ok('平台σ 独立复刻 1.64·ρ̂^2.41') : bad('平台σ', String(j.plateau_over_sigmas));
 
-// ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)^n，n 取 GA_EXPONENT_MAP（缺省 2）──
+// ── 2. 标度律不变量：E(ρ̄₁)/E(ρ̄₂) = (ρ̄₁/ρ̄₂)^(γ·n)（FEA 族表观幂比；缺省族 n=2 无映射）──
 const ra = est('--type', 'diamond', '--porosity', '0.5');
 const rb = est('--type', 'diamond', '--porosity', '0.8');
-// diamond 主公式暂缓入库（2026-11-02 Codex 复核）——缺省档 ρ² 不变量；FEA 候选指数存档 fea-calibration.md
-near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（diamond 0.5 vs 0.8，缺省档）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
+// diamond 实测口径 2.0709+映射 γ=1.06235 → 表观幂比 (2.5)^2.1997（≡名义指数，链式法则自洽旁证）
+near(ra.E_over_Es / rb.E_over_Es, Math.pow(0.5 / 0.2, 1.06235 * 2.0709)) ? ok('标度律 E∝ρ̄^2.20（diamond 表观=γ·n）') : bad('标度律', `${ra.E_over_Es}/${rb.E_over_Es}`);
 const ra2 = est('--type', 'schwarz', '--porosity', '0.5');
 const rb2 = est('--type', 'schwarz', '--porosity', '0.8');
 near(ra2.E_over_Es / rb2.E_over_Es, Math.pow(0.5 / 0.2, 2)) ? ok('标度律 E∝ρ̄²（schwarz 0.5 vs 0.8，缺省档不变量）') : bad('标度律 schwarz', `${ra2.E_over_Es}/${rb2.E_over_Es}`);

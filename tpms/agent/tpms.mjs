@@ -252,13 +252,17 @@ function cmdEstimate(a, json) {
     plateauStrengthMPa: core.plateauStress && core.plateauStress(rel, type) !== undefined
       ? core.plateauStress(rel, type) * core.BASE_YIELD_STRENGTH[material] : undefined,
     anisotropy: core.getAnisotropy(type),
-    model: type === 'gyroid'
-      ? 'FEA 标定幂律（network gyroid，k≥2 域 ρ̄∈[0.3,0.5]）: E*/Es=1.02·ρ̄^2.25, σ*/σs=0.54·ρ̄^2.02 (Rp0.2), 平台σ*=1.64·ρ̄^2.41'
+    model: type === 'gyroid' || type === 'diamond'
+      ? `FEA 标定幂律（network ${type}，STL 实测密度口径+名义→实测幂律映射；k≥2 域 ρ̄∈[0.3,0.5]）: ` +
+        (type === 'gyroid'
+          ? 'E*/Es=0.9914·ρ̂^2.2028, σ*/σs=0.54·ρ̂^2.02 (Rp0.2), 平台σ*=1.64·ρ̂^2.41'
+          : 'E*/Es=0.7871·ρ̂^2.0709') +
+        '（ρ̂=κ·ρ̄^γ 把 MC 弦截断畸变从物理指数分离，2026-11-04 Gemini 签发）'
       : 'Gibson-Ashby 开孔泡沫近似: E*/Es=C1·ρ̄², σ*/σs=C2·ρ̄^1.5',
     feaCalibration: type === 'gyroid'
-      ? '【2026-10-31 已替换为 FEA 标定幂律】本管线 ABAQUS 八轮标定（Standard 四点 E*+Explicit 三点全特征+k≥2 域；Rp0.2 跨求解范式 0.9% 一致）。GA 对照值（旧口径）：E*/Es=0.38·ρ̄²=' + (0.38 * rel * rel).toFixed(4) + '、σ*/σs=0.3·ρ̄^1.5=' + (0.3 * Math.pow(rel, 1.5)).toFixed(4) + '——FEA/GA 刚度 1.98~2.24×、强度侧指数 2.0/2.41 vs GA 1.5（强度刚度解耦）。详见 docs/fea-calibration.md'
+      ? '【2026-11-04 口径换代（Gemini 签发）】实测口径 0.9914·ρ̂^2.2028（名义对照 1.02·ρ̄^2.25=Q2 前旧口径；STL 实测密度三点拟合+指数 CI95=±0.081）。GA 对照值（更旧口径）：E*/Es=0.38·ρ̄²=' + (0.38 * rel * rel).toFixed(4) + '。详见 docs/fea-calibration.md'
       : type === 'diamond'
-        ? '【FEA 三点候选已存档、主公式暂缓入库（2026-11-02 Codex 复核定）】候选 E*/Es≈0.85·ρ̄^2.20（名义密度口径，实测口径指数 2.07；docs/fea-calibration.md）——放行条件缺"p50 近退化单元对刚度影响"定量证据，平台预测本命令仍为 GA 0.42·ρ²=' + (0.42 * rel * rel).toFixed(4)
+        ? '【2026-11-04 口径换代（Gemini 签发）】实测口径 0.7871·ρ̂^2.0709（p50 放行证据链闭合：|ΔE*|=0.0006%；名义对照 0.851·ρ̄^2.198；GA 旧口径 0.42·ρ̄²=' + (0.42 * rel * rel).toFixed(4) + '）。详见 docs/fea-calibration.md'
         : undefined,
     boundary: '几何相关指标（比表面积/渗透率/孔径/各向异性刚度张量）需网格管线，M1 提供',
   };
