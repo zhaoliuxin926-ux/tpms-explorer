@@ -159,6 +159,14 @@ export interface PlasticityParams {
   tangent?: 'elastic' | 'geo' | 'consistent';
   /** 步发散即停（数字孪生坍塌检测：发散点=坍塌应变，曲线截断上报） */
   stopOnDiverge?: boolean;
+  /**
+   * PCG 诊断回调（2026-11-04 Q2 排障基建，可选）：每次 Newton-PCG 求解后回调。
+   * pApMin=本次 PCG 全迭代中最小 p^T·K_T·p（≤0 或过小 → 算子失去 SPD → 循环保护性
+   * 中断，"坍塌"标签的机制甄别关键）；detFMin=当前构型逐单元 min det(F)（由
+   * Green-Lagrange 应变 detF=√det(2E+I) 计算，<0.3 即显著压缩局部化）。
+   */
+  onPcgDiag?: (d: { step: number; newtonIter: number; pcgIters: number;
+                    pApMin: number; converged: boolean; detFMin: number }) => void;
 }
 
 export interface PlasticityStepContext {
@@ -585,9 +593,14 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     for (let i = 0; i < prescDof.length; i++) v[prescDof[i]] = 0;
   }
 
-  /** PCG：K_ff·du = −r_f（bottom 全固定、top uz 给定位移，其余自由；tolOverride 供非精确牛顿） */
+  /** PCG：K_ff·du = −r_f（bottom 全固定、top uz 给定位移，其余自由；tolOverride 供非精确牛顿）
+   * 诊断（onPcgDiag 埋点 2026-11-04）：pApMin=迭代中最小 p^T·K_T·p；spdBroke=保护性中断 */
+  let pcgDiagPApMin = Infinity;
+  let pcgDiagSpcBroke = false;
   function solveIncrement(r: Float64Array, out: Float64Array, tolOverride?: number): number {
     const tolPcg = tolOverride ?? pcgTol;
+    pcgDiagPApMin = Infinity;
+    pcgDiagSpcBroke = false;
     let bNorm = 0;
     pcgB.fill(0, 0, nDof);
     for (let nd = 0; nd < nNodes; nd++) {
@@ -611,7 +624,8 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       zeroPrescribed(pcgAp);   // 关键：防 prescribed 行污染 r→z→p（否则算子非对称，残差指数增长）
       let pAp = 0;
       for (let i = 0; i < nDof; i++) pAp += pcgP[i] * pcgAp[i];
-      if (!(pAp > 1e-300)) break;
+      if (pAp < pcgDiagPApMin) pcgDiagPApMin = pAp;
+      if (!(pAp > 1e-300)) { pcgDiagSpcBroke = true; break; }
       const alpha = rz / pAp;
       let rr2 = 0, rzN = 0;
       for (let i = 0; i < nDof; i++) {
@@ -697,7 +711,30 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     return n;
   }
 
+  /** 诊断（onPcgDiag 埋点）：对角近似 detF 扫描——(1+∂ux/∂x)(1+∂uy/∂y)(1+∂uz/∂z) 逐 solid
+   * 活性单元的单元平均梯度（忽略剪切耦合的判别用近似；精确口径 = sqrt(det(2E+I)) 步末场） */
+  function diagDetFMin(): number {
+    let m = Infinity;
+    for (let s = 0; s < nSolid; s++) {
+      if (!active[elems[s]]) continue;
+      const nbase = s * 8;
+      let gx = 0, gy = 0, gz = 0;
+      for (let a = 0; a < 8; a++) {
+        const nd = elemNodes[nbase + a];
+        // 形函数对 x/y/z 的节点系数（等参单位立方体 ±1/8 交替符号）
+        const sx = (a & 1 ? 1 : -1) / 8, sy = (a & 2 ? 1 : -1) / 8, sz = (a & 4 ? 1 : -1) / 8;
+        gx += U[nd * 3] * sx;  // 单元尺寸 1（体素网格 h=1）→ 梯度=Σ u·dN/dx
+        gy += U[nd * 3 + 1] * sy;
+        gz += U[nd * 3 + 2] * sz;
+      }
+      const d = (1 + gx) * (1 + gy) * (1 + gz);
+      if (d < m) m = d;
+    }
+    return m;
+  }
+
   /** 单次修正牛顿（到给定应变 sGoal）：弹性/几何切线 + 最优 α 线搜索；失败时 U 保持可继续迭代 */
+  let curDiagStep = 0;   // 主循环游标（runNR 定义在循环外，onPcgDiag 借此取 step 号）
   function runNR(sGoal: number): { converged: boolean; iterations: number } {
     for (let iter = 0; iter < maxIter; iter++) {
       Utrial.set(U);
@@ -714,6 +751,11 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代
       const pcgT = Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
       const pcgIt = solveIncrement(fint, du, pcgT);
+      if (params.onPcgDiag) {
+        params.onPcgDiag({ step: curDiagStep, newtonIter: iter + 1, pcgIters: pcgIt,
+          pApMin: pcgDiagPApMin, converged: pcgDiagSpcBroke ? false : pcgIt < pcgMaxIter,
+          detFMin: diagDetFMin() });
+      }
       // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
       // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
       {
@@ -820,6 +862,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   let fracCarry = 1;
 
   for (let step = 1; step <= nSteps; step++) {
+    curDiagStep = step;
     const strain = (step / nSteps) * maxStrain;
     const strainPrev = ((step - 1) / nSteps) * maxStrain;
     const totalDs = strain - strainPrev;

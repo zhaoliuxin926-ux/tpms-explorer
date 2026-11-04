@@ -71,6 +71,8 @@ export interface CompressionTwinParams {
   type?: string;
   /** 台账：每步被杀死的单元数 */
   onDeath?: (step: number, killed: number, totalDead: number) => void;
+  /** PCG 诊断透传（2026-11-04 Q2 排障基建，见 PlasticityParams.onPcgDiag） */
+  onPcgDiag?: import('./gpu-plasticity-solver').PlasticityParams['onPcgDiag'];
 }
 
 export interface CompressionTwinResult {
@@ -131,6 +133,7 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
     // 坍塌物理在残差侧几何项（恒在），v1.0.2 的坍塌检测/DT-GA 结果本就等效 elastic 口径
     tangent: 'elastic',
     stopOnDiverge: true,
+    onPcgDiag: params.onPcgDiag,
     onStep: (ctx) => {
       // 最大（拉伸）主应变失效 → 单元生死；每步杀死上限 + 活性下限守卫
       // （压溃主通道由塑性本构承担；死亡只代理拉伸断裂/失稳塌陷）
