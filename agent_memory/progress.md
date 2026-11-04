@@ -10,7 +10,7 @@
 > 3. **parity 同款坑第二次→结构性防线（ca61a80）**——b8a526f 改平台源码漏重建 docs/platform（CI parity 三平台齐红，eb56456 首次同款）；**run_ci_suite drift 守卫升级硬门**：dist 存在且 hash 不一致直接 exit 1（原只 warn——bugs.md 已知缺口，两次踩坑实证补上）。
 >
 > ### 新会话第一优先
-> 1. **Q2 修复平台级落地（判读与探针验证已完成，6689dda）**：机构铰假说 100% 核准+浮点相消预言双验证实锤+修复①探针级见效（R12 崩溃 1.25%→7.5% 仅剩 Newton 上限）——剩余工程：a) 拓扑滤波入平台生产路径（gpu-plasticity-solver 或 twin 入口的 solid 预处理）；b) LM 对角阻尼 η·diag(K)+零空间优雅终止选项；c) Newton maxIter/自适应子步调优（ε≈7.5% 塑性段 40 次耗尽）；d) DT/FEA 参照比 R6→R16/R24 迁移+R6 更名披露（Gemini 裁定：伪块体解只作冒烟基线）；e) audit 门禁锚更新+48 门+CI；
+> 1. **Q2 修复平台级落地（五轮裁定终版，第五档归档 collab/gemini/2026-11-04-q2-consistent-tangent-reenable.md）**：a) 6-连通主干滤波+递归 k-core 剥离入体素化生产入口（探针 prune v2 移植）；b) LM 对角阻尼+零空间优雅终止——**阻尼锚定弹性对角线 diag(K_e)（非当前塑性对角），η=5e-4**；c) **consistent 切线重启用替代 elastic+maxIter 硬扛**（算力陷阱定量：谱半径 0.98 需 570 外环步；consistent 5-12 步）——**护栏 A 落地差异：我方 matVecFree 的 geo 项条件 tangentMode!=elastic 使 consistent 绑定了 K_geo，须解绑为纯材料修正**；护栏 C=第 8 步切线冻结/阻尼×5 防活动集乒乓+maxIter 25 后子步折半；d) DT/FEA 参照比 R6→R16/R24 迁移+R6 更名 "R6 (1-Voxel Locking Regime / Fast Preview)"；e) audit 门禁锚+48 门+CI；验证先验=V 形彻底拉平/外环 5-12 步/总耗时 -60%；
 > 2. **CI 终态确认**（ca61a80/ea41e2f 链；9a518a5 的 run 被 b8a526f concurrency 取消属正常接棒）；
 > 3. **R16 判别点**（后台跑中，崩溃点若落 2.5-4% 区间则非单调曲线形状确认）；
 > 4. **p0 双修**：STL 写前顶点预合并（float64 域合并→写 float32 必然同坐标，Gmsh 100% 合并）+ eps_snap 场钳位（Gemini 核准方案）。
