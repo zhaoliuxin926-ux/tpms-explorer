@@ -167,7 +167,7 @@ export interface PlasticityParams {
    */
   onPcgDiag?: (d: { step: number; newtonIter: number; pcgIters: number;
                     pApMin: number; converged: boolean; detFMin: number;
-                    pNormMax?: number }) => void;
+                    pNormMax?: number; graceful?: boolean }) => void;
 }
 
 export interface PlasticityStepContext {
@@ -258,6 +258,64 @@ function fillB(B: Float64Array, gxi: number, gyi: number, gzi: number): void {
   }
 }
 
+/**
+ * 承载主干滤波（Q2 修复①生产化，2026-11-04；参考实现=probe_dt_q2_diag.mjs --prune v2）：
+ *   1) 6-连通主分量——保留同时触及 z=0 与 z=L 加载面的贯通分量（无则回退取触 z=0
+ *      的首个分量），其余分量整体剔除（悬浮孤岛）；
+ *   2) 递归死端剥离——非加载层内 6 邻接数 <2 的体素迭代剥离至不动点（悬臂链逐层
+ *      退化为孤岛后被整链清除；加载层豁免保证端板/承载面完整）。
+ * 机制依据（Gemini 五轮核准）：棱邻接体素对=圆柱铰 N_mech=1 → 机构零空间是
+ * consistent 切线失 SPD 与 PCG 零空间死循环的根源；单轴压缩下不贯通/悬臂体素
+ * 本就无承载路径，剔除物理正当，剔除量由调用方如实披露。
+ */
+export function pruneUnloadedVoxels(solid: Uint8Array, R: number): { islands: number; dangling: number } {
+  const at = (i: number, j: number, k: number) => i + j * R + k * R * R;
+  const inB = (i: number, j: number, k: number) => i >= 0 && i < R && j >= 0 && j < R && k >= 0 && k < R;
+  const NB: ReadonlyArray<readonly [number, number, number]> = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  const nbrCount6 = (i: number, j: number, k: number): number => {
+    let n = 0;
+    for (const [di, dj, dk] of NB) { const ni = i + di, nj = j + dj, nk = k + dk; if (inB(ni, nj, nk) && solid[at(ni, nj, nk)]) n++; }
+    return n;
+  };
+  // 1) 6-连通主分量（贯通 z=0↔z=L 者优先；无贯通时回退首个触 z=0 者）
+  const comp = new Int32Array(R * R * R).fill(-1);
+  let nComp = 0, main = -1, mainHasL = false;
+  const stack: number[] = [];
+  for (let v0 = 0; v0 < R * R * R; v0++) {
+    if (!solid[v0] || comp[v0] >= 0) continue;
+    const cid = nComp++; let has0 = false, hasL = false;
+    stack.length = 0; stack.push(v0); comp[v0] = cid;
+    while (stack.length) {
+      const v = stack.pop()!;
+      const i = v % R, j = Math.floor(v / R) % R, k = Math.floor(v / (R * R));
+      if (k === 0) has0 = true;
+      if (k === R - 1) hasL = true;
+      for (const [di, dj, dk] of NB) {
+        const ni = i + di, nj = j + dj, nk = k + dk;
+        if (!inB(ni, nj, nk)) continue;
+        const nv = at(ni, nj, nk);
+        if (solid[nv] && comp[nv] < 0) { comp[nv] = cid; stack.push(nv); }
+      }
+    }
+    if (has0 && hasL && !mainHasL) { main = cid; mainHasL = true; }
+    else if (has0 && main < 0) main = cid;
+  }
+  let islands = 0;
+  for (let v = 0; v < R * R * R; v++) if (solid[v] && comp[v] !== main) { solid[v] = 0; islands++; }
+  // 2) 递归死端剥离（k-core，face 邻接 ≤1；z=0/z=L 加载层豁免）
+  let dangling = 0;
+  for (;;) {
+    let changed = false;
+    for (let k = 1; k < R - 1; k++) for (let j = 0; j < R; j++) for (let i = 0; i < R; i++) {
+      const v = at(i, j, k);
+      if (!solid[v]) continue;
+      if (nbrCount6(i, j, k) < 2) { solid[v] = 0; dangling++; changed = true; }
+    }
+    if (!changed) break;
+  }
+  return { islands, dangling };
+}
+
 /** 求解全流程：位移步进 → 修正牛顿 → 径向返回 → 能量台账 */
 export function solvePlasticityCompression(params: PlasticityParams): PlasticityResult {
   const t0 = performance.now();
@@ -277,6 +335,16 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   // 真实 StVK 平衡/坍塌物理不受切线选择影响，elastic 切线是最鲁棒的修正牛顿口径。
   // geo 现为正确可用的可选项（matvec 已修，见下），用于需要切线级屈曲加速的场景。
   const tangentMode = params.tangent ?? 'elastic';
+  // Q2 consistent 重启用三件套（2026-11-04，collab/gemini 五~六轮核准）：入口侧拓扑滤波
+  // （pruneUnloadedVoxels）根除机构零空间 + LM 弹性对角阻尼锁谱下界 + PCG 零空间优雅
+  // 终止——elastic+maxIter 硬扛塑性平台段谱半径 0.97-0.995 需 ~570 外环步，consistent
+  // 二次收敛 5-12 步。elastic/geo 口径行为零变化（lmEta=0 短路全部新路径）。
+  const lmEtaBase = tangentMode === 'consistent' ? 5e-4 : 0;
+  let lmEta = lmEtaBase;
+  let tangentFrozen = false;   // 护栏 C：NR 第 8 迭代起冻结塑性切线缓存+阻尼×5（防活动集乒乓）
+  let plasticThisIter = false; // 本 NR 迭代是否有 GP 塑性激活（LM 门控：弹性段算子本就
+                               // SPD 良态，全程阻尼反而劣化 Newton 步质量——R12 实证
+                               // s1 9it→17it；LM 只在塑性激活迭代启用）
   const stopOnDiverge = params.stopOnDiverge ?? false;
   const lame = lameFromNu(nu);
 
@@ -376,8 +444,13 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   const PEEQgpTrial = new Float64Array(nSolid * 8);
   const Sgp = new Float64Array(nSolid * 8 * 6);
   const yieldNow = new Float64Array(nSolid * 8);
-  // 一致弹塑性切线的秩一项：w = C_el·m（m = ∂σv/∂S）， yielded GP 才参与修正
-  const tanW = new Float64Array(nSolid * 8 * 6);
+  // 一致切线缓存（Simo-Taylor 完整式，Q2 修复 2026-11-04）：n̂=trial 偏应力单位方向
+  // （张量口径，Voigt 存法向+张量剪切）；c1=3μdγ/σv_tr（偏斜软化=dm/dσ 项）；
+  // c2=3μ/(3μ+H)−c1（n 方向附加软化）。旧实现秩一 w⊗w/(3μ+H) 漏 c1 项且 Voigt
+  // 剪切内积口径错——FD 对拍实证修正量差 3.6×，见 collab/gemini Q2 档
+  const tanN = new Float64Array(nSolid * 8 * 6);
+  const tanC1 = new Float64Array(nSolid * 8);
+  const tanC2 = new Float64Array(nSolid * 8);
   const tanYield = new Float64Array(nSolid * 8);
 
   /** 内力组装：从已提交状态对总应变做本构试探（NR 幂等），写 Sgp/yieldNow/试验状态 */
@@ -418,24 +491,27 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
           EpgpTrial[gi + k] = rr.epPlastic[k];
         }
         PEEQgpTrial[iGP] = rr.peeq;
-        // 一致切线秩一项：dS = C_el·dε − w·(wᵀdε)/(3μ+H)，m = ∂σv/∂S（Voigt 工程剪切）
+        // 一致切线缓存（冻结后不更新——保持触发时刻的活动集，防加载/卸载切线突变→
+        // 残差周期 2 极限环）。n̂/c1/c2 全部取 trial 态（推导口径；sympy+FD 双向验证）：
+        //   C_ep·dε = C·dε − c1·dev(C·dε) − c2·n̂·(n̂:(C·dε))
+        //   c1 = 3μ·dγ/σv_tr，c2 = 3μ/(3μ+H) − c1
+        if (!tangentFrozen) {
         if (rr.dPeek > 0) {
+          plasticThisIter = true;
           tanYield[iGP] = 1;
-          const S = rr.stress;
-          const vm = vonMisesVoigt(S);
-          const m0 = (2 * S[0] - S[1] - S[2]) / (2 * vm);
-          const m1 = (2 * S[1] - S[0] - S[2]) / (2 * vm);
-          const m2 = (2 * S[2] - S[0] - S[1]) / (2 * vm);
-          const m3 = 3 * S[3] / vm, m4 = 3 * S[4] / vm, m5 = 3 * S[5] / vm;
-          const mtr = m0 + m1 + m2;
-          tanW[gi] = lame.lambda * mtr + 2 * lame.mu * m0;
-          tanW[gi + 1] = lame.lambda * mtr + 2 * lame.mu * m1;
-          tanW[gi + 2] = lame.lambda * mtr + 2 * lame.mu * m2;
-          tanW[gi + 3] = lame.mu * m3;
-          tanW[gi + 4] = lame.mu * m4;
-          tanW[gi + 5] = lame.mu * m5;
+          const sT = stVkPK2(ev, epOld6, lame);        // trial 应力（radialReturn 同源）
+          const vmT = vonMisesVoigt(sT);
+          const trT = sT[0] + sT[1] + sT[2];
+          const d0 = sT[0] - trT / 3, d1 = sT[1] - trT / 3, d2 = sT[2] - trT / 3;
+          const rn = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2 + 2 * (sT[3] * sT[3] + sT[4] * sT[4] + sT[5] * sT[5]));
+          tanN[gi] = d0 / rn; tanN[gi + 1] = d1 / rn; tanN[gi + 2] = d2 / rn;
+          tanN[gi + 3] = sT[3] / rn; tanN[gi + 4] = sT[4] / rn; tanN[gi + 5] = sT[5] / rn;
+          const c1 = (3 * lame.mu * rr.dPeek) / vmT;
+          tanC1[iGP] = c1;
+          tanC2[iGP] = (3 * lame.mu) / (3 * lame.mu + hardening) - c1;
         } else {
           tanYield[iGP] = 0;
+        }
         }
         // f_int^e = ∫BᵀS dV = Σ_g Bᵀ·S·(1/8)
         for (let i = 0; i < 24; i++) {
@@ -492,11 +568,13 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         for (let j = 0; j < 24; j++) s0 += Ke[row + j] * eu[j];
         kv[i] = s0;
       }
-      // 已屈服 GP 的秩一一致切线修正：−Bᵀ·[w·(wᵀ·B·eu)/(3μ+H)]·dV（仅 consistent 口径）
+      // 已屈服 GP 的 Simo-Taylor 一致切线修正（完整式，仅 consistent）：
+      // Δσ = −c1·dev(C:dε) − c2·n̂·(n̂:(C:dε))；(C:dε) 为弹性应力响应
       let anyYield = false;
       if (tangentMode === 'consistent') {
         for (let g = 0; g < 8; g++) if (tanYield[s * 8 + g]) { anyYield = true; break; }
-      }if (anyYield) {
+      }
+      if (anyYield) {
         for (let g = 0; g < 8; g++) {
           if (!tanYield[s * 8 + g]) continue;
           const gi = (s * 8 + g) * 6;
@@ -512,20 +590,35 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
             deV[4] += Bg[Bg0 + 96 + i] * bi;
             deV[5] += Bg[Bg0 + 120 + i] * bi;
           }
-          const wde = tanW[gi] * deV[0] + tanW[gi + 1] * deV[1] + tanW[gi + 2] * deV[2]
-            + tanW[gi + 3] * deV[3] + tanW[gi + 4] * deV[4] + tanW[gi + 5] * deV[5];
-          const cScale = -wde / (3 * lame.mu + hardening) / 8;
-          const se0 = cScale * tanW[gi], se1 = cScale * tanW[gi + 1], se2 = cScale * tanW[gi + 2],
-            se3 = cScale * tanW[gi + 3], se4 = cScale * tanW[gi + 4], se5 = cScale * tanW[gi + 5];
+          // C:dε（Voigt：法向 λ·tr+2μ·e，剪切 μ·γ）
+          const trD = deV[0] + deV[1] + deV[2];
+          const ce0 = lame.lambda * trD + 2 * lame.mu * deV[0];
+          const ce1 = lame.lambda * trD + 2 * lame.mu * deV[1];
+          const ce2 = lame.lambda * trD + 2 * lame.mu * deV[2];
+          const ce3 = lame.mu * deV[3], ce4 = lame.mu * deV[4], ce5 = lame.mu * deV[5];
+          // n̂:(C:dε) —— 张量内积：法向直和 + 剪切 ×2（tanN 剪切存张量分量、ce 剪切=张量 s）
+          const nCe = tanN[gi] * ce0 + tanN[gi + 1] * ce1 + tanN[gi + 2] * ce2
+            + 2 * (tanN[gi + 3] * ce3 + tanN[gi + 4] * ce4 + tanN[gi + 5] * ce5);
+          const c1 = tanC1[s * 8 + g], c2 = tanC2[s * 8 + g];
+          const trCe = ce0 + ce1 + ce2;
+          const se0 = -c1 * (ce0 - trCe / 3) - c2 * tanN[gi] * nCe;
+          const se1 = -c1 * (ce1 - trCe / 3) - c2 * tanN[gi + 1] * nCe;
+          const se2 = -c1 * (ce2 - trCe / 3) - c2 * tanN[gi + 2] * nCe;
+          const se3 = -c1 * ce3 - c2 * tanN[gi + 3] * nCe;
+          const se4 = -c1 * ce4 - c2 * tanN[gi + 4] * nCe;
+          const se5 = -c1 * ce5 - c2 * tanN[gi + 5] * nCe;
           for (let i = 0; i < 24; i++) {
             kv[i] -= (Bg[Bg0 + i] * se0 + Bg[Bg0 + 24 + i] * se1 + Bg[Bg0 + 48 + i] * se2
-              + Bg[Bg0 + 72 + i] * se3 + Bg[Bg0 + 96 + i] * se4 + Bg[Bg0 + 120 + i] * se5);
+              + Bg[Bg0 + 72 + i] * se3 + Bg[Bg0 + 96 + i] * se4 + Bg[Bg0 + 120 + i] * se5) / 8;
           }
         }
       }
-      // 几何刚度 mat-vec：y_a += Σ_b (G_a·∇N_b)·v_b（geo/consistent 口径启用；
-      // 纯 elastic 口径不含屈曲软化，交由残差侧几何项 + 弹性切线收敛兜底）
-      if (tangentMode !== 'elastic') {
+      // 几何刚度 mat-vec：y_a += Σ_b (G_a·∇N_b)·v_b（仅 'geo' 口径；
+      // 纯 elastic/consistent 口径不含屈曲软化，交由残差侧几何项兜底）。
+      // 2026-11-04 Q2 解绑（Gemini 护栏 A）：旧条件 `!== 'elastic'` 使 consistent 误绑
+      // K_geo——大压缩 S<0 叠加塑性会产真实负特征值，是历史"consistent 失 SPD"真因；
+      // consistent=纯材料修正切线，几何非线性由残差侧精确承载不损平衡态
+      if (tangentMode === 'geo') {
         const G = geoG;
         for (let g = 0; g < 8; g++) {
           const gi = (s * 8 + g) * 6;
@@ -599,11 +692,15 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   let pcgDiagPApMin = Infinity;
   let pcgDiagSpcBroke = false;
   let pcgDiagPNormMax = 0;   // ‖p‖ 轨迹（Gemini 预言验证：零空间死循环时 >1e10）
-  function solveIncrement(r: Float64Array, out: Float64Array, tolOverride?: number): number {
+  let pcgDiagGraceful = false;
+  /** 护栏 C 冻结触发迭代数（≤0 禁用；Q2 落地轮实验参数） */
+  const NR_FREEZE_ITER = 8;
+  function solveIncrement(r: Float64Array, out: Float64Array, tolOverride?: number, lmEff = 0): number {
     const tolPcg = tolOverride ?? pcgTol;
     pcgDiagPApMin = Infinity;
     pcgDiagSpcBroke = false;
     pcgDiagPNormMax = 0;
+    pcgDiagGraceful = false;
     let bNorm = 0;
     pcgB.fill(0, 0, nDof);
     for (let nd = 0; nd < nNodes; nd++) {
@@ -624,6 +721,10 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     let iter = 0;
     for (; iter < pcgMaxIter; iter++) {
       matVecFree(pcgP, pcgAp);
+      // LM 对角阻尼（Q2 护栏 B，仅 consistent 且本迭代塑性激活）：算子加 η·diag(K_e)——
+      // 锚定弹性对角线（完全屈服体素的塑性对角≈0，弹性锚托底 λ_min ≥ η·E；diag 即弹性
+      // 对角近似，见 refreshDiag）。prescribed 行 pcgP=0 → 阻尼贡献 0，随后照常清零
+      if (lmEff > 0) for (let i = 0; i < nDof; i++) pcgAp[i] += lmEff * diag[i] * pcgP[i];
       zeroPrescribed(pcgAp);   // 关键：防 prescribed 行污染 r→z→p（否则算子非对称，残差指数增长）
       let pAp = 0;
       for (let i = 0; i < nDof; i++) pAp += pcgP[i] * pcgAp[i];
@@ -632,6 +733,11 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       for (let i = 0; i < nDof; i++) pn += pcgP[i] * pcgP[i];
       if (pn > pcgDiagPNormMax) pcgDiagPNormMax = pn;   // 平方范数（开方在消费侧）
       if (!(pAp > 1e-300)) { pcgDiagSpcBroke = true; break; }
+      // 优雅终止（Q2 护栏 B 第二道）：pAp 相对过小（≤1e-14·‖p‖²·‖K‖_est）= 搜索方向
+      // 落入残余零空间——不判失败，返回当前部分和（值域步）交回线搜索。
+      // ‖K‖_est=keDiagAvg（最连通节点弹性对角的数量级；判据超保守，滤波+LM 下
+      // 正常工况永不触发）。elastic/geo 口径 lmEff=0 短路，行为与历史逐位一致
+      if (lmEff > 0 && pAp <= 1e-14 * pn * keDiagAvg) { pcgDiagGraceful = true; iter++; break; }
       const alpha = rz / pAp;
       let rr2 = 0, rzN = 0;
       for (let i = 0; i < nDof; i++) {
@@ -742,7 +848,18 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   /** 单次修正牛顿（到给定应变 sGoal）：弹性/几何切线 + 最优 α 线搜索；失败时 U 保持可继续迭代 */
   let curDiagStep = 0;   // 主循环游标（runNR 定义在循环外，onPcgDiag 借此取 step 号）
   function runNR(sGoal: number): { converged: boolean; iterations: number } {
+    // 每子步重置护栏 C 状态（冻结/阻尼只在单次 NR 内生效；失败交回外层手风琴折半）
+    tangentFrozen = false;
+    lmEta = lmEtaBase;
     for (let iter = 0; iter < maxIter; iter++) {
+      // 护栏 C（Q2，仅 consistent）：第 8 迭代起冻结塑性切线缓存 + LM 阻尼×5——
+      // 屈服面临界体素加载/卸载切线突变 → 残差周期 2 极限环（活动集乒乓）；
+      // 冻结=退化为修正牛顿口径，配线搜索换稳定（二次收敛预期 5-12 步内完成）
+      if (tangentMode === 'consistent' && NR_FREEZE_ITER > 0 && iter >= NR_FREEZE_ITER && !tangentFrozen) {
+        tangentFrozen = true;
+        lmEta = lmEtaBase * 5;
+      }
+      plasticThisIter = false;   // 本迭代塑性门控（internalForce 置位）
       Utrial.set(U);
       applyPrescribed(Utrial, sGoal);
       internalForce(Utrial, fint);
@@ -756,11 +873,11 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       if (rNorm0 <= tol * fScale) { U.set(Utrial); return { converged: true, iterations: iter + 1 }; }
       // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代
       const pcgT = Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
-      const pcgIt = solveIncrement(fint, du, pcgT);
+      const pcgIt = solveIncrement(fint, du, pcgT, tangentMode === 'consistent' && plasticThisIter ? lmEta : 0);
       if (params.onPcgDiag) {
         params.onPcgDiag({ step: curDiagStep, newtonIter: iter + 1, pcgIters: pcgIt,
           pApMin: pcgDiagPApMin, converged: pcgDiagSpcBroke ? false : pcgIt < pcgMaxIter,
-          detFMin: diagDetFMin(), pNormMax: pcgDiagPNormMax });
+          detFMin: diagDetFMin(), pNormMax: pcgDiagPNormMax, graceful: pcgDiagGraceful });
       }
       // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
       // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
@@ -804,6 +921,8 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       for (let i = 0; i < nDof; i++) Utrial[i] += bestAlpha * du[i];
       applyPrescribed(Utrial, sGoal);
       U.set(Utrial);
+      // NR 迭代诊断钩子（沿 __plasSubDbg 先例，未设置零开销；Q2 落地轮加）
+      (globalThis as any).__plasNrDbg?.(iter + 1, rNorm0, bestAlpha, bestNorm, pcgIt, plasticThisIter);
     }
     return { converged: false, iterations: maxIter };
   }

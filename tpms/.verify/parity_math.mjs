@@ -617,7 +617,9 @@ const { gibsonAshby } = (await imp(BUNDLE));
   const rho = 0.25;
   const g = gibsonAshby(rho, 'gyroid');
   // 2026-10-31 gyroid σ 主口径已替换为 FEA Rp0.2 幂律（docs/fea-calibration.md）；其他族仍 GA
-  check('FEA Rp0.2 σ* = 0.54·ρ^2.02（Explicit 三点标定）', Math.abs(g.sigma_Es - 0.54 * Math.pow(rho, 2.02)) < 1e-12, `${fmt(g.sigma_Es)}`);
+  // 2026-11-04 口径换代同步：强度链入口接 mappedRho（ρ̂=1.01461·ρ^1.02161，9a518a5）——
+  // 期望公式级复刻映射（裸 0.54·ρ^2.02 旧锚漏改，Q2 落地轮 e) 补锚）
+  check('FEA Rp0.2 σ* = 0.54·ρ̂^2.02（Explicit 三点标定，ρ̂=mappedRho）', Math.abs(g.sigma_Es - 0.54 * Math.pow(1.01461 * Math.pow(rho, 1.02161), 2.02)) < 1e-12, `${fmt(g.sigma_Es)}`);
   check('FEA σ* 量级合理 (≤0.6·ρ^1.5)', g.sigma_Es <= 0.6 * Math.pow(rho, 1.5), '原值 1.5 高估 6.5×');
 }
 

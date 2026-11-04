@@ -1,6 +1,43 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-11-04 收官 ·Gemini 通道六档全链闭环 ·主任务=Q2 平台级落地）
+> ## 🔖 新会话开工指引（2026-11-04 深夜 ·Q2 落地轮收官 ·consistent 重启用翻案为负结果）
+
+> **仓库态**：main=本轮提交链见下，工作树净，CI 绿。上一会话链：9a518a5 口径换代 → … → 15f166c/435a497 六档归档（详见下方历史段）。
+>
+> ### Q2 落地轮成果全账（2026-11-04 晚，第七档=`collab/gemini/2026-11-04-q2-landing-report.md`）
+> 五项四落地+一翻案：
+> 1. **a) prune v2 生产化 ✅**——`pruneUnloadedVoxels` 入 gpu-plasticity-solver 导出（6-连通 z 贯通主分量+递归死端 k-core），UI voxelizeCurrentTPMS 替换旧"触任意边界"剪除（孤岛+悬臂分项披露）。
+> 2. **b) LM+优雅终止 ✅（改进）**——η=5e-4 锚弹性对角+PCG pᵀq≤1e-14·‖p‖²·‖K‖ 优雅终止；**加塑性段门控**（全程挂载实测弹性段 Newton 9→17it 劣化）。
+> 3. **c) consistent 切线数学修复+重启用翻案**——**挖出历史潜伏 bug**：旧秩一 w⊗w/(3μ+H) 与真 Jacbian 偏差 45-70%（剪切通道 3.6×；v6.0 起无门禁覆盖）→ sympy+FD 双向验证修复为 **Simo-Taylor 完整式**（c1=3μdγ/σv_tr 偏斜软化+c2=3μ/(3μ+H)−c1，残差 0.015%）；但 **R12 实测矩阵证明修复后 consistent 仍劣于 elastic**（活动集乒乓：NR 解剖 ratio 停滞 0.77 平台/α 恒 1/冻结护栏救不了）→ **wrapper 定案回退 elastic+maxIter40+prune**（s2/s3=29/39it，较 maxIter25 改善 5-11×，极限 ε=7.5% 复现判读轮基线）；K_geo 解绑/冻结护栏/LM 全保留（elastic 零影响）。
+> 4. **d) 半项**——R6 更名 "R6 (1-Voxel Locking Regime / Fast Preview)" 披露入 fea-calibration.md+门 28；R16/R24 参照比迁移**暂停**（依赖 V 形拉平未达成）。
+> 5. **e) 门禁锚 ✅**——门 28 接住上轮漏网（9a518a5 plateauStress 接 mappedRho 后 gaPrediction 0.1348→0.1281，断言锚漏改——公式级补锚）；门 27 57/0（elastic/geo 零漂移实证）、门 28 27/0、docs 349/0、docs/platform 重建（drift 门）。
+> **验收基线四项对账**：V 形拉平 ✗（开放研究项：屈服面正则化/切线混合/混合控制三候选）；外环 5-12 步 ✗（consistent 负结果）；单档耗时 -60% ✗（口径不适用）；参照比上移 ✗（暂停）。——负结果如实回贴 Gemini（第七档五节含三问裁定请求）。
+> **可复用方法论**：Voigt 工程剪切的张量内积陷阱（m₃=2×m₁₂，sympy 推导也踩）；FD 对拍（radialReturn 层 δ=1e-7 中心差分）是切线实现的低成本黄金标准；NR 逐迭代解剖（__plasNrDbg 钩子）定位活动集乒乓。
+>
+> ### 新会话第一优先：Gemini 第七档三问回执处置（用户代贴）
+> 裁定①负结果定案 vs 再试一轮收敛工程；②c1 项对 SPD 安全性结论的影响；③V 形拉平三候选优先级。
+>
+> ### 老挂账（按价值排序）
+> 1. **p0 双修**（管线轮）：STL 写前顶点预合并+eps_snap 场钳位（Gemini 核准）；
+> 2. **LLM 回归 43 条**：需 TPMS_LLM_KEY 三 env（用户手动 export）；
+> 3. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板。
+>
+> ### 多设备纪律（machine-facts.md=新设备第一读）
+> 开工 `git fetch origin && git reset --hard origin/main`（未推送提交先 bundle 离线备份——**禁止 push backup-\* 分支**）；hub=导师部署仅工位接入；大文件走文件中心。
+>
+> ### 铁律速查
+> - **平台 src 变更必须同提交重建 docs/platform**（run_ci_suite drift 硬门，流程：`npx vite build && rm -rf docs/platform && cp -r dist docs/platform && find docs/platform -name '*.map' -delete`）
+> - 构建规范 cwd（license-headers 按 cwd 解析）；发版链=本地 48 门→推→CI+Pages 同 HEAD 双绿
+> - **python 写文件防截断**：`open('w')` 先截断后抛错=清空——长内容用 Write 工具
+> - **Gemini 通道**（唯一外部评审，Codex 已停用）：无仓库上下文，出题自包含；collab/gemini/ 归档；分歧 ZCode 交叉实证
+> - **node stdout 管道全缓冲**：探针输出 `| tail` 会憋到最后——看中间态用输出文件 Read
+> - abaqus 命令在 `D:/SIMULIA/Commands/abaqus.bat`；.inp 手术=只注释 *ELEMENT 段+MPC PIN 非重合节点对
+> - git grep 正则通配误报——甄别用 -F 固定串；bash 一律绝对路径；改源码用 Write/Edit；GBK 乱码≠损坏
+
+---
+
+> ## 🔖 前会话指引（2026-11-04 白天 ·Gemini 六档全链 ·已折叠）
+
 
 > **仓库态**：main=**15f166c 已推送**，工作树净，CI 三平台绿（ce9fe70 run 41803283157 实证；其后 agent_memory/commits 不触发 CI）。本会话提交链：9a518a5 口径换代 → b8a526f Q2 诊断基建 → ca61a80 parity 修复+drift 硬门 → ea41e2f 交接(事故) → ce9fe70 progress 恢复 → 6689dda Q2 判读处置 → bfb568e/55bba4e/15f166c 五~六轮归档。
 >

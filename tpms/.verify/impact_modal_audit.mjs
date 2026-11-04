@@ -81,7 +81,9 @@ console.log('\n[C] 吸能效率与平台应力');
   const cr = computeCrush(0.3, 'gyroid');
   check(`η(ε_d) ∈ (0,1]（${cr.etaAtEpsilonD.toFixed(3)}）`, cr.etaAtEpsilonD > 0 && cr.etaAtEpsilonD <= 1);
   // 平台应力同源：gyroid=FEA 平台幂律 1.64·880·ρ̄^2.41（2026-10-31 替换，docs/fea-calibration.md）
-  const expect = 1.64 * 880 * Math.pow(0.3, 2.41);
+  // 2026-11-04 口径换代同步：plateauStress 入口接 mappedRho（ρ̂=1.01461·ρ^1.02161，9a518a5）——
+  // 期望公式级复刻映射（裸 1.64·880·ρ^2.41 旧锚漏改，Q2 落地轮 e) 补锚）
+  const expect = 1.64 * 880 * Math.pow(1.01461 * Math.pow(0.3, 1.02161), 2.41);
   check(`σ_pl 同源（${cr.sigmaPl.toFixed(2)} vs ${expect.toFixed(2)} MPa）`, Math.abs(cr.sigmaPl - expect) < 1e-9);
   // 效率函数可用
   const eta = energyEfficiency(0.3, 0.3, 'gyroid');

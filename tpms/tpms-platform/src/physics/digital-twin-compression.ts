@@ -17,6 +17,10 @@
 import { solvePlasticityCompression, type PlasticityResult, type PlasticityStepResult } from './gpu-plasticity-solver';
 import { plateauStress as feaPlateauStress } from './gibson-ashby';
 
+// DT 契约转发（Q2 2026-11-04）：喂给数字孪生的体素掩码应先过承载主干滤波
+// （UI 入口 main.ts voxelizeCurrentTPMS 已接；consistent 切线的 SPD 前提之一）
+export { pruneUnloadedVoxels } from './gpu-plasticity-solver';
+
 /** Gibson-Ashby 平台应力系数（与 gibson-ashby.ts 的 C2 同源同值） */
 export const GA_C2 = 0.3;
 
@@ -129,9 +133,14 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
     steps: params.steps ?? 8,
     maxStrain: params.maxStrain ?? 0.04,
     tol: params.tol ?? 1e-5,
-    // elastic 切线（2026-09-20 定案）：geo matvec 修复后受压算子非 SPD，PCG 鲁棒性差；
-    // 坍塌物理在残差侧几何项（恒在），v1.0.2 的坍塌检测/DT-GA 结果本就等效 elastic 口径
+    // elastic 切线（Q2 落地轮 2026-11-04 实测定案）：consistent 重启用在 R12 位移控制
+    // 工况实证劣于 elastic——活动集乒乓（屈服面临界体素加载/卸载振荡，NR 解剖 ratio
+    // 停滞 0.77 平台）使固定活动集下的二次收敛理想不成立；elastic+prune+maxIter40
+    // 实测 s2/s3=29/39it、极限 ε=7.5%（consistent 修复版 266/1009it、崩@5%）。
+    // 切线数学已同步修复（Simo-Taylor 完整式，FD 对拍 0.015%）留作后续场景研究。
+    // 坍塌物理不受切线选择影响（残差侧几何项恒在）
     tangent: 'elastic',
+    maxIter: 40,
     stopOnDiverge: true,
     onPcgDiag: params.onPcgDiag,
     onStep: (ctx) => {

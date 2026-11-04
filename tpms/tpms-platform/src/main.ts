@@ -469,7 +469,7 @@ function updateImpactStats(): void {
 // 位移加载压至 4%，von Mises 逐帧映射顶点色（Cool-Warm 同源 LUT）。
 let plasRunning = false;
 
-function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
+function voxelizeCurrentTPMS(R: number, prune: (s: Uint8Array, r: number) => { islands: number; dangling: number }): { solid: Uint8Array; pruned: number; prunedDetail: string } {
   const st = getState();
   const fn = getTpmsFunction(st.type, st.customFormula);
   const kk = st.cellSize;
@@ -511,30 +511,15 @@ function voxelizeCurrentTPMS(R: number): { solid: Uint8Array; pruned: number } {
       }
     }
   }
-  // 剪除不与网格边界 6 连通的孤立体素（与 gpu-plasticity-solver 连通性守卫同口径镜像）：
-  // R=6 粗网格 × 高孔隙支化几何天然产生悬浮碎片，保留则 K 必奇异——门 27/28 喂合成
-  // 连通掩码测不到该路径（2026-09-20 走查实证默认档 k=2/k=3 均 100% 失败）；
-  // 悬浮体素在单轴压溃中本就无承载路径，剔除物理正当，剔除量在结果文案如实披露
-  const seen = new Uint8Array(R * R * R);
-  const queue = new Int32Array(R * R * R);
-  let head = 0, tail = 0;
-  const push = (v: number) => { if (!seen[v] && solid[v]) { seen[v] = 1; queue[tail++] = v; } };
-  for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++) {
-    if (ix === 0 || ix === R - 1 || iy === 0 || iy === R - 1 || iz === 0 || iz === R - 1) push(ix + iy * R + iz * R * R);
-  }
-  while (head < tail) {
-    const v = queue[head++];
-    const vx = v % R, vy = ((v / R) | 0) % R, vz = (v / (R * R)) | 0;
-    if (vx > 0) push(v - 1);
-    if (vx < R - 1) push(v + 1);
-    if (vy > 0) push(v - R);
-    if (vy < R - 1) push(v + R);
-    if (vz > 0) push(v - R * R);
-    if (vz < R - 1) push(v + R * R);
-  }
-  let pruned = 0;
-  for (let i = 0; i < R * R * R; i++) if (solid[i] && !seen[i]) { solid[i] = 0; pruned++; }
-  return { solid, pruned };
+  // 承载主干滤波（Q2 修复①生产化 2026-11-04，参考实现=probe_dt_q2_diag.mjs --prune v2）：
+  // 6-连通 z 贯通主分量 + 递归死端（悬臂链）剥离——替代旧「触任意边界」剪除。
+  // 机构学依据（Gemini 五轮核准）：棱邻接体素对=圆柱铰 N_mech=1，不贯通/悬臂体素
+  // 是 consistent 切线失 SPD 与 PCG 零空间死循环的机构零空间源；单轴压缩下本就
+  // 无承载路径，剔除物理正当，剔除量在结果文案如实分项披露。
+  // 旧口径下 R=6 粗网格 × 高孔隙支化几何天然产生悬浮碎片致 K 奇异（2026-09-20
+  // 走查实证默认档 k=2/k=3 均 100% 失败）——门 27/28 喂合成连通掩码测不到该路径
+  const { islands, dangling } = prune(solid, R);
+  return { solid, pruned: islands + dangling, prunedDetail: `孤岛 ${islands} + 悬臂 ${dangling}` };
 }
 
 function drawPlasticityCurve(res: { curve: { strain: number; reaction: number }[] }): void {
@@ -585,13 +570,13 @@ function runPlasticityDemo(): boolean {
   // 让 toast 先绘制
   setTimeout(async () => {
     try {
-      const { runCompressionDigitalTwin } = await loadDigitalTwin();
+      const { runCompressionDigitalTwin, pruneUnloadedVoxels } = await loadDigitalTwin();
       const { mapElementFieldToVertexColors } = await loadPlasticityColor();
       const st0 = getState();
       // R=6（216 体素）实测：75% 孔隙率剪除孤岛后骨架不跨上下承载面，首步即发散
       // （坍塌 @ε=null、PEEQ 0、DT/GA 全空读数）——R=8（512 体素）为默认档可解分辨率
       const R = 8;
-      const { solid, pruned } = voxelizeCurrentTPMS(R);
+      const { solid, pruned, prunedDetail } = voxelizeCurrentTPMS(R, pruneUnloadedVoxels);
       const mat = st0.material === 'auto' ? 'tc4' : st0.material;
       // 单位坑：BASE_YIELD_STRENGTH 为 MPa、BASE_MODULUS 为 GPa——σy/E 须 ×1e-3 换算
       // （裸除曾得 8.0 vs 门 28 口径 0.008，屈服应变虚高 1000× → 求解器首步即退化，
@@ -633,7 +618,7 @@ function runPlasticityDemo(): boolean {
       if (out) {
         out.textContent = `数字孪生压溃 R=${R} · ${res.allConverged ? '全步收敛 ✓' : `⚠ ${res.collapsed ? `坍塌 @ε=${res.collapseStrain != null ? res.collapseStrain.toFixed(3) : '首步'}` : '未收敛步'}`} · ${dt}s · `          + `σ_pl/E=${Number.isFinite(res.plateauStress) ? res.plateauStress.toExponential(2) : '—'} · 解析参照比 ${res.gaPrediction.toFixed(3)}（DT/参照=${Number.isFinite(res.calibrationRatio) ? res.calibrationRatio.toFixed(2) : '—'}）`
           + ` · 断裂死亡 ${res.totalDead} 单元 · PEEQ ${last.maxPEEQ.toExponential(2)}（材料 ${mat}：σy/E=${syRel.toFixed(4)}）`
-          + (pruned > 0 ? ` · 已剔除 ${pruned} 个不承载孤立体素（粗网格碎片）` : '');
+          + (pruned > 0 ? ` · 已剔除 ${pruned} 个不承载体素（${prunedDetail}，粗网格碎片）` : '');
         // 不收敛时的可操作指引（2026-09-20 探针+深回溯/非单调线搜索/解析体素化三修后实测：
         // cellSize=1 全孔隙率段可解出弹性段+平台+真实坍塌检测（p75 坍塌@ε=1.5%·DT/GA=0.82），
         // 典型 20s 主线程同步（低孔隙档可达分钟级）；k≥2 在 R=8 粗网格下骨架承载不足——研究级后续）
