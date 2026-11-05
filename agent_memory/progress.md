@@ -1,6 +1,18 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-11-06 ·Q2 全案终局封档 ·Gemini 通道十二档全链终结）
+> ## 🔖 新会话开工指引（2026-11-06 ·Q2 通道正式结项 ·下一主线=P0 双修）
+
+> **仓库态**：main=e1088df 已推送。Gemini 第十三档终局封存（`collab/gemini/2026-11-06-channel-final-closure.md`）：Q1/Q2/Q3 十二档全链结项签发；两项物理定性入档（屈服斜率>刚度=最弱环极值+缺口应力集中；p70 长尾=塑性铰分岔点前移至 2.6-3.0%，2.5% 窗停在奇异点前）。
+>
+> ### 下一主线：P0 双修（Gemini 衔接提示已入档）
+> - `eps_snap=1e-6` 置 **Marching Cubes 入口前**；
+> - 导出二进制 STL 前顶点预合并（`merge_vertices(merge_tex, merge_norm)` 或 decimals=5 量化聚类赋同值再转 float32）——一次性过 Gmsh 容差门禁；
+> - 根治 p50 类 float32 ULP 病灶（Q1 判读：量化 ULP 2^-20≈9.5e-7 > Gmsh Tolerance 1e-8 拒合并）。
+>
+> ### 老挂账（按价值排序）
+> 1. **P0 双修**（上，Gemini 技术提示在案）；
+> 2. **LLM 回归 43 条**：需 TPMS_LLM_KEY 三 env；
+> 3. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板。
 
 > **仓库态**：main=**edd1ee1 已推送**（ρ̄=0.3 判别收官，docs-only CI 按设计跳过/Pages 绿）。Q2 提交链：8d20186 落地 → ab14d77 裁定处置 → d45d15d 终审 → 1891b26 R-1 负结果 → 2271e4e 十一档+边界定理 → 3cc99c0 项 d 迁移（CI 双绿）→ 8763e12 交接 → edd1ee1 密度判别封档。
 >
