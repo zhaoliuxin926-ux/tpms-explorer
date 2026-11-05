@@ -164,6 +164,15 @@ export interface PlasticityParams {
    * （预期塑性平台谱半径 0.98→0.85-0.90，20-35it 收进 maxIter 窗口）。仅 consistent 口径生效。
    */
   tangentBlend?: number;
+  /**
+   * R-1 外环 Anderson 加速 AA(m=4)（2026-11-05 Gemini 九档立项，三护栏规范）：
+   * 纯 elastic 内环零改动，外环割线外推击穿深塑性段线性停滞（ρ≈0.98）。
+   * 护栏一：前 3 迭代纯 Picard 步不入历史池（边界位移脉冲扩散期伪屈服防轨迹污染）；
+   * 护栏二：活动集相变清窗（跳变率 >15% 或 plas→0 跨区切换即清空窗口）；
+   * 护栏三：Tikhonov 正则（λ=1e-6）+ 残差单调守护（AA 步残差 >1.05×纯步即回退+清窗，
+   * 最坏下界严格不劣于 elastic 基线）。仅 elastic 口径生效。
+   */
+  andersonAccel?: boolean;
   /** 步发散即停（数字孪生坍塌检测：发散点=坍塌应变，曲线截断上报） */
   stopOnDiverge?: boolean;
   /**
@@ -353,6 +362,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   let plasticThisIter = false; // 本 NR 迭代是否有 GP 塑性激活（LM 门控：弹性段算子本就
                                // SPD 良态，全程阻尼反而劣化 Newton 步质量——R12 实证
                                // s1 9it→17it；LM 只在塑性激活迭代启用）
+  let nPlasThisIter = 0;       // 本迭代屈服 GP 计数（AA 护栏二的活动集跳变率监控）
   const stopOnDiverge = params.stopOnDiverge ?? false;
   const lame = lameFromNu(nu);
 
@@ -506,6 +516,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         if (!tangentFrozen) {
         if (rr.dPeek > 0) {
           plasticThisIter = true;
+          nPlasThisIter++;
           tanYield[iGP] = 1;
           const sT = stVkPK2(ev, epOld6, lame);        // trial 应力（radialReturn 同源）
           const vmT = vonMisesVoigt(sT);
@@ -780,6 +791,23 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   const UprevSub = new Float64Array(nDof);
   const fint = new Float64Array(nDof);
   const du = new Float64Array(nDof);
+  // ── R-1 外环 Anderson 加速工作区（Gemini 九档三护栏规范，仅 elastic+andersonAccel）──
+  const aaEnabled = params.andersonAccel === true && tangentMode === 'elastic';
+  const AA_M = 4;        // 窗口深度 m
+  const AA_DELAY = 3;    // 护栏一：前 3 迭代纯 Picard 步不入池
+  const AA_LAMBDA = 1e-6;// 护栏三：Tikhonov 正则（相对 ‖D‖²_F）
+  const AA_FLUSH = 0.15; // 护栏二：活动集跳变率清窗阈
+  // 护栏三：绝对阈守护（1.05×）已升级为「与线搜索最优竞争」守护（数学上更强，
+  // s1 解剖实证绝对阈会接受打断 Picard 0.05 节奏的 AA 步）——规范参数留档
+  const aaDu: Float64Array[] = Array.from({ length: AA_M }, () => new Float64Array(nDof)); // 窗口迭代点 u_j 池
+  const aaDd: Float64Array[] = Array.from({ length: AA_M }, () => new Float64Array(nDof)); // 窗口方向 d_j 池（F_j=g(u_j)−u_j）
+  const aaG = new Float64Array(AA_M);          // α 解
+  const aaGram = new Float64Array(AA_M * AA_M);// 正规方程 QᵀQ（工作区）
+  const aaRhs = new Float64Array(AA_M);
+  const aaUAA = new Float64Array(nDof);        // AA 试探位移
+  const aaFint = new Float64Array(nDof);
+  let aaCount = 0;                             // 当前窗口深度 m_k
+  let aaPrevPlas = -1;                         // 上一迭代屈服 GP 数（相变监控）
   const results: PlasticityStepResult[] = [];
   let wExt = 0, wInt = 0, wPl = 0;
   let allConverged = true;
@@ -859,6 +887,9 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     // 每子步重置护栏 C 状态（冻结/阻尼只在单次 NR 内生效；失败交回外层手风琴折半）
     tangentFrozen = false;
     lmEta = lmEtaBase;
+    // R-1 AA 状态同样每子步重置（子步起点=新线性化邻域，旧历史无意义）
+    aaCount = 0;
+    aaPrevPlas = -1;
     for (let iter = 0; iter < maxIter; iter++) {
       // 护栏 C（Q2，仅 consistent）：第 8 迭代起冻结塑性切线缓存 + LM 阻尼×5——
       // 屈服面临界体素加载/卸载切线突变 → 残差周期 2 极限环（活动集乒乓）；
@@ -868,6 +899,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         lmEta = lmEtaBase * 5;
       }
       plasticThisIter = false;   // 本迭代塑性门控（internalForce 置位）
+      nPlasThisIter = 0;
       Utrial.set(U);
       applyPrescribed(Utrial, sGoal);
       internalForce(Utrial, fint);
@@ -877,10 +909,20 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         (globalThis as any).__plasNaNDbg?.(sGoal, U, Utrial, fint, nDof);
         return { converged: false, iterations: iter + 1 };
       }
+      // R-1 护栏二：活动集相变清窗（跳变率>阈 或 plas→0 跨区切换——跨子空间割线混叠防护）
+      if (aaEnabled && aaCount > 0 && aaPrevPlas >= 0) {
+        const dAct = Math.abs(nPlasThisIter - aaPrevPlas) / Math.max(10, nPlasThisIter);
+        if (dAct > AA_FLUSH || (aaPrevPlas > 0 && nPlasThisIter === 0)) aaCount = 0;
+      }
       const fScale = Math.max(reactionMagnitude(), 1e-12);
       if (rNorm0 <= tol * fScale) { U.set(Utrial); return { converged: true, iterations: iter + 1 }; }
-      // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代
-      const pcgT = Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
+      // 非精确牛顿：PCG 容差随残差收缩（早期松、后期紧），砍掉无效迭代。
+      // R-1 例外：AA 激活迭代用固定紧容差——自适应容差使 d_k 精度逐迭代漂移，
+      // Δd 割线历史被线性解噪声污染 → γ 失准 → 外推方向劣化（s1 解剖 it7-11
+      // ratio 0.82-0.97 实证；AA 的 GMRES 等价性前提=d_k 同精度同算子）
+      const pcgT = aaEnabled && iter >= AA_DELAY
+        ? Math.min(pcgTol, 1e-8)
+        : Math.min(1e-2, Math.max(pcgTol, 0.01 * rNorm0 / fScale));
       const pcgIt = solveIncrement(fint, du, pcgT, tangentMode === 'consistent' && plasticThisIter ? lmEta : 0);
       if (params.onPcgDiag) {
         params.onPcgDiag({ step: curDiagStep, newtonIter: iter + 1, pcgIters: pcgIt,
@@ -889,11 +931,81 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       }
       // 位移增量限幅：CG 崩坏/近机制下 du 可能爆到 1e16（单元死亡后切线 indefinite 实录），
       // 统一压回 0.2R 内——线搜索仍有下降方向，配合回退子步保证不发散
+      let duCapped = false;
       {
         let duMax = 0;
         for (let i = 0; i < nDof; i++) { const a = Math.abs(du[i]); if (a > duMax) duMax = a; }
         const cap = 0.2 * R;
-        if (duMax > cap) { const sc = cap / duMax; for (let i = 0; i < nDof; i++) du[i] *= sc; }
+        if (duMax > cap) { const sc = cap / duMax; for (let i = 0; i < nDof; i++) du[i] *= sc; duCapped = true; }
+      }
+      if (aaEnabled && duCapped) aaCount = 0;   // 缩放污染割线对，清窗
+      // ── R-1 AA 外推（α 直接形式：min‖Σα_j·F_j‖ s.t. Σα=1，u_AA=Σα_j·g(u_j)。
+      // γ 差分形式首版在 1 维线性收缩 sanity 上只到 59% 剩余距离（标准 α 形式精确到
+      // 3e-12）——α 形式直接缓存迭代点与方向，索引无差分链，2026-11-05 定版）──
+      let aaAccepted = false;
+      let aaRn = Infinity;
+      if (aaEnabled && iter >= AA_DELAY && aaCount >= 2) {
+        const mk = aaCount;   // 池内过往点数；锚点=当前迭代（U, du）
+        // 消去 α_cur=1−Σα'_j：r=du+Σα'_j(F_j−du)（F_j=池方向，du=F_cur）
+        // min‖r‖ → (QᵀQ+λ·I)α' = −QᵀF_cur（Q 列=F_j−F_cur）
+        let qNorm2 = 0;
+        for (let j = 0; j < mk; j++) {
+          let s = 0;
+          for (let i = 0; i < nDof; i++) { const q = aaDd[j][i] - du[i]; s += q * q; }
+          qNorm2 += s;
+        }
+        for (let j = 0; j < mk; j++) {
+          let cj = 0;
+          for (let i = 0; i < nDof; i++) cj += (aaDd[j][i] - du[i]) * du[i];
+          aaRhs[j] = -cj;
+          for (let k2 = 0; k2 <= j; k2++) {
+            let g = 0;
+            for (let i = 0; i < nDof; i++) g += (aaDd[j][i] - du[i]) * (aaDd[k2][i] - du[i]);
+            aaGram[j * AA_M + k2] = g; aaGram[k2 * AA_M + j] = g;
+          }
+        }
+        for (let j = 0; j < mk; j++) aaGram[j * AA_M + j] += AA_LAMBDA * (qNorm2 || 1);
+        // mk≤4 高斯消元（带部分主元）
+        let singularAA = false;
+        const mm = mk;
+        for (let col = 0; col < mm; col++) {
+          let piv = col;
+          for (let r2 = col + 1; r2 < mm; r2++) if (Math.abs(aaGram[r2 * AA_M + col]) > Math.abs(aaGram[piv * AA_M + col])) piv = r2;
+          if (Math.abs(aaGram[piv * AA_M + col]) < 1e-300) { singularAA = true; break; }
+          if (piv !== col) {
+            for (let c2 = 0; c2 < mm; c2++) { const t = aaGram[col * AA_M + c2]; aaGram[col * AA_M + c2] = aaGram[piv * AA_M + c2]; aaGram[piv * AA_M + c2] = t; }
+            const t = aaRhs[col]; aaRhs[col] = aaRhs[piv]; aaRhs[piv] = t;
+          }
+          const dInv = 1 / aaGram[col * AA_M + col];
+          for (let r2 = col + 1; r2 < mm; r2++) {
+            const f = aaGram[r2 * AA_M + col] * dInv;
+            if (f === 0) continue;
+            for (let c2 = col; c2 < mm; c2++) aaGram[r2 * AA_M + c2] -= f * aaGram[col * AA_M + c2];
+            aaRhs[r2] -= f * aaRhs[col];
+          }
+        }
+        if (!singularAA) {
+          let sumPrev = 0;
+          for (let j = mm - 1; j >= 0; j--) {
+            let s = aaRhs[j];
+            for (let c2 = j + 1; c2 < mm; c2++) s -= aaGram[j * AA_M + c2] * aaG[c2];
+            aaG[j] = s / aaGram[j * AA_M + j];
+            sumPrev += aaG[j];
+          }
+          const alphaCur = 1 - sumPrev;
+          // u_AA = Σα_j·g(u_j) + α_cur·(U + du)
+          aaUAA.fill(0);
+          for (let j = 0; j < mm; j++) {
+            const a = aaG[j];
+            if (a === 0) continue;
+            for (let i = 0; i < nDof; i++) aaUAA[i] += a * (aaDu[j][i] + aaDd[j][i]);
+          }
+          for (let i = 0; i < nDof; i++) aaUAA[i] += alphaCur * (U[i] + du[i]);
+          applyPrescribed(aaUAA, sGoal);
+          internalForce(aaUAA, aaFint);
+          const rAA = freeResidualNorm(aaFint);
+          aaRn = Number.isFinite(rAA) ? rAA : Infinity;
+        }
       }
       // 回溯线搜索：α ∈ {1, …, 1/512}（12 级）取残差最小者；无改善则判失败（上层回退子步）。
       // 深回拓+非单调接受（2026-09-20 定案，二者缺一不可——实测单独深回溯仍败于步2）：
@@ -901,6 +1013,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
       // 下降仍无解——此时接受「未恶化」（≤1.5×）的最小残差步让 NR 继续迭代越过折点。
       // p75 k1 实测可解前沿 ε=0.0063→0.0225（弹性段+平台成形，坍塌检测落真实软化区）；
       // 失败阈值与 σy 应力水平精确重合即此机制。合成掩码（门 27/28）Armijo 恒成功不触发。
+      // R-1：线搜索总是跑（AA 试探与线搜索最优竞争后择优——竞争守护严格强于绝对阈）
       let bestAlpha = 0, bestNorm = rNorm0;
       let minAlpha = 0, minRn = rNorm0;
       for (let ls = 0; ls < 12; ls++) {
@@ -913,24 +1026,40 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         if (rn < bestNorm * (1 - 1e-4)) { bestNorm = rn; bestAlpha = alpha; }
         if (rn < minRn) { minRn = rn; minAlpha = alpha; }
       }
-      if (bestAlpha === 0) {
-        if (minAlpha > 0 && minRn <= rNorm0 * 1.5) {
-          Utrial.set(U);
-          for (let i = 0; i < nDof; i++) Utrial[i] += minAlpha * du[i];
-          applyPrescribed(Utrial, sGoal);
-          U.set(Utrial);
-          continue;
-        }
+      // 竞争决策：Picard 候选=Armijo 最优或非单调带内最小者；AA 严格更优才接受
+      const picardBest = bestAlpha > 0
+        ? bestNorm
+        : (minAlpha > 0 && minRn <= rNorm0 * 1.5 ? minRn : Infinity);
+      if (aaRn < picardBest) {
+        U.set(aaUAA);
+        fint.set(aaFint);
+        aaAccepted = true;
+      } else if (bestAlpha > 0) {
+        Utrial.set(U);
+        for (let i = 0; i < nDof; i++) Utrial[i] += bestAlpha * du[i];
+        applyPrescribed(Utrial, sGoal);
+        U.set(Utrial);
+      } else if (minAlpha > 0 && minRn <= rNorm0 * 1.5) {
+        Utrial.set(U);
+        for (let i = 0; i < nDof; i++) Utrial[i] += minAlpha * du[i];
+        applyPrescribed(Utrial, sGoal);
+        U.set(Utrial);
+        continue;
+      } else {
         // 线搜索取证钩子（沿 __plasSubDbg 先例，未设置零开销）
         (globalThis as any).__plasLsDbg?.({ sGoal, rNorm0, fScale, pcgIt, pcgMaxIter, pcgT });
         return { converged: false, iterations: iter + 1 };
       }
-      Utrial.set(U);
-      for (let i = 0; i < nDof; i++) Utrial[i] += bestAlpha * du[i];
-      applyPrescribed(Utrial, sGoal);
-      U.set(Utrial);
+      // R-1 历史记录（护栏一：iter≥AA_DELAY−1 起入池，池存「迭代点 u_j + 方向 d_j」）
+      if (aaEnabled && iter >= AA_DELAY - 1) {
+        if (aaCount < AA_M) aaCount++;
+        for (let j = aaCount - 1; j > 0; j--) { aaDu[j].set(aaDu[j - 1]); aaDd[j].set(aaDd[j - 1]); }
+        aaDu[0].set(U);
+        aaDd[0].set(du);
+      }
+      if (aaEnabled) aaPrevPlas = nPlasThisIter;
       // NR 迭代诊断钩子（沿 __plasSubDbg 先例，未设置零开销；Q2 落地轮加）
-      (globalThis as any).__plasNrDbg?.(iter + 1, rNorm0, bestAlpha, bestNorm, pcgIt, plasticThisIter);
+      (globalThis as any).__plasNrDbg?.(iter + 1, rNorm0, aaAccepted ? -1 : bestAlpha, aaAccepted ? aaRn : bestNorm, pcgIt, plasticThisIter);
     }
     return { converged: false, iterations: maxIter };
   }
