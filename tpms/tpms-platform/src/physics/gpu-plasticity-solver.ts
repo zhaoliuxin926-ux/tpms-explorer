@@ -157,6 +157,13 @@ export interface PlasticityParams {
    * 残差恒含几何（初始应力）内力项——各口径下平衡方程均为真实 StVK 平衡。
    */
   tangent?: 'elastic' | 'geo' | 'consistent';
+  /**
+   * 一致切线欠松弛混合系数 θ（2026-11-05 Gemini 第八档裁定首选路线）：C_θ = (1−θ)·C_e
+   * + θ·C_ep，实现为 c1_eff=θ·c1、c2_eff=θ·c2。θ=1 满额 consistent（默认，行为不变）；
+   * θ≈0.75 时刚度跨屈服跳变比 100:1→4:1 锁死活动集乒乓，同时保留 75% 塑性软化方向
+   * （预期塑性平台谱半径 0.98→0.85-0.90，20-35it 收进 maxIter 窗口）。仅 consistent 口径生效。
+   */
+  tangentBlend?: number;
   /** 步发散即停（数字孪生坍塌检测：发散点=坍塌应变，曲线截断上报） */
   stopOnDiverge?: boolean;
   /**
@@ -335,6 +342,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   // 真实 StVK 平衡/坍塌物理不受切线选择影响，elastic 切线是最鲁棒的修正牛顿口径。
   // geo 现为正确可用的可选项（matvec 已修，见下），用于需要切线级屈曲加速的场景。
   const tangentMode = params.tangent ?? 'elastic';
+  const tangentBlend = params.tangentBlend ?? 1;   // θ 混合（Gemini 八档：c_eff=θ·c）
   // Q2 consistent 重启用三件套（2026-11-04，collab/gemini 五~六轮核准）：入口侧拓扑滤波
   // （pruneUnloadedVoxels）根除机构零空间 + LM 弹性对角阻尼锁谱下界 + PCG 零空间优雅
   // 终止——elastic+maxIter 硬扛塑性平台段谱半径 0.97-0.995 需 ~570 外环步，consistent
@@ -599,7 +607,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
           // n̂:(C:dε) —— 张量内积：法向直和 + 剪切 ×2（tanN 剪切存张量分量、ce 剪切=张量 s）
           const nCe = tanN[gi] * ce0 + tanN[gi + 1] * ce1 + tanN[gi + 2] * ce2
             + 2 * (tanN[gi + 3] * ce3 + tanN[gi + 4] * ce4 + tanN[gi + 5] * ce5);
-          const c1 = tanC1[s * 8 + g], c2 = tanC2[s * 8 + g];
+          const c1 = tanC1[s * 8 + g] * tangentBlend, c2 = tanC2[s * 8 + g] * tangentBlend;
           const trCe = ce0 + ce1 + ce2;
           const se0 = -c1 * (ce0 - trCe / 3) - c2 * tanN[gi] * nCe;
           const se1 = -c1 * (ce1 - trCe / 3) - c2 * tanN[gi + 1] * nCe;
