@@ -1,18 +1,21 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-11-06 ·Q2 通道正式结项 ·下一主线=P0 双修）
+> ## 🔖 新会话开工指引（2026-11-06 ·P0 双修落地 ·p50 类病灶根除 ·CI 守望中）
 
-> **仓库态**：main=e1088df 已推送。Gemini 第十三档终局封存（`collab/gemini/2026-11-06-channel-final-closure.md`）：Q1/Q2/Q3 十二档全链结项签发；两项物理定性入档（屈服斜率>刚度=最弱环极值+缺口应力集中；p70 长尾=塑性铰分岔点前移至 2.6-3.0%，2.5% 窗停在奇异点前）。
+> **仓库态**：main=**88af41d CI 三平台全绿**（dispatch run 42071416704 实证）+Pages 绿——发版链达标。Q2 通道已结项（十三档，Gemini 休眠）。
 >
-> ### 下一主线：P0 双修（Gemini 衔接提示已入档）
-> - `eps_snap=1e-6` 置 **Marching Cubes 入口前**；
-> - 导出二进制 STL 前顶点预合并（`merge_vertices(merge_tex, merge_norm)` 或 decimals=5 量化聚类赋同值再转 float32）——一次性过 Gmsh 容差门禁；
-> - 根治 p50 类 float32 ULP 病灶（Q1 判读：量化 ULP 2^-20≈9.5e-7 > Gmsh Tolerance 1e-8 拒合并）。
+> **CI 踩坑记录（rerun 15 分钟墙）**：88af41d 首跑 macos 三次（首跑+两次 rerun-failed-jobs）全部在**精确 15 分 01 秒**处 cancelled（ubuntu/windows 全绿、无 FAIL step、超时配置 90/60min 无涉、昨日同配置 edd1ee1 macos 42min 绿）；workflow_dispatch 触发全新 run 后三平台全绿——**定论=rerun attempt 路径/平台侧怪异行为，代码无恙**。铁律：CI 单平台 cancelled 且无 FAIL step 时先 workflow_dispatch 全新 run 再下结论，rerun attempt 的结论不作数。
+>
+> ### P0 双修落地（2026-11-06，88af41d）
+> - **修 1**（stl-exporter.ts）：`buildBinarySTL` 写前坐标按 **1e-5 mm 十进制格量化赋同值再转 float32**（同 double 必得同 float32；CLI mesh 同走此函数=UI+CLI 双链单点根治）；坐标偏移 ≤5e-6 mm。
+> - **修 2**（surface-nets.ts）：场填充循环 **eps_snap=1e-6 保号钳位**——抬升 iso=0 邻域插值分母，根除 sin(π)~1e-16 零点振荡致插值点贴格点 δ~1e-15 的上游退化源（solid 判定语义不变）。
+> - **验证**：探针 `probe_p0_vertex_merge.mjs`（入库）——diamond p50 k2 R48 实测**修前分裂指纹 7647 → 修后 0**；parity 337/0、mesh_audit 全过、48 门全套全绿、docs/platform 重建。
+> - ASCII STL（buildMultiSolidSTL）天然免疫（toFixed(6) 文本格隐式 1e-6 聚类，Gmsh 按 double 读）——无需改。
 >
 > ### 老挂账（按价值排序）
-> 1. **P0 双修**（上，Gemini 技术提示在案）；
-> 2. **LLM 回归 43 条**：需 TPMS_LLM_KEY 三 env；
-> 3. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板。
+> 1. **LLM 回归 43 条**：需 TPMS_LLM_KEY 三 env；
+> 2. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板；
+> 3. （已完成销账）P0 双修 ✓ 2026-11-06。
 
 > **仓库态**：main=**edd1ee1 已推送**（ρ̄=0.3 判别收官，docs-only CI 按设计跳过/Pages 绿）。Q2 提交链：8d20186 落地 → ab14d77 裁定处置 → d45d15d 终审 → 1891b26 R-1 负结果 → 2271e4e 十一档+边界定理 → 3cc99c0 项 d 迁移（CI 双绿）→ 8763e12 交接 → edd1ee1 密度判别封档。
 >
