@@ -563,7 +563,12 @@ export function buildSurface(params: BuildParams, pool: BufferPool = globalBuffe
       const yB = zB + iy * N;
       for (let ix = 0; ix < N; ix++) {
         const px = phys(ix);
-        const f = tpmsAt(V[yB + ix], biasAt(px, py, pz), tEffBase, px, py, pz);
+        const fRaw = tpmsAt(V[yB + ix], biasAt(px, py, pz), tEffBase, px, py, pz);
+        // P0 修 2（eps_snap=1e-6 场钳位，2026-11-06）：解析零点振荡（diamond p50⇔c=0
+        // 时 sin(π)~1e-16 类）使 iso=0 邻域插值点距格点 δ~1e-15 → 边界封盖退化三角 →
+        // Gmsh sliver 放大（Q1 机制链）。钳位保号——solid 判定（>0）语义不变，仅
+        // 抬升插值分母；配合导出层 1e-5 量化聚类（stl-exporter 修 1）双防线闭环
+        const f = fRaw >= 0 ? (fRaw < 1e-6 ? 1e-6 : fRaw) : (fRaw > -1e-6 ? -1e-6 : fRaw);
         const b = boundArr[yB + ix];
         // 统一封盖规则（v2）：容器外(b>=0)或网格边界层(dAx==0)一律空气。
         // max(f, clip) 不行——公式在圆柱角落的正瓣会压过负 clip（+109%→+27% 教训），

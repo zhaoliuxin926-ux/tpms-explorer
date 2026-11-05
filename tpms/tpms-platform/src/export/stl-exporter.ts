@@ -36,6 +36,13 @@ export function buildBinarySTL(
 
   const oriented = orientConsistently(positions, indices);
 
+  // P0 修 1（2026-11-06，Gemini 十三档衔接提示）：写前顶点量化聚类——坐标先按
+  // 1e-5 mm 十进制格取整赋同值、再转 float32（同 double 必得同 float32），本应
+  // 重合的顶点对必然同格同值。根治 float32 ULP（大坐标处 2^-20≈9.5e-7）分裂致
+  // Gmsh Tolerance(1e-8) 拒合并的 p50 类双节点对病灶（Q1 判读：节点 206/23775
+  // Δz≈1e-6 即此源）。坐标偏移 ≤5e-6 mm，远低于一切下游容差。
+  const q = (v: number): number => Math.round(v * 1e5) / 1e5;
+
   let offset = headerSize + 4;
   for (let t = 0; t < triCount; t++) {
     let i0 = oriented[t * 3] * 3;
@@ -58,17 +65,17 @@ export function buildBinarySTL(
     dv.setFloat32(offset, cz / clen, true); offset += 4;
 
     // v0
-    dv.setFloat32(offset, positions[i0] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i0 + 1] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i0 + 2] * scale, true); offset += 4;
+    dv.setFloat32(offset, q(positions[i0] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i0 + 1] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i0 + 2] * scale), true); offset += 4;
     // v1
-    dv.setFloat32(offset, positions[i1] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i1 + 1] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i1 + 2] * scale, true); offset += 4;
+    dv.setFloat32(offset, q(positions[i1] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i1 + 1] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i1 + 2] * scale), true); offset += 4;
     // v2
-    dv.setFloat32(offset, positions[i2] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i2 + 1] * scale, true); offset += 4;
-    dv.setFloat32(offset, positions[i2 + 2] * scale, true); offset += 4;
+    dv.setFloat32(offset, q(positions[i2] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i2 + 1] * scale), true); offset += 4;
+    dv.setFloat32(offset, q(positions[i2 + 2] * scale), true); offset += 4;
     // attribute byte count
     dv.setUint16(offset, 0, true); offset += 2;
   }
