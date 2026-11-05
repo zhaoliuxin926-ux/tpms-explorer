@@ -35,7 +35,7 @@ function bundle(exportLines, name) {
 }
 
 const dt = await import(pathToFileURL(bundle([
-  `export { runCompressionDigitalTwin, principalStrains, GA_C2 } from ${JSON.stringify(join(PLATFORM, 'src/physics/digital-twin-compression.ts'))};`,
+  `export { runCompressionDigitalTwin, principalStrains, GA_C2, pruneUnloadedVoxels } from ${JSON.stringify(join(PLATFORM, 'src/physics/digital-twin-compression.ts'))};`,
 ], 'dt')));
 
 let passCount = 0, failCount = 0;
@@ -125,6 +125,60 @@ console.log('\n[C] 数字孪生压溃（R=6 · σy/E=0.008 · 2.5%）');
     // 实证劣于 elastic——活动集乒乓，见 docs/fea-calibration.md 与 collab/gemini 档）
     check(`DT/FEA 参照比在固定 R6 算例回归容差 [0.6, 0.95] 内（实测 ${resF.calibrationRatio.toFixed(3)}；单收敛点，口径敏感）`, resF.calibrationRatio > 0.6 && resF.calibrationRatio < 0.95);
     check('缺省（不传 type）保持 GA 口径（向后兼容）', Math.abs(res.gaPrediction - 0.3 * Math.pow(0.35, 1.5)) < 1e-15);
+  }
+
+  // ══ C3. 弹性+初屈服参照比迁移锚（2026-11-06 项 d 解耦，Gemini 十一档双轨制）══
+  // 依据：0-3.5% 窗口已覆盖 E*/σ0.2 提取（ε_y 结构≈2%）；R16 快速档双比实测
+  // E*=0.8068/Rp0.2=0.7997（偏软 ~20% 随分辨率收敛），R24 标定档 0.9923/0.9976
+  // （FEA 幂律标定精度 <1%，入 docs/fea-calibration.md 披露；CI 锚选 R16 权衡时长）
+  // 几何口径：k2（全域 2 周期，对齐 FEA 幂律标定几何 probe_dt_fea_matched）——与上方
+  // R6 算例的 k1 voxelizeGyroid 不同（历史 C 段保持不动）
+  {
+    console.log('\n[C3] 弹性+初屈服参照比迁移（R16 k2 快速档 · 0-3.5% 窗口）');
+    const voxK2 = (R, targetSolid) => {
+      const mm = (2 * Math.PI * 2) / R;
+      const tp = (x, y, z) => Math.sin(x * mm) * Math.cos(y * mm) + Math.sin(y * mm) * Math.cos(z * mm) + Math.sin(z * mm) * Math.cos(x * mm);
+      const V = new Float64Array(R * R * R);
+      for (let iz = 0; iz < R; iz++) for (let iy = 0; iy < R; iy++) for (let ix = 0; ix < R; ix++)
+        V[ix + iy * R + iz * R * R] = tp(ix + 0.5, iy + 0.5, iz + 0.5);
+      const sorted = Float64Array.from(V).sort();
+      const iso = sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(targetSolid * sorted.length)))];
+      const s = new Uint8Array(R * R * R);
+      for (let i = 0; i < V.length; i++) s[i] = V[i] < iso ? 1 : 0;
+      return s;
+    };
+    const solid16 = voxK2(16, 1 - 0.6);
+    dt.pruneUnloadedVoxels(solid16, 16);
+    const t3 = Date.now();
+    const res16 = dt.runCompressionDigitalTwin({
+      R: 16, solid: solid16, porosity: 0.6, sigmaYRatio: 0.0275, hardening: 0.05,
+      steps: 7, maxStrain: 0.035, tol: 1e-5, type: 'gyroid', failureStrain: 1.0,
+    });
+    const secs = ((Date.now() - t3) / 1000).toFixed(0);
+    check(`R16 全步收敛 0→3.5%（${secs}s）`, res16.allConverged);
+    const A0 = 16 * 16;
+    const c = res16.curve;
+    const E1 = c[0].stress / c[0].strain;
+    // E* DT/FEA：割线首步 vs 0.9914·ρ̂^2.2028（ρ̂=mappedRho(0.4)）
+    const rhoH = 1.01461 * Math.pow(0.4, 1.02161);
+    const Efea = 0.9914 * Math.pow(rhoH, 2.2028);
+    const eRatio = E1 / Efea;
+    check(`E* DT/FEA 在 R16 回归带 [0.78, 0.84]（实测 ${eRatio.toFixed(4)}；R24 同口径 0.9923 入档）`,
+      eRatio > 0.78 && eRatio < 0.84);
+    // Rp0.2：0.2% 偏移交点（相对基体屈服比，对照 0.54·ρ̂^2.02）
+    let syDT = NaN;
+    for (let i = 1; i < c.length; i++) {
+      const lU = E1 * (c[i].strain - 0.002), lL = E1 * (c[i - 1].strain - 0.002);
+      if (c[i].stress < lU && c[i - 1].stress >= lL) {
+        const f = (c[i - 1].stress - lL) / (lL - c[i].stress + c[i].stress - lU || 1);
+        const e0 = c[i - 1].strain + f * (c[i].strain - c[i - 1].strain);
+        syDT = E1 * (e0 - 0.002);
+        break;
+      }
+    }
+    const rpRatio = Number.isFinite(syDT) ? (syDT / 0.0275) / (0.54 * Math.pow(rhoH, 2.02)) : NaN;
+    check(`Rp0.2 DT/FEA 在 R16 回归带 [0.76, 0.84]（实测 ${rpRatio.toFixed(4)}）`,
+      rpRatio > 0.76 && rpRatio < 0.84);
   }
 }
 
