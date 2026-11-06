@@ -13,9 +13,8 @@
 > - ASCII STL（buildMultiSolidSTL）天然免疫（toFixed(6) 文本格隐式 1e-6 聚类，Gmsh 按 double 读）——无需改。
 >
 > ### 老挂账（按价值排序）
-> 1. **LLM 回归 43 条**：需 TPMS_LLM_KEY 三 env；
-> 2. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板；
-> 3. （已完成销账）P0 双修 ✓ 2026-11-06。
+> 1. **S1_G60 上机**（卡用户）：CSV 回传即反演+幂律叠图；**CFD license**/单元形态拍板；
+> 2. （已销账）P0 双修 ✓ 2026-11-06；**LLM 回归 43 条** ✓ 2026-11-06（三轮画像 42/43×2 flash+41/43 满血，E2 超时族定性=thinking 长尾×170s 冲突非拦截器缺陷，`docs/LLM_REGRESSION_LIVE.md` 2026-11-06 节；key 已 hub 留痕，anthropic 通道三件套）。
 
 > **仓库态**：main=**edd1ee1 已推送**（ρ̄=0.3 判别收官，docs-only CI 按设计跳过/Pages 绿）。Q2 提交链：8d20186 落地 → ab14d77 裁定处置 → d45d15d 终审 → 1891b26 R-1 负结果 → 2271e4e 十一档+边界定理 → 3cc99c0 项 d 迁移（CI 双绿）→ 8763e12 交接 → edd1ee1 密度判别封档。
 >
