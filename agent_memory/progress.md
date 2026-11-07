@@ -1,5 +1,19 @@
 # progress — 当前任务进度
 
+> ## 🔖 新会话开工指引（2026-11-08 · 全栈绿+历史已重写+CFD 病灶锁定）
+
+> **仓库态**：main=6123e28（重写史+清理登记），**CI 对重写树 completed success**（run 直查实证）——UI 批次一+updateTips 修复+E11 拦截+docs/platform 补交全栈过门。**宿舍机开工：fetch + reset --hard origin/main 即对齐新史**（f8303a4 之后 SHA 全变；bundle 备份 D:\GITHUB	pms-bundle-backup-20261107.bundle 本地勿删）。
+>
+> ### 三条主线的最新定案
+> 1. **CFD（Anchor-1）**：链路全通+四层误差分离终态=**近壁 tet 梯度离散高估 ~18.6%**（剖面 RMS 0.23% 抛物线、snGrad 三方案逐位同=非旋钮、polyDual 崩溃）——修复候选=棱柱近壁层/结构化 hex（网格生成层工作，下一批立项）。
+> 2. **agent 红队**：17 案零代码级穿透；E11 已落地（同 out 去重拒绝+探针回归断言 17/17+selftest 101/0）；E5 联合算力预算开放（探针回归位在）。
+> 3. **UI**：批次一+updateTips 修复落地；批次二剩余=拦截三段式卡片/重建进度内嵌/3 步引导动线（动 verify.mjs 6 步断言需连门一起改）；批次三=移动端 IA。
+>
+> ### 铁律新增
+> - **构建**：一律 `cd /d/GITHUB/tpms/tpms/tpms-platform && npm run build`（禁止 build|tail 进 && 链——管道吞退出码+cwd 漂移+双事故实证）
+> - **历史重写**：仓库冻结（零提交零推送）+fresh-clone+git filter-repo，弃用 filter-branch
+> - **wsl**：内联 bash -c 变量赋值会被参数撕裂——一律脚本文件
+>
 > ## 工位侧 11-08 凌晨二：git 历史清理完成（用户授权，强推 1974710）
 
 > - **清理范围**：wsl_1500_C/U 两场文件从全史移除（filter-repo bundle 副本内重写 9.7s）；旧仓 175MB 松散对象经 reflog expire+gc 清零（终态 pack 67.97MiB/count=0）；**tags 无变化**（v1.2.0 等均在重写点之前）。**bundle 备份：D:\GITHUB	pms-bundle-backup-20261107.bundle（本地勿删，宿舍下次 fetch+reset --hard 对齐新史）**。
