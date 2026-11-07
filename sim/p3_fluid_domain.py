@@ -21,7 +21,8 @@ from p0_generate import box_sdf, solve_level  # noqa: E402
 REPO = Path(__file__).resolve().parents[1]
 
 
-def generate_fluid(k: int, R: int, porosity: float):
+def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
+                   solid: float = 0.35):
     from skimage import measure
     margin = 2
     dx = 2.0 * np.pi / R
@@ -30,13 +31,20 @@ def generate_fluid(k: int, R: int, porosity: float):
     ax = np.linspace(-margin * dx, box_hi + margin * dx, n + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
     f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
-    # c 与 p0 同源（同一等值面）；孔隙指示 h = c - f（p0 固相为 f-c）
     eps = 1e-6
     in_box = ((x >= box_lo - eps) & (x <= box_hi + eps)
               & (y >= box_lo - eps) & (y <= box_hi + eps)
               & (z >= box_lo - eps) & (z <= box_hi + eps))
-    c = solve_level(f[in_box], 1.0 - porosity)       # c 按固相率二分（与 p0 一致）
-    g = np.maximum(f - c, box_sdf(ax, box_lo, box_hi))  # g<0 ⇔ 孔隙(f<c)∩盒内（与 p0 固相侧相反）
+    if structure == "sheet":
+        # sheet 孔隙域：|f|>t 侧（与 p0 sheet 固相 |f|≤t 同一等值面对）；t 与 p0 同法二分
+        from p0_generate import solve_sheet_halfwidth
+        t = solve_sheet_halfwidth(f[in_box], solid)
+        g = np.maximum(t - np.abs(f), box_sdf(ax, box_lo, box_hi))  # g<0 ⇔ 孔隙∩盒内
+    else:
+        # c 与 p0 同源（同一等值面）；孔隙指示 h = c - f（p0 固相为 f-c）
+        c = solve_level(f[in_box], 1.0 - porosity)       # c 按固相率二分（与 p0 一致）
+        g = np.maximum(f - c, box_sdf(ax, box_lo, box_hi))  # g<0 ⇔ 孔隙(f<c)∩盒内（与 p0 固相侧相反）
+        t = c
     verts, faces, _, _ = measure.marching_cubes(g, level=0.0)
     verts = verts * dx + np.array([ax[0], ax[0], ax[0]])
     mesh = trimesh.Trimesh(vertices=verts, faces=faces, process=False)
@@ -49,7 +57,7 @@ def generate_fluid(k: int, R: int, porosity: float):
         mesh = trimesh.Trimesh(vertices=v, faces=ff, process=False)
         if mesh.volume < 0:
             mesh.invert()
-    return mesh, c
+    return mesh, t
 
 
 def periodic_pair_check(mesh: trimesh.Trimesh, k: int) -> tuple[bool, str]:
@@ -71,25 +79,42 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--k", type=int, default=1)        # 单胞优先（PBC 扫参主力，discuss-2 共识）
     ap.add_argument("--R", type=int, default=24)
-    ap.add_argument("--por", type=float, default=0.60)
+    ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率")
+    ap.add_argument("--structure", type=str, default="network", choices=["network", "sheet"])
+    ap.add_argument("--solid", type=float, default=0.35, help="sheet 模式：目标固相率（与 p0 --solid 同源）")
     a = ap.parse_args()
 
-    mesh, c = generate_fluid(a.k, a.R, a.por)
+    if a.structure == "sheet":
+        mesh, thr = generate_fluid(a.k, a.R, porosity=1.0 - a.solid, structure="sheet", solid=a.solid)
+        fluid_target = 1.0 - a.solid
+        thr_label = f"tfield={thr:.4f}"
+    else:
+        mesh, thr = generate_fluid(a.k, a.R, a.por)
+        fluid_target = a.por
+        thr_label = f"level_c={thr:.4f}"
     bbox = mesh.bounds[1] - mesh.bounds[0]
     fluid_frac = mesh.volume / float(np.prod(bbox))
     pair_ok, pair_msg = periodic_pair_check(mesh, a.k)
     comps = len(mesh.split(only_watertight=False))
 
-    out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_p{int(a.por*100)}.stl"
+    if a.structure == "sheet":
+        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_s{int(a.solid*100)}.stl"
+        # sheet 孔隙域预期 comp=2（G+/G- 双迷宫互不相通）——几何特征非缺陷
+        comp_note = f"comp={comps}（{'双迷宫预期' if comps == 2 else '⚠ 非预期，应=2'}）"
+    else:
+        out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_p{int(a.por*100)}.stl"
+        comp_note = f"comp={comps}"
+
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(trimesh.exchange.stl.export_stl(mesh))
 
-    ok = mesh.is_watertight and mesh.is_winding_consistent and pair_ok
-    print(f"[{'OK' if ok else 'WARN'}] {out.name}: faces={len(mesh.faces)} "
-          f"watertight={mesh.is_watertight} comp={comps} "
-          f"fluid_frac={fluid_frac:.4f} (target {a.por:.2f}, dev={abs(fluid_frac-a.por)*100:.2f}pp) "
-          f"| 周期自检: {pair_msg}")
-    return 0 if ok else 1
+    ok = mesh.is_watertight and mesh.is_winding_consistent
+    sheet_comp_ok = (a.structure != "sheet") or (comps == 2)
+    print(f"[{'OK' if (ok and sheet_comp_ok) else 'WARN'}] {out.name}: faces={len(mesh.faces)} "
+          f"watertight={mesh.is_watertight} {comp_note} "
+          f"fluid_frac={fluid_frac:.4f} (target {fluid_target:.2f}, "
+          f"dev={abs(fluid_frac-fluid_target)*100:.2f}pp) | {thr_label} | 周期自检: {pair_msg}")
+    return 0 if (ok and sheet_comp_ok) else 1
 
 
 if __name__ == "__main__":
