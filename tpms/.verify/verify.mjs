@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
+import { dumpUiDiag } from './ui_diag.mjs';
 
 // BASE 可由 run_all/run_ci_suite 注入（其自起的 docs 服务端口）；独立直跑时回退 8123
 const BASE = process.env.BASE || 'http://localhost:8123';
@@ -25,6 +26,18 @@ async function reloadRetry(page, opts = {}) {
     // 自递归 = 永久挂起（run56-58 三平台 verify 零输出 1800s 强杀的根因）
     try { return await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000, ...opts }); }
     catch (e) { if (a === 2) throw e; await page.waitForTimeout(2500); }
+  }
+}
+
+// 关键点击失败即落证（ui_diag 五探针电池）——2026-11-07 CI ubuntu #ob-next 挂死事件
+// （agent_memory/bugs.md 2026-11-07 条）暴露 verify 伏击网盲区；引导卡点击=深水风暴家族高发入口
+async function clickDiag(page, sel) {
+  const loc = page.locator(sel);
+  try { return await loc.click(); }
+  catch (e) {
+    console.log(`[DIAG] click '${sel}' 失败/超时，落取证后重抛：`);
+    try { await dumpUiDiag(page, `click '${sel}' fail`); } catch (e2) { console.log('[DIAG] dump 异常: ' + String(e2).slice(0, 100)); }
+    throw e;
   }
 }
 
@@ -64,12 +77,12 @@ async function reloadRetry(page, opts = {}) {
     const dotCount = await page.locator('.ob-dots i').count();
     log(`第${i+1}步: "${t}"`, !!t, `dots=${dotCount}`);
     await page.screenshot({ path: `${OUT}/02-step-${i+1}.png`, timeout: 15000 }).catch(() => {});
-    if (i < 5) await page.locator('#ob-next').click();
+    if (i < 5) await clickDiag(page, '#ob-next');
   }
   log('共 6 步且标题不重复', stepTitles.length === 6 && new Set(stepTitles).size === 6);
 
   // 最后一步点"开始探索"应关闭
-  await page.locator('#ob-next').click();
+  await clickDiag(page, '#ob-next');
   await page.waitForTimeout(600);
   const closed = !(await page.locator('#ob-card').evaluate(el => el.classList.contains('show')));
   log('最后一步"开始探索"关闭引导', closed);
@@ -87,7 +100,7 @@ async function reloadRetry(page, opts = {}) {
   await page.waitForFunction(() => document.getElementById('ob-card')?.classList.contains('show'), null, { timeout: 30000 }).catch(() => {});
 
   // 第2步演示孔隙率
-  await page.locator('#ob-next').click();
+  await clickDiag(page, '#ob-next');
   await page.waitForTimeout(400);
   await page.locator('#ob-demo').click();
   await page.waitForTimeout(500);
@@ -95,7 +108,7 @@ async function reloadRetry(page, opts = {}) {
   log('演示·孔隙率→88', porosity === '88', `actual=${porosity}`);
 
   // 第3步演示切 Schwarz P
-  await page.locator('#ob-next').click();
+  await clickDiag(page, '#ob-next');
   await page.waitForTimeout(400);
   await page.locator('#ob-demo').click();
   await page.waitForTimeout(800);
@@ -103,7 +116,7 @@ async function reloadRetry(page, opts = {}) {
   log('演示·切到 Schwarz P', activeType === 'schwarz', `actual=${activeType}`);
 
   // 第4步演示截面
-  await page.locator('#ob-next').click();
+  await clickDiag(page, '#ob-next');
   await page.waitForTimeout(400);
   await page.locator('#ob-demo').click();
   await page.waitForTimeout(400);

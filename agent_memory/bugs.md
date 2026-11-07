@@ -48,7 +48,7 @@
 - **现象**：4e23fe8（docs-only）CI run 42354965517 **ubuntu 单平台**失败：verify（单文件版 27 项）前 3 断言过（引导卡弹出/标题/dots=6）后，verify.mjs:67 点 `#ob-next` 卡死在 **"performing click action"**（元素可见/稳定/滚动完成=点击派发后主线程无响应）30s 超时；套件级 flaky 重跑**同点 2/2 复现**。macos+windows 同树全绿。
 - **排除链（全部实证）**：①代码——`git log 88af41d..4e23fe8 -- tpms/` 为空，平台代码与 11-06 三平台绿树逐位相同；②镜像——ubuntu 镜像 2026-11-02 发布（20261101），绿（11-06）红（11-07）同镜像；③浏览器——lock 钉死同 revision。
 - **判别实验（定案证据）**：workflow_dispatch 全新 run **42358233768**（同树）三平台全绿含 ubuntu verify——fresh VMs 无复现。**定案=VM 局部瞬态（与 2026-10-05 深水风暴同族：点击派发挂死）；同 VM flaky 重试自我复制解释 2/2**。Gemini 咨询裁定为不必要（判别实验先行后问题消失）。
-- **遗留改进项（非缺陷）**：verify 套件是伏击网盲区——五探针常驻 card_smoke/meshcont 系，verify 无探针→本次红无 traceTop 落证；探针共享化/移植为结构改进候选（低优先，风暴定案不阻塞）。
+- **遗留改进项（✅ 已落地 2026-11-07 同日）**：verify 伏击网盲区已补——新共享探针模块 `tpms/.verify/ui_diag.mjs`（五探针电池忠实移植 meshcont 实战版+失败路径 8s 自限防挂死），verify.mjs 五处 `#ob-next` 入口点击经 clickDiag 包装：点击失败/超时即落 DIAG 证据再重抛（本地 27/27 全绿无回归+scratch 直测五探针全出数）。**顺带发现原版缺陷**：meshcont 内联版 heap 探针用 `Memory.getDOMCounters.jsHeapSize`——该 CDP 域无此字段（恒 NaN，nodes 有效），即原版 heap 斜率探针自上线以来从未出过数；新模块改 `Performance.getMetrics.JSHeapUsedSize` 修正。meshcont 原版**不动**（实战装备+其 watchdog 流程依赖现状），修正以本模块为准；如需回补 meshcont 属独立小批。
 
 ## 2026-10-24 实用性审查首批四组执行后开放项
 
