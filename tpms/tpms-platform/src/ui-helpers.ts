@@ -340,12 +340,21 @@ export function updateTips(
     lastPorosityEstimate == null
       ? `目标孔隙率 ${porosity}%`
       : `目标 ${porosity}% / 估算 ${(lastPorosityEstimate * 100).toFixed(1)}%`;
+  // 评价按实测估算值选段（曾只按目标值选段——端板主导场景目标 75%/估算 17.1% 误显"平衡区间"，
+  // 2026-11-07 Gemini 截图诊断实证 + grep 复核）；无估算时维持目标值口径（向后兼容）。
+  const estNum = lastPorosityEstimate == null ? null : lastPorosityEstimate * 100;
+  const basis = estNum ?? porosity;
+  const deviation = estNum == null ? null : Math.abs(estNum - porosity);
+  const attr =
+    deviation != null && deviation > 5
+      ? `（与目标差 ${deviation.toFixed(1)}pp——端板/边界效应主导，可在控制面板核对）`
+      : '';
   tip1.textContent =
-    porosity > 80
-      ? `${est}：高孔隙，利于细胞/组织长入，但力学强度下降`
-      : porosity < 70
-        ? `${est}：偏致密，力学支撑更好，内部可用空间有限`
-        : `${est}：平衡区间，兼顾力学性能与功能性`;
+    basis > 80
+      ? `${est}：实测偏高孔隙，利于细胞/组织长入，但力学强度下降${attr}`
+      : basis < 70
+        ? `${est}：实测偏致密，力学支撑更好，内部可用空间有限${attr}`
+        : `${est}：实测处于平衡区间，兼顾力学性能与功能性${attr}`;
 
   const typeDesc: Record<string, string> = {
     gyroid: 'Gyroid 各向同性、无自交，应力分布均匀，是骨支架首选',
