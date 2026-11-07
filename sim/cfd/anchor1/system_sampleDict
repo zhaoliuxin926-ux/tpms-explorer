@@ -1,0 +1,15 @@
+/* Anchor-1 径向速度剖面采样（判别 profile 压扁假说，2026-11-07） */
+type            sets;
+libs            ("libsampling.so");
+fields          (U);
+sets
+{
+    radial
+    {
+        type            lineUniform;
+        axis            xyz;
+        start           (3.14159265 3.15000000 3.14159265);
+        end             (3.14159265 6.27000000 3.14159265);
+        nPoints         120;
+    }
+}
