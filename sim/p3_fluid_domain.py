@@ -57,6 +57,12 @@ def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
         mesh = trimesh.Trimesh(vertices=v, faces=ff, process=False)
         if mesh.volume < 0:
             mesh.invert()
+    # Q4 根治（Gemini 回执 2026-11-07）：孔隙域连通性按形态——network 孔隙理论
+    # 单连通（keep=1）；sheet 孔隙理论 50/50 双迷宫（keep=2）。碎片域无条件滤除。
+    from p0_generate import keep_dominant_components
+    mesh, n_frag = keep_dominant_components(mesh, keep=(2 if structure == "sheet" else 1))
+    if n_frag:
+        print(f"[fragment-filter] 剔除 {n_frag} 个孤立碎片域")
     return mesh, t
 
 

@@ -74,6 +74,19 @@ def solve_sheet_halfwidth(f: np.ndarray, solid_fraction: float) -> float:
     return 0.5 * (lo + hi)
 
 
+def keep_dominant_components(mesh: trimesh.Trimesh, keep: int = 1):
+    """pymeshfix 修复后连通域筛选（Gemini Q4 处置，2026-11-07）：MC Case 1 盒边界
+    擦边退化 + pymeshfix 剥离封洞会偶现 4 三角孤立微壳（体积占比 ~2e-6）——按体积
+    降序保留前 keep 个域，其余无条件丢弃。返回 (筛选后 mesh, 剔除域数)。"""
+    comps = mesh.split(only_watertight=False)
+    if len(comps) <= keep:
+        return mesh, 0
+    kept = sorted(comps, key=lambda m: -abs(m.volume))[:keep]
+    dropped = len(comps) - keep
+    merged = trimesh.util.concatenate(kept) if dropped else mesh
+    return merged, dropped
+
+
 def box_sdf(ax: np.ndarray, box_lo: float, box_hi: float) -> np.ndarray:
     """采样域上的盒子 SDF（盒内为负）。盒=[box_lo, box_hi]，须严格落在数据域内部。"""
     half = 0.5 * (box_hi - box_lo)
@@ -149,6 +162,11 @@ def generate(k: int, R: int, porosity: float, ftype: str = "gyroid",
         if mesh.volume < 0:
             mesh.invert()
         fix_delta_v = mesh.volume - vol_raw
+    # Q4 根治（Gemini 回执 2026-11-07）：固相理论单连通（network/sheet 皆然）——
+    # 修复后只留最大域，MC 擦边+pymeshfix 剥离封洞的微壳碎片清零
+    mesh, n_frag = keep_dominant_components(mesh, keep=1)
+    if n_frag:
+        print(f"[fragment-filter] 剔除 {n_frag} 个孤立碎片域")
     dv_pct = fix_delta_v / vol_raw * 100 if vol_raw else 0.0
     flag = "WARN" if abs(dv_pct) > 1.0 else "ok"
     print(f"[geom-audit] raw faces={faces_raw} vol={vol_raw:.2f} -> proc faces={faces_proc} "

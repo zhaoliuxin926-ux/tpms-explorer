@@ -1,5 +1,14 @@
 # progress — 当前任务进度
 
+> ## Gemini 四问回执处置（2026-11-07 · 用户代贴，宿舍侧 ZCode 核实落地）
+
+> - **回执归档**：collab/gemini/2026-11-07-dorm-side-consult-reply.md（原文+处置表）。
+> - **Q1 采纳（拆分单算）**：双迷宫合算=双压力零空间奇异性风险+对称冗余；K 双口径（K_eff=2×K_single 文献主口径/K_single 单腔保底）进 Phase 3 CSV 契约；COMSOL 非共形周期对原生支持（General Extrusion+容差 5~10% 调优）=首选，Fluent 走 solver 侧 make-periodic GGI（路径 A）/Python 端盖平移复制强制共形（路径 B 记录）。
+> - **Q2 采纳（判据级）**：形态拍板判据=打印工艺——金属 LPBF+防应力屏蔽→**network**（壁厚充裕/孔隙单连通）；DLP 陶瓷/树脂+增韧→**sheet**（L 放大 1.5× 补偿孔径）。指数口径调和：理论拉伸 1.2~1.8 / 实测退化 1.6~2.3（与 fea-calibration"文献带 2.0~2.3"系实测口径，勿与理论值混用）。**文献抽验 2/2 通过**（Kapfer 2011 Biomaterials 32:6875 DOI 10.1016/j.biomaterials.2011.05.017 ✓；Bobbert 2017 Acta Biomater 53:572 ✓）——Gemini 本轮引用可信。
+> - **Q3 工具在位+首测未达标**：pymmg 装上但 Python 绑定坏，**mmgs 5.7 CLI 可用**；R48 STL（35.9 万面）首测（hausd 0.005/hmax 0.3）：面数 46.6 万不降反升+水密破坏——归一化/曲率驱动参数交互待调参研究（非阻塞：R24 验证档是生产口径）；480× 暴涨的机制解释（薄壁内部无纵深，跨壁拉尺寸场=slivers）比此前表述更精确，采纳。调参方向：hausd 放宽/-nreg 归一化控制/显式尺寸场 .sol。
+> - **Q4 已落地验证**：p0/p3 清洗段尾部加 `keep_dominant_components`（network keep=1/sheet 孔隙 keep=2）——实测 p3 network 碎片剔除 comp=1 干净（dev 0.01pp 保持）、sheet 双迷宫 50/50 保留、p0 双模式逐位回归。**碎片根治完成**。
+> - 仓库迁移后新路径：**D:\TPMS Workflow\tpms-explorer**（用户 11-07 挪入 Antigravity 工作区目录）。
+
 > ## 物理误读重大更正（2026-11-07 续 · 对抗审查精神延续）
 
 > - **"network gyroid 孔隙域双迷宫"撤回**：trimesh 磁盘级域分解实测——network 孔隙域 = **单连通主域（56,236 面）+ 4 三角 pymeshfix 孤立碎片**，此前 comp=2 的"双迷宫"是把碎片误读为第二迷宫。**物理纠正：network 单侧切割（f<c）孔隙相单连通**（c≠0 仍逾渗）；**真双迷宫=sheet 型独有**（|f|≤t 中面分界两侧），且实测 **50.0%/50.0% 精确对称**（对称提取的几何正确性强证据）。
