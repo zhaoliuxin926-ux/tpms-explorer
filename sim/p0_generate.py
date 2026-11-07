@@ -164,7 +164,7 @@ def main() -> int:
                     help="network=单侧阈值固相网络（缺省）；sheet=绕中面区间提取薄片（八坑 #1 正解）")
     ap.add_argument("--k", type=int, default=2)
     ap.add_argument("--R", type=int, default=24)
-    ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率")
+    ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率（sheet 模式下忽略）")
     ap.add_argument("--solid", type=float, default=0.35,
                     help="sheet 模式：目标固相率（决定壁厚；|∇f| 非常数故不用名义壁厚标定）")
     ap.add_argument("--out", type=str, default=None)
@@ -183,9 +183,11 @@ def main() -> int:
     comps = len(mesh.split(only_watertight=False))
 
     if args.structure == "sheet":
-        out = Path(args.out) if args.out else REPO / "sim" / "out" / f"{args.type}_sheet_k{args.k}_s{int(args.solid*100)}.stl"
+        out = (Path(args.out) if args.out else
+               REPO / "sim" / "out" / f"{args.type}_sheet_k{args.k}_R{args.R}_s{int(args.solid*100)}.stl")
     else:
-        out = Path(args.out) if args.out else REPO / "sim" / "out" / f"{args.type}_k{args.k}_p{int(args.por*100)}.stl"
+        out = (Path(args.out) if args.out else
+               REPO / "sim" / "out" / f"{args.type}_k{args.k}_R{args.R}_p{int(args.por*100)}.stl")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(trimesh.exchange.stl.export_stl(mesh))
 

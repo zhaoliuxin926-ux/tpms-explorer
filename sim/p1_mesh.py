@@ -36,8 +36,14 @@ def make_mesh(stl: Path, lmax: float) -> Path:
         sl = gmsh.model.geo.addSurfaceLoop(surfaces)
         gmsh.model.geo.addVolume([sl])
         gmsh.model.geo.synchronize()
-        gmsh.option.setNumber("Mesh.MeshSizeMax", lmax)      # 修复死参数（discrete 路线下约束内部）
+        gmsh.option.setNumber("Mesh.MeshSizeMax", lmax)      # 仅作上限：勿设 ExtendFromBoundary=0 促粗化——
         gmsh.option.setNumber("Mesh.MeshSizeMin", lmax * 0.05)
+        # 【2026-11-07 对抗审查实验定案】lmax"死参数"机制根因 = Gmsh 缺省
+        # MeshSizeExtendFromBoundary=1：MC 密集边界网格的局部尺寸场向内延伸，
+        # MeshSizeMax 只是上限管不住（0.5/0.8 逐位同实证）。置 0 可令 lmax 生效
+        # （121,461 tets，-39%），**但实测有害**：薄壁壁厚方向解析被粗化破坏
+        # （p50 0.738→0.418、<0.05 从 8 个暴涨 480× 至 3877 个）——边界驱动细
+        # 网格是薄壁质量的保障机制，非缺陷。故保留缺省 1，lmax 仅防超大单元。
         gmsh.option.setNumber("Mesh.Algorithm3D", 10)      # HXT
         gmsh.option.setNumber("Mesh.Optimize", 1)
         t0 = time.time()
