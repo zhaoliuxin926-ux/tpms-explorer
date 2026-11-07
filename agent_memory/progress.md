@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-08 凌晨二：git 历史清理完成（用户授权，强推 1974710）
+
+> - **清理范围**：wsl_1500_C/U 两场文件从全史移除（filter-repo bundle 副本内重写 9.7s）；旧仓 175MB 松散对象经 reflog expire+gc 清零（终态 pack 67.97MiB/count=0）；**tags 无变化**（v1.2.0 等均在重写点之前）。**bundle 备份：D:\GITHUB	pms-bundle-backup-20261107.bundle（本地勿删，宿舍下次 fetch+reset --hard 对齐新史）**。
+> - **过程事故两起（已解）**：①filter-branch 重写期间我并发提交=竞态（723c024 成孤儿）——改 filter-repo fresh-clone 模式绕开；②工作树与 HEAD 脱节——reset 对齐。**教训：历史重写期间仓库冻结（零提交零推送），一律 fresh-clone+filter-repo，弃用 filter-branch。**
+> - CI 对 1974710 强推自动重触发（守望中）。
+>
 > ## 工位侧 11-08 凌晨：snGrad 变体负结果（判别收窄到网格层）
 
 > - **三方案逐位同**（corrected/orthogonal/limited 0.5 全部 Ubar=0.84552759）——近壁 tet 恰好近正交，修正项=0，**snGrad 不是梯度高估的旋钮**；高估=近壁 tet 结构性（格心-壁面距离几何）。polyDualMesh 75 直接 core dump（负结果登记，勿再投料）。
