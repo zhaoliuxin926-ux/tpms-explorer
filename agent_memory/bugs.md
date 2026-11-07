@@ -42,12 +42,12 @@
 
 ## 二、开放风险（按日期）
 
-## 2026-11-07 CI ubuntu verify 套件 #ob-next 点击挂死（环境侧签名，dispatch 确认中）
+## 2026-11-07 CI ubuntu verify 套件 #ob-next 点击挂死（✅ 已定案 2026-11-07：环境侧 flake，深水风暴家族）
 
 - **现象**：4e23fe8（docs-only）CI run 42354965517 **ubuntu 单平台**失败：verify（单文件版 27 项）前 3 断言过（引导卡弹出/标题/dots=6）后，verify.mjs:67 点 `#ob-next` 卡死在 **"performing click action"**（元素可见/稳定/滚动完成=点击派发后主线程无响应）30s 超时；套件级 flaky 重跑**同点 2/2 复现**。macos+windows 同树全绿。
-- **代码回归排除（实证）**：`git log 88af41d..4e23fe8 -- tpms/` 为空——平台代码与 11-06 三平台绿树逐位相同；docs-only 提交不触 UI。
-- **签名归属**：与 2026-10-05 关闭的深水风暴同族（点击派发挂死=主线程长任务），但伏击网五探针常驻在 card_smoke/meshcont 系套件，**verify 套件无探针——本次红无 traceTop 落证**。runner 镜像漂移（Chrome/Playwright 版本）为平行嫌疑（CI 跨版本断言纪律：因果未证明勿断言）。
-- **处置**：按 rerun 铁律 workflow_dispatch 全新 run **42358233768**（HEAD 99bfac0，树差异仅 docs/agent_memory/sim，不触 UI）确认中；**绿=环境侧 flake 定案**（verify 套件已有 flaky 重试，不改代码）；**再红同点=ubuntu 镜像漂移坐实**，下一步查 runner Chrome 版本或在 verify.mjs `#ob-next` 点击加短超时+重试护栏。
+- **排除链（全部实证）**：①代码——`git log 88af41d..4e23fe8 -- tpms/` 为空，平台代码与 11-06 三平台绿树逐位相同；②镜像——ubuntu 镜像 2026-11-02 发布（20261101），绿（11-06）红（11-07）同镜像；③浏览器——lock 钉死同 revision。
+- **判别实验（定案证据）**：workflow_dispatch 全新 run **42358233768**（同树）三平台全绿含 ubuntu verify——fresh VMs 无复现。**定案=VM 局部瞬态（与 2026-10-05 深水风暴同族：点击派发挂死）；同 VM flaky 重试自我复制解释 2/2**。Gemini 咨询裁定为不必要（判别实验先行后问题消失）。
+- **遗留改进项（非缺陷）**：verify 套件是伏击网盲区——五探针常驻 card_smoke/meshcont 系，verify 无探针→本次红无 traceTop 落证；探针共享化/移植为结构改进候选（低优先，风暴定案不阻塞）。
 
 ## 2026-10-24 实用性审查首批四组执行后开放项
 
