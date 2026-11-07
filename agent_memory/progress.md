@@ -8,7 +8,9 @@
 > - **环境核验**：工位机 trimesh 4.12.2/meshio 5.3.5/gmsh 4.15.2+pymeshfix 在位；mmgs 无 CLI（Q3 mmgs 路线宿舍侧持有，A5 YAGNI 下非阻塞）。
 > - **缺省命名纪律补全（82d1aa8）**：p0 修后的同族漏网清掉——p3 双分支补 `_R{n}`（今日复现验证时实锤过一次覆盖）、p2 缺省名嵌入 feats 模式串（sheet 标定批 LE+EXPL 同网格并存将踩中的预定事故，提前拆除）；p1 --lmax 豁免（no-op 旋钮不塑形产物，A5 基线派生命名不破坏）。验证四产物共存+几何统计与档案逐位一致。
 > - **p0 固相侧 k1 R48 核对（用户侧挂账外微任务）**：k1 R24 dev=0.57pp → k1 R48 dev=0.21pp——方向与流体侧一致；互补性差定案：同参数 p0 固相（MC 网格=[0,2πk] 精确盒）+p3 流体（盒外扩 margin 2 格）两侧不同网格剖同一等值面，0.22pp 和差=离散化口径差非缺陷，力学用 p0 口径、CFD 用 p3 口径各自自洽。
-> - **verify 伏击网盲区补全（1f04b83）**：新共享探针模块 `tpms/.verify/ui_diag.mjs`（五探针忠实移植 meshcont 实战版+失败路径 8s 自限防挂死），verify.mjs 五处 `#ob-next` 入口点击 clickDiag 包装（失败即落证再重抛）；顺带发现原版 heap 探针缺陷（Memory.getDOMCounters 无 jsHeapSize 恒 NaN）新模块已改 Performance.getMetrics 修正，meshcont 实战件不动。本地 27/27 无回归。
+> - **verify 伏击网盲区补全（1f04b83）**：新共享探针模块 `tpms/.verify/ui_diag.mjs`（五探针忠实移植 meshcont 实战版+失败路径 8s 自限防挂死），verify.mjs 五处 `#ob-next` 入口点击 clickDiag 包装（失败即落证再重抛）；顺带发现原版 heap 探针缺陷（Memory.getDOMCounters 无 jsHeapSize 恒 NaN）新模块已改 Performance.getMetrics 修正，meshcont 实战件不动。本地 27/27 无回归。CI 三平台绿（run 42364236614，ubuntu 昨日挂死平台上实证 verify 通过）。
+> - **k1/k2 dev 机制问题保持开放（scratch 废弃教训）**：同 R 档 k1 dev=1.23pp vs k2 0.46pp 的机制未定案——scratch 复刻 p3 时 box_sdf/网格为猜测实现，faces 数对拍（6408 vs 真实 8620）当场证伪复刻忠实性，全部数字废弃不作结论。**教训：复刻管线做实验前先逐行对拍源码（与移植探针同款教训同日两犯），faces/节点数是廉价的忠实性对拍锚**。k1→R48 建议不受影响（依据=真实管线实测 0.01pp）。正确做法=直接 import p3.generate_fluid 分步插桩，非复刻。
+> - **p3 --maze 单迷宫拆分导出（c5424e3，Q1 拆分单算裁决几何端补全）**：sheet 双迷宫按界面顶点 f 场中位数符号物理判别 G+/G-（边界=等值面 |f|=t，G± 侧 f≈±t），实测 k2 R24 s35：G± f_med=±0.5356（≈±t）、双迷宫体积比 0.9999、单迷宫 comp=1 watertight、周期自检 1376/1376 完全相等（周期对应性最强的单迷宫证据）。dev 口径修正单迷宫参考值。license 无关，Phase 3 求解端就绪件+1。
 >
 > ## 周期面对应性五轮实验（2026-11-07 晚 · 回答工位自查题 + Gemini Q1 容差裁决修正）
 
