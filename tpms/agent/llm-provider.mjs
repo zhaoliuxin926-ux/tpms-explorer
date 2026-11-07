@@ -98,6 +98,8 @@ export function validateToolCalls(toolCalls, schema) {
     return { ok: false, errors };
   }
   const calls = toolCalls ?? [];
+  // E11 批次写写冲突（2026-11-07 红队定案）：同批次同 out 路径双调用=串行执行后者静默覆盖前者
+  const outPaths = new Map();
   if (calls.length > 64) {
     errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
     return { ok: false, errors };
@@ -158,6 +160,17 @@ export function validateToolCalls(toolCalls, schema) {
       if (!Object.hasOwn(args, k)) continue;
       const v = validateValue(name, k, spec, args[k], errors);
       if (errors.length === errBefore) validated[k] = v;
+    }
+
+    // 批次内 out 路径冲突检测（重复者拒、首个保留——保守语义）
+    if (errors.length === errBefore) {
+      for (const [k, v] of Object.entries(validated)) {
+        if (k === 'out' && typeof v === 'string') {
+          const prev = outPaths.get(v);
+          if (prev !== undefined) errors.push(`tool ${name}: 输出路径 "${v}" 与本批次调用 #${prev} 重复（写写冲突拒绝，红队 E11）`);
+          else outPaths.set(v, i);
+        }
+      }
     }
 
     // 逐调用错误归属：本调用无新错误才放行执行
