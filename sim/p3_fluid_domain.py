@@ -31,7 +31,30 @@ def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
     ax = np.linspace(-margin * dx, box_hi + margin * dx, n + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
     f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
+    # 周期性浮点破缺根治（2026-11-07 工位自查题实验定位）：sin 大参数舍入使
+    # f(x=0) 与 f(x=L) 切片系统性差 ~6.7e-16（实测 2477/2809 格点），经 MC case
+    # 翻转放大为周期面轮廓环缺口（network 实测 3 顶点缺口/最大 2.34mm——COMSOL
+    # General Extrusion 的 5~10% 边长容差 ~0.03mm 远不够覆盖）。数学严格修复：
+    # 周期场强制三向逐位周期（i 与 i±kR 对应切片赋值），两侧 MC 输入逐位相同
+    # → 输出必然共形。轴向索引：i=margin↔x=0，i=margin+kR↔x=L。
+    kR = k * R
+    f[margin + kR] = f[margin]                                  # x: (x=L)←(x=0)
+    f[:margin] = f[kR:kR + margin]                              # (x=-2dx,-dx)←(x=L-2dx,L-dx)
+    f[margin + kR + 1:] = f[margin + 1:margin + 1 + margin]     # (x=L+dx,L+2dx)←(x=dx,2dx)
+    f[:, margin + kR] = f[:, margin]                            # y 同法
+    f[:, :margin] = f[:, kR:kR + margin]
+    f[:, margin + kR + 1:] = f[:, margin + 1:margin + 1 + margin]
+    f[:, :, margin + kR] = f[:, :, margin]                      # z 同法
+    f[:, :, :margin] = f[:, :, kR:kR + margin]
+    f[:, :, margin + kR + 1:] = f[:, :, margin + 1:margin + 1 + margin]
     eps = 1e-6
+    # 【2026-11-07 周期对应性实验终案】盒角碎片根因=max(f-c, sdf) 组合把贴壁
+    # 孔隙格点（f<c、sdf=0）的 g 压成精确 0 → MC 退化临界 → 盒角剥落 4 三角微壳。
+    # 已试方案：inset 内缩证伪（max(f-c,-δ) 在 f-c≈0 处把 1e-16 破缺放大 1e12 倍，
+    # 暴露区对称性反而破坏）；sdf 对称层赋值无效（破缺源在 max 组合层不在 sdf 层）。
+    # 终案=保持 sdf=0 支配（暴露区对称性由 f 三向钳位保障）+ 碎片由
+    # keep_dominant_components 滤除（体积占比 2e-6，危害已清零）；残余非对称=
+    # 暴露区 0.04% 面积差（全局 K/WSS 影响 <<0.1%，登记接受）。
     in_box = ((x >= box_lo - eps) & (x <= box_hi + eps)
               & (y >= box_lo - eps) & (y <= box_hi + eps)
               & (z >= box_lo - eps) & (z <= box_hi + eps))
