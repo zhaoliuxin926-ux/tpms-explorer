@@ -20,6 +20,54 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[1]
 
 
+def split_domains(stl: Path) -> list[Path]:
+    """连通域分解（STL 顶点先 merge——STL 格式每三角形独立顶点，不 merge 全碎成
+    逐三角"域"，实测 56240 域）。多域写 {stem}__dom{i}.stl 逐域处理；
+    单域返回原文件（零改动路径）。"""
+    import trimesh
+    src = trimesh.load_mesh(stl, process=False)
+    src.merge_vertices()
+    comps = src.split(only_watertight=False)
+    if len(comps) <= 1:
+        return [stl]
+    paths = []
+    total_v = sum(abs(c.volume) for c in comps)
+    for i, comp in enumerate(comps):
+        p = stl.with_name(f"{stl.stem}__dom{i + 1}.stl")
+        p.write_bytes(trimesh.exchange.stl.export_stl(comp))
+        paths.append(p)
+        if abs(comp.volume) / total_v < 0.01:
+            print(f"[WARN] 域 {i + 1} 体积占比 {abs(comp.volume)/total_v*100:.4f}% "
+                  f"（{len(comp.faces)} 面）——疑似 pymeshfix 孤立碎片，CFD 前建议人工确认后剔除")
+    return paths
+
+
+def concat_inps(inp_paths: list, out_inp: Path) -> None:
+    """多域 .inp 拼接：节点/单元重编号合并。COMSOL/Fluent 按连通性自动识别域
+    （两迷宫不接触），无需 physical 标签（Gmsh 端多 volume 路线证伪：STL 顶点
+    合并行为不可控，实测聚出 4 片碎片+两迷宫混杂）。"""
+    import numpy as np
+    points_all, cells_all = [], []
+    offset = 0
+    for p in inp_paths:
+        m = meshio.read(p)
+        tet10 = [c for c in m.cells if c.type == "tetra10"]
+        if not tet10:
+            raise SystemExit(f"[FAIL] {p.name} 无 tetra10")
+        cells_all.append(np.vstack([c.data for c in tet10]) + offset)
+        points_all.append(m.points)
+        offset += len(m.points)
+    merged = meshio.Mesh(points=np.vstack(points_all),
+                         cells=[("tetra10", np.vstack(cells_all))])
+    meshio.write(out_inp, merged, file_format="abaqus")
+    txt = out_inp.read_text(encoding="utf-8")
+    n_mh = txt.count("TYPE=C3D10MH")
+    if n_mh:
+        out_inp.write_text(txt.replace("TYPE=C3D10MH", "TYPE=C3D10"), encoding="utf-8")
+    print(f"[concat] {len(inp_paths)} 域合并 -> {out_inp.name} "
+          f"(C3D10MH->C3D10 x{n_mh})")
+
+
 def make_mesh(stl: Path, lmax: float) -> Path:
     import gmsh
 
@@ -105,9 +153,24 @@ def main() -> int:
     ap.add_argument("--lmax", type=float, default=0.5)
     args = ap.parse_args()
     stl = Path(args.stl)
-    msh = make_mesh(stl, args.lmax)
-    inp, mesh = to_inp(msh)
-    verify_tet10(mesh)
+    domains = split_domains(stl)
+    if len(domains) == 1:
+        msh = make_mesh(stl, args.lmax)
+        inp, mesh = to_inp(msh)
+        verify_tet10(mesh)
+    else:
+        print(f"[multidomain] {len(domains)} 域 → 逐域划网 + INP 拼接")
+        inps = []
+        total = 0
+        for i, d in enumerate(domains):
+            print(f"[multidomain] 域 {i + 1}/{len(domains)}: {d.name}")
+            msh = make_mesh(d, args.lmax)
+            inp_d, mesh_d = to_inp(msh)
+            verify_tet10(mesh_d)
+            inps.append(inp_d)
+            total += len(mesh_d.cells[0].data) if len(mesh_d.cells) == 1 else 0
+        inp = stl.with_suffix(".inp")
+        concat_inps(inps, inp)
     print(f"[DONE] {inp}")
     return 0
 
