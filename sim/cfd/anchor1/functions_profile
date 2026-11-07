@@ -1,0 +1,21 @@
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system/functions";
+    object      profile;
+}
+start           (3.14159265 3.15 3.14159265);
+end             (3.14159265 6.27 3.14159265);
+fields          (U);
+axis            distance;
+sets
+{
+    radial
+    {
+        type    lineCell;
+        axis    distance;
+        start   $start;
+        end     $end;
+    }
+}

@@ -1,0 +1,24 @@
+[gmshToFoam] 
+Moving faces from patch cycX0 to patch 3
+Moving faces from patch cycXL to patch 4
+Removing zero-sized patch cycXL type patch at position 1
+Removing zero-sized patch cycX0 type patch at position 2
+    cells:            262359
+Mesh OK.
+[foamRun] exit=0  iters=1500
+time step continuity errors : sum local = 2.7353504e-09, global = 2.0752514e-18, cumulative = 1.2997045e-16
+ExecutionTime = 3328.4034 s  ClockTime = 3338 s
+
+Time = 1500s
+
+smoothSolver:  Solving for Ux, Initial residual = 3.0006725e-05, Final residual = 9.0445808e-09, No Iterations 8
+smoothSolver:  Solving for Uy, Initial residual = 1.4951988e-05, Final residual = 4.8161938e-09, No Iterations 6
+smoothSolver:  Solving for Uz, Initial residual = 1.5034518e-05, Final residual = 6.2842723e-09, No Iterations 6
+DICPCG:  Solving for p, Initial residual = 5.7029179e-05, Final residual = 4.21146e-07, No Iterations 3
+DICPCG:  Solving for p, Initial residual = 7.1936523e-06, Final residual = 5.5748355e-08, No Iterations 5
+DICPCG:  Solving for p, Initial residual = 1.1115404e-06, Final residual = 1.0346089e-08, No Iterations 18
+time step continuity errors : sum local = 2.5586136e-09, global = 6.7303652e-20, cumulative = 1.3003775e-16
+ExecutionTime = 3331.1845 s  ClockTime = 3341 s
+
+End
+
