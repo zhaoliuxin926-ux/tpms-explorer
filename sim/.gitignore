@@ -1,5 +1,6 @@
 # 仿真管线产物（大文件不入库，纪律同 specimens/*）
 out/
+__pycache__/
 *.stl
 *.msh
 *.inp
