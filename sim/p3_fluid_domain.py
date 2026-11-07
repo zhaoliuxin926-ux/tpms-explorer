@@ -111,25 +111,51 @@ def main() -> int:
     ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率")
     ap.add_argument("--structure", type=str, default="network", choices=["network", "sheet"])
     ap.add_argument("--solid", type=float, default=0.35, help="sheet 模式：目标固相率（与 p0 --solid 同源）")
+    ap.add_argument("--maze", type=str, default=None, choices=["gplus", "gminus"],
+                    help="sheet 模式：只导出单迷宫（Q1 拆分单算裁决：对称 sheet 算单迷宫，K_eff=2×K_single）；"
+                         "物理标注=界面顶点 f 场中位数符号（G+ 边界 f≈+t / G- 边界 f≈-t）")
     a = ap.parse_args()
 
     if a.structure == "sheet":
         mesh, thr = generate_fluid(a.k, a.R, porosity=1.0 - a.solid, structure="sheet", solid=a.solid)
-        fluid_target = 1.0 - a.solid
+        fluid_target = (1.0 - a.solid) / 2 if a.maze else 1.0 - a.solid
+        # --maze 单迷宫体积≈双迷宫一半，dev 按单迷宫参考值对比（0.65→0.325）
         thr_label = f"tfield={thr:.4f}"
     else:
         mesh, thr = generate_fluid(a.k, a.R, a.por)
         fluid_target = a.por
         thr_label = f"level_c={thr:.4f}"
+
+    # Q1 拆分单算（2026-11-07 Gemini 回执采纳）：sheet 双迷宫按顶点 f 场中位数符号拆分——
+    # 迷宫边界即等值面 |f|=t，G+ 侧边界顶点 f≈+t、G- 侧 f≈-t（壁面顶点占少数不翻签名）
+    maze_note = ""
+    if a.structure == "sheet" and a.maze:
+        parts = mesh.split(only_watertight=False)
+        if len(parts) != 2:
+            raise SystemExit(f"[FAIL] --maze 需要恰好 2 个连通域，实测 {len(parts)}")
+        def fmaze(comp):
+            v = comp.vertices
+            return float(np.median(np.sin(v[:, 0]) * np.cos(v[:, 1]) + np.sin(v[:, 1]) * np.cos(v[:, 2])
+                                   + np.sin(v[:, 2]) * np.cos(v[:, 0])))
+        parts_sorted = sorted(parts, key=fmaze)  # f 中位数 -t → +t：[G-, G+]
+        pick = parts_sorted[0] if a.maze == "gminus" else parts_sorted[1]
+        print(f"[maze] G- f_med={fmaze(parts_sorted[0]):+.4f} vol={parts_sorted[0].volume:.2f} | "
+              f"G+ f_med={fmaze(parts_sorted[1]):+.4f} vol={parts_sorted[1].volume:.2f} "
+              f"(对称性 vol 比={parts_sorted[1].volume / parts_sorted[0].volume:.4f})")
+        mesh = pick
+        maze_note = f" 单迷宫={a.maze}"
+
     bbox = mesh.bounds[1] - mesh.bounds[0]
     fluid_frac = mesh.volume / float(np.prod(bbox))
     pair_ok, pair_msg = periodic_pair_check(mesh, a.k)
     comps = len(mesh.split(only_watertight=False))
 
     if a.structure == "sheet":
-        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_R{a.R}_s{int(a.solid*100)}.stl"
-        # sheet 孔隙域预期 comp=2（G+/G- 双迷宫互不相通）——几何特征非缺陷
-        comp_note = f"comp={comps}（{'双迷宫预期' if comps == 2 else '⚠ 非预期，应=2'}）"
+        suffix = f"_{a.maze}" if a.maze else ""
+        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_R{a.R}_s{int(a.solid*100)}{suffix}.stl"
+        # sheet 孔隙域预期 comp=2（G+/G- 双迷宫互不相通）——几何特征非缺陷；--maze 拆分后单迷宫 comp=1
+        exp = 1 if a.maze else 2
+        comp_note = f"comp={comps}（{'双迷宫预期' if comps == 2 else '单迷宫预期' if comps == exp else '⚠ 非预期'}，应={exp}）"
     else:
         out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_R{a.R}_p{int(a.por*100)}.stl"
         comp_note = f"comp={comps}"
@@ -138,12 +164,13 @@ def main() -> int:
     out.write_bytes(trimesh.exchange.stl.export_stl(mesh))
 
     ok = mesh.is_watertight and mesh.is_winding_consistent
-    sheet_comp_ok = (a.structure != "sheet") or (comps == 2)
-    print(f"[{'OK' if (ok and sheet_comp_ok) else 'WARN'}] {out.name}: faces={len(mesh.faces)} "
-          f"watertight={mesh.is_watertight} {comp_note} "
+    exp_comps = (2 if (a.structure == "sheet" and not a.maze) else 1)
+    comps_ok = comps == exp_comps
+    print(f"[{'OK' if (ok and comps_ok) else 'WARN'}] {out.name}: faces={len(mesh.faces)} "
+          f"watertight={mesh.is_watertight} {comp_note}{maze_note} "
           f"fluid_frac={fluid_frac:.4f} (target {fluid_target:.2f}, "
           f"dev={abs(fluid_frac-fluid_target)*100:.2f}pp) | {thr_label} | 周期自检: {pair_msg}")
-    return 0 if (ok and sheet_comp_ok) else 1
+    return 0 if (ok and comps_ok) else 1
 
 
 if __name__ == "__main__":
