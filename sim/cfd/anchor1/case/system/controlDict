@@ -1,0 +1,32 @@
+FoamFile { format ascii; class dictionary; location "system"; object controlDict; }
+application     foamRun;
+solver          incompressibleFluid;
+startFrom       latestTime;
+startTime       0;
+stopAt          endTime;
+endTime         1500;
+deltaT          1;
+writeControl    timeStep;
+writeInterval   1500;
+purgeWrite      2;
+writeFormat     ascii;
+writePrecision  8;
+functions
+{
+    Ubar
+    {
+        type            volFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        cellZone        all;
+        fields          (U);
+        operation       volAverage;
+        writeFields     false;
+    };
+    wss
+    {
+        type            wallShearStress;
+        libs            ("libfieldFunctionObjects.so");
+        patches         (scaffoldWall);
+        writeFields     false;
+    };
+};

@@ -1,0 +1,15 @@
+FoamFile { format ascii; class dictionary; location "constant"; object fvModels; }
+drive
+{
+    type            semiImplicitSource;
+    cellZone        all;
+    volumeMode      specific;
+    sources
+    {
+        U
+        {
+            explicit (0.81 0 0);  // mm/s^2 恒定比体力（目标 U0~1mm/s，信号在残差地板上 6 量级）
+            implicit  0;
+        };
+    };
+};
