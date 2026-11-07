@@ -1,5 +1,13 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-07 深夜续：Anchor-1 全链落地（0964ef8，OpenFOAM 线零到一）
+
+> - **环境**：OpenFOAM v13 已在位（WSL /opt/openfoam13 + ~/OpenFOAM/qi-13——"待安装"条目作废，check-before-assume 第三犯）；**下一批=h0.15 加密轮**（约 25 万 tets/40min，目标：ε 因子判别+0.5% 放行阈）；再下一批 Anchor-2（R48 MC-STL 圆柱）/Anchor-3（cyclicAMI 对照）。
+> - **Anchor-1 结果（链路级验证 ✓）**：Ubar 收敛平台 0.86455 mm/s（1200 迭代后稳定），K_meas=ν·ε·Ubar/G=0.8383 mm² vs 理论 π³/32=0.9689 → **−13.5%（h=0.3 粗网格 33k tets 离散误差带）**。无因子级/口径级错误（缺 ε 会读 +10%）；**此分辨率下 ε 判别力不足**，量化判据待加密轮。
+> - **v13 语法实测定案（回写 plans §7.3）**：meanVelocityForce 不存在（Unknown fvModel）、acceleration=瞬态斜坡型（acceleration.C:80 dU=velocity(t)−velocity(t−dt)，constant=零力）、**正解=semiImplicitSource（volumeMode specific+explicit (G 0 0)+cellZone all）**；fvModel 域选择统一 fvCellZone（selectionMode 已废）；volFieldValue 亦强制 cellZone all；全周期域需 pRefCell/pRefValue；createPatch **同名列=type 不更新陷阱**（"type will remain the same"——必须重命名式）。
+> - **量纲教训（登记防再犯）**：域用"米"时 K≈0.969 m²（管半径 π 米），U₀~1e-3 m/s 所需 G=8e-10 m/s² **低于求解器残差地板 4 个量级=源项数值不可见**（表现为流动向零驱动稳态单调衰减）。修法=mm 制（ν=1 mm²/s、G=0.81、U₀~1 mm/s，信号在地板上 6 量级，K 对账数字不变）。**Anchor 类算例的驱动幅度必须放在求解器残差地板之上几个量级。**
+> - 入库件：sim/cfd/anchor1/{gen_mesh.py, case/*(9 dicts), run_anchor1.sh, k_check.py}；.msh/run.log gitignore。
+>
 > ## 工位侧 11-07 深夜：Gemini CFD 路线裁决处置（34b291c）
 
 > - **回执归档+处置表**：collab/gemini/2026-11-07-personal-project-cfd-route-and-governance-reply.md。**Q1 采纳**：个人项目零 institutional 依赖 → **OpenFOAM v13 + gmshToFoam + 端盖平移共形主力**（COMSOL/Fluent 弃用）；一阶网格铁律（C3D10 严禁直转/snappyHexMesh 禁）；K 提取 meanVelocityForce 定 Ubar 反读 pressure gradient；**口径注记登记**：Ubar=全域平均（表面流速）→ K=ν·Ubar/G，回执公式含 ε_eff 隐含孔隙内流速口径，两者不可混用——Anchor-1 已知 K 反推钉死；启动序=Anchor 1-3 阶梯（直管 Poiseuille 解析锚四层误差分离）。**抽验**：v13 模块化语法（foamRun+incompressibleFluid/momentumTransport laminar/nu 运动学）rag-kb 逐条确认 ✓；meanVelocityForce/fvModels KB 未直接命中 → Anchor-1 动手验证。
