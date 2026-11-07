@@ -1937,9 +1937,10 @@ bindRegionCard();
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
 let nlPendingExport: 'stl' | '3mf' | null = null;
 
+const NL_LOG_KEY = 'tpms.nl.log';
 function nlAppend(text: string): void {
   const log = document.getElementById('nl-log');
-  if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; }
+  if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; try { sessionStorage.setItem(NL_LOG_KEY, log.textContent); } catch { /* 静默 */ } }
 }
 
 async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
@@ -2034,16 +2035,23 @@ function wireNLChat(): void {
   const fab = document.getElementById('nl-fab');
   const panel = document.getElementById('nl-panel');
   const input = document.getElementById('nl-input') as HTMLInputElement | null;
+  const log = document.getElementById('nl-log');
   const send = () => {
     if (!input || !input.value.trim()) return;
     const intent = parseNL(input.value);
     applyNLIntent(intent);
     input.value = '';
   };
+  document.getElementById('nl-clear')?.addEventListener('click', () => {
+    if (log) log.textContent = '';
+    try { sessionStorage.removeItem('tpms.nl.log'); } catch { /* 忽略 */ }
+  });
   fab?.addEventListener('click', () => { if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; });
   document.getElementById('nl-send')?.addEventListener('click', send);
   input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  try { const saved = sessionStorage.getItem('tpms.nl.log'); if (saved && log) log.textContent = saved; } catch { /* 忽略 */ }
   document.querySelectorAll('.nl-chip').forEach((chip) => {
+    if (chip.id === 'nl-clear') return;
     chip.addEventListener('click', () => {
       if (input) input.value = (chip as HTMLElement).dataset.q ?? '';
       send();
