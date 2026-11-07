@@ -133,7 +133,7 @@ Gmsh Python API               首选 COMSOL（MPh 库脚本化；
    个人业余项目=零 institutional 依赖，**主力路线=OpenFOAM v13 + gmshToFoam + 端盖平移共形**（COMSOL/Fluent 弃用，无授权渠道）：
    - **共形优先**：Python 端主周期面三角网平移 2πk 覆盖对侧+锁表面，Gmsh 剖内部（cyclicAMI 降为容错备选，lowWeightCorrection；0.04% 暴露区对 K 一阶影响 O(1e-4) 预期由 Anchor-3 实证）；
    - **一阶网格铁律**：Gmsh Element Type 4 一阶四面体（.msh v2 ASCII）→ gmshToFoam；**严禁 C3D10 二阶直接转入**；snappyHexMesh 禁（薄壁跨壁穿透风险）；备选 cfMesh/polyDualMesh 75；
-   - **v13 模块化语法**（rag-kb 抽验：foamRun+incompressibleFluid/momentumTransport laminar/nu 运动学口径 ✓；meanVelocityForce/fvModels 待 Anchor-1 动手验证）：K 提取=meanVelocityForce 定 Ubar 反读 pressure gradient；**口径注记：Ubar 为全域平均（表面流速）→ K=ν·Ubar/G，回执公式含 ε_eff 因子隐含孔隙内流速口径，两者不可混用——Anchor-1 已知 K 反推钉死**；WSS=scaffoldWall 命名+函数对象 patches 白名单+运动学值×ρ_f；
+   - **v13 模块化语法（Anchor-1 实测+源码定案，2026-11-07 深夜）**：rag-kb 抽验 ✓ foamRun+incompressibleFluid/momentumTransport laminar/nu 运动学；**实测证伪**：meanVelocityForce 不存在于 v13（"Unknown fvModel"）、acceleration 是瞬态斜坡型（acceleration.C:80 dU=velocity(t)−velocity(t−dt)，constant=零驱动力）。**正解=semiImplicitSource**（volumeMode specific + sources.U.explicit (G 0 0) + cellZone all——v13 的 fvModel 域选择统一为 fvCellZone 生成器，selectionMode 语法已废）。K 提取=volFieldValue(cellZone all, volAverage) 实测 Ubar；**口径定案（Gemini 补充裁决+域定义）**：CFD 网格只含流体域 → Ubar=孔隙本征流速 U₀ → **K=ν·ε·U₀/G 保留 ε 因子**（删 ε 会在 Anchor-1 偏大 1/ε≈27.3%，Anchor-1 数值闭环中）；WSS=scaffoldWall+函数对象 patches 白名单+运动学值×ρ_f；v13 函数对象 volFieldValue 同样强制 cellZone all；全周期域需 pRefCell/pRefValue。
    - **启动序=Anchor 1-3 阶梯**（直管 Poiseuille 解析锚，L=2π R=0.5L）：①CAD 圆柱共形（验源项+量纲，阈 0.5%）②R48 MC-STL 圆柱（验 MC+FVM 层，K<2%/WSS<3%）③cyclicAMI vs 共形对照（验周期接口，<0.2%）——四层误差分离后再进 TPMS 实体；
    - Forchheimer 判据：Re_p<1 单点定 K；1~10 区间三点拟合二次曲线取一次项。
 
