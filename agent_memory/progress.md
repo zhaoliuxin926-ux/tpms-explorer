@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-07 深夜三：agent 红队 E5~E14 实测（18f0e07）
+
+> - **实测 17 案：3 真穿透 + 14 已防护**（probe_redteam_e5e14.mjs 入库）。**唯一代码级穿透=estimate.porosity 缺 maximum**（E13+E6b 同根因——65=6500% 孔隙率过校验进执行器；修复=加 maximum:1.0，下一批第一优先，改后探针两案应翻转）；**设计级缺口 2**（E5 联合算力预算/E11 批次写写冲突——需批次级上下文，mock 拒绝守卫下实际风险=真实执行面，待用户拍板立项）；E12 的 tpms-driver 槽位修补单调性=执行器面待查。
+> - **机制更正两处**：Gemini 预设"静默自钳制"vs 实装拒绝式校验；scenario 无自由文本材料槽位（E9 注入面=契约不可达）。Gemini Top2（严格反序列化基线）已被实装覆盖（additionalProperties+isfinite+严格类型全家在位）。
+> - **下一批队列**：①estimate.porosity 上界修复+探针翻转验证+门禁 ②Anchor-1 h0.15 加密轮 ③Anchor-2/3 ④E5/E11 设计决策待拍板。
+>
 > ## 工位侧 11-07 深夜续：Anchor-1 全链落地（0964ef8，OpenFOAM 线零到一）
 
 > - **环境**：OpenFOAM v13 已在位（WSL /opt/openfoam13 + ~/OpenFOAM/qi-13——"待安装"条目作废，check-before-assume 第三犯）；**下一批=h0.15 加密轮**（约 25 万 tets/40min，目标：ε 因子判别+0.5% 放行阈）；再下一批 Anchor-2（R48 MC-STL 圆柱）/Anchor-3（cyclicAMI 对照）。
