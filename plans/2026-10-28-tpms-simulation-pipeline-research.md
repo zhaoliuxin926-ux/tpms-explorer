@@ -123,6 +123,12 @@ Gmsh Python API               首选 COMSOL（MPh 库脚本化；
 1. **Phase 1 几何水密性验证**：✅ **2026-10-29 修订版全绿**（经反重力 T1 评审修复：坐标系重构为整数周期盒+盒内统计阈值，孔隙率偏差 0.90pp→**0.02pp**；.inp 过滤 2D 面单元（旧版实测混入 CPE6=ABAQUS datacheck 必挂）+ C3D10MH→C3D10 规范化；lmax 生效+minSICN 质量审计上线，212,209 C3D10 实测 minSICN min=0.057/0 个<0.05/p50=0.797，tet10 体积符号 0 非正 PASS；三阶段几何审计 meshfix 侵蚀 -0.00%）。脚本 `sim/p0_generate.py`、`sim/p1_mesh.py`、`sim/p1_geom_check.py`。过程中新增坑 9（见 §3）与铁律：Gmsh 对数万面片 MC 网格禁用 classifySurfaces(forceParametrizable=True)（用 createTopology discrete 路线）；trimesh 5.0 无 remove_degenerate_faces（用 process(validate=True)）；pymeshfix 0.18 拒收 TrackedArray（np.array() 转）；meshio tetra10→C3D10MH 硬编码 + triangle6→CPE6 混入（写 inp 必须只传 tet10 + 类型文本规范化）。
 2. **Phase 2 力学线打通**：单胞 → Gmsh C3D10/C3D10M → .inp → ABAQUS（Static 与 Explicit 准静态各验一次）。.inp 产物约 20~80MB，git 不适合传输——两机传递通道待定（文件中心 SMB / 重新在工位跑 p0+p1 即可复现同网格）。
 3. **Phase 3 流体线打通**：负空间流体域提取 → 周期边界网格 → COMSOL/Fluent 算渗透率。
+   **2026-11-07 Q1 裁决更新**（[collab/gemini/2026-11-07-dorm-side-consult-reply.md](../collab/gemini/2026-11-07-dorm-side-consult-reply.md)）：
+   **拆分单算**——对称 sheet 双迷宫同网格合算=双压力零空间奇异风险+对称冗余，对称 sheet 只算
+   单迷宫（CSV 契约 K 双口径：K_eff=2×K_single 文献主对标口径 + K_single 单腔保底口径）；非对称
+   偏移 sheet 拆两域各算。周期对：**COMSOL 原生非共形周期对（General Extrusion+映射容差 5~10%
+   调优）首选**；Fluent 走 solver 侧 make-periodic GGI（路径 A）/Python 端盖平移复制强制共形
+   （路径 B 记录）。宿舍侧 p3 已支持 sheet 双迷宫孔隙域提取（--structure sheet，50/50 对称实测）。
 
 ## 8. 开放问题（下次会话优先回答）
 

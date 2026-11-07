@@ -6,7 +6,9 @@
 > ｜反演报告 [fit-report.md](fit-report.md)（单点）/ [fit-report-expl.md](fit-report-expl.md)（四点）
 >
 > **术语更正（2026-11-01 独立复核）**：本标定几何为 p0 场 `f≥c` 单侧实体 = **network（solid）
-> 形态**，非 sheet（薄壳 |f|<t，未实现）——初版文档误称 "sheet gyroid" 已全篇更正。
+> 形态**，非 sheet（薄壳 |f|<t）——初版文档误称 "sheet gyroid" 已全篇更正。（sheet 生成端
+> 已于 2026-11-07 落地 `sim/p0_generate.py --structure sheet` 宿舍侧，本标定线仍 network-only，
+> sheet 标定随单元形态拍板链式启动，见 [plans/2026-11-07_sheet管线遗留问题解决方案.md](../plans/2026-11-07_sheet管线遗留问题解决方案.md)）
 > 文献指数带 n≈2.0~2.3 系 **sheet 类**报道，对 network 形态仅作方向性参考（同为连续曲面
 > 承载、区别于 strut），"落带中"的强断言撤回。
 
@@ -136,8 +138,9 @@
 
 ## 口径与适用域（诚实边界；2026-11-01 独立复核更正）
 
-- **形态**：network（solid）gyroid——p0 场 `f≥c` 单侧实体；sheet（薄壳）形态未实现，
-  文献 sheet 类指数带对本标定仅方向性参考；
+- **形态**：network（solid）gyroid——p0 场 `f≥c` 单侧实体；sheet 生成端 2026-11-07 已落地
+  （`sim/p0_generate.py --structure sheet` 宿舍侧），标定线仍 network-only（sheet 标定随单元
+  形态拍板链式启动，见 [plans/2026-11-07_sheet管线遗留问题解决方案.md](../plans/2026-11-07_sheet管线遗留问题解决方案.md)）；文献 sheet 类指数带对本标定仅方向性参考；
 - **分辨率定义（更正）**：p0 的 R=**每周期格数**——k2R24 = 24 格/周期（非初版误写的
   12）；specimens/S1_G60 = k8 R96 = **12 格/周期**。标定组保真度**高于**试样：对比时
   试样侧含更粗几何离散（方向=试样偏软），叠图超差先查此项（初版"两者同档直接可比"
