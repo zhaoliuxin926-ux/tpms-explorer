@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-07 深夜：Gemini CFD 路线裁决处置（34b291c）
+
+> - **回执归档+处置表**：collab/gemini/2026-11-07-personal-project-cfd-route-and-governance-reply.md。**Q1 采纳**：个人项目零 institutional 依赖 → **OpenFOAM v13 + gmshToFoam + 端盖平移共形主力**（COMSOL/Fluent 弃用）；一阶网格铁律（C3D10 严禁直转/snappyHexMesh 禁）；K 提取 meanVelocityForce 定 Ubar 反读 pressure gradient；**口径注记登记**：Ubar=全域平均（表面流速）→ K=ν·Ubar/G，回执公式含 ε_eff 隐含孔隙内流速口径，两者不可混用——Anchor-1 已知 K 反推钉死；启动序=Anchor 1-3 阶梯（直管 Poiseuille 解析锚四层误差分离）。**抽验**：v13 模块化语法（foamRun+incompressibleFluid/momentumTransport laminar/nu 运动学）rag-kb 逐条确认 ✓；meanVelocityForce/fvModels KB 未直接命中 → Anchor-1 动手验证。
+> - **Q2 执行完毕**：卡片 #3~#18 批量结案 10 张（单行模板注记 `[CLOSED | 个人业余项目-无需导师介入]`，resolved_by=zlx）；hub 三条改造建议（scope 标签/熔断计数只算未闭环/卡 TTL 72h）已提 report_mcp_feedback（id=ab15f4f7，feedback-hub open）。
+> - **项目性质记忆入库**：tpms=用户个人业余项目，决策用户唯一拍板；资源问题先给无依赖路径；openclaw 记账照常。后续不再把导师面向动作路由进本项目的行动清单。
+> - **下一步（待用户有空）**：Phase 3 启动序第一批=工位机装 OpenFOAM v13 + Anchor-1 直管 Poiseuille case 骨架（几小时级批次，可自主推进，下次会话可开工）。
+>
 > ## 工位侧 11-07 晚：四问处置收尾+跨机复现验证（4e23fe8 已收入 d93f72a）
 
 > - **4e23fe8 收尾**：Q1 处置表承诺的"Phase 3 方案更新"grep 实证未写入 → plans/2026-10-28 §7.3 补拆分单算+K 双口径+周期对三路径（COMSOL 非共形原生首选/Fluent 路径 A/端盖平移复制路径 B）；fea-calibration.md 两处"sheet 未实现"过时表述同步（生成端已落地、标定线仍 network-only）。
