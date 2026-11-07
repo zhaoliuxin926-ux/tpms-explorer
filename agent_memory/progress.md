@@ -7,6 +7,8 @@
 > - **新数据点（PBC 主力档建议）**：network k1 R24 dev=1.23pp vs k1 R48 dev=0.01pp——k1 单胞对 MC 离散更敏感（周期数少难平均），**Phase 3 k1 口径建议直接 R48**（同理 p0 固相生成端 k1 档也建议 R48 核对）。p3 的"周期自检"三角计数差是信息性非 gate（docstring 明示配对属网格器职责），k1 计数差大=单胞暴露区占比高的邻格效应，非 f 钳位失效。
 > - **环境核验**：工位机 trimesh 4.12.2/meshio 5.3.5/gmsh 4.15.2+pymeshfix 在位；mmgs 无 CLI（Q3 mmgs 路线宿舍侧持有，A5 YAGNI 下非阻塞）。
 > - **缺省命名纪律补全（82d1aa8）**：p0 修后的同族漏网清掉——p3 双分支补 `_R{n}`（今日复现验证时实锤过一次覆盖）、p2 缺省名嵌入 feats 模式串（sheet 标定批 LE+EXPL 同网格并存将踩中的预定事故，提前拆除）；p1 --lmax 豁免（no-op 旋钮不塑形产物，A5 基线派生命名不破坏）。验证四产物共存+几何统计与档案逐位一致。
+> - **p0 固相侧 k1 R48 核对（用户侧挂账外微任务）**：k1 R24 dev=0.57pp → k1 R48 dev=0.21pp——方向与流体侧一致；互补性差定案：同参数 p0 固相（MC 网格=[0,2πk] 精确盒）+p3 流体（盒外扩 margin 2 格）两侧不同网格剖同一等值面，0.22pp 和差=离散化口径差非缺陷，力学用 p0 口径、CFD 用 p3 口径各自自洽。
+> - **verify 伏击网盲区补全（1f04b83）**：新共享探针模块 `tpms/.verify/ui_diag.mjs`（五探针忠实移植 meshcont 实战版+失败路径 8s 自限防挂死），verify.mjs 五处 `#ob-next` 入口点击 clickDiag 包装（失败即落证再重抛）；顺带发现原版 heap 探针缺陷（Memory.getDOMCounters 无 jsHeapSize 恒 NaN）新模块已改 Performance.getMetrics 修正，meshcont 实战件不动。本地 27/27 无回归。
 >
 > ## 周期面对应性五轮实验（2026-11-07 晚 · 回答工位自查题 + Gemini Q1 容差裁决修正）
 
