@@ -127,11 +127,11 @@ def main() -> int:
     comps = len(mesh.split(only_watertight=False))
 
     if a.structure == "sheet":
-        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_s{int(a.solid*100)}.stl"
+        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_R{a.R}_s{int(a.solid*100)}.stl"
         # sheet 孔隙域预期 comp=2（G+/G- 双迷宫互不相通）——几何特征非缺陷
         comp_note = f"comp={comps}（{'双迷宫预期' if comps == 2 else '⚠ 非预期，应=2'}）"
     else:
-        out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_p{int(a.por*100)}.stl"
+        out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_R{a.R}_p{int(a.por*100)}.stl"
         comp_note = f"comp={comps}"
 
     out.parent.mkdir(parents=True, exist_ok=True)

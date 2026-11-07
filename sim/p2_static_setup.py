@@ -79,7 +79,13 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     w = w_override if w_override else x_hi - x_lo
     t = t_override if t_override else max(ys) - min(ys)
     disp = -abs(strain) * h
-    out = mesh_inp.with_name(mesh_inp.stem + "_static.inp")
+    # 模式标签嵌入缺省名（2026-11-07 工位对抗审计：p0 已修 _R{n}，本脚本同族隐患
+    # ——LE 与 EXPL 共用 <stem>_static.inp 静默覆盖；sheet 标定批 p60 LE+EXPL 同网格
+    # 并存将当场踩中）。缺省命名必须含全部影响产物的自由参数。
+    feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact),
+                                      (f"MU{friction:g}", friction > 0.0),
+                                      (f"EXPL{(explicit_ms or 0):g}ms", bool(explicit_ms))) if on)) or "LE"
+    out = mesh_inp.with_name(f"{mesh_inp.stem}_{feats}_static.inp")
 
     buf = []
     buf.append("*HEADING")
@@ -171,9 +177,6 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     out.write_text("\n".join(buf) + "\n", encoding="utf-8")
 
     band_ok = any(abs(h - b) <= 1.0 for b in (12.0, 24.0, 34.0))
-    feats = ("+".join(s for s, on in (("NLGEOM", nlgeom), ("PLASTIC", plastic), ("CONTACT", contact),
-                                       (f"MU{friction:g}", friction > 0.0),
-                                       (f"EXPL{(explicit_ms or 0):g}ms", bool(explicit_ms))) if on)) or "LE"
     print(f"[setup] {out.name}[{feats}]: nodes={len(nodes)} elems={n_elems}(ESOLID 1..{max_eid}) "
           f"bot={len(bot)} top={len(top)} disp={disp:.4f}mm "
           f"H={h:.4f} W={w:.4f} T={t:.4f} A0={w*t:.2f}mm2 "
