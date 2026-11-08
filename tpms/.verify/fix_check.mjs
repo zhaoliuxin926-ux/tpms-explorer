@@ -55,8 +55,8 @@ let ob = await page.evaluate(() => ({
   bootErr: !!document.querySelector('.boot-error,[data-boot-error]'),
   ready: document.readyState,
 }));
-ob.show && /第 1 步 \/ 共 6/.test(ob.step1 || '') && /欢迎/.test(ob.title || '')
-  ? ok('B3 首访自动弹出第 1/6 步') : bad('B3 首访自动弹出', JSON.stringify(ob));
+ob.show && /第 1 步 \/ 共 3/.test(ob.step1 || '') && /实时等值面/.test(ob.title || '')
+  ? ok('B3 首访自动弹出第 1/3 步') : bad('B3 首访自动弹出', JSON.stringify(ob));
 
 // B3-2 spotlight 聚焦 .viewer（spot 有尺寸）
 // 轮询等待替代固定 sleep+单次采样：冷启动慢时 spot 尚在展开过渡（实测 4×4 假阴性）
@@ -75,23 +75,20 @@ try {
 }
 spot.ok ? ok('B3 spotlight 聚焦视口') : bad('B3 spotlight', JSON.stringify(spot));
 
-// B3-3 演示按钮驱动（第 2 步孔隙率滑块变 88）；用 DOM click 绕过 Playwright 对重建 DOM 的 actionability 等待
+// B3-3 演示按钮驱动（第 1 步孔隙率滑块变 88——3 步黄金动线版）；用 DOM click 绕过 Playwright 对重建 DOM 的 actionability 等待
 const domClick = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
-await domClick('#ob-next');
 await page.waitForTimeout(300);
 const hasDemo2 = await page.evaluate(() => !!document.getElementById('ob-demo'));
-hasDemo2 ? ok('B3 第 2 步有演示按钮') : bad('B3 第 2 步演示按钮');
+hasDemo2 ? ok('B3 第 1 步有演示按钮') : bad('B3 第 1 步演示按钮');
 await domClick('#ob-demo');
 const porAfterDemo = await page.evaluate(() => document.getElementById('porosity')?.value);
 porAfterDemo === '88' ? ok('B3 演示驱动孔隙率=88') : bad('B3 演示驱动', 'porosity=' + porAfterDemo);
 
-// B3-4 走完 6 步并关闭
-await domClick('#ob-next'); await page.waitForTimeout(200);
-await domClick('#ob-next'); await page.waitForTimeout(200);
+// B3-4 走完 3 步并关闭
 await domClick('#ob-next'); await page.waitForTimeout(200);
 await domClick('#ob-next'); await page.waitForTimeout(200);
 let lastTitle = await page.evaluate(() => document.querySelector('#ob-card .ob-title')?.textContent);
-/把结果带走/.test(lastTitle || '') ? ok('B3 到达第 6 步') : bad('B3 第 6 步', String(lastTitle));
+/工程级防错/.test(lastTitle || '') ? ok('B3 到达第 3 步') : bad('B3 第 3 步', String(lastTitle));
 await domClick('#ob-next'); // 开始探索 → 关闭
 await page.waitForTimeout(300);
 let closed = await page.evaluate(() => ({
