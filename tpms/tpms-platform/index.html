@@ -386,6 +386,18 @@
   .v-foot{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;z-index:5}
   @media(max-width:768px){.axes-hint{display:none}}
   @media(max-width:768px){.brand h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58vw}}
+  /* 【UI 批次三·移动端 IA】四项实测缺口修复（2026-11-08，Gemini 像素诊断+375px 截图） */
+  @media(max-width:768px){
+    .v-tools{left:10px;right:10px;justify-content:flex-start;overflow-x:auto;max-width:calc(100vw - 20px);scrollbar-width:none}
+    .topbar button,.topbar a{white-space:nowrap}
+    .v-tools::-webkit-scrollbar{display:none}
+    .stat-overlay{top:52px;right:auto;left:10px;max-width:calc(100vw - 20px)}
+    #nl-fab{bottom:66px;right:12px;width:40px;height:40px}
+  }
+  @media(max-width:980px){
+    #nl-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;max-width:100%;max-height:48vh;border-radius:14px 14px 0 0;box-shadow:0 -8px 30px rgba(10,13,20,.25)}
+    #nl-fab{bottom:66px}
+  }
   .v-foot .tipbar{background:rgba(13,16,21,.55);border:1px solid rgba(255,255,255,.08);color:#dfe5ee;padding:7px 12px;border-radius:9px;font-size:.74rem;line-height:1.5;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}
   .tipbar .ti{flex:none;width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;color:#fff}
   .tipbar .ti.a{background:var(--accent)}
