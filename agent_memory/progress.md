@@ -1,6 +1,13 @@
 # progress — 当前任务进度
 
-> ## 工位侧 11-08 凌晨六/七：netgen 定论+决策矩阵六路线齐（管线决策=netgen 进生产）
+> ## 工位侧 11-08 上午：PWA 应用化+形态闭环+UI 全清单收官
+
+> - **PWA 三件套落地（96f74d2）**：manifest（standalone/主题色/PIL 生成青蓝晶格图标 192/512/maskable）+service worker（/assets/* 内容哈希=cache-first 惰性缓存规避手写清单过期陷阱；html=network-first+离线回退——零后端应用真离线可用）+注册守卫（https/localhost 外静默跳过）。实测：SW registered scope 全站+manifest 200。**手机浏览器访问 Pages→添加到主屏幕即成应用**。门：fix_check 28/28+ui_mobile 4/0+selector 64/0+docs 349/0。
+> - **形态拍板闭环**：拓竹 P1S FDM+PLA+0.2 喷嘴→network 终态（杆径进舒适区），打印建议单 0.2 校准（9c47458），首件 print-verify_k3_G60_24mm.stl 已生成（specimens/）。
+> - **UI 三批次全清单收官**：批次一+批次二（E5/E11 红队收口+3 步引导+失败建议+重建回执）+批次三（移动端 IA+气泡化+解析 mini 卡）——Gemini §1 清单全项落地。教训两笔：门与 artifact 对应关系（verify=冻结教学版/fix_check=platform）改 onboarding 前必查；git add -A 二犯（禁手升级=status 明细必查）。
+> - **CFD 决策矩阵终态**：六路线齐+netgen 进生产；cfMesh 编译中（第七路线=最后候选，完成后自动 anchor 判别）；openfoam-cfd skill 沉淀完毕。
+>
+> > ## 工位侧 11-08 凌晨六/七：netgen 定论+决策矩阵六路线齐（管线决策=netgen 进生产）
 
 > - **netgen 优化器**：K=−8.26%（vs 基线 −13.48%，改善 5.2pp）——近壁质量机制方向再证实但不消除（形状优化治不了格心-壁面距离的结构性）。**管线决策：gen_mesh.py 加 Mesh.Optimize/OptimizeNetgen=1（一行白捡 5.2pp，fa47224）**；K 进 0.5% 阈仍需 Phase 3 的 cfMesh/snappyHex 或量化偏差披露。
 > - **决策矩阵终态六路线**：tets −13.48%/snGrad 逐位同/netgen −8.26%/polyDual 崩溃/gmsh 4.15 BL 只支持曲线源（曲面源不存在）/hex −1.27%✓。
