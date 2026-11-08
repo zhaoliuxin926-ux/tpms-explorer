@@ -1,0 +1,23 @@
+FoamFile { format ascii; class dictionary; location "system"; object createPatchDict; }
+pointSync false;
+patches
+(
+    {
+        name scaffoldWall;
+        patchInfo { type wall; }
+        constructFrom patches;
+        patches (wall0 wall1 wall2 wall3);
+    }
+    {
+        name cyclicX0;
+        patchInfo { type cyclic; neighbourPatch cyclicXL; }
+        constructFrom patches;
+        patches (x0);
+    }
+    {
+        name cyclicXL;
+        patchInfo { type cyclic; neighbourPatch cyclicX0; }
+        constructFrom patches;
+        patches (xL);
+    }
+);

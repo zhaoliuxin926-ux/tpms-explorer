@@ -43,6 +43,10 @@
 
 ## 二、开放风险（按日期）
 
+## 2026-11-08 引导改版覆盖缺口（非阻塞）
+
+- **platform 3 步引导无门禁覆盖**：verify 27 项门测的是 docs/app.html（10-02 冻结教学版单文件），非 platform——platform 侧 onboarding（现 3 步黄金动线）仅手工验收。修复候选：verify 增 platform 引导分支或教学版再生成机制。教训：改 onboarding 前先确认 verify 测的是哪个 artifact。
+
 ## 2026-11-07 UI 打磨轮实锤（Gemini 截图诊断+grep 实证）
 
 - **updateTips 评价绑定 bug（ui-helpers.ts:343-348）**：底栏评价文案只按目标 porosity 选段

@@ -16,7 +16,7 @@ const est = (over = {}) => [{ function: { name: 'tpms_estimate', arguments: JSON
 
 {
   const calls = Array.from({ length: 64 }, (_, i) => ({ function: { name: 'tpms_mesh', arguments: JSON.stringify({ type: 'gyroid', porosity: 60, periods: 12, resolution: 128, out: `d${String(i).padStart(3, '0')}.stl` }) } }));
-  run('E5 64×合法顶格 mesh 唯一 out（组合爆炸面）', '放行', calls);
+  run('E5 64×合法顶格 mesh 唯一 out（组合爆炸面）——联合预算拦截', '拦截', calls);
 }
 run('E6a 未声明字段走私', '拦截', est({ unregistered_flag: true }));
 run('E6b 同名键 last-wins（原始字节流 porosity:0.6,65→合法 65% 双口径）', '放行', [{ function: { name: 'tpms_estimate', arguments: '{"type":"gyroid","porosity":0.6,"porosity":65.0}' } }]);

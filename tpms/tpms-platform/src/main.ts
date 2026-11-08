@@ -1936,6 +1936,7 @@ bindRegionCard();
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
 let nlPendingExport: 'stl' | '3mf' | null = null;
+let nlRebuildPending = false;  // NL 改参触发的重建进行中（完成时回执）
 
 const NL_LOG_KEY = 'tpms.nl.log';
 function nlAppend(text: string): void {
@@ -1951,7 +1952,7 @@ async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
   // 网格交付门（2026-10-24 审查 #7 连带）：NL 助手导出与导出中心同口径——非水密不交付
   const aNL = auditMeshIndices(baseGeo.attributes.position.array as Float32Array, baseGeo.index!.array as Uint32Array);
   if (aNL.openEdges !== 0 || aNL.nonManifoldEdges !== 0 || aNL.degenTris !== 0) {
-    throw new Error(`网格未通过水密审计（开放边=${aNL.openEdges} 非流形边=${aNL.nonManifoldEdges} 退化面=${aNL.degenTris}）——不导出（与 CLI/导出中心同口径）`);
+    throw new Error(`网格未通过水密审计（开放边=${aNL.openEdges} 非流形边=${aNL.nonManifoldEdges} 退化面=${aNL.degenTris}）——不导出（与 CLI/导出中心同口径）。建议：预览档分辨率有限，可提高分辨率后重试，或降低周期数/孔隙率后重试`);
   }
   const pos = baseGeo.attributes.position.array as Float32Array;
   const idx = baseGeo.index!.array as Uint32Array;
@@ -2005,6 +2006,7 @@ function applyNLIntent(intent: NLIntent): void {
     syncUI(sNew);
     updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);   // 关键：NL 改参必须触发重建（曾缺失 → 视图不更新、导出旧几何）
+    nlRebuildPending = true;
     scheduleHdUpgrade();      // 与滑块 change 路径同参：松手/应用后升级全高清
     nlAppend(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
   } else {
@@ -2644,6 +2646,7 @@ function rebuild(preview: boolean, waitForResult = false): RebuildOutcome {
     scheduleMicroPhysics(250);
     updateFormulaDisplay(s.type, s.weights, cached.isoUsed);
     updateTips(s.type, s.porosity, s.thickness, cached.porosityEstimate);
+    if (nlRebuildPending) { nlAppend('助手：几何重建完成 ✓'); nlRebuildPending = false; }
     runPendingNLExport();
     return { fromCache: true };
   }
@@ -3055,6 +3058,7 @@ function onWorkerResult(res: WorkerResponse): void {
 
   // 应用几何
   applyGeometry(res.positions, res.normals, res.indices, res.vertCount, res.triCount, res.colors ?? null);
+  if (nlRebuildPending) { nlAppend('助手：几何重建完成 ✓'); nlRebuildPending = false; }
   runPendingNLExport();
 
   // 缓存结果：Worker 已 transfer 独占，直接存引用（不再 new 拷一份）。

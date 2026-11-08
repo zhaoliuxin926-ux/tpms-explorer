@@ -575,50 +575,31 @@ export function initOnboard(): void {
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
-  function demoType(): void {
-    (document.querySelector('[data-type="schwarz"]') as HTMLElement | null)?.click();
-  }
-  function demoSlice(): void {
-    const el = document.getElementById('slice') as HTMLInputElement | null;
-    if (!el) return;
-    el.value = '20';
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  }
 
   const steps: OnboardStep[] = [
     {
-      title: '欢迎来到 TPMS 探索器',
-      body: '你眼前这个就是 <b>Gyroid 螺旋曲面</b>——三重周期性极小曲面家族里最经典的一员，蝴蝶翅膀、细胞膜里都能找到它的影子。<b>三重周期</b>指它沿 x/y/z 三个方向平移后与自身重合，能像晶胞一样无限堆叠；<b>极小</b>指它像肥皂膜一样处处平均曲率为零。先<b>拖动画面</b>转一圈，感受它的立体形态。',
-      demo: null,
+      title: '30 秒看懂：实时等值面 + 交付闭环',
+      body: '眼前是 <b>Gyroid</b>——24 族三重周期极小曲面之一。拖动旋转，拖动<b>孔隙率滑块</b>实时重建；右侧任务流五步直达（设计→比选→制造检查→导出→试验分析），全程<b>目标/实测双读数</b>。',
+      demo: { label: '演示 · 调到高孔隙', run: demoPorosity },
       target: () => document.querySelector('.viewer'),
     },
     {
-      title: '孔隙率：把“空”调出来',
-      body: '<b>孔隙率</b>就是结构里有多少比例是“空的”。拖动这个滑块，看 Gyroid 怎么从致密变得通透——这正是骨支架、滤膜设计的核心旋钮。',
-      demo: { label: '演示 · 调到高孔隙', run: demoPorosity },
-      target: () => (document.getElementById('porosity') as HTMLElement | null)?.closest('.field') ?? null,
+      title: 'AI 助手：一句话完成建模',
+      body: '右下角<b>青色悬浮球</b>是自然语言设计助手：解析族/孔隙率/材料/端板/容器并实时应用，配好自动导出，越界自动钳制。试试 ↓',
+      demo: {
+        label: '演示 · 打开 AI 助手',
+        run: () => {
+          const p = document.getElementById('nl-panel') as HTMLElement | null;
+          const f = document.getElementById('nl-fab');
+          if (p && getComputedStyle(p).display === 'none') f?.click();
+          p?.scrollIntoView({ block: 'nearest' });
+        },
+      },
+      target: () => document.getElementById('nl-fab'),
     },
     {
-      title: '一个家族，多种形态',
-      body: 'TPMS 不止一种。点这里切到 <b>Diamond</b> 或 <b>Schwarz P</b>，对比螺旋、笼状、片状截然不同的几何，还可以在下方公式区拖动<b>权重滑块</b>重塑曲面。',
-      demo: { label: '演示 · 切到 Schwarz P', run: demoType },
-      target: () => document.querySelector('.controls .sect'),
-    },
-    {
-      title: '截面扫描：切开看内部',
-      body: '想知道内部孔道长什么样？拖动<b>截面滑块</b>，像切蛋糕一样沿 Z 轴逐层剖开曲面，看清内部连通的通道网络。',
-      demo: { label: '演示 · 剖到中部', run: demoSlice },
-      target: () => (document.getElementById('slice') as HTMLElement | null)?.closest('.field') ?? null,
-    },
-    {
-      title: '一键进入真实应用',
-      body: '最后试试这些<b>应用场景预设</b>：仿生骨支架、轻量化零件、散热结构——它们把“看懂结构”和“真实用途”直接连起来。',
-      demo: null,
-      target: () => document.querySelector('.scenes'),
-    },
-    {
-      title: '把结果带走：导出与分享',
-      body: '配好参数后，右下角工具栏提供 <b>截图 PNG</b>（论文配图）、<b>STL 导出</b>（3D 打印 / 仿真）、<b>复制分享链接</b>（含全部参数，打开即可复现）。<br><br>点击试试 ↓',
+      title: '工程级防错：审计门与对账',
+      body: '导出前自动<b>水密审计</b>——非水密不交付（与 CLI/导出中心同口径）；左下角<b>目标/实测</b>双读数带偏差归因。工具栏提供截图 PNG、STL/3MF 导出与含全部参数的<b>分享链接</b>。<br><br>点完开始探索 ↓',
       demo: { label: '演示 · 复制分享链接', run: () => document.getElementById('btn-share')?.click() },
       target: () => document.querySelector('.v-tools'),
     },

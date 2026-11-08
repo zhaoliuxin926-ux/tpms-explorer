@@ -100,6 +100,9 @@ export function validateToolCalls(toolCalls, schema) {
   const calls = toolCalls ?? [];
   // E11 批次写写冲突（2026-11-07 红队定案）：同批次同 out 路径双调用=串行执行后者静默覆盖前者
   const outPaths = new Map();
+  // E5 联合算力预算（2026-11-08 落地）：跨调用组合爆炸防护——Σ periods³ ≤ 4096
+  // （=单调用 schema 上限 12³ 的 2.4 倍；64×periods5=8000 被拒、8×periods8=4096 恰达上限；阈值随性能数据可调）
+  let heavyBudget = 0;
   if (calls.length > 64) {
     errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
     return { ok: false, errors };
@@ -162,6 +165,10 @@ export function validateToolCalls(toolCalls, schema) {
       if (errors.length === errBefore) validated[k] = v;
     }
 
+    if (errors.length === errBefore && typeof validated.periods === 'number' && ['tpms_mesh', 'tpms_scenario', 'tpms_pareto'].includes(name)) {
+      heavyBudget += validated.periods ** 3;
+    }
+
     // 批次内 out 路径冲突检测（重复者拒、首个保留——保守语义）
     if (errors.length === errBefore) {
       for (const [k, v] of Object.entries(validated)) {
@@ -177,6 +184,7 @@ export function validateToolCalls(toolCalls, schema) {
     if (errors.length === errBefore) cleaned.push({ name, arguments: validated });
   }
 
+  if (heavyBudget > 4096) errors.push(`批次算力预算超限（Σ periods³=${heavyBudget} > 4096，E5 联合预算——合法顶格组合也会耗尽宿主资源）`);
   return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned };
 }
 
