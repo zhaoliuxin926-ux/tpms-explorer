@@ -10,7 +10,7 @@
  */
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 const PKG_VERSION = JSON.parse(readFileSync(new URL('../tpms-platform/package.json', import.meta.url), 'utf8')).version;
 import { chromium } from 'playwright';
