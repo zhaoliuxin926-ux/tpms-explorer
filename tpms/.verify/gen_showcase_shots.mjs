@@ -10,8 +10,9 @@
  */
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+const PKG_VERSION = JSON.parse(readFileSync(new URL('../tpms-platform/package.json', import.meta.url), 'utf8')).version;
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -197,7 +198,7 @@ try {
           <div class="stat"><b>1000+</b><span>断言（带防中和守卫）</span></div>
           <div class="stat"><b>M0-M5</b><span>LLM Agent 闭环</span></div>
         </div>
-        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v1.1.x</div>
+        <div class="foot">github.com/zhaoliuxin926-ux/tpms-explorer · v${PKG_VERSION}</div>
       </div>
     </body></html>`;
     const tmp = path.join(OUT, '_social_tmp.html');
