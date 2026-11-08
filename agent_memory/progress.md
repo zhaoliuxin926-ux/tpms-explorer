@@ -1,5 +1,11 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-08 凌晨五：近壁修复路线决策矩阵完成（gmsh BL 曲面源不存在）
+
+> - **最小棱柱实验定论**：本机 gmsh 4.15 的 BoundaryLayer field 只支持曲线源（EdgesList/CurvesList 实测存在），**SurfacesList/FacesList 选项不存在=曲面源 3D BL 不可行**——OCC 路线的 gmsh 原生棱柱层证伪。
+> - **四路线决策矩阵终态**：①tets 均匀=−13.5%（加密不消除）②snGrad=逐位同（非旋钮）③polyDual=崩溃④gmsh 3D BL=不支持⑤**hex O-grid=−1.27% ✓（唯一有效，但结构化对 TPMS 曲面壁不通用）**。
+> - **TPMS 近壁策略候选收敛**：A) cfMesh（cartesianMesh+BL layers，需装）B) snappyHexMesh（BL 支持但薄壁穿透风险需验）C) 接受量化偏差修正（tet 系统偏差作为标定因子披露——最省但不优雅）。**三候选留 Phase 3 立项拍板**；hex 案例继续作为验证基准。
+>
 > ## 工位侧 11-08 凌晨四：hex 终审定案——CFD 线闭环（O-grid 78k 误差 −1.27%）
 
 > - **终审数据**：hex O-grid（78k，nRad30/nArc24/nAx60，non-ortho max 39.8）Ubar=0.9866，K=0.9566，**err=−1.27%** vs tet 同量级 −13.5%——同物理/同求解器/同方案，只换近壁结构误差塌缩 10 倍，**tet 近壁梯度高估诊断 100% 实锤，修复路线（结构化/棱柱近壁）验证有效**。Anchor 阶梯完整闭环：隔离→假说→修复验证。
