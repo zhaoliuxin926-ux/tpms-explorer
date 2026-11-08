@@ -8,5 +8,6 @@
 - 试样体系：specimens/ 32 件全齐（8 组×4 含 S7/S8 桁架对照组）
 - **FEA 标定线**：network 双族幂律已换代入库（2026-11-04：gyroid E\*=0.9914ρ̄^2.2028 / diamond 0.7871ρ̄^2.0709，STL 实测口径+NOMINAL_TO_MEASURED 映射，三消费点单源连带）；强度侧 gyroid（Rp0.2=0.54ρ̄^2.02/平台σ=1.64ρ̄^2.41，Explicit）；权威文档 docs/fea-calibration.md（p50 放行证据链+传递修正因子 η(ρ̄)）；条件匹配探针 probe_dt_fea_matched.mjs 活跃
 - 智谱 key：用户 2026-10-06 起的 Coding Plan 型 key 只经 env 不落盘；三 env 铁律=KEY/BASE_URL/REG_PROVIDER
+- **CFD 判断层 skill**：openfoam-cfd（~/.zcode/skills/）——v13 语法断代/Anchor 阶梯/量纲地板/近壁离散全部沉淀（2026-11-08 建），CFD 任务开工先读
 - 已发布博客：一/二/三双平台（掘金+知乎链接在 README+job_narrative）；博客四定稿待用户择期发
 - 仓库 2026-11-01 历史清洗 force push 后已转私有；宿舍机对齐纪律见 machine-facts.md
