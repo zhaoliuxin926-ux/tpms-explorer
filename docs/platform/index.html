@@ -384,6 +384,14 @@
   .stat-full{display:none;margin-top:5px}
   .stat-overlay.open .stat-full{display:block}
   .v-foot{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;z-index:5}
+  /* NL 气泡化+解析 mini 卡（UI 批次三·Gemini §1 B 项） */
+  #nl-log{display:flex;flex-direction:column;gap:6px}
+  .nl-msg{padding:6px 9px;border-radius:10px;font-size:.72rem;line-height:1.5;white-space:pre-wrap;max-width:92%}
+  .nl-msg.nl-user{align-self:flex-end;background:var(--accent-soft);color:var(--ink);border-radius:12px 12px 2px 12px}
+  .nl-msg.nl-assistant{align-self:flex-start;background:rgba(127,140,160,.12);border-left:2px solid var(--accent);border-radius:12px 12px 12px 2px;color:var(--ink)}
+  .nl-card{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-self:flex-start;background:rgba(127,140,160,.10);border:1px solid var(--panel-border);border-left:2px solid var(--accent);border-radius:10px;padding:7px 10px;font-size:.7rem}
+  .nl-card .nl-k{color:var(--ink-3)}
+  .nl-card .nl-v{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
   @media(max-width:768px){.axes-hint{display:none}}
   @media(max-width:768px){.brand h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58vw}}
   /* 【UI 批次三·移动端 IA】四项实测缺口修复（2026-11-08，Gemini 像素诊断+375px 截图） */
@@ -853,7 +861,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-BsIE824b.js"></script>
+  <script type="module" crossorigin src="./assets/index-Ch6IvM_e.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Dse4tHut.js">
 </head>
 <body>

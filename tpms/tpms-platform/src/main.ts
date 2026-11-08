@@ -1941,7 +1941,28 @@ let nlRebuildPending = false;  // NL 改参触发的重建进行中（完成时�
 const NL_LOG_KEY = 'tpms.nl.log';
 function nlAppend(text: string): void {
   const log = document.getElementById('nl-log');
-  if (log) { log.textContent += (log.textContent ? '\n' : '') + text; log.scrollTop = log.scrollHeight; try { sessionStorage.setItem(NL_LOG_KEY, log.textContent); } catch { /* 静默 */ } }
+  if (!log) return;
+  const isUser = text.startsWith('你：');
+  const div = document.createElement('div');
+  div.className = 'nl-msg ' + (isUser ? 'nl-user' : 'nl-assistant');
+  div.textContent = isUser ? text.slice(2) : text;  // textContent 转义用户原文（防注入）
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ }
+}
+
+/** 解析结果结构化 mini 卡（字段→值键值网格+置信度徽标，Gemini UI 裁决 §1） */
+function nlCard(items: Array<{ field: string; to: string | number }>, confidence: number): void {
+  const log = document.getElementById('nl-log');
+  if (!log || !items.length) return;
+  const card = document.createElement('div');
+  card.className = 'nl-card';
+  card.innerHTML = items.map((it) =>
+    `<span class="nl-k">${it.field}</span><span class="nl-v">${String(it.to)}</span>`).join('')
+    + `<span class="nl-k">置信度</span><span class="nl-v">${Math.round(confidence * 100)}%</span>`;
+  log.appendChild(card);
+  log.scrollTop = log.scrollHeight;
+  try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ }
 }
 
 async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
@@ -2008,7 +2029,8 @@ function applyNLIntent(intent: NLIntent): void {
     scheduleRebuild(false);   // 关键：NL 改参必须触发重建（曾缺失 → 视图不更新、导出旧几何）
     nlRebuildPending = true;
     scheduleHdUpgrade();      // 与滑块 change 路径同参：松手/应用后升级全高清
-    nlAppend(`助手：已应用 ${intent.reply}（置信度 ${Math.round(intent.confidence * 100)}%）`);
+    nlAppend('助手：已应用');
+    if (intent.log.length) nlCard(intent.log, intent.confidence);
   } else {
     nlAppend('助手：' + intent.reply);
   }
@@ -2051,7 +2073,7 @@ function wireNLChat(): void {
   fab?.addEventListener('click', () => { if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; });
   document.getElementById('nl-send')?.addEventListener('click', send);
   input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
-  try { const saved = sessionStorage.getItem('tpms.nl.log'); if (saved && log) log.textContent = saved; } catch { /* 忽略 */ }
+  try { const saved = sessionStorage.getItem('tpms.nl.log'); if (saved && log) log.innerHTML = saved; } catch { /* 忽略 */ }
   document.querySelectorAll('.nl-chip').forEach((chip) => {
     if (chip.id === 'nl-clear') return;
     chip.addEventListener('click', () => {
