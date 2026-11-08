@@ -1,5 +1,12 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-08 凌晨三：批次二收尾+E5 预算+git add -A 再犯（CI 守望中）
+
+> - **红队缺口全清零**：E5 联合算力预算落地（validateToolCalls 批次级 Σ periods³≤4096，探针 E5 案转回归断言 17/17+selftest 101/0）；E11 前夜已落地。
+> - **UI 批次二落地**：3 步黄金引导（新增 NL 助手发现性步骤+demoType/demoSlice 孤儿清理）+导出失败文案可执行化+NL 重建完成回执。**关键发现：verify 27 项门测的是 docs/app.html（10-02 冻结教学版）而非 platform**——platform 引导改动无门覆盖，缺口登记 bugs.md；verify.mjs 协同改动已回滚（门断言与冻结件一致是对的）。
+> - **git add -A 再犯（诚实账）**：hub troubleshooting 已登记过此禁手，仍用它把 wsl 场文件/shots 再度扫入（sim/cfd/.gitignore 子目录相对前缀写错=模式失守的根因）——第二遍 filter-repo 清理（158d8dd 强推，工作仓对齐 count=0）。**禁手升级：提交前 git status 明细必查（登记规则的第二犯=更重的注意义务）**。
+> - **hex 判别算例**：blockMesh O-grid 三连修（3D 物理组/arc 中点角 90°+90k/中心块双切向 nArc）后 Mesh OK（non-ortho max 39.8），foamRun 迭代中——tet 近壁高估假说的终审。
+>
 > ## 🔖 新会话开工指引（2026-11-08 · 全栈绿+历史已重写+CFD 病灶锁定）
 
 > **仓库态**：main=6123e28（重写史+清理登记），**CI 对重写树 completed success**（run 直查实证）——UI 批次一+updateTips 修复+E11 拦截+docs/platform 补交全栈过门。**宿舍机开工：fetch + reset --hard origin/main 即对齐新史**（f8303a4 之后 SHA 全变；bundle 备份 D:\GITHUB	pms-bundle-backup-20261107.bundle 本地勿删）。
