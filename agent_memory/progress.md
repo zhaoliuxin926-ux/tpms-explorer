@@ -1,5 +1,39 @@
 # progress — 当前任务进度
 
+> ## 🔖 新会话开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
+
+> **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
+>
+> ### 下会话第一优先：anchor 圆柱 snappyHex 实验（近墙策略终判）
+> - **判据**：K 误差 vs hex O-grid −1.27% 基线（sim/cfd/anchor1/ 全套脚本在）。snappyHex=v13 原生零安装（cfMesh 已 404+ESI fork 兼容性死路，见下）。
+> - **流程**：blockMesh 背景盒 + 圆柱表面 STL（gmsh 面网格导出）+ snappyHexMeshDict（castellated+snap+layers）→ foamRun → K 对账。**若 <0.5%：TPMS 近墙策略定案 snappy 路线**；失败则 cfMesh-ESI fork 兜底或量化偏差披露。
+> - 注意：WSL 内 git clone 会挂死——外部仓库克隆走 Windows git 侧再拷入；foamPostProcess -funcs 只认 ETC 目录（采样走 writeCellCentres+python join）。
+>
+> ### 已拍板（不再问用户）
+> - **形态=network（solid）终态**：拓竹 P1S FDM + PLA + 0.2 喷嘴。打印建议单 docs/fdm-print-guide.md（壁圈 2-3/层高 0.08-0.12/免支撑/最细杆 ≥0.5mm 红线）。**首件验证件已生成：specimens/print-verify_k3_G60_24mm.stl**（24mm k3 粗杆），正式标定件 specimens/S1_G60.stl 系 32 件全齐。
+> - **sheet 标定链 B/C/D 不启动**（FDM 壁厚下限裁决）。
+>
+> ### 用户侧行动卡（唯一剩余）
+> ①打印首件验证工艺 → ②S1_G60 上机压缩 → ③CSV 回传（fit-batch 契约）→ 反演+幂律叠图自动跑。
+>
+> ### 工程侧剩余（按需立项，非阻塞）
+> - UI：全部三批+图标一致化完成，**无遗留**。LLM E2 超时缓解（小件，需 key 消耗）可选。
+> - CFD：snappyHex 实验后=近墙策略定案；K 标定进 0.5% 阈仍需棱柱类方案或量化偏差披露。
+> - git 历史清理已完成两遍（count=0）；如需再清同流程（fresh-clone+filter-repo，bundle 先行）。
+>
+> ### 今晚关键教训（详见下方历史段与 bugs.md）
+> 1. **门与 artifact 对应**：verify=冻结教学版 docs/app.html；fix_check=platform（4811）——改 onboarding 前必查。
+> 2. **构建**：`cd /d/GITHUB/tpms/tpms/tpms-platform && npm run build`——禁止 build|tail 进 && 链。
+> 3. **历史重写**：仓库冻结+fresh-clone+git filter-repo（filter-branch 弃用）。
+> 4. **wsl**：内联 bash -c 撕参数——一律脚本文件；外部克隆走 Windows git。
+> 5. **git add -A 禁手**（二犯）：提交前 status 明细必查。
+> 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
+> 7. **CFD 量纲**：驱动幅度须高于残差地板 3+ 量级；v13 语法外部声称必实测。
+>
+> ---
+> ## 以下为 2026-11-07/08 会话历史段（按时间倒序，查阅用）
+>
+
 > ## 工位侧 11-08 上午：PWA 应用化+形态闭环+UI 全清单收官
 
 > - **PWA 三件套落地（96f74d2）**：manifest（standalone/主题色/PIL 生成青蓝晶格图标 192/512/maskable）+service worker（/assets/* 内容哈希=cache-first 惰性缓存规避手写清单过期陷阱；html=network-first+离线回退——零后端应用真离线可用）+注册守卫（https/localhost 外静默跳过）。实测：SW registered scope 全站+manifest 200。**手机浏览器访问 Pages→添加到主屏幕即成应用**。门：fix_check 28/28+ui_mobile 4/0+selector 64/0+docs 349/0。
