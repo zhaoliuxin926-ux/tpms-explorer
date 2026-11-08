@@ -7,6 +7,12 @@
 > - **UI 三批次全清单收官**：批次一+批次二（E5/E11 红队收口+3 步引导+失败建议+重建回执）+批次三（移动端 IA+气泡化+解析 mini 卡）——Gemini §1 清单全项落地。教训两笔：门与 artifact 对应关系（verify=冻结教学版/fix_check=platform）改 onboarding 前必查；git add -A 二犯（禁手升级=status 明细必查）。
 > - **CFD 决策矩阵终态**：六路线齐+netgen 进生产；cfMesh 编译中（第七路线=最后候选，完成后自动 anchor 判别）；openfoam-cfd skill 沉淀完毕。
 >
+> > ## 工位侧 11-08 上午续：近墙第七路线（cfMesh）撞墙——候选收敛到 snappyHex
+
+> - **cfMesh 路线 404**：原 URL creativenvironmentlab/cfMesh 不存在（仓库迁移）；社区版 Codeynamics/cfMesh-Installation-v2406 针对 **ESI v2406** 版本线——对 Foundation v13 兼容性未知，编译地雷区。**WSL 内 git clone 还会挂死（网络，一小时无进展）——外部仓库克隆一律走 Windows git 侧再拷入**。
+> - **候选收敛**：snappyHexMesh=v13 原生零安装零兼容风险，升为**首选**（薄壁穿透风险的担忧是 sheet 语境——用户已拍板 network，solid 网络杆件厚，风险显著降低）；cfMesh 降为"若 snappy 失败再验 ESI fork"。
+> - **下会话开工批次**：anchor 圆柱 snappyHex 实验（背景 blockMesh+STL surface+snappyHexMeshDict+layers），判据=K 误差 vs hex −1.27% 基线。
+>
 > > ## 工位侧 11-08 凌晨六/七：netgen 定论+决策矩阵六路线齐（管线决策=netgen 进生产）
 
 > - **netgen 优化器**：K=−8.26%（vs 基线 −13.48%，改善 5.2pp）——近壁质量机制方向再证实但不消除（形状优化治不了格心-壁面距离的结构性）。**管线决策：gen_mesh.py 加 Mesh.Optimize/OptimizeNetgen=1（一行白捡 5.2pp，fa47224）**；K 进 0.5% 阈仍需 Phase 3 的 cfMesh/snappyHex 或量化偏差披露。
