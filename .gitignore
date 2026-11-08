@@ -105,3 +105,4 @@ tpms/.verify/*.inp
 # specimens/ 仅 README 索引入库（STL 大文件仍被上面规则挡住）
 !specimens/README.md
 tpms/tpms-platform/shots/
+tpms/tpms-platform/tpms-*-verified.stl

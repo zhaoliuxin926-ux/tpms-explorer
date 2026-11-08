@@ -1,6 +1,11 @@
 # progress — 当前任务进度
 
-> ## 工位侧 11-08 凌晨五：近壁修复路线决策矩阵完成（gmsh BL 曲面源不存在）
+> ## 工位侧 11-08 凌晨六/七：netgen 定论+决策矩阵六路线齐（管线决策=netgen 进生产）
+
+> - **netgen 优化器**：K=−8.26%（vs 基线 −13.48%，改善 5.2pp）——近壁质量机制方向再证实但不消除（形状优化治不了格心-壁面距离的结构性）。**管线决策：gen_mesh.py 加 Mesh.Optimize/OptimizeNetgen=1（一行白捡 5.2pp，fa47224）**；K 进 0.5% 阈仍需 Phase 3 的 cfMesh/snappyHex 或量化偏差披露。
+> - **决策矩阵终态六路线**：tets −13.48%/snGrad 逐位同/netgen −8.26%/polyDual 崩溃/gmsh 4.15 BL 只支持曲线源（曲面源不存在）/hex −1.27%✓。
+>
+> > ## 工位侧 11-08 凌晨五：近壁修复路线决策矩阵完成（gmsh BL 曲面源不存在）
 
 > - **最小棱柱实验定论**：本机 gmsh 4.15 的 BoundaryLayer field 只支持曲线源（EdgesList/CurvesList 实测存在），**SurfacesList/FacesList 选项不存在=曲面源 3D BL 不可行**——OCC 路线的 gmsh 原生棱柱层证伪。
 > - **四路线决策矩阵终态**：①tets 均匀=−13.5%（加密不消除）②snGrad=逐位同（非旋钮）③polyDual=崩溃④gmsh 3D BL=不支持⑤**hex O-grid=−1.27% ✓（唯一有效，但结构化对 TPMS 曲面壁不通用）**。
