@@ -1,5 +1,10 @@
 # progress — 当前任务进度
 
+> ## 工位侧 11-08 凌晨四：hex 终审定案——CFD 线闭环（O-grid 78k 误差 −1.27%）
+
+> - **终审数据**：hex O-grid（78k，nRad30/nArc24/nAx60，non-ortho max 39.8）Ubar=0.9866，K=0.9566，**err=−1.27%** vs tet 同量级 −13.5%——同物理/同求解器/同方案，只换近壁结构误差塌缩 10 倍，**tet 近壁梯度高估诊断 100% 实锤，修复路线（结构化/棱柱近壁）验证有效**。Anchor 阶梯完整闭环：隔离→假说→修复验证。
+> - **TPMS 实体网格的近壁策略**（下批立项）：gmsh CAD 曲面+BoundaryLayer 棱柱层（OCC 路线，非宿舍证伪的离散 STL 路线），或关键区域 hex/棱柱混合；Anchor-1 的 hex case 已成为可用验证基准（blockMeshDict.hex+createPatchDict.hex+run_hex.sh 入库）。
+>
 > ## 工位侧 11-08 凌晨三：批次二收尾+E5 预算+git add -A 再犯（CI 守望中）
 
 > - **红队缺口全清零**：E5 联合算力预算落地（validateToolCalls 批次级 Σ periods³≤4096，探针 E5 案转回归断言 17/17+selftest 101/0）；E11 前夜已落地。
