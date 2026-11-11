@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TPMS Harness — Agent 驾驶舱</title>
+<style>
+  /* 驾驶舱恒暗——设计源：原型/harness-驾驶舱.html（2026-11-11 双栏 B 方案，两轮视觉走查定稿） */
+  :root{
+    --bg-0:#0b1220; --bg-1:#0f172a; --bg-2:#16213a;
+    --line:#233350;
+    --ink-1:#e2e8f0; --ink-2:#94a3b8; --ink-3:#5b6b85;
+    --accent:#22d3ee; --accent-deep:#0891b2;
+    --paper:#ffffff;
+    --ok:#34d399; --fail:#ff8a8a; --warn:#fbbf24;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    --r-s:6px; --r-m:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--sans);background:var(--bg-0);color:var(--ink-1);font-size:13px;line-height:1.55;overflow:hidden}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+  /* 顶栏 */
+  .topbar{height:46px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--bg-1);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:600;letter-spacing:.02em}
+  .brand svg{color:var(--accent)}
+  .brand small{color:var(--ink-3);font-weight:400;font-size:11px}
+  .topbar .spacer{flex:1}
+  .select,.tbtn{font-size:12px;padding:4px 10px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-2);color:var(--ink-1)}
+  .select:hover,.tbtn:hover{border-color:var(--accent-deep)}
+  .tbtn:active{transform:translateY(1px)}
+  .meter{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-2);padding:3px 10px;border:1px solid var(--line);border-radius:999px}
+  .meter .bar{width:56px;height:4px;border-radius:2px;background:var(--bg-2);overflow:hidden}
+  .meter .bar i{display:block;height:100%;width:0%;background:var(--accent);transition:width .3s}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);margin-left:4px;box-shadow:0 0 0 3px rgba(52,211,153,.15)}
+  .dot.busy{background:var(--warn);box-shadow:0 0 0 3px rgba(251,191,36,.15)}
+
+  /* 设置面板（顶栏下抽） */
+  .cfgrow{display:none;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--bg-1);border-bottom:1px solid var(--line)}
+  .cfgrow.open{display:flex}
+  .cfgrow input[type="text"],.cfgrow input[type="password"]{font-size:12px;padding:5px 9px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-0);color:var(--ink-1);outline:none;min-width:130px}
+  .cfgrow input:focus{border-color:var(--accent-deep)}
+  .nl-remember{font-size:11.5px;display:flex;gap:4px;align-items:center;color:var(--ink-2);white-space:nowrap}
+  .cfgsave{font-size:12px;padding:5px 14px;border-radius:var(--r-s);border:1px solid var(--accent-deep);color:var(--accent);background:rgba(34,211,238,.06)}
+  .cfgsave:hover{background:rgba(34,211,238,.12)}
+
+  /* 主体双栏 */
+  .main{flex:1;display:flex;min-height:0}
+  .chat{width:41%;min-width:380px;display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--bg-0);min-height:0}
+  .stage{flex:1;display:flex;flex-direction:column;background:var(--bg-1);min-width:0}
+
+  /* 轨迹流（签名元素：遥测脊+仪表块） */
+  .stream{flex:1;overflow-y:auto;padding:16px 18px 8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .user{align-self:flex-end;max-width:88%;margin:0 0 14px auto;background:var(--accent-deep);color:var(--paper);padding:8px 12px;border-radius:var(--r-m) var(--r-m) 3px var(--r-m)}
+  .entry{position:relative;padding-left:26px;margin-bottom:12px}
+  .entry::before{content:"";position:absolute;left:8px;top:11px;bottom:-13px;width:1px;background:var(--line)}
+  .entry:last-child::before{display:none}
+  .entry>.tick{position:absolute;left:2px;top:3px;width:13px;height:13px;border-radius:50%;border:1.6px solid var(--ink-3);color:var(--ink-3);display:grid;place-items:center;font-size:9px;font-family:var(--mono)}
+  .entry.tool>.tick{border-color:var(--accent);color:var(--accent)}
+  .entry.ok>.tick{border-color:var(--ok);color:var(--ok)}
+  .entry.fail>.tick{border-color:var(--fail);color:var(--fail)}
+  .entry.repair>.tick{border-color:var(--warn);color:var(--warn)}
+  .round{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-bottom:4px;letter-spacing:.04em}
+  .round b{color:var(--warn);font-weight:600}
+  .card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-m);padding:8px 11px;max-width:100%}
+  .card .name{font-family:var(--mono);font-size:12px;color:var(--ink-1);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .args{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:3px;word-break:break-all}
+  .res{font-family:var(--mono);font-size:11px;margin-top:5px;color:var(--ink-2);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+  .res.bad{color:var(--fail);background:rgba(255,110,110,.06);border-radius:4px;padding:3px 5px;margin-left:-5px}
+  .badge{font-size:10px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2)}
+  .badge.fail{border-color:var(--fail);color:var(--fail)}
+  .final{background:linear-gradient(135deg,rgba(34,211,238,.08),transparent 60%);border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:var(--r-m);padding:9px 12px;color:var(--ink-1)}
+  .errcard{border:1px solid var(--fail);background:rgba(248,113,113,.06);border-radius:var(--r-m);padding:8px 11px;font-size:12px;color:var(--ink-1);margin-bottom:12px}
+  .errcard b{color:var(--fail);font-family:var(--mono);font-size:11px}
+  .empty{border:1px dashed var(--line);border-radius:var(--r-m);padding:18px 16px;color:var(--ink-2);text-align:center;line-height:1.8}
+  .empty code{font-family:var(--mono);color:var(--accent)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;background:var(--bg-1)}
+  .chip{font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);background:var(--bg-0)}
+  .chip:hover{border-color:var(--accent-deep);color:var(--ink-1)}
+  .inputrow{flex:none;display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--bg-1)}
+  .inputrow input{flex:1;font:inherit;font-size:12.5px;padding:8px 11px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-0);color:var(--ink-1);outline:none;min-width:0}
+  .inputrow input:focus{border-color:var(--accent-deep)}
+  .send{padding:0 16px;border-radius:var(--r-s);background:var(--accent-deep);color:var(--paper);font-size:12.5px;font-weight:600}
+  .send:hover{filter:brightness(1.12)}
+  .send:active{transform:translateY(1px)}
+  .stop{padding:0 12px;border-radius:var(--r-s);border:1px solid var(--fail);color:var(--fail);font-family:var(--mono);font-size:11.5px;display:flex;align-items:center;gap:6px}
+  .stop .sq{width:8px;height:8px;background:var(--fail);border-radius:1px}
+  .stop:hover{background:rgba(248,113,113,.1)}
+  .stop[hidden]{display:none}
+
+  /* 画布坞 */
+  .tabs{flex:none;display:flex;gap:2px;padding:8px 16px 0;border-bottom:1px solid var(--line)}
+  .tab{font-size:12px;padding:6px 14px;border-radius:var(--r-s) var(--r-s) 0 0;color:var(--ink-2);border:1px solid transparent;border-bottom:none;position:relative;top:1px}
+  .tab:hover{color:var(--ink-1)}
+  .tab.on{background:var(--bg-1);border-color:var(--line);color:var(--accent)}
+  .tabpane{flex:1;min-height:0;display:none;padding:14px;overflow:auto}
+  .tabpane.on{display:block}
+  .viewport{height:100%;min-height:260px;border:1px solid var(--line);border-radius:var(--r-m);position:relative;background:var(--bg-0);overflow:hidden}
+  .viewport iframe{width:100%;height:100%;border:0;display:block}
+  .viewport .loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-3);font-size:12px}
+  .statbar{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:11.5px;color:var(--ink-2);padding:9px 13px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg-1);font-variant-numeric:tabular-nums}
+  .statbar b{color:var(--ink-1);font-weight:600}
+  .statbar .delta{color:var(--warn)}
+  .diag{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .diag .cell{border:1px solid var(--line);border-radius:var(--r-m);padding:9px 11px;background:var(--bg-1)}
+  .diag .cell .k{font-size:11px;color:var(--ink-3)}
+  .diag .cell .v{font-family:var(--mono);font-size:16px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .diag .cell .v.bad{color:var(--fail)}
+  .diag .cell .v.ok{color:var(--ok)}
+  .diag-empty{color:var(--ink-3);font-size:12px;padding:8px 2px}
+  .filelist{display:flex;flex-direction:column;gap:8px;max-width:460px}
+  .file{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg-1)}
+  .file .fname{font-family:var(--mono);font-size:12px;flex:1}
+  .file .meta{font-size:11px;color:var(--ink-3)}
+  .file .st{font-size:11px;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:1px 8px}
+  .file .st.rej{color:var(--fail);border-color:var(--fail)}
+  .exp-empty{color:var(--ink-3);font-size:12px;padding:8px 2px}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  @media (min-width:981px){
+    .topbar{padding:0 24px}
+    .chips{padding:0 24px 12px}
+    .inputrow{padding:12px 24px}
+  }
+  /* ≤980px：38vh 吸顶舞台 + 62vh 对话流 */
+  @media (max-width:980px){
+    .main{flex-direction:column-reverse}
+    .chat{width:100%;min-width:0;flex:1;height:auto;border-right:none;border-top:1px solid var(--line)}
+    .stage{height:38vh;flex:none}
+    .tab{padding:10px 14px;min-height:44px}
+    .tbtn,.select{min-height:40px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .chip{padding:7px 12px;min-height:38px}
+    .brand small{display:none}
+    .meter{display:none}
+    .statbar{margin-top:8px}
+    .viewport{min-height:150px}
+  }
+</style>
+  <script type="module" crossorigin src="./assets/harness-B1Mh6oRd.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/llm-provider-browser-ByAQfCAV.js">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 22V12M3 7l9 5 9-5"/></svg>
+      TPMS Harness <small>Agent 驾驶舱</small>
+    </div>
+    <div class="spacer"></div>
+    <span class="meter" title="本次指令算力预算（Σ periods³ + 512×verify ≤ 4096，Per-Prompt Run）">Σ <span id="budget-used">0</span><span class="bar"><i id="budget-bar"></i></span>4096</span>
+    <select class="select" id="provider" aria-label="Agent 后端">
+      <option value="rules">本地规则</option>
+      <option value="openai">OpenAI 兼容</option>
+      <option value="ollama">Ollama 本地</option>
+    </select>
+    <button class="tbtn" id="cfg-btn">设置</button>
+    <span class="dot" id="status-dot" title="就绪"></span>
+  </header>
+
+  <div class="cfgrow" id="cfgrow">
+    <input id="baseurl" type="text" placeholder="Base URL（默认 DeepSeek）" aria-label="端点地址">
+    <input id="model" type="text" placeholder="模型（默认 deepseek-chat）" aria-label="模型名">
+    <input id="key-input" type="password" placeholder="API Key（仅存本浏览器）" aria-label="API Key">
+    <label class="nl-remember"><input type="checkbox" id="key-remember">记住</label>
+    <button class="cfgsave" id="cfg-save">保存设置</button>
+  </div>
+
+  <div class="main">
+
+    <section class="chat" aria-label="对话轨迹">
+      <div class="stream" id="stream" aria-live="polite">
+        <div class="empty" id="empty-hint">
+          驾驶舱就绪——用一句自然语言下达设计任务，Agent 将在右侧画布构建并验证。<br>
+          <code>mesh → verify → 修复菜单 → 导出</code> 全程轨迹在此留痕。
+        </div>
+      </div>
+      <div class="chips">
+        <button class="chip">设计一个高孔隙 gyroid 支架（孔隙率 88%），并做制造检查</button>
+        <button class="chip">估算 diamond 孔隙率 75% 的力学指标</button>
+        <button class="chip">验证当前设计壁厚</button>
+      </div>
+      <div class="inputrow">
+        <input id="cmd" type="text" placeholder="描述设计目标，如：孔隙率 70% 的 diamond 支架并检查可制造性" aria-label="自然语言设计指令">
+        <button class="stop" id="stop-btn" hidden title="停止推理"><span class="sq"></span><span id="clock">0s</span></button>
+        <button class="send" id="send-btn">发送</button>
+      </div>
+    </section>
+
+    <section class="stage" aria-label="画布坞">
+      <div class="tabs" role="tablist">
+        <button class="tab on" data-pane="p3d" role="tab">3D 视口</button>
+        <button class="tab" data-pane="pdiag" role="tab">诊断</button>
+        <button class="tab" data-pane="pexp" role="tab">导出</button>
+      </div>
+      <div class="tabpane on" id="p3d">
+        <div class="viewport">
+          <iframe id="stage-frame" src="./index.html" title="TPMS 工程壳视口"></iframe>
+          <div class="loading" id="frame-loading">工程壳加载中…</div>
+        </div>
+        <div class="statbar" id="statbar">
+          <span id="stat-state">画布待命</span>
+        </div>
+      </div>
+      <div class="tabpane" id="pdiag">
+        <div class="diag-empty" id="diag-empty">尚无制造审计结果——发送含「制造检查/壁厚」的指令后，诊断网格在此呈现。</div>
+        <div class="diag" id="diag" hidden></div>
+      </div>
+      <div class="tabpane" id="pexp">
+        <div class="exp-empty" id="exp-empty">尚无导出物——指令中带「导出 STL」即在水密门通过后生成文件卡。</div>
+        <div class="filelist" id="filelist" hidden></div>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

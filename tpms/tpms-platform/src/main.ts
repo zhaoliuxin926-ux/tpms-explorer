@@ -39,8 +39,9 @@ import { DISPLAY_SCALE, effectiveMmFactor, hdResolution, l2Resolution } from './
 import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
 // 方向 A（2026-11-11）：NL 助手 LLM 合流——契约单源桥 + 浏览器 provider + Agent 循环
-import { TOOLS_SCHEMA } from './core/agent-contract';
-import { runAgent, type ToolImpl } from './core/agent-run';
+import { runAgent, type ToolImpl, type ToolExecResult } from './core/agent-run';
+import { agentListExec, agentEstimateExec } from './core/agent-tools-shared';
+import { serveBridge } from './core/iframe-bridge';
 import {
   createBrowserProvider, loadAgentCfg, saveAgentCfg, getByoKey, setByoKey,
   BrowserLlmError, DEFAULT_ENDPOINTS, DEFAULT_MODELS, type AgentCfg,
@@ -2087,139 +2088,115 @@ function agentClampPorosity(p: number): { pct: number; clamped: boolean } {
   return { pct: c, clamped: Math.abs(c - pct) > 1e-9 };
 }
 
+/** Agent 写态工具执行体（主壳直接执行；harness 壳经 iframe-bridge 驱动同一对函数——双壳单源） */
+async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecResult> {
+  const patches: Partial<AppState> = {};
+  const notes: string[] = [];
+  if (typeof args.type === 'string') patches.type = args.type as AppState['type'];
+  if (typeof args.porosity === 'number') {
+    const { pct, clamped } = agentClampPorosity(args.porosity);
+    patches.porosity = pct;
+    if (clamped) notes.push(`孔隙率 ${args.porosity} 已钳制到面板域 ${pct}%`);
+  }
+  if (typeof args.periods === 'number') {
+    const k = Math.min(5, Math.max(1, Math.round(args.periods)));
+    patches.cellSize = k;
+    if (k !== args.periods) notes.push(`周期数 ${args.periods} 已钳制到面板域 ${k}`);
+  }
+  if (typeof args.material === 'string') patches.material = args.material as AppState['material'];
+  if (typeof args.mode === 'string') patches.structureMode = args.mode as AppState['structureMode'];
+  if (typeof args.container === 'string') patches.containerShape = args.container as AppState['containerShape'];
+  setState(patches);
+  const sNew = getState();
+  syncUI(sNew);
+  updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
+  scheduleRebuild(false);
+  nlRebuildPending = true;
+  scheduleHdUpgrade();
+  let outNote = '';
+  if (typeof args.out === 'string' && args.out) {
+    // A3：同步等重建→水密门→导出（失败以 verifyFail 回流修复菜单）；超时兜底=挂起后台导出
+    const rebuilt = await awaitNextRebuild();
+    if (!rebuilt) {
+      nlPendingExport = { fmt: 'stl', name: args.out };
+      outNote = `；重建超时，已挂起后台导出 ${args.out}`;
+    } else {
+      const baseSummary = `${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${notes.length ? '；' + notes.join('；') : ''}`;
+      try {
+        await nlDoExport('stl', args.out);
+        return { ok: true, summary: `已导出 ${args.out}（水密门通过）——${baseSummary}` };
+      } catch (e) {
+        return {
+          ok: false,
+          verifyFail: true,   // 触发下一轮 apply_repair（降 periods/换族/调孔隙率）
+          summary: `导出被水密门拒绝——${e instanceof Error ? e.message : String(e)}。当前设计：${baseSummary}。请在修复菜单中选择补丁后重试`,
+        };
+      }
+    }
+  }
+  return {
+    ok: true,
+    summary: `已更新设计：${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize} ${sNew.structureMode} ${sNew.containerShape}（几何重建中）${notes.length ? '；' + notes.join('；') : ''}${outNote}`,
+  };
+}
+
+async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecResult> {
+  // design_verify 与 mesh 同槽位：先应用设计参数（无 out），再从新状态直接体素审计
+  await agentMeshExec({ type: args.type, porosity: args.porosity, periods: args.periods, material: args.material, mode: args.mode, container: args.container });
+  const s = getState();
+  if (s.model === 'strut') return { ok: false, summary: '线框模式无壁厚语义——制造检查仅支持曲面族' };
+  const unsupported = voxelUnsupportedReasons(s);
+  if (unsupported.length) return { ok: false, summary: `体素口径守卫拒绝：${unsupported.join('、')}（审计结果将不对应交付几何）` };
+  const Rmfg = Math.min(96, Math.max(24, Math.round(Number(args.resolution ?? 48))));
+  const exp = await loadExport();
+  const vox = exp.buildVoxelModel({
+    type: s.type, periods: s.cellSize, weights: s.weights,
+    structureMode: s.structureMode, containerShape: s.containerShape,
+    thickness: s.thickness, targetPorosity: s.porosity / 100, iso: 0,
+    customFormula: s.customFormula, stress: s.stress,
+  }, Rmfg);
+  const hMm = vox.hWc * effMm(s);
+  const { auditManufacturing } = await import('./physics/manufacturing-audit');
+  const rep = auditManufacturing(vox, hMm, { minWallMm: 0.4 });
+  const suggestions: string[] = [];
+  if (rep.warnings.length) suggestions.push('壁厚不足：优先降 periods 或换低谐波曲面族后重调 tpms_mesh；升 resolution 次之');
+  if (rep.mainPoreFraction < 0.999) suggestions.push(`孔隙未全连通（主域 ${(rep.mainPoreFraction * 100).toFixed(1)}%）——换族或降孔隙率`);
+  const verdict = rep.warnings.length === 0 ? 'pass' : 'fail';
+  return {
+    ok: true,
+    verifyFail: verdict === 'fail',   // A3-M4：触发下一轮有界修复菜单注入
+    summary: JSON.stringify({
+      verdict, stage: 'manufacturing-audit',
+      minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
+      closedDomains: rep.closedDomains, closedPoreFraction: Number((rep.closedPoreFraction * 100).toFixed(2)),
+      mainPoreFraction: Number((rep.mainPoreFraction * 100).toFixed(1)),
+      warnings: rep.warnings, suggestions, R: rep.R, minWallThresholdMm: 0.4,
+    }),
+  };
+}
+
 function buildAgentTools(): ToolImpl[] {
   return [
-    {
-      name: 'tpms_list',
-      write: false,
-      async exec() {
-        const { BASE_MODULUS, BASE_YIELD_STRENGTH } = await import('./physics/gibson-ashby');
-        const typeEnum = (TOOLS_SCHEMA.tools.find((t) => t.name === 'tpms_estimate')?.parameters as { properties?: { type?: { enum?: string[] } } })?.properties?.type?.enum ?? [];
-        const materials = Object.entries(BASE_MODULUS).map(([k, E]) => `${k}: E=${E}GPa σy=${BASE_YIELD_STRENGTH[k] ?? '?'}MPa`).join('；');
-        return { ok: true, summary: `曲面族 ${typeEnum.length} 个：${typeEnum.join(',')}。\n材料：${materials}。` };
-      },
-    },
-    {
-      name: 'tpms_estimate',
-      write: false,
-      async exec(args) {
-        const type = String(args.type ?? 'gyroid');
-        const p = Number(args.porosity ?? 0.75);
-        const material = String(args.material ?? 'tc4');
-        const { gibsonAshby, plateauStress, BASE_MODULUS, BASE_YIELD_STRENGTH } = await import('./physics/gibson-ashby');
-        const pct = p > 1 ? p : p * 100;
-        if (!(pct >= 0 && pct < 100)) return { ok: false, summary: `孔隙率口径非法：${p}` };
-        const rho = 1 - pct / 100;
-        const { E_Es, sigma_Es, C1 } = gibsonAshby(rho, type);
-        const plateau = plateauStress(rho, type);
-        const baseE = BASE_MODULUS[material] ?? BASE_MODULUS.tc4;
-        const baseS = BASE_YIELD_STRENGTH[material] ?? BASE_YIELD_STRENGTH.tc4;
-        return {
-          ok: true,
-          summary: JSON.stringify({
-            type, porosity: pct > 1 ? pct / 100 : pct, material,
-            E_GPa: Number((E_Es * baseE).toFixed(3)), yield_MPa: Number((sigma_Es * baseS).toFixed(2)),
-            plateau_MPa: plateau !== undefined ? Number((plateau * baseS).toFixed(2)) : null,
-            C1, caliber: 'Gibson-Ashby 解析工程口径（非 FEA）',
-          }),
-        };
-      },
-    },
-    {
-      name: 'tpms_mesh',
-      write: true,
-      async exec(args) {
-        const patches: Partial<AppState> = {};
-        const notes: string[] = [];
-        if (typeof args.type === 'string') patches.type = args.type as AppState['type'];
-        if (typeof args.porosity === 'number') {
-          const { pct, clamped } = agentClampPorosity(args.porosity);
-          patches.porosity = pct;
-          if (clamped) notes.push(`孔隙率 ${args.porosity} 已钳制到面板域 ${pct}%`);
-        }
-        if (typeof args.periods === 'number') {
-          const k = Math.min(5, Math.max(1, Math.round(args.periods)));
-          patches.cellSize = k;
-          if (k !== args.periods) notes.push(`周期数 ${args.periods} 已钳制到面板域 ${k}`);
-        }
-        if (typeof args.material === 'string') patches.material = args.material as AppState['material'];
-        if (typeof args.mode === 'string') patches.structureMode = args.mode as AppState['structureMode'];
-        if (typeof args.container === 'string') patches.containerShape = args.container as AppState['containerShape'];
-        setState(patches);
-        const sNew = getState();
-        syncUI(sNew);
-        updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
-        scheduleRebuild(false);
-        nlRebuildPending = true;
-        scheduleHdUpgrade();
-        let outNote = '';
-        if (typeof args.out === 'string' && args.out) {
-          // A3：同步等重建→水密门→导出（失败以 verifyFail 回流修复菜单）；超时兜底=挂起后台导出
-          const rebuilt = await awaitNextRebuild();
-          if (!rebuilt) {
-            nlPendingExport = { fmt: 'stl', name: args.out };
-            outNote = `；重建超时，已挂起后台导出 ${args.out}`;
-          } else {
-            const baseSummary = `${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${notes.length ? '；' + notes.join('；') : ''}`;
-            try {
-              await nlDoExport('stl', args.out);
-              return { ok: true, summary: `已导出 ${args.out}（水密门通过）——${baseSummary}` };
-            } catch (e) {
-              return {
-                ok: false,
-                verifyFail: true,   // 触发下一轮 apply_repair（降 periods/换族/调孔隙率）
-                summary: `导出被水密门拒绝——${e instanceof Error ? e.message : String(e)}。当前设计：${baseSummary}。请在修复菜单中选择补丁后重试`,
-              };
-            }
-          }
-        }
-        return {
-          ok: true,
-          summary: `已更新设计：${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize} ${sNew.structureMode} ${sNew.containerShape}（几何重建中）${notes.length ? '；' + notes.join('；') : ''}${outNote}`,
-        };
-      },
-    },
-    {
-      name: 'tpms_design_verify',
-      write: false,
-      async exec(args) {
-        // design_verify 与 mesh 同槽位：先应用设计参数（无 out），再从新状态直接体素审计
-        const meshTool = buildAgentTools().find((t) => t.name === 'tpms_mesh')!;
-        await meshTool.exec({ type: args.type, porosity: args.porosity, periods: args.periods, material: args.material, mode: args.mode, container: args.container });
-        const s = getState();
-        if (s.model === 'strut') return { ok: false, summary: '线框模式无壁厚语义——制造检查仅支持曲面族' };
-        const unsupported = voxelUnsupportedReasons(s);
-        if (unsupported.length) return { ok: false, summary: `体素口径守卫拒绝：${unsupported.join('、')}（审计结果将不对应交付几何）` };
-        const Rmfg = Math.min(96, Math.max(24, Math.round(Number(args.resolution ?? 48))));
-        const exp = await loadExport();
-        const vox = exp.buildVoxelModel({
-          type: s.type, periods: s.cellSize, weights: s.weights,
-          structureMode: s.structureMode, containerShape: s.containerShape,
-          thickness: s.thickness, targetPorosity: s.porosity / 100, iso: 0,
-          customFormula: s.customFormula, stress: s.stress,
-        }, Rmfg);
-        const hMm = vox.hWc * effMm(s);
-        const { auditManufacturing } = await import('./physics/manufacturing-audit');
-        const rep = auditManufacturing(vox, hMm, { minWallMm: 0.4 });
-        const suggestions: string[] = [];
-        if (rep.warnings.length) suggestions.push('壁厚不足：优先降 periods 或换低谐波曲面族后重调 tpms_mesh；升 resolution 次之');
-        if (rep.mainPoreFraction < 0.999) suggestions.push(`孔隙未全连通（主域 ${(rep.mainPoreFraction * 100).toFixed(1)}%）——换族或降孔隙率`);
-        const verdict = rep.warnings.length === 0 ? 'pass' : 'fail';
-        return {
-          ok: true,
-          verifyFail: verdict === 'fail',   // A3-M4：触发下一轮有界修复菜单注入
-          summary: JSON.stringify({
-            verdict, stage: 'manufacturing-audit',
-            minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
-            closedDomains: rep.closedDomains, closedPoreFraction: Number((rep.closedPoreFraction * 100).toFixed(2)),
-            mainPoreFraction: Number((rep.mainPoreFraction * 100).toFixed(1)),
-            warnings: rep.warnings, suggestions, R: rep.R, minWallThresholdMm: 0.4,
-          }),
-        };
-      },
-    },
+    { name: 'tpms_list', write: false, exec: () => agentListExec() },
+    { name: 'tpms_estimate', write: false, exec: (args) => agentEstimateExec(args) },
+    { name: 'tpms_mesh', write: true, exec: agentMeshExec },
+    { name: 'tpms_design_verify', write: false, exec: agentVerifyExec },
   ];
 }
+
+/** 双壳桥（方向 B1）：被嵌入时开桥——harness 壳经桥驱动同一套执行体（同源校验+重活滑动窗 cap 自守） */
+function wireHarnessBridge(): void {
+  if (window.parent === window) return;
+  serveBridge({
+    apply: agentMeshExec,
+    verify: agentVerifyExec,
+    'get-state': () => {
+      const s = getState();
+      return { ok: true, summary: `${s.type} p=${s.porosity}% k=${s.cellSize} ${s.structureMode} ${s.containerShape}` };
+    },
+  });
+}
+wireHarnessBridge();
 
 /** Agent 设置 UI（provider/端点/模型/Key）+ 运行秒表/停止 */
 function wireAgentCfgUi(): void {

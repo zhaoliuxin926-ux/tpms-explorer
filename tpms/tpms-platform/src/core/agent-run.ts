@@ -35,7 +35,7 @@ export interface ToolImpl {
 export type AgentEvent =
   | { type: 'round'; round: number; repairMode: boolean }
   | { type: 'tool-start'; name: string; digest: string }
-  | { type: 'tool-end'; name: string; result: ToolExecResult }
+  | { type: 'tool-end'; name: string; result: ToolExecResult; budgetUsed: number }
   | { type: 'repair-applied'; patches: Record<string, unknown>; reason: string }
   | { type: 'llm-error'; code: string; message: string }
   | { type: 'budget-stop'; used: number; limit: number }
@@ -153,7 +153,7 @@ export async function runAgent(userText: string, deps: RunDeps): Promise<void> {
         try { res = await impl.exec(c.arguments); }
         catch (e) { res = { ok: false, summary: `执行异常：${e instanceof Error ? e.message : String(e)}` }; }
       }
-      onEvent({ type: 'tool-end', name: c.name, result: res });
+      onEvent({ type: 'tool-end', name: c.name, result: res, budgetUsed });
       if (c.name === 'tpms_design_verify' && res.verifyFail) pendingRepair = true;
       messages.push({ role: 'tool', tool_call_id: toolCallId(out.toolCalls[i], i), content: res.summary });
     }

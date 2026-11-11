@@ -192,6 +192,20 @@ console.log('\n[E] M4 修复循环（fail→repair→pass / unreachable / 越界
   }
 }
 
+// ══ F. 双壳 iframe 桥（方向 B1：同源/嵌入校验/重活 cap/双壳单源执行体）══
+console.log('\n[F] 双壳 iframe 桥接线（结构级）');
+{
+  const bridgeSrc = readFileSync(join(PLATFORM, 'src/core/iframe-bridge.ts'), 'utf8');
+  check('F1 桥服务端同源+嵌入双校验', bridgeSrc.includes('e.origin !== location.origin') && bridgeSrc.includes('window.parent === window'));
+  check('F2 重活滑动窗 cap（Σ≤4096/60s，apply=periods³·verify=512）', bridgeSrc.includes('CAP_BUDGET: 4096') && bridgeSrc.includes('CAP_WINDOW_MS: 60_000') && bridgeSrc.includes('? 512 :'));
+  const mainSrc2 = readFileSync(join(PLATFORM, 'src/main.ts'), 'utf8');
+  check('F3 工程壳被嵌入时开桥且复用同源执行体', mainSrc2.includes('wireHarnessBridge') && mainSrc2.includes('serveBridge({') && mainSrc2.includes('apply: agentMeshExec') && mainSrc2.includes('verify: agentVerifyExec'));
+  const harnessSrc = readFileSync(join(PLATFORM, 'src/harness-main.ts'), 'utf8');
+  check('F4 驾驶舱壳经桥驱动+规则兜底经桥应用', harnessSrc.includes('bridge.attach()') && harnessSrc.includes("bridge.request('apply'") && harnessSrc.includes("bridge.request('verify'") && harnessSrc.includes('parseNL'));
+  const viteSrc = readFileSync(join(PLATFORM, 'vite.config.ts'), 'utf8');
+  check('F5 双入口构建（index+harness）', viteSrc.includes('harness: resolve('));
+}
+
 console.log(`\n== AGENT-BRIDGE: ${passCount} PASS / ${failCount} FAIL ==`);
 if (failures.length) { console.log('失败项：\n - ' + failures.join('\n - ')); process.exitCode = 1; }
 try { rmSync(BUNDLE); rmSync(entry); } catch { /* 临时文件清理尽力 */ }

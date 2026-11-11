@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 // MIT 合规插件（2026-09-29）：esbuild minify 会剥离 rollup banner 与源内 legal 注释
 //（banner/legalComments 两路均被吞，实证）——closeBundle 后置注入是唯一确定路径，
@@ -40,6 +40,11 @@ export default defineConfig({
     // Three.js 被单独拆为 vendor chunk，体积天然偏大；提升阈值避免无意义告警
     chunkSizeWarningLimit: 800,
     rollupOptions: {
+      // 方向 B1（2026-11-11）：双入口——index.html（工程壳）+ harness.html（Agent 驾驶舱壳）
+      input: {
+        main: resolve('index.html'),
+        harness: resolve('harness.html'),
+      },
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/three')) return 'three';
