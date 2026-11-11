@@ -13,8 +13,8 @@
 > - **形态=network（solid）终态**：拓竹 P1S FDM + PLA + 0.2 喷嘴。打印建议单 docs/fdm-print-guide.md（壁圈 2-3/层高 0.08-0.12/免支撑/最细杆 ≥0.5mm 红线）。**首件验证件已生成：specimens/print-verify_k3_G60_24mm.stl**（24mm k3 粗杆），正式标定件 specimens/S1_G60.stl 系 32 件全齐。
 > - **sheet 标定链 B/C/D 不启动**（FDM 壁厚下限裁决）。
 >
-> ### 用户侧行动卡（唯一剩余）
-> ①打印首件验证工艺 → ②S1_G60 上机压缩 → ③CSV 回传（fit-batch 契约）→ 反演+幂律叠图自动跑。
+> ### 用户侧行动卡（**2026-11-11 挂起**：用户拍板近期不上机，移出行动卡；CSV 回传→反演+幂律叠图链路保持就绪，随时可恢复）
+> ①打印首件验证工艺 → ②S1_G60 上机压缩 → ③CSV 回传（fit-batch 契约）。
 >
 > ### 工程侧剩余（按需立项，非阻塞）
 > - UI：全部三批+图标一致化完成，**无遗留**。LLM E2 超时缓解（小件，需 key 消耗）可选。
@@ -29,6 +29,14 @@
 > 5. **git add -A 禁手**（二犯）：提交前 status 明细必查。
 > 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
 > 7. **CFD 量纲**：驱动幅度须高于残差地板 3+ 量级；v13 语法外部声称必实测。
+>
+> ## 工位侧 11-11：Gemini 平台化咨询回执（参照系=deepseek-harness 开源平台；只出回执不立项，既定优先级不变）
+>
+> - **背景**：用户代贴 Gemini（以 deepseek-harness 开源 Agent 平台为借鉴参照）基于 platform/index.html 的"四大差距"诊断+Sim-Harness 改造建议。ZCode 核实：DOM 事实基本准确（31 抽屉非 29、nl 面板尺寸/单步规则解析属实），**关键勘误=M4 自愈闭环（tpms-driver 有界菜单修复+declare_unreachable）已在 CLI 线生产态**——真缺口是"两线合流"非"从零建"。
+> - **裁定**（回执 collab/gemini/2026-11-11-agent-platform-consult-reply.md）：差距1 交互主次=真差距但属产品定位决策；差距2=半真（闭环已在 CLI）；微内核插件化+本地 CAE 桥**不立项**（48 门锚拆散/零后端定位冲突，sim/ 管线已承担真跑）。
+> - **收窄路线**：A=Web NL 接 LLM function-calling+浏览器 ToolRegistry（前置卡点：paas/v4 CORS 未实测、key localStorage 纪律需拍板）→ B=harness.html 双壳（A 为前置）→ C 不立项。**用户拍板：本轮不立项，择期 A；既定优先（snappyHex 终判/S1 上机）不变。** 已向 Gemini 出三问（Web 合流最小方案/微内核可证伪判据/双壳移动端不回退）。
+> - **第二轮（Gemini 终答已归档处置，`collab/gemini/2026-11-11-agent-platform-gemini-verdict.md`）**：接受全部勘误裁定；Q1 设计基线采纳（单源 schema-core.mjs／`__active_viewport__` 冲突锁／五类错误分类／四门禁增补）——两处修正（vite 路径 `../agent` 非 `../../`；E11 语义"整批拒 vs 重复者拒首个保留"待对齐）+ 一处实质分歧登记（**浏览器 45s 总超时 vs CLI E2 教训 170s thinking 长尾**，立项时用 E2 数据重定）；Q2 三判据（异构本体≥3/协作者>2/首屏 5MB·3s）登记备查；Q3 移动端 38vh/62vh 方案留方向 B。**参照系核实：deepseek-harness 官方仓真实（MIT/Cordis/`npx @deepseek-ai/dsh web`/developer preview），可借鉴 docs/architecture.md 但不引入 Cordis 依赖。**
+> - **第三轮定案（同日，用户拍板）**：①S1 上机**挂起**（近期不上机，链路保持就绪）；②**方向 A 插队启动**（"想把 agent 平台做出来"），snappyHex 顺延；③三笔修正定案（E11 对齐 8d1bddb「首个保留/重复者拒」非整批连坐；浏览器总超时 170s+秒表+手动停止；vite 路径 `../agent`）；④**预算窗口定案=Per-Prompt Autonomous Run**（一次发送驱动的 1..maxRounds 跨轮累计不重置，超限熔断该 Run；Run 结束交还人类后重置；防连发滑动窗口 60s≤8192）。设计输入包齐备，A1（schema-core.mjs 抽离+CORS 实测）当日开工。
 >
 > ---
 > ## 以下为 2026-11-07/08 会话历史段（按时间倒序，查阅用）
