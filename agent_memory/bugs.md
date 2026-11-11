@@ -43,6 +43,13 @@
 
 ## 二、开放风险（按日期）
 
+## 2026-11-11 浏览器 design_verify 的 minWallMm.medial=NaN 口径（小瑕，非阻塞）
+
+- **现象**：agent e2e 联调（gyroid p88 k3 R48）中 design_verify 结构化 JSON 输出 `minWallMm:null`——根因=薄壁端固相体素全为表面邻接、medial EDT 无局部极大点 → `rep.minWallMm.medial` 为 NaN，`Number(NaN.toFixed(3))` → `JSON.stringify(NaN)` 序列化为 null。
+- **影响**：verdict 判定不经此值（rep.warnings 驱动），行为正确；仅 LLM 消费方读到 null 可能困惑（与"未测量"不可区分）。
+- **处置**：低优先——后续把 NaN 归一为字符串 "n/a（薄壁无中面采样点）" 或在 summary 附注；制造检查 UI 卡（f2 格式化）显示 "—" 已免疫。
+
+
 ## 2026-11-08 引导改版覆盖缺口（✅ 已修复并实证）
 
 - **初判有误已纠正**：platform 引导**有门覆盖**——fix_check（工程版接线 28 项，测 docs/platform:4811），不是 verify（verify 测 docs/app.html 冻结教学版）。教训修正版：**改 onboarding 前先确认哪个门测哪个 artifact**（verify=教学版 / fix_check=platform），本轮曾把协同做在 verify 上导致 CI 三平台红（fix_check 3 断言失配+GUARD 25<28）。已协同 fix_check 三断言至 3 步动线，本地 28/28 实证。
