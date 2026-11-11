@@ -163,8 +163,11 @@
 ### 事实口径修正（不改变结论）
 - "349 项文档审计锚定 31 抽屉"口径混：docs_consistency 349=全仓文档断言；platform DOM 锚=fix_check 28 项（verify 27 测的是冻结教学版 docs/app.html，非 platform——改 onboarding 前必查对应门的既有纪律）。
 
-### 待验证卡点（不变）
-- 智谱 paas/v4 浏览器 CORS（Gemini 方案默认可配，未证——方向 A 第一验证步）。
+### 待验证卡点
+- ~~智谱 paas/v4 浏览器 CORS~~ **已验证（2026-11-11 当日，ZCode 五组实测）**：
+  - **智谱全线浏览器直连=死路**：paas/v4 与 anthropic 通道第三方 Origin preflight 均无 ACA 头；anthropic 实响带 `anthropic-dangerous-direct-browser-access` 时有 ACAO 回显但预检仍拦；自域 Origin（open.bigmodel.cn）对照拿到全套 ACA 头=**自域白名单机制实证**；z.ai 国际端点同样拒；官方文档+社区案例佐证设计为服务端调用。
+  - **GO 端点**：DeepSeek（api.deepseek.com，Origin 回显+credentials=true）与 OpenRouter（ACAO `*`+全头）；本地 Ollama（`OLLAMA_ORIGINS`）。
+  - 处置：A2 云通道=任意 CORS 放行的 OpenAI 兼容端点（provider 抽象下端点即配置项）；智谱 Coding Plan key 留 CLI/回归侧。
 
 ### 参照系核实（ZCode 实测 2026-11-11）
 - `deepseek-ai/deepseek-harness` 官方仓真实存在：MIT、"Everything is a Plugin"、Cordis（cordiverse/cordis，arXiv:2608.25512）、`npx @deepseek-ai/dsh web`（127.0.0.1:3080）、Desktop 形态、developer preview（官方声明将有破坏性变更）、生态活跃（插件市场/awesome 列表/第三方桌面版）。原诊断的模式 B 引用真实。**方向 A/B 设计时可借鉴其 `docs/architecture.md` 的接口分层，但不引入 Cordis 运行时依赖**（与"微内核不立项"裁定一致）。

@@ -10,6 +10,9 @@
  *   - OllamaProvider：POST /api/chat（支持 tools/function-calling）
  *   - 输出拦截器：validateToolCalls() 逐槽位过 schema 校验（越界拒绝），非法值 → 结构化拒绝
  *
+ * 2026-11-11 方向 A 抽离：validateToolCalls / schemaToOllamaTools 迁至 schema-core.mjs
+ *（零 Node 依赖单源模块，浏览器端 Vite 打包同源），此处转出口保持既有 import 路径兼容。
+ *
  * 用法：
  *   node llm-agent.mjs --provider ollama --model qwen2.5:7b "设计一个孔隙率 75% 的 Gyroid 骨支架"
  */
@@ -17,175 +20,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export { validateToolCalls, schemaToOllamaTools } from './schema-core.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 // ── Schema 加载 ──────────────────────────────────────────────────
 export function loadToolsSchema() {
   return JSON.parse(readFileSync(join(HERE, 'tools.schema.json'), 'utf8'));
-}
-
-// ── 输出拦截器：LLM 产出 → schema 校验（越界拒绝）──────────────────────────
-
-/** 递归校验单值：number/integer 严格类型，string 支持 enum/pattern（路径狱），object/array 递归子 schema */
-function validateValue(toolName, key, spec, v, errors) {
-  if (spec.type === 'number' || spec.type === 'integer') {
-    if (typeof v !== 'number') { errors.push(`tool ${toolName}.${key}: 须为 JSON number（收到 ${v === null ? 'null' : typeof v}）`); return; }
-    if (!Number.isFinite(v)) { errors.push(`tool ${toolName}.${key}: 非有限数字`); return; }
-    if (spec.minimum !== undefined && v < spec.minimum) { errors.push(`tool ${toolName}.${key}: ${v} < minimum ${spec.minimum}`); return; }
-    if (spec.maximum !== undefined && v > spec.maximum) { errors.push(`tool ${toolName}.${key}: ${v} > maximum ${spec.maximum}`); return; }
-    if (spec.exclusiveMinimum !== undefined && v <= spec.exclusiveMinimum) { errors.push(`tool ${toolName}.${key}: ${v} ≤ exclusiveMinimum ${spec.exclusiveMinimum}`); return; }
-    if (spec.exclusiveMaximum !== undefined && v >= spec.exclusiveMaximum) { errors.push(`tool ${toolName}.${key}: ${v} ≥ exclusiveMaximum ${spec.exclusiveMaximum}`); return; }
-    if (spec.type === 'integer' && !Number.isInteger(v)) { errors.push(`tool ${toolName}.${key}: ${v} 非整数`); return; }
-    return v;
-  }
-  if (spec.type === 'string') {
-    if (typeof v !== 'string') { errors.push(`tool ${toolName}.${key}: 须为 string（收到 ${v === null ? 'null' : typeof v}）`); return; }
-    if (spec.enum && !spec.enum.includes(v)) { errors.push(`tool ${toolName}.${key}: "${v}" 不在 enum [${spec.enum.join(',')}]`); return; }
-    if (spec.pattern && !new RegExp(spec.pattern).test(v)) {
-      errors.push(`tool ${toolName}.${key}: 不满足 schema pattern ${spec.pattern}（out 类槽位：单段安全文件名 + 强制 .stl 后缀 + 拒 Win 设备名；design 读路径：单段禁分隔符/..）`);
-      return;
-    }
-    return v;
-  }
-  if (spec.type === 'boolean') {
-    if (typeof v !== 'boolean') { errors.push(`tool ${toolName}.${key}: 须为 boolean（收到 ${v === null ? 'null' : typeof v}）`); return; }
-    return v;
-  }
-  if (spec.type === 'array') {
-    if (!Array.isArray(v)) { errors.push(`tool ${toolName}.${key}: 须为 array`); return; }
-    if (spec.minItems !== undefined && v.length < spec.minItems) { errors.push(`tool ${toolName}.${key}: 元素数 ${v.length} < minItems ${spec.minItems}`); return; }
-    if (spec.maxItems !== undefined && v.length > spec.maxItems) { errors.push(`tool ${toolName}.${key}: 元素数 ${v.length} > maxItems ${spec.maxItems}`); return; }
-    return v.map((item, i) => validateValue(toolName, `${key}[${i}]`, spec.items ?? {}, item, errors));
-  }
-  if (spec.type === 'object') {
-    if (typeof v !== 'object' || v === null || Array.isArray(v)) { errors.push(`tool ${toolName}.${key}: 须为 object`); return; }
-    const props = spec.properties ?? {};
-    if (spec.additionalProperties === false) {
-      for (const k of Object.keys(v)) {
-        if (!Object.hasOwn(props, k)) errors.push(`tool ${toolName}.${key}: 未知属性 "${k}"`);
-      }
-    }
-    // 嵌套必填：required 只在顶层查过曾放过 isoGrad 缺 values（拦截器通过后 runCli.values.join 裸崩）——
-    // 任何层深的 object schema 都必须自查 required
-    for (const r of spec.required ?? []) {
-      if (!Object.hasOwn(v, r)) errors.push(`tool ${toolName}.${key}: 缺必填 "${r}"`);
-    }
-    const out = {};
-    for (const [k, sub] of Object.entries(props)) {
-      if (!Object.hasOwn(v, k)) continue;
-      out[k] = validateValue(toolName, `${key}.${k}`, sub, v[k], errors);
-    }
-    return out;
-  }
-  return v; // 未声明类型的槽位：原样放行（schema 不应有此类槽位）
-}
-
-/**
- * 验证 LLM 返回的 toolCalls 是否只填了 schema 允许的槽位且数值在界内。
- * @returns {{ ok: true, calls: Array } | { ok: false, errors: string[] }}
- */
-export function validateToolCalls(toolCalls, schema) {
-  const errors = [];
-  // 注册面用 Map：普通对象会被 __proto__/constructor/hasOwnProperty 等原型链键
-  // 穿透「不在注册面」truthy 检查（红队 D H-1 实证 ACCEPTED），Map.get 无此面
-  const toolsByName = new Map(schema.tools.map((t) => [t.name, t]));
-  const cleaned = [];
-
-  // 2026-10-02 复审 M-1：顶层非数组（网络面 tool_calls:"abc" 形态）此前裸崩 exit 1——
-  // 与元素级守卫同型收口，结构化拒绝保契约 exit 2
-  if (toolCalls !== undefined && toolCalls !== null && !Array.isArray(toolCalls)) {
-    errors.push(`toolCalls 须为数组（收到 ${typeof toolCalls}）`);
-    return { ok: false, errors };
-  }
-  const calls = toolCalls ?? [];
-  // E11 批次写写冲突（2026-11-07 红队定案）：同批次同 out 路径双调用=串行执行后者静默覆盖前者
-  const outPaths = new Map();
-  // E5 联合算力预算（2026-11-08 落地）：跨调用组合爆炸防护——Σ periods³ ≤ 4096
-  // （=单调用 schema 上限 12³ 的 2.4 倍；64×periods5=8000 被拒、8×periods8=4096 恰达上限；阈值随性能数据可调）
-  let heavyBudget = 0;
-  if (calls.length > 64) {
-    errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
-    return { ok: false, errors };
-  }
-  for (const [i, call] of calls.entries()) {
-    // 2026-10-02 审查 M-1：数组含 null/非对象元素此前裸崩 exit 1（openai/ollama 网络面
-    // tool_calls:[null] 实证可达）——循环首行守卫，结构化拒绝保契约 exit 2
-    if (call === null || typeof call !== 'object') {
-      errors.push(`tool call #${i}: 须为 object（收到 ${call === null ? 'null' : typeof call}）`);
-      continue;
-    }
-    const name = call.function?.name ?? call.name;
-    // 工具名形状校验：注册面全是 snake_case，畸形/原型链键名直接结构化拒绝
-    if (typeof name !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(name)) {
-      errors.push(`tool ${name}: 非法工具名形状（须 snake_case）`);
-      continue;
-    }
-    let args;
-    try {
-      args = typeof call.function?.arguments === 'string'
-        ? JSON.parse(call.function.arguments)
-        : (call.function?.arguments ?? call.arguments ?? {});
-    } catch (e) {
-      errors.push(`tool ${name}: arguments 非法 JSON — ${e.message}`);
-      continue;
-    }
-    // 标量/数组 arguments（畸形 LLM 产出）结构化拒绝，不得静默吞成空参数或裸崩
-    if (typeof args !== 'object' || args === null || Array.isArray(args)) {
-      errors.push(`tool ${name}: arguments 须为 JSON object（收到 ${args === null ? 'null' : typeof args}）`);
-      continue;
-    }
-
-    const tool = toolsByName.get(name);
-    if (!tool) {
-      errors.push(`tool ${name}: 不在 tools.schema.json 注册面`);
-      continue;
-    }
-
-    const props = tool.parameters?.properties ?? {};
-    const required = tool.parameters?.required ?? [];
-    const additional = tool.parameters?.additionalProperties;
-    const errBefore = errors.length;
-
-    // 未知属性拒绝（Object.hasOwn 防原型链键名绕过）
-    if (additional === false) {
-      for (const k of Object.keys(args)) {
-        if (!Object.hasOwn(props, k)) errors.push(`tool ${name}: 未知属性 "${k}"`);
-      }
-    }
-    // 必填检查
-    for (const k of required) {
-      if (!Object.hasOwn(args, k)) errors.push(`tool ${name}: 缺必填 "${k}"`);
-    }
-
-    // 逐属性递归校验
-    const validated = {};
-    for (const [k, spec] of Object.entries(props)) {
-      if (!Object.hasOwn(args, k)) continue;
-      const v = validateValue(name, k, spec, args[k], errors);
-      if (errors.length === errBefore) validated[k] = v;
-    }
-
-    if (errors.length === errBefore && typeof validated.periods === 'number' && ['tpms_mesh', 'tpms_scenario', 'tpms_pareto'].includes(name)) {
-      heavyBudget += validated.periods ** 3;
-    }
-
-    // 批次内 out 路径冲突检测（重复者拒、首个保留——保守语义）
-    if (errors.length === errBefore) {
-      for (const [k, v] of Object.entries(validated)) {
-        if (k === 'out' && typeof v === 'string') {
-          const prev = outPaths.get(v);
-          if (prev !== undefined) errors.push(`tool ${name}: 输出路径 "${v}" 与本批次调用 #${prev} 重复（写写冲突拒绝，红队 E11）`);
-          else outPaths.set(v, i);
-        }
-      }
-    }
-
-    // 逐调用错误归属：本调用无新错误才放行执行
-    if (errors.length === errBefore) cleaned.push({ name, arguments: validated });
-  }
-
-  if (heavyBudget > 4096) errors.push(`批次算力预算超限（Σ periods³=${heavyBudget} > 4096，E5 联合预算——合法顶格组合也会耗尽宿主资源）`);
-  return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned };
 }
 
 // ── Provider 抽象 ────────────────────────────────────────────────
@@ -254,7 +95,7 @@ export class OllamaProvider extends LLMProvider {
 export class OpenAICompatProvider extends LLMProvider {
   /**
    * @param {{ baseUrl?: string, apiKey?: string, model?: string, temperature?: number, timeoutMs?: number }} opts
-   * baseUrl 须含版本段（如 https://open.bigmodel.cn/api/paas/v4）；key 走环境变量或 --api-key，不得入库
+   * baseUrl 须含版本段（如 https://open.bigmodel.cn/api/paas/v4 或 https://api.deepseek.com）；key 走环境变量或 --api-key，不得入库
    */
   constructor(opts = {}) {
     super();
@@ -306,6 +147,8 @@ export class OpenAICompatProvider extends LLMProvider {
 //（open.bigmodel.cn/api/anthropic，Claude Code 类工具的接入路径），不抵扣开放平台
 // paas/v4 按量通道——同 key 在 paas/v4 调 glm-5.3 得 429/1113，在 anthropic 通道成功。
 // 本类让订阅用户零额外成本跑满血模型回归。
+// 注意（2026-11-11 CORS 实测）：open.bigmodel.cn 网关 CORS 为自域白名单（第三方 Origin
+// preflight 无 ACA 头），浏览器直连不可达——本通道仅限 CLI/服务端使用。
 export class AnthropicCompatProvider extends LLMProvider {
   /**
    * @param {{ baseUrl?: string, apiKey?: string, model?: string, temperature?: number, timeoutMs?: number, maxTokens?: number }} opts
@@ -423,16 +266,4 @@ export class MockProvider extends LLMProvider {
     }
     return { toolCalls: this.preset.toolCalls ?? [], raw: this.preset.raw ?? '' };
   }
-}
-
-// ── tools.schema.json → OpenAI/Ollama tools 格式 ─────────────────
-export function schemaToOllamaTools(schema) {
-  return schema.tools.map((t) => ({
-    type: 'function',
-    function: {
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    },
-  }));
 }

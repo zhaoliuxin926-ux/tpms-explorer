@@ -351,15 +351,16 @@ for (const [label, args] of [
   JSON.stringify(dvP.material.enum) === JSON.stringify(tool('tpms_estimate').parameters.properties.material.enum)
     ? ok('design_verify ≡ estimate material enum') : bad('design_verify/estimate material enum 不一致');
   // 闭环不变量：driver 修复菜单的 mode 域 ⊆ 初始槽位 mode 域（修复不得越出初始声明域）
-  const drvSrc = readFileSync(join(HERE, 'tpms-driver.mjs'), 'utf8');
-  const mRepair = drvSrc.match(/const TYPES = \[([^\]]+)\]/);
+  // 2026-11-11 方向 A 抽离：修复菜单 TYPES/REPAIR_TOOL 单源迁至 schema-core.mjs，静态锚同步改指
+  const drvSrc = readFileSync(join(HERE, 'schema-core.mjs'), 'utf8');
+  const mRepair = drvSrc.match(/const REPAIR_TYPES = \[([^\]]+)\]/);
   const drvTypes = mRepair ? mRepair[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')) : [];
   JSON.stringify(drvTypes) === JSON.stringify(dvP.type.enum)
     ? ok('driver 修复菜单 TYPES ≡ schema type enum（跨实现静态哨兵）') : bad('driver/schema type enum 漂移', `drv=${drvTypes.length} schema=${dvP.type.enum.length}`);
   // 红队 C C-10：REPAIR_TOOL 非 type 槽位漂移曾无哨兵（porosity 口径分裂/mode 缺项正是发生地）——
   // driver REPAIR_TOOL.patches 与 tools.schema 初始槽位逐项静态对拍
   {
-    const drvSrc2 = readFileSync(join(HERE, 'tpms-driver.mjs'), 'utf8');
+    const drvSrc2 = readFileSync(join(HERE, 'schema-core.mjs'), 'utf8');
     const rt = drvSrc2.match(/patches: \{[\s\S]*?\n        \},/);
     if (!rt) bad('REPAIR_TOOL.patches 静态提取失败');
     else {
@@ -370,8 +371,8 @@ for (const [label, args] of [
       const inline = rpCode.match(/type:\s*\{[^}]*enum:\s*\[([^\]]*)\]/);
       if (inline) {
         rpTypes = inline[1].split(',').map((x) => x.trim().replace(/'/g, ''));
-      } else if (/enum:\s*TYPES\b/.test(rpCode)) {
-        const drvTypesM = drvSrc2.match(/const TYPES = \[([^\]]+)\]/);
+      } else if (/enum:\s*REPAIR_TYPES\b/.test(rpCode)) {
+        const drvTypesM = drvSrc2.match(/const REPAIR_TYPES = \[([^\]]+)\]/);
         rpTypes = drvTypesM
           ? drvTypesM[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
           : [];

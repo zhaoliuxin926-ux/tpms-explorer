@@ -16,42 +16,12 @@ import { spawnSync } from 'node:child_process';
 import { writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  validateToolCalls,
-  OllamaProvider, OpenAICompatProvider, AnthropicCompatProvider,
-} from './llm-provider.mjs';
+import { OllamaProvider, OpenAICompatProvider, AnthropicCompatProvider } from './llm-provider.mjs';
+// 契约校验核与修复菜单单源（2026-11-11 方向 A 抽离，schema-core.mjs 头注）
+import { validateToolCalls, REPAIR_TOOL } from './schema-core.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TPMS = join(HERE, 'tpms.mjs');
-
-// ── 修复动作 schema（有界策略菜单；validateToolCalls 同源校验）──
-const TYPES = ['gyroid', 'diamond', 'schwarz', 'neovius', 'iwp', 'frd', 'lidinoid', 'splitp', 'octo', 'karcher', 'fks', 'fky', 'gprime', 'fcks', 'dprime', 'dp', 'dd', 'dg', 'fcky', 'cdd', 'slotp', 'fs', 'qstar', 'ws', 'strutbcc', 'strutoctet'];
-const REPAIR_TOOL = {
-  name: 'apply_repair',
-  description: '根据 verify 失败诊断选择下一轮修复。规则：水密/非流形失败（薄壁自触族）优先降 periods 或换曲面族；分辨率不足优先提 resolution（≤128）；参数层错误按 paramErrors 逐项修正；确定不可达（如 cylinder+diamond 深水区）才 declare_unreachable。',
-  parameters: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['action', 'reason'],
-    properties: {
-      action: { type: 'string', enum: ['patch_design', 'declare_unreachable'] },
-      patches: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          type: { type: 'string', enum: TYPES },
-          porosity: { type: 'number', minimum: 0.05, maximum: 0.99, description: '目标孔隙率，0-1 小数口径（diag 的 designNormalized.porosity 同口径；勿用百分数）' },
-          periods: { type: 'integer', minimum: 1, maximum: 12 },
-          resolution: { type: 'integer', minimum: 48, maximum: 128 },
-          container: { type: 'string', enum: ['cube', 'cylinder'] },
-          mode: { type: 'string', enum: ['solid_network', 'shell', 'gradient_shell'] },
-          material: { type: 'string', enum: ['tc4', 'polymer', 'thermal'] },
-        },
-      },
-      reason: { type: 'string' },
-    },
-  },
-};
 
 function parseArgs(argv) {
   const a = { _: [] };
