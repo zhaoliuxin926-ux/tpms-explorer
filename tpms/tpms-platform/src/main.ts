@@ -1946,6 +1946,19 @@ let nlPendingExport: { fmt: 'stl' | '3mf'; name?: string } | null = null;  // na
 let nlRebuildPending = false;  // NL 改参触发的重建进行中（完成时回执）
 
 const NL_LOG_KEY = 'tpms.nl.log';
+
+// ── A3：Agent mesh 导出等待器——重建完成点（runPendingNLExport 入口）唤醒 ──
+// 浏览器 M4 信号面补全：带 out 的 mesh 调用同步等到重建完成后过水密门再导出，
+// 水密失败以 verifyFail 回流修复循环（对齐 CLI verify 含水密门的语义）。
+let nlRebuildWaiters: Array<() => void> = [];
+function notifyRebuildDone(): void { const w = nlRebuildWaiters; nlRebuildWaiters = []; for (const r of w) r(); }
+function awaitNextRebuild(timeoutMs = 120_000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const t = window.setTimeout(() => { nlRebuildWaiters = nlRebuildWaiters.filter((r) => r !== wake); resolve(false); }, timeoutMs);
+    const wake = () => { window.clearTimeout(t); resolve(true); };
+    nlRebuildWaiters.push(wake);
+  });
+}
 function nlAppend(text: string): void {
   const log = document.getElementById('nl-log');
   if (!log) return;
@@ -1992,6 +2005,7 @@ async function nlDoExport(fmt: 'stl' | '3mf', nameOverride?: string): Promise<vo
 
 /** 重建完成后若挂起 NL 导出则执行（缓存路径与 worker 路径都会调用） */
 function runPendingNLExport(): void {
+  notifyRebuildDone();  // Agent mesh 工具的 awaitNextRebuild 等待者（A3：导出水密门回流修复循环）
   if (!nlPendingExport) return;
   const { fmt, name } = nlPendingExport;
   nlPendingExport = null;
@@ -2140,8 +2154,24 @@ function buildAgentTools(): ToolImpl[] {
         scheduleHdUpgrade();
         let outNote = '';
         if (typeof args.out === 'string' && args.out) {
-          nlPendingExport = { fmt: 'stl', name: args.out };
-          outNote = `；几何重建完成后自动导出 ${args.out}（水密门不通过则拒产）`;
+          // A3：同步等重建→水密门→导出（失败以 verifyFail 回流修复菜单）；超时兜底=挂起后台导出
+          const rebuilt = await awaitNextRebuild();
+          if (!rebuilt) {
+            nlPendingExport = { fmt: 'stl', name: args.out };
+            outNote = `；重建超时，已挂起后台导出 ${args.out}`;
+          } else {
+            const baseSummary = `${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${notes.length ? '；' + notes.join('；') : ''}`;
+            try {
+              await nlDoExport('stl', args.out);
+              return { ok: true, summary: `已导出 ${args.out}（水密门通过）——${baseSummary}` };
+            } catch (e) {
+              return {
+                ok: false,
+                verifyFail: true,   // 触发下一轮 apply_repair（降 periods/换族/调孔隙率）
+                summary: `导出被水密门拒绝——${e instanceof Error ? e.message : String(e)}。当前设计：${baseSummary}。请在修复菜单中选择补丁后重试`,
+              };
+            }
+          }
         }
         return {
           ok: true,

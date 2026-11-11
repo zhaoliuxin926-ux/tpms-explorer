@@ -109,6 +109,10 @@ console.log('\n[D] 规则版同步路径钉（行为级由 nl_agent_audit/run_al
   const mainSrc = readFileSync(join(PLATFORM, 'src/main.ts'), 'utf8');
   check('规则同步链 parseNL→applyNLIntent 在位', mainSrc.includes('applyNLIntent(parseNL(text))'));
   check('Agent 分支前有 key 门（无 key 不进异步路径）', /if \(cfg\.kind === 'rules' \|\| \(needKey && !getByoKey\(\)\)\)/.test(mainSrc));
+  // A3：导出水密门失败回流修复循环（对齐 CLI verify 含水密门语义）——结构级断言
+  check('水密门回流接线（awaitNextRebuild/notifyRebuildDone/verifyFail 水密分支）',
+    mainSrc.includes('awaitNextRebuild') && mainSrc.includes('notifyRebuildDone') && mainSrc.includes('导出被水密门拒绝——')
+    && /verifyFail: true,\s*\/\/ 触发下一轮 apply_repair/.test(mainSrc));
 }
 
 // ══ E. M4 有界修复循环（脚本化 provider 跑真 agent-run 循环）══
