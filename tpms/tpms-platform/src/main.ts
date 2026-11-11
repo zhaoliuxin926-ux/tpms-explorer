@@ -39,8 +39,7 @@ import { DISPLAY_SCALE, effectiveMmFactor, hdResolution, l2Resolution } from './
 import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
 // 方向 A（2026-11-11）：NL 助手 LLM 合流——契约单源桥 + 浏览器 provider + Agent 循环
-import { browserToolsSchema, validateToolCalls, checkViewportConflicts, TOOLS_SCHEMA } from './core/agent-contract';
-import { schemaToOllamaTools } from '../../agent/schema-core.mjs';
+import { TOOLS_SCHEMA } from './core/agent-contract';
 import { runAgent, type ToolImpl } from './core/agent-run';
 import {
   createBrowserProvider, loadAgentCfg, saveAgentCfg, getByoKey, setByoKey,
@@ -2178,6 +2177,7 @@ function buildAgentTools(): ToolImpl[] {
         const verdict = rep.warnings.length === 0 ? 'pass' : 'fail';
         return {
           ok: true,
+          verifyFail: verdict === 'fail',   // A3-M4：触发下一轮有界修复菜单注入
           summary: JSON.stringify({
             verdict, stage: 'manufacturing-audit',
             minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
@@ -2259,13 +2259,17 @@ async function runAgentUi(text: string, cfg: AgentCfg): Promise<void> {
     const provider = createBrowserProvider(cfg, getByoKey());
     await runAgent(text, {
       complete: (m, t) => provider.complete(m as never, t as never),
-      validate: validateToolCalls,
-      checkViewport: checkViewportConflicts,
-      tools: schemaToOllamaTools(browserToolsSchema()) as never,
       toolImpls: new Map(buildAgentTools().map((t) => [t.name, t])),
+      repairExec: async (patches) => {
+        // M4 修复补丁 → 与 tpms_mesh 同映射的确定性应用（REPAIR patches.porosity=0-1 小数口径，
+        // agentClampPorosity 双口径兼容）
+        const meshTool = buildAgentTools().find((t) => t.name === 'tpms_mesh')!;
+        return meshTool.exec(patches);
+      },
       onEvent: (e) => {
-        if (e.type === 'round') nlAppend(`…推理中（第 ${e.round} 轮）`);
+        if (e.type === 'round') nlAppend(`…推理中（第 ${e.round} 轮${e.repairMode ? ' · 修复菜单' : ''}）`);
         else if (e.type === 'tool-start') nlAppend(`→ ${e.name} ${e.digest}`);
+        else if (e.type === 'repair-applied') nlAppend(`✎ 有界修复已应用：${JSON.stringify(e.patches)} — ${e.reason}`);
         else if (e.type === 'tool-end') nlAppend(`${e.result.ok ? '✓' : '✗'} ${e.name}: ${e.result.summary.slice(0, 300)}`);
         else if (e.type === 'rejected') fallbackRules(`指令被契约拦截器拒绝（${e.errors.slice(0, 2).join('；')}）`);
         else if (e.type === 'budget-stop') nlAppend(`助手：本次指令算力预算熔断（Σ=${e.used}/${e.limit}，E5 联合预算）——请减小周期数或分步下达`);

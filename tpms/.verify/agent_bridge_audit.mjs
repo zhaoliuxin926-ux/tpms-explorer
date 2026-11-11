@@ -24,13 +24,13 @@ const PLATFORM = join(HERE, '../tpms-platform');
 const AGENT = join(HERE, '../agent');
 
 const entry = join(tmpdir(), 'agbr_entry.ts');
-writeFileSync(entry, `export { TOOLS_SCHEMA, BROWSER_TOOL_NAMES, validateToolCalls, checkViewportConflicts, VIEWPORT_OUT } from ${JSON.stringify(join(PLATFORM, 'src/core/agent-contract.ts'))};`);
+writeFileSync(entry, `export { TOOLS_SCHEMA, BROWSER_TOOL_NAMES, validateToolCalls, checkViewportConflicts, VIEWPORT_OUT, REPAIR_TOOL } from ${JSON.stringify(join(PLATFORM, 'src/core/agent-contract.ts'))};\nexport { runAgent } from ${JSON.stringify(join(PLATFORM, 'src/core/agent-run.ts'))};`);
 const BUNDLE = join(tmpdir(), 'agbr_bundle.mjs');
 const rolldown = join(PLATFORM, 'node_modules/.bin/rolldown' + (process.platform === 'win32' ? '.cmd' : ''));
 if (!existsSync(rolldown)) { console.error('rolldown 不存在:', rolldown); process.exit(1); }
 const r = spawnSync(`"${rolldown}" "${entry}" --format esm --file "${BUNDLE}"`, { shell: true, encoding: 'utf8' });
 if (r.status !== 0) { console.error('rolldown 打包失败:', r.stdout, r.stderr); process.exit(1); }
-const { TOOLS_SCHEMA, BROWSER_TOOL_NAMES, validateToolCalls, checkViewportConflicts, VIEWPORT_OUT } = await import(pathToFileURL(BUNDLE));
+const { TOOLS_SCHEMA, BROWSER_TOOL_NAMES, validateToolCalls, checkViewportConflicts, VIEWPORT_OUT, REPAIR_TOOL, runAgent } = await import(pathToFileURL(BUNDLE));
 
 let passCount = 0, failCount = 0;
 const failures = [];
@@ -109,6 +109,83 @@ console.log('\n[D] 规则版同步路径钉（行为级由 nl_agent_audit/run_al
   const mainSrc = readFileSync(join(PLATFORM, 'src/main.ts'), 'utf8');
   check('规则同步链 parseNL→applyNLIntent 在位', mainSrc.includes('applyNLIntent(parseNL(text))'));
   check('Agent 分支前有 key 门（无 key 不进异步路径）', /if \(cfg\.kind === 'rules' \|\| \(needKey && !getByoKey\(\)\)\)/.test(mainSrc));
+}
+
+// ══ E. M4 有界修复循环（脚本化 provider 跑真 agent-run 循环）══
+console.log('\n[E] M4 修复循环（fail→repair→pass / unreachable / 越界菜单拒）');
+{
+  check('E0 REPAIR_TOOL 与 tpms-driver 同源（apply_repair 菜单）', REPAIR_TOOL?.name === 'apply_repair' && Array.isArray(REPAIR_TOOL?.parameters?.properties?.patches?.properties?.type?.enum));
+  // E1：verify fail → 修复菜单注入 → patch_design(periods=2) → verify pass → final
+  {
+    let repaired = false;
+    let sawRepairMenu = false;
+    const rounds = [
+      { toolCalls: [{ function: { name: 'tpms_design_verify', arguments: '{"type":"gyroid","porosity":0.75}' } }], raw: '' },
+      { toolCalls: [{ function: { name: 'apply_repair', arguments: JSON.stringify({ action: 'patch_design', patches: { periods: 2 }, reason: '壁厚不足→降周期' }) } }], raw: '' },
+      { toolCalls: [{ function: { name: 'tpms_design_verify', arguments: '{"type":"gyroid","porosity":0.75}' } }], raw: '' },
+      { toolCalls: [], raw: '修复完成，壁厚已达标。' },
+    ];
+    let ri = 0;
+    const events = [];
+    await runAgent('验证壁厚', {
+      complete: async (_m, tools) => {
+        const names = tools.map((t) => (t.function ?? t).name);
+        if (names.includes('apply_repair')) sawRepairMenu = true;
+        return rounds[Math.min(ri++, rounds.length - 1)];
+      },
+      toolImpls: new Map([
+        ['tpms_design_verify', { name: 'tpms_design_verify', write: false, exec: async () => (repaired
+          ? { ok: true, verifyFail: false, summary: '{"verdict":"pass","minWallMm":0.51}' }
+          : { ok: true, verifyFail: true, summary: '{"verdict":"fail","minWallMm":0.21}' }) }],
+      ]),
+      repairExec: async (patches) => { repaired = patches.periods === 2; return { ok: true, summary: `修复已应用：${JSON.stringify(patches)}` }; },
+      onEvent: (e) => events.push(e),
+    });
+    const repairRound = events.find((e) => e.type === 'round' && e.repairMode);
+    check('E1 失败后注入修复菜单（apply_repair offered）', repairRound != null && sawRepairMenu);
+    check('E1 repair-applied 事件（periods=2 补丁）', events.some((e) => e.type === 'repair-applied' && e.patches?.periods === 2));
+    const fin = events.find((e) => e.type === 'final');
+    check('E1 闭环 fail→repair→pass→final', fin != null && fin.text.includes('修复完成'), fin ? '' : '未到 final');
+    check('E1 预算跨轮累计（verify×512×2+repair 2³=1032）', fin?.budgetUsed === 1032, String(fin?.budgetUsed));
+  }
+  // E2：declare_unreachable → 结构化不可达 final
+  {
+    const rounds = [
+      { toolCalls: [{ function: { name: 'tpms_design_verify', arguments: '{"type":"gyroid","porosity":0.75}' } }], raw: '' },
+      { toolCalls: [{ function: { name: 'apply_repair', arguments: JSON.stringify({ action: 'declare_unreachable', reason: 'cylinder+diamond 深水区' }) } }], raw: '' },
+    ];
+    let ri = 0;
+    const events = [];
+    await runAgent('验证', {
+      complete: async () => rounds[Math.min(ri++, rounds.length - 1)],
+      toolImpls: new Map([
+        ['tpms_design_verify', { name: 'tpms_design_verify', write: false, exec: async () => ({ ok: true, verifyFail: true, summary: '{"verdict":"fail"}' }) }],
+      ]),
+      repairExec: async () => ({ ok: true, summary: 'noop' }),
+      onEvent: (e) => events.push(e),
+    });
+    const fin = events.find((e) => e.type === 'final');
+    check('E2 declare_unreachable→结构化不可达 final', fin != null && fin.text.includes('结构化不可达'), fin?.text.slice(0, 60) ?? '未到 final');
+  }
+  // E3：越界菜单（patches.periods=99 > max 12）→ 扩展面拦截拒绝
+  {
+    const rounds = [
+      { toolCalls: [{ function: { name: 'tpms_design_verify', arguments: '{"type":"gyroid","porosity":0.75}' } }], raw: '' },
+      { toolCalls: [{ function: { name: 'apply_repair', arguments: JSON.stringify({ action: 'patch_design', patches: { periods: 99 }, reason: '越界' }) } }], raw: '' },
+    ];
+    let ri = 0;
+    const events = [];
+    await runAgent('验证', {
+      complete: async () => rounds[Math.min(ri++, rounds.length - 1)],
+      toolImpls: new Map([
+        ['tpms_design_verify', { name: 'tpms_design_verify', write: false, exec: async () => ({ ok: true, verifyFail: true, summary: '{"verdict":"fail"}' }) }],
+      ]),
+      repairExec: async () => ({ ok: true, summary: 'noop' }),
+      onEvent: (e) => events.push(e),
+    });
+    const rej = events.find((e) => e.type === 'rejected');
+    check('E3 越界修复补丁被扩展面拦截（periods 99>12）', rej != null && rej.errors.some((x) => x.includes('maximum')), rej ? '' : '未拒绝');
+  }
 }
 
 console.log(`\n== AGENT-BRIDGE: ${passCount} PASS / ${failCount} FAIL ==`);

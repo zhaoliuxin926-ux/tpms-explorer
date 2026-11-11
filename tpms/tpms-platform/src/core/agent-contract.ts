@@ -9,7 +9,7 @@
  * 文件槽位，浏览器无文件语义）与 tpms_pareto（逆设计入口阻断中+扫描治理另批）暂不注册，
  * 由 .verify/agent_bridge_audit.mjs 同源锁门断言「注册面 ⊆ schema 注册面」。
  */
-import { validateToolCalls as validateCore } from '../../../agent/schema-core.mjs';
+import { validateToolCalls as validateCore, REPAIR_TOOL as REPAIR_TOOL_CORE, schemaToOllamaTools } from '../../../agent/schema-core.mjs';
 import rawSchema from '../../../agent/tools.schema.json';
 
 export interface ToolSchemaDef {
@@ -31,6 +31,17 @@ export function browserToolsSchema(): { tools: ToolSchemaDef[] } {
 export function validateToolCalls(toolCalls: unknown): { ok: true; calls: Array<{ name: string; arguments: Record<string, unknown> }> } | { ok: false; errors: string[] } {
   return validateCore(toolCalls, browserToolsSchema());
 }
+
+/** 扩展面校验（修复轮：基础面 + REPAIR_TOOL；schema 形状与 schema-core 同构） */
+export function validateToolCallsIn(toolCalls: unknown, schema: { tools: ToolSchemaDef[] }): { ok: true; calls: Array<{ name: string; arguments: Record<string, unknown> }> } | { ok: false; errors: string[] } {
+  return validateCore(toolCalls, schema);
+}
+
+/** M4 修复菜单（apply_repair 有界策略，与 tpms-driver 同源）——浏览器修复轮注入用 */
+export const REPAIR_TOOL = REPAIR_TOOL_CORE as unknown as ToolSchemaDef;
+
+/** schemaToOllamaTools 转出口（agent-run 构建工具清单用，schema-core 单源） */
+export { schemaToOllamaTools };
 
 /** 视口写冲突虚拟槽位（E11 浏览器层：未显式指定 out 的视口写调用同轮互斥） */
 export const VIEWPORT_OUT = '__active_viewport__';
