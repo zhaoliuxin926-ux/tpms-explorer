@@ -38,6 +38,14 @@ import { flashToast } from './ui/toast';
 import { DISPLAY_SCALE, effectiveMmFactor, hdResolution, l2Resolution } from './core/units';
 import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
+// 方向 A（2026-11-11）：NL 助手 LLM 合流——契约单源桥 + 浏览器 provider + Agent 循环
+import { browserToolsSchema, validateToolCalls, checkViewportConflicts, TOOLS_SCHEMA } from './core/agent-contract';
+import { schemaToOllamaTools } from '../../agent/schema-core.mjs';
+import { runAgent, type ToolImpl } from './core/agent-run';
+import {
+  createBrowserProvider, loadAgentCfg, saveAgentCfg, getByoKey, setByoKey,
+  BrowserLlmError, DEFAULT_ENDPOINTS, DEFAULT_MODELS, type AgentCfg,
+} from './core/llm-provider-browser';
 import type { YieldCriterionKind } from './physics/yield-surface';
 import type { YieldViewer } from './viewers/yield-viewer';
 import type { PhononicResult } from './physics/phononic-bandgap';
@@ -1935,7 +1943,7 @@ bindRegionCard();
 
 // ── LPBF 工艺模拟（v6.0 阶段 IV）──────────────────────
 // ── AI 设计助手（v6.0 阶段 V）──────────────────────
-let nlPendingExport: 'stl' | '3mf' | null = null;
+let nlPendingExport: { fmt: 'stl' | '3mf'; name?: string } | null = null;  // name=Agent out 槽位指定文件名（规则版路径不带）
 let nlRebuildPending = false;  // NL 改参触发的重建进行中（完成时回执）
 
 const NL_LOG_KEY = 'tpms.nl.log';
@@ -1965,10 +1973,10 @@ function nlCard(items: Array<{ field: string; to: string | number }>, confidence
   try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ }
 }
 
-async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
+async function nlDoExport(fmt: 'stl' | '3mf', nameOverride?: string): Promise<void> {
   const { exportBinarySTL, export3MF } = await loadExport();
   const sNow = getState();
-  const base = `tpms-${sNow.type}-p${sNow.porosity}`;
+  const base = nameOverride?.replace(/\.(stl|3mf)$/i, '') ?? `tpms-${sNow.type}-p${sNow.porosity}`;
   if (!baseGeo) throw new Error('几何尚未就绪');
   // 网格交付门（2026-10-24 审查 #7 连带）：NL 助手导出与导出中心同口径——非水密不交付
   const aNL = auditMeshIndices(baseGeo.attributes.position.array as Float32Array, baseGeo.index!.array as Uint32Array);
@@ -1986,9 +1994,9 @@ async function nlDoExport(fmt: 'stl' | '3mf'): Promise<void> {
 /** 重建完成后若挂起 NL 导出则执行（缓存路径与 worker 路径都会调用） */
 function runPendingNLExport(): void {
   if (!nlPendingExport) return;
-  const fmt = nlPendingExport;
+  const { fmt, name } = nlPendingExport;
   nlPendingExport = null;
-  nlDoExport(fmt).catch((err) => nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`));
+  nlDoExport(fmt, name).catch((err) => nlAppend(`助手：导出失败——${err instanceof Error ? err.message : String(err)}`));
 }
 
 function applyNLIntent(intent: NLIntent): void {
@@ -2038,7 +2046,7 @@ function applyNLIntent(intent: NLIntent): void {
     if (a === 'export-stl' || a === 'export-3mf') {
       if (stateChanged) {
         // 参数变了 → 几何是旧的（worker 异步重建），挂起到重建完成自动导出
-        nlPendingExport = a === 'export-stl' ? 'stl' : '3mf';
+        nlPendingExport = { fmt: a === 'export-stl' ? 'stl' : '3mf' };
         nlAppend('助手：参数已应用，几何重建完成后自动导出 ' + (a === 'export-stl' ? 'STL' : '3MF') + '…');
       } else {
         nlDoExport(a === 'export-stl' ? 'stl' : '3mf')
@@ -2055,6 +2063,248 @@ function applyNLIntent(intent: NLIntent): void {
   }
 }
 
+// ── 方向 A（2026-11-11）：LLM Agent 合流——工具注册表 + 设置 UI + 运行时 ──
+// 契约/拦截器/预算/冲突语义与 CLI 同源（agent-contract → tpms/agent/schema-core.mjs）；
+// 无 key 时 send() 走原 parseNL 同步路径（nl_agent 门 45 断言 + card_smoke 流零回归基线）。
+
+/** schema 双口径孔隙率 → 面板百分数域 [60,90]（钳制须披露——规则版同域纪律，门31-C） */
+function agentClampPorosity(p: number): { pct: number; clamped: boolean } {
+  const pct = p > 1 ? p : p * 100;
+  const c = Math.min(90, Math.max(60, pct));
+  return { pct: c, clamped: Math.abs(c - pct) > 1e-9 };
+}
+
+function buildAgentTools(): ToolImpl[] {
+  return [
+    {
+      name: 'tpms_list',
+      write: false,
+      async exec() {
+        const { BASE_MODULUS, BASE_YIELD_STRENGTH } = await import('./physics/gibson-ashby');
+        const typeEnum = (TOOLS_SCHEMA.tools.find((t) => t.name === 'tpms_estimate')?.parameters as { properties?: { type?: { enum?: string[] } } })?.properties?.type?.enum ?? [];
+        const materials = Object.entries(BASE_MODULUS).map(([k, E]) => `${k}: E=${E}GPa σy=${BASE_YIELD_STRENGTH[k] ?? '?'}MPa`).join('；');
+        return { ok: true, summary: `曲面族 ${typeEnum.length} 个：${typeEnum.join(',')}。\n材料：${materials}。` };
+      },
+    },
+    {
+      name: 'tpms_estimate',
+      write: false,
+      async exec(args) {
+        const type = String(args.type ?? 'gyroid');
+        const p = Number(args.porosity ?? 0.75);
+        const material = String(args.material ?? 'tc4');
+        const { gibsonAshby, plateauStress, BASE_MODULUS, BASE_YIELD_STRENGTH } = await import('./physics/gibson-ashby');
+        const pct = p > 1 ? p : p * 100;
+        if (!(pct >= 0 && pct < 100)) return { ok: false, summary: `孔隙率口径非法：${p}` };
+        const rho = 1 - pct / 100;
+        const { E_Es, sigma_Es, C1 } = gibsonAshby(rho, type);
+        const plateau = plateauStress(rho, type);
+        const baseE = BASE_MODULUS[material] ?? BASE_MODULUS.tc4;
+        const baseS = BASE_YIELD_STRENGTH[material] ?? BASE_YIELD_STRENGTH.tc4;
+        return {
+          ok: true,
+          summary: JSON.stringify({
+            type, porosity: pct > 1 ? pct / 100 : pct, material,
+            E_GPa: Number((E_Es * baseE).toFixed(3)), yield_MPa: Number((sigma_Es * baseS).toFixed(2)),
+            plateau_MPa: plateau !== undefined ? Number((plateau * baseS).toFixed(2)) : null,
+            C1, caliber: 'Gibson-Ashby 解析工程口径（非 FEA）',
+          }),
+        };
+      },
+    },
+    {
+      name: 'tpms_mesh',
+      write: true,
+      async exec(args) {
+        const patches: Partial<AppState> = {};
+        const notes: string[] = [];
+        if (typeof args.type === 'string') patches.type = args.type as AppState['type'];
+        if (typeof args.porosity === 'number') {
+          const { pct, clamped } = agentClampPorosity(args.porosity);
+          patches.porosity = pct;
+          if (clamped) notes.push(`孔隙率 ${args.porosity} 已钳制到面板域 ${pct}%`);
+        }
+        if (typeof args.periods === 'number') {
+          const k = Math.min(5, Math.max(1, Math.round(args.periods)));
+          patches.cellSize = k;
+          if (k !== args.periods) notes.push(`周期数 ${args.periods} 已钳制到面板域 ${k}`);
+        }
+        if (typeof args.material === 'string') patches.material = args.material as AppState['material'];
+        if (typeof args.mode === 'string') patches.structureMode = args.mode as AppState['structureMode'];
+        if (typeof args.container === 'string') patches.containerShape = args.container as AppState['containerShape'];
+        setState(patches);
+        const sNew = getState();
+        syncUI(sNew);
+        updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
+        scheduleRebuild(false);
+        nlRebuildPending = true;
+        scheduleHdUpgrade();
+        let outNote = '';
+        if (typeof args.out === 'string' && args.out) {
+          nlPendingExport = { fmt: 'stl', name: args.out };
+          outNote = `；几何重建完成后自动导出 ${args.out}（水密门不通过则拒产）`;
+        }
+        return {
+          ok: true,
+          summary: `已更新设计：${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize} ${sNew.structureMode} ${sNew.containerShape}（几何重建中）${notes.length ? '；' + notes.join('；') : ''}${outNote}`,
+        };
+      },
+    },
+    {
+      name: 'tpms_design_verify',
+      write: false,
+      async exec(args) {
+        // design_verify 与 mesh 同槽位：先应用设计参数（无 out），再从新状态直接体素审计
+        const meshTool = buildAgentTools().find((t) => t.name === 'tpms_mesh')!;
+        await meshTool.exec({ type: args.type, porosity: args.porosity, periods: args.periods, material: args.material, mode: args.mode, container: args.container });
+        const s = getState();
+        if (s.model === 'strut') return { ok: false, summary: '线框模式无壁厚语义——制造检查仅支持曲面族' };
+        const unsupported = voxelUnsupportedReasons(s);
+        if (unsupported.length) return { ok: false, summary: `体素口径守卫拒绝：${unsupported.join('、')}（审计结果将不对应交付几何）` };
+        const Rmfg = Math.min(96, Math.max(24, Math.round(Number(args.resolution ?? 48))));
+        const exp = await loadExport();
+        const vox = exp.buildVoxelModel({
+          type: s.type, periods: s.cellSize, weights: s.weights,
+          structureMode: s.structureMode, containerShape: s.containerShape,
+          thickness: s.thickness, targetPorosity: s.porosity / 100, iso: 0,
+          customFormula: s.customFormula, stress: s.stress,
+        }, Rmfg);
+        const hMm = vox.hWc * effMm(s);
+        const { auditManufacturing } = await import('./physics/manufacturing-audit');
+        const rep = auditManufacturing(vox, hMm, { minWallMm: 0.4 });
+        const suggestions: string[] = [];
+        if (rep.warnings.length) suggestions.push('壁厚不足：优先降 periods 或换低谐波曲面族后重调 tpms_mesh；升 resolution 次之');
+        if (rep.mainPoreFraction < 0.999) suggestions.push(`孔隙未全连通（主域 ${(rep.mainPoreFraction * 100).toFixed(1)}%）——换族或降孔隙率`);
+        const verdict = rep.warnings.length === 0 ? 'pass' : 'fail';
+        return {
+          ok: true,
+          summary: JSON.stringify({
+            verdict, stage: 'manufacturing-audit',
+            minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
+            closedDomains: rep.closedDomains, closedPoreFraction: Number((rep.closedPoreFraction * 100).toFixed(2)),
+            mainPoreFraction: Number((rep.mainPoreFraction * 100).toFixed(1)),
+            warnings: rep.warnings, suggestions, R: rep.R, minWallThresholdMm: 0.4,
+          }),
+        };
+      },
+    },
+  ];
+}
+
+/** Agent 设置 UI（provider/端点/模型/Key）+ 运行秒表/停止 */
+function wireAgentCfgUi(): void {
+  const providerSel = document.getElementById('nl-provider') as HTMLSelectElement | null;
+  const cfgBtn = document.getElementById('nl-cfg-btn');
+  const cfgRow = document.getElementById('nl-cfgrow');
+  const baseurlEl = document.getElementById('nl-baseurl') as HTMLInputElement | null;
+  const modelEl = document.getElementById('nl-model') as HTMLInputElement | null;
+  const keyEl = document.getElementById('nl-key-input') as HTMLInputElement | null;
+  const rememberEl = document.getElementById('nl-key-remember') as HTMLInputElement | null;
+  const saveBtn = document.getElementById('nl-cfg-save');
+  if (!providerSel) return;
+  const cfg0 = loadAgentCfg();
+  providerSel.value = cfg0.kind;
+  if (baseurlEl && cfg0.baseUrl) baseurlEl.value = cfg0.baseUrl;
+  if (modelEl && cfg0.model) modelEl.value = cfg0.model;
+  if (rememberEl) rememberEl.checked = cfg0.rememberKey;
+  const endpointHint = () => {
+    if (!baseurlEl || !modelEl) return;
+    const kind = providerSel.value as AgentCfg['kind'];
+    if (kind === 'rules') { baseurlEl.placeholder = '—（本地规则模式）'; modelEl.placeholder = '—'; return; }
+    const k = kind === 'openai' ? 'openai' : 'ollama';
+    baseurlEl.placeholder = `Base URL（默认 ${DEFAULT_ENDPOINTS[k]}）`;
+    modelEl.placeholder = `模型（默认 ${DEFAULT_MODELS[k]}）`;
+  };
+  endpointHint();
+  providerSel.addEventListener('change', () => { endpointHint(); saveAgentCfg({ ...loadAgentCfg(), kind: providerSel.value as AgentCfg['kind'] }); });
+  cfgBtn?.addEventListener('click', () => { if (cfgRow) cfgRow.style.display = cfgRow.style.display === 'none' ? 'flex' : 'none'; });
+  saveBtn?.addEventListener('click', () => {
+    const kind = providerSel.value as AgentCfg['kind'];
+    const cfg: AgentCfg = {
+      kind,
+      baseUrl: baseurlEl?.value.trim() || undefined,
+      model: modelEl?.value.trim() || undefined,
+      rememberKey: rememberEl?.checked ?? false,
+    };
+    saveAgentCfg(cfg);
+    if (keyEl) setByoKey(keyEl.value.trim(), cfg.rememberKey);
+    nlAppend('助手：Agent 设置已保存（Key 仅存本浏览器，不进分享链接/导出件）');
+  });
+}
+
+/** LLM Agent 异步运行（含秒表/停止/错误回退规则版） */
+async function runAgentUi(text: string, cfg: AgentCfg): Promise<void> {
+  const stat = document.getElementById('nl-run-stat');
+  const stopBtn = document.getElementById('nl-stop');
+  let stopped = false;
+  let elapsed = 0;
+  const timer = window.setInterval(() => {
+    elapsed++;
+    if (stat) stat.textContent = `${elapsed}s`;
+  }, 1000);
+  const cleanup = () => {
+    window.clearInterval(timer);
+    if (stat) stat.textContent = '';
+    if (stopBtn) stopBtn.style.display = 'none';
+  };
+  const fallbackRules = (why: string) => {
+    nlAppend('助手：' + why + '——已回退本地规则解析本次指令');
+    const input = document.getElementById('nl-input') as HTMLInputElement | null;
+    if (input) { input.value = text; applyNLIntent(parseNL(text)); input.value = ''; }
+  };
+  const onStop = () => { stopped = true; };
+  stopBtn?.addEventListener('click', onStop, { once: true });
+  if (stopBtn) stopBtn.style.display = '';
+  try {
+    const provider = createBrowserProvider(cfg, getByoKey());
+    await runAgent(text, {
+      complete: (m, t) => provider.complete(m as never, t as never),
+      validate: validateToolCalls,
+      checkViewport: checkViewportConflicts,
+      tools: schemaToOllamaTools(browserToolsSchema()) as never,
+      toolImpls: new Map(buildAgentTools().map((t) => [t.name, t])),
+      onEvent: (e) => {
+        if (e.type === 'round') nlAppend(`…推理中（第 ${e.round} 轮）`);
+        else if (e.type === 'tool-start') nlAppend(`→ ${e.name} ${e.digest}`);
+        else if (e.type === 'tool-end') nlAppend(`${e.result.ok ? '✓' : '✗'} ${e.name}: ${e.result.summary.slice(0, 300)}`);
+        else if (e.type === 'rejected') fallbackRules(`指令被契约拦截器拒绝（${e.errors.slice(0, 2).join('；')}）`);
+        else if (e.type === 'budget-stop') nlAppend(`助手：本次指令算力预算熔断（Σ=${e.used}/${e.limit}，E5 联合预算）——请减小周期数或分步下达`);
+        else if (e.type === 'stopped') nlAppend('助手：已手动停止');
+      },
+      isStopped: () => stopped,
+    });
+  } catch (e) {
+    if (e instanceof BrowserLlmError) {
+      const hint = e.code === 'ERR_CORS_OR_NETWORK'
+        ? `端点不可达/CORS 拦截（${e.message}）——智谱开放平台为自域白名单不支持浏览器直连，可用 DeepSeek/OpenRouter 或本地 Ollama`
+        : e.message;
+      fallbackRules(`LLM 通道错误 [${e.code}] ${hint}`);
+    } else {
+      fallbackRules(`Agent 异常：${e instanceof Error ? e.message : String(e)}`);
+    }
+  } finally {
+    cleanup();
+    stopBtn?.removeEventListener('click', onStop);
+  }
+}
+
+/** send 路径决策：无 key/规则模式 → 原同步路径（零回归基线）；否则 Agent 异步 */
+function nlSendDecided(input: HTMLInputElement): void {
+  const text = input.value;
+  if (!text.trim()) return;
+  const cfg = loadAgentCfg();
+  const needKey = cfg.kind === 'openai';
+  if (cfg.kind === 'rules' || (needKey && !getByoKey())) {
+    if (needKey && !getByoKey()) nlAppend('助手：未配置 API Key（设置里填写），本次走本地规则解析');
+    applyNLIntent(parseNL(text));   // 原路径：内部自带「你：」回显
+    input.value = '';
+    return;
+  }
+  nlAppend('你：' + text);
+  input.value = '';
+  void runAgentUi(text, cfg);
+}
+
 function wireNLChat(): void {
   const fab = document.getElementById('nl-fab');
   const panel = document.getElementById('nl-panel');
@@ -2062,9 +2312,7 @@ function wireNLChat(): void {
   const log = document.getElementById('nl-log');
   const send = () => {
     if (!input || !input.value.trim()) return;
-    const intent = parseNL(input.value);
-    applyNLIntent(intent);
-    input.value = '';
+    nlSendDecided(input);
   };
   document.getElementById('nl-clear')?.addEventListener('click', () => {
     if (log) log.textContent = '';
@@ -2083,6 +2331,7 @@ function wireNLChat(): void {
   });
 }
 wireNLChat();
+wireAgentCfgUi();
 
 // ── 【v7.1 UI】移动端底部抽屉开关（存量缺口：handle 无任何接线，sheet 永远无法展开）──
 {

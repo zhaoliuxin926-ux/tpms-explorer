@@ -754,6 +754,15 @@
   #nl-input{flex:1;font-size:.72rem;padding:6px 8px;border-radius:8px;border:1px solid var(--panel-border);background:transparent;color:inherit}
   #nl-send{font-size:.7rem;padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:var(--accent);color:#fff;transition:filter .15s}
   #nl-send:hover{filter:brightness(1.12)}
+  /* 方向 A（2026-11-11）：Agent 后端选择/设置行——工业风同款（无 emoji，文本+线框） */
+  #nl-agent-row{display:flex;gap:6px;align-items:center}
+  #nl-agent-row select,#nl-cfgrow input{font-size:.68rem;padding:4px 6px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:inherit}
+  #nl-cfg-btn,#nl-stop,#nl-cfg-save{font-size:.66rem;padding:4px 8px;border-radius:6px;border:1px solid var(--panel-border);background:rgba(15,23,42,.04);cursor:pointer;color:var(--ink-2,#334155)}
+  #nl-stop{border-color:#b91c1c;color:#b91c1c}
+  #nl-run-stat{font-size:.66rem;color:var(--ink-2,#334155);min-width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
+  #nl-cfgrow{display:none;flex-wrap:wrap;gap:6px;align-items:center}
+  #nl-cfgrow input[type="password"]{flex:1;min-width:110px}
+  .nl-remember{font-size:.64rem;display:flex;gap:3px;align-items:center;color:var(--ink-2,#334155);white-space:nowrap}
 
   /* ═══════════════════════════════════════════════════════════════
      暗色主题组件覆盖（末尾块：利用层叠顺序，零 !important）
@@ -868,7 +877,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Ch6IvM_e.js"></script>
+  <script type="module" crossorigin src="./assets/index-n_uJ_os4.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three-Dse4tHut.js">
 </head>
 <body>
@@ -1778,6 +1787,23 @@ window.addEventListener('error', function(e) {
     <div id="nl-inputrow">
       <input id="nl-input" type="text" placeholder="例如：孔隙率 75%、Gyroid、2mm 端板，导出 3MF" aria-label="自然语言设计指令">
       <button id="nl-send" aria-label="发送">发送</button>
+    </div>
+    <div id="nl-agent-row">
+      <select id="nl-provider" aria-label="Agent 后端">
+        <option value="rules">本地规则</option>
+        <option value="openai">OpenAI 兼容</option>
+        <option value="ollama">Ollama 本地</option>
+      </select>
+      <button id="nl-cfg-btn" title="Agent 端点/模型/Key 设置">设置</button>
+      <span id="nl-run-stat" aria-live="polite"></span>
+      <button id="nl-stop" style="display:none" aria-label="停止推理">停止</button>
+    </div>
+    <div id="nl-cfgrow" style="display:none">
+      <input id="nl-baseurl" type="text" placeholder="Base URL（默认 DeepSeek）" aria-label="端点地址">
+      <input id="nl-model" type="text" placeholder="模型（默认 deepseek-chat）" aria-label="模型名">
+      <input id="nl-key-input" type="password" placeholder="API Key（仅存本浏览器）" aria-label="API Key">
+      <label class="nl-remember"><input type="checkbox" id="nl-key-remember">记住</label>
+      <button id="nl-cfg-save">保存</button>
     </div>
   </div>
   </main>

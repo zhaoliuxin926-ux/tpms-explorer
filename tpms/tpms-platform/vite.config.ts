@@ -31,6 +31,9 @@ function licenseHeaders(): Plugin {
 export default defineConfig({
   plugins: [licenseHeaders()],
   base: './',
+  // 方向 A（2026-11-11）：src 直引 ../../agent/schema-core.mjs + tools.schema.json（契约单源）
+  // dev 服务器默认 fs.allow 只放行本包根——显式放行上级（tpms/）供本地开发
+  server: { fs: { allow: ['..'] } },
   build: {
     outDir: 'dist',
     sourcemap: true,
