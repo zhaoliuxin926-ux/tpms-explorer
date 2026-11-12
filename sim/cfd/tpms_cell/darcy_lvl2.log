@@ -1,0 +1,8 @@
+== checkMesh (lvl2) ==
+    cells:            83895
+Mesh OK.
+== foamRun ==
+[foamRun] iters=1500
+End
+== Ubar 末值（K = nu*eps*Ubar/(ΔP/L) = 0.5877*Ubar/0.80981）==
+1500            	(1.11319513e-01 -6.69137459e-03 -1.44610151e-03)
