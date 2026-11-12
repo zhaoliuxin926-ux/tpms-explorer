@@ -41,8 +41,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       // 方向 B1（2026-11-11）：双入口——index.html（工程壳）+ harness.html（Agent 驾驶舱壳）
+      // 入口键=index 保持主包命名 index-*.js 不变（docs_consistency 主包唯一性哨兵的锚）
       input: {
-        main: resolve('index.html'),
+        index: resolve('index.html'),
         harness: resolve('harness.html'),
       },
       output: {
