@@ -1,0 +1,34 @@
+FoamFile
+{
+    format ascii;
+    class dictionary;
+    location "system";
+    object createNonConformalCouplesDict;
+}
+// 全 PBC 三对偶合（2026-11-12）。注意：宏只解析祖先链不解析兄弟——
+// y/z 对不能 $../xperiodic/... 引用，三对各自写字面 patchFields。
+fields yes;
+nonConformalCouples
+{
+    xperiodic
+    {
+        owner     { patch cycX0; patchFields { U { type nonConformalCyclic; } p { type nonConformalCyclic; } } }
+        neighbour { patch cycXL; patchFields { $../../owner/patchFields; } }
+        transform translational;
+        separation (6.283185307179586 0 0);
+    }
+    yperiodic
+    {
+        owner     { patch cycY0; patchFields { U { type nonConformalCyclic; } p { type nonConformalCyclic; } } }
+        neighbour { patch cycYL; patchFields { $../../owner/patchFields; } }
+        transform translational;
+        separation (0 6.283185307179586 0);
+    }
+    zperiodic
+    {
+        owner     { patch cycZ0; patchFields { U { type nonConformalCyclic; } p { type nonConformalCyclic; } } }
+        neighbour { patch cycZL; patchFields { $../../owner/patchFields; } }
+        transform translational;
+        separation (0 0 6.283185307179586);
+    }
+}

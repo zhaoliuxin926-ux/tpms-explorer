@@ -1,0 +1,37 @@
+/* TPMS 单胞 Darcy v2——全 PBC 背景盒（mm 制 [0,2π]³，2026-11-12）
+   六面全部周期 patch（x/y/z 三对），无壁面——无限周期介质本征渗透率口径；
+   v1（y/z=wall）保留在 blockMeshDict.tpms 作壁面效应对照。 */
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+convertToMeters 1;
+
+vertices
+(
+    (0                  0                  0)
+    (6.283185307179586  0                  0)
+    (0                  6.283185307179586  0)
+    (6.283185307179586  6.283185307179586  0)
+    (0                  0                  6.283185307179586)
+    (6.283185307179586  0                  6.283185307179586)
+    (0                  6.283185307179586  6.283185307179586)
+    (6.283185307179586  6.283185307179586  6.283185307179586)
+);
+
+blocks
+(
+    hex (0 1 3 2 4 5 7 6) (21 21 21) simpleGrading (1 1 1)
+);
+
+boundary
+(
+    cycX0 { type patch; faces ((0 4 6 2)); }
+    cycXL { type patch; faces ((1 5 7 3)); }
+    cycY0 { type patch; faces ((0 1 5 4)); }
+    cycYL { type patch; faces ((2 3 7 6)); }
+    cycZ0 { type patch; faces ((0 1 3 2)); }
+    cycZL { type patch; faces ((4 5 7 6)); }
+);

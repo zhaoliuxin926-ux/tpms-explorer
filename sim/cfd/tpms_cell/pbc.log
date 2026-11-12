@@ -1,0 +1,15 @@
+== blockMesh ==
+
+== snappyHexMesh ==
+Finished meshing without any errors
+Finished meshing in = 146.45097 s.
+== createNonConformalCouples ==
+6
+== checkMesh ==
+    cells:            83905
+Mesh OK.
+== foamRun ==
+[foamRun] iters=1500
+End
+== Ubar 末值 ==
+1500            	(2.10389358e-04 -1.06467722e-06 -1.97957360e-06)
