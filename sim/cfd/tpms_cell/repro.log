@@ -1,0 +1,15 @@
+== blockMesh ==
+
+== snappyHexMesh ==
+Finished meshing without any errors
+Finished meshing in = 147.88814 s.
+== createNonConformalCouples ==
+4
+== checkMesh ==
+    cells:            83895
+Mesh OK.
+== foamRun ==
+[foamRun] iters=1500
+End
+== Ubar 末值（K=nu*eps*Ubar/G，eps 用 p3 fluid_frac）==
+1500            	(2.10401666e-04 -1.03407936e-06 -2.00148288e-06)
