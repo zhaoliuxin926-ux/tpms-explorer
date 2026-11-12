@@ -1,0 +1,111 @@
+/* Anchor-1 snappyHexMesh 近墙策略判别算例（2026-11-12）
+   判据：K 误差 vs hex O-grid −1.27% 基线（tet −13.5%）——<0.5% 则 TPMS 近墙策略定案 snappy 路线。
+   流程：blockMesh 背景（h≈0.3）→ 本字典 castellated+snap+addLayers → createPatch 周期对。
+   近壁目标：3 层棱柱，finalLayer 0.09、expansion 1.3（总厚≈0.21，对照 hex nRad30 首层 0.105）。 */
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+mergeTolerance  1e-6;
+
+geometry
+{
+    // v13 语法：几何键名=surface 名（即 patch 名），STL 文件经 file 键指定（无 name 键）
+    scaffoldWall
+    {
+        type triSurfaceMesh;
+        file "cylinder_wall.stl";
+    }
+}
+
+castellatedMeshControls
+{
+    maxLocalCells       2000000;
+    maxGlobalCells      4000000;
+    minRefinementCells  0;
+    nCellsBetweenLevels 2;
+
+    features ();
+
+    refinementSurfaces
+    {
+        scaffoldWall
+        {
+            level (2 2);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 30;
+
+    // 流体域=管内：取管轴中点
+    locationInMesh (3.14159265 3.14159265 3.14159265);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+    nFeatureSnapIter 10;
+    implicitFeatureSnap true;
+    explicitFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes   false;
+
+    layers
+    {
+        scaffoldWall
+        {
+            nSurfaceLayers 3;
+        }
+    }
+
+    expansionRatio      1.3;
+    finalLayerThickness 0.09;
+    minThickness        0.02;
+
+    nGrow               0;
+    nBufferCellsNoExtrude 0;   // v13 必填键
+    nLayerIter          50;    // v13 必填键
+    featureAngle        60;
+    slipFeatureAngle    30;
+    nRelaxIter          5;
+    nSmoothSurfaceNormals 3;
+    nSmoothNormals      5;
+    nSmoothThickness    10;
+    maxFaceThicknessRatio 0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle  90;
+}
+
+meshQualityControls
+{
+    maxNonOrtho         65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave          80;
+    minVol              1e-13;
+    minTetQuality       1e-15;
+    minArea             -1;
+    minTwist            0.02;
+    minDeterminant      0.001;
+    minFaceWeight       0.02;
+    minVolRatio         0.01;
+    minTriangleTwist    -1;
+    nSmoothScale        4;
+    errorReduction      0.75;
+}

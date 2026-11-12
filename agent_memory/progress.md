@@ -5,9 +5,7 @@
 > **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
 >
 > ### 下会话第一优先：anchor 圆柱 snappyHex 实验（近墙策略终判）
-> - **判据**：K 误差 vs hex O-grid −1.27% 基线（sim/cfd/anchor1/ 全套脚本在）。snappyHex=v13 原生零安装（cfMesh 已 404+ESI fork 兼容性死路，见下）。
-> - **流程**：blockMesh 背景盒 + 圆柱表面 STL（gmsh 面网格导出）+ snappyHexMeshDict（castellated+snap+layers）→ foamRun → K 对账。**若 <0.5%：TPMS 近墙策略定案 snappy 路线**；失败则 cfMesh-ESI fork 兜底或量化偏差披露。
-> - 注意：WSL 内 git clone 会挂死——外部仓库克隆走 Windows git 侧再拷入；foamPostProcess -funcs 只认 ETC 目录（采样走 writeCellCentres+python join）。
+> - **✅ 已完成（2026-11-12，见下方 11-12 段）：K 误差 +0.319% < 0.5% 阈——TPMS 近墙策略定案 snappy 路线**。后续 CFD 线=TPMS 实体算例（p3 流体域 STL + snappyHexMesh + 端盖平移周期对）。
 >
 > ### 已拍板（不再问用户）
 > - **形态=network（solid）终态**：拓竹 P1S FDM + PLA + 0.2 喷嘴。打印建议单 docs/fdm-print-guide.md（壁圈 2-3/层高 0.08-0.12/免支撑/最细杆 ≥0.5mm 红线）。**首件验证件已生成：specimens/print-verify_k3_G60_24mm.stl**（24mm k3 粗杆），正式标定件 specimens/S1_G60.stl 系 32 件全齐。
@@ -30,6 +28,14 @@
 > 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
 > 7. **CFD 量纲**：驱动幅度须高于残差地板 3+ 量级；v13 语法外部声称必实测。
 >
+> ## 工位侧 11-12：anchor snappyHex 终判达标——TPMS 近墙策略定案（CFD 线里程碑）
+>
+> - **终判数据**：snappyHex（blockMesh 背景 0.3+圆柱侧壁 STL+castellated/snap 层级 2+**3 层棱柱** finalLayer 0.09/expand 1.3）→ **134,589 cells / Mesh OK / 1500 迭代收敛 1e-8 / Ubar=1.002487 / K=0.972038 / 误差 +0.319% < 0.5% 阈**。路线对照终表：tet −13.5% / netgen −8.26% / hex O-grid −1.27% / **snappy +0.319%**（且对任意 STL 曲面通用=TPMS 实体网格正解）。误差符号转正（棱柱层近壁解析优于 hex 均匀径向）。下一步=TPMS 实体算例（p3 流体域 STL+snappy+端盖平移周期对）。
+> - **v13 snappyHex 语法三坑**：①debug 是原始 int 标志非子字典；②geometry 的 triSurfaceMesh **无 name 键**——几何键名即名称/patch 名，STL 经 `file` 键指定；③addLayersControls 必填 `nBufferCellsNoExtrude`+`nLayerIter`（旧教程缺省即炸）。
+> - **k_check.py SI 残留修正**：脚本原 G=1e-9/nu=1e-6（早期米制尝试残留）——本 case 族全 mm 制（G=0.81/nu=1），历史 tet/netgen/hex 误差均按 mm 口径手算，脚本现钉死 mm 常量。snappy 首跑误用 SI 得 +81158% 假误差（口径先行铁律再证）。
+> - **STL 净化坑**：gmsh generate(2) 把端面圆盘一并写进 STL（会被 snappy 当 wall patch）——occ.remove 圆盘实体后再网格化。
+> - 入库件：sim/cfd/anchor1/{gen_snappy_surface.py, blockMeshDict.snappy, snappyHexMeshDict, run_snappy.sh}；cylinder_wall.stl gitignore（脚本再生）。同日 B1 线：CI 红修复（bc4466c）+harness_ui_check 49→50 门（55b5a60）三平台绿。
+>
 > ## 工位侧 11-11：Gemini 平台化咨询回执（参照系=deepseek-harness 开源平台；只出回执不立项，既定优先级不变）
 >
 > - **背景**：用户代贴 Gemini（以 deepseek-harness 开源 Agent 平台为借鉴参照）基于 platform/index.html 的"四大差距"诊断+Sim-Harness 改造建议。ZCode 核实：DOM 事实基本准确（31 抽屉非 29、nl 面板尺寸/单步规则解析属实），**关键勘误=M4 自愈闭环（tpms-driver 有界菜单修复+declare_unreachable）已在 CLI 线生产态**——真缺口是"两线合流"非"从零建"。
@@ -38,6 +44,8 @@
 > - **第二轮（Gemini 终答已归档处置，`collab/gemini/2026-11-11-agent-platform-gemini-verdict.md`）**：接受全部勘误裁定；Q1 设计基线采纳（单源 schema-core.mjs／`__active_viewport__` 冲突锁／五类错误分类／四门禁增补）——两处修正（vite 路径 `../agent` 非 `../../`；E11 语义"整批拒 vs 重复者拒首个保留"待对齐）+ 一处实质分歧登记（**浏览器 45s 总超时 vs CLI E2 教训 170s thinking 长尾**，立项时用 E2 数据重定）；Q2 三判据（异构本体≥3/协作者>2/首屏 5MB·3s）登记备查；Q3 移动端 38vh/62vh 方案留方向 B。**参照系核实：deepseek-harness 官方仓真实（MIT/Cordis/`npx @deepseek-ai/dsh web`/developer preview），可借鉴 docs/architecture.md 但不引入 Cordis 依赖。**
 > - **第三轮定案（同日，用户拍板）**：①S1 上机**挂起**（近期不上机，链路保持就绪）；②**方向 A 插队启动**（"想把 agent 平台做出来"），snappyHex 顺延；③三笔修正定案（E11 对齐 8d1bddb「首个保留/重复者拒」非整批连坐；浏览器总超时 170s+秒表+手动停止；vite 路径 `../agent`）；④**预算窗口定案=Per-Prompt Autonomous Run**（一次发送驱动的 1..maxRounds 跨轮累计不重置，超限熔断该 Run；Run 结束交还人类后重置；防连发滑动窗口 60s≤8192）。设计输入包齐备，A1（schema-core.mjs 抽离+CORS 实测）当日开工。
 > - **A1 落地（同日，四门全绿）**：①CORS 终判（五组实测）：**智谱全线=自域白名单，浏览器直连死路**（anthropic 实响 dangerous-direct-browser-access 有 ACAO 回显但 preflight 无 ACA 头）；**GO=DeepSeek（Origin 回显）+OpenRouter（ACAO *）+本地 Ollama**——A2 云通道=任意 CORS 放行的 OpenAI 兼容端点，智谱 key 留 CLI。②**schema-core.mjs 单源抽离**：validateToolCalls（含 E5 预算/E11 写冲突）+schemaToOllamaTools 自 llm-provider、REPAIR_TOOL（REPAIR_TYPES）自 tpms-driver 迁入，零 Node 依赖；llm-provider 转出口保 import 兼容；schema_check 静态锚两处改指 schema-core。③验证：selftest 101/0+schema_check **113/0**（108 旧口径作废）+红队探针 17/17+driver selftest 20/0。④**A2 下一批**=browser provider（OpenAI 兼容 CORS 端点+Ollama+Mock 兜底）+BrowserToolRegistry 六工具映射+NL 面板 BYO key UI+四门禁增补（Per-Prompt Run 预算窗口/170s 超时+秒表停止钮）。
+> - **harness_ui_check 纳管（11-12，55b5a60，49→50 门）**：B1 自查题缺口闭合——新门 13 断言三层活性（外壳：标题/provider 三通道/空态/停止钮隐藏/芯片标签；**iframe 桥端到端**：手工 postMessage get-state 回执+apply 写穿双壳断言工程壳 title→Diamond——一信号证明外壳↔桥↔工程壳全链；标签切换；无 key 规则兜底真实 UI 路径写穿 title→Schwarz；零错误）。踩坑：harness.html 无 icon 链接→浏览器 /favicon.ico 回退 404 炸零错误断言——补 `<link rel=icon href=./favicon.svg>` 源级修复。50 门宣称全量连带（badge/README 双语/tpms README/docs 5 份含 interview-pack）+schema_check 50/50 对拍+docs 349/0 复绿。CI 43146815413 守望中（含 bc4466c 主包命名修复验证）。
+> - **B1 CI 红修复（11-12，bc4466c）**：89d1126 三平台齐红——vite 多入口 `main:` 键把主包改名 main-*.js，撞翻 docs_consistency 主包唯一性哨兵（index-*.js 锚）。入口键 main→index 一行修复；docs 349/0+fix_check 28/0+agent_bridge 29/0 本地复绿，新 CI 守望。**教训：门禁哨兵锚定产物命名（隐契约）——加入口/改产物布局时 docs_consistency 属布局敏感门必须进本地预验证清单；私有仓 CI 日志 403 时三平台齐红=确定性失败，本地按嫌疑度跑快门定位。**
 > - **方向 B1 落地（同日，harness.html 双壳驾驶舱上线）**：①设计先行（design skill 全流程）——原型 `原型/harness-驾驶舱.html` 双轮 AI 视觉走查修 8 处（误读 3 处经脚本实测排除）+双端 gutter 零命中+真指针五交互全中+lint 0 违规；用户拍板 **B 双栏极简+恒暗**（41% 轨迹流/59% 画布坞；≤980px=38vh 吸顶舞台+62vh 对话流）。②实现——`harness.html`+`src/harness-main.ts`（7.9kB 轻壳）+vite 双入口；**iframe-bridge**（同源+嵌入双校验开桥、请求-回执 id 配对、**重活滑动窗 cap Σ≤4096/60s**——执行面自守封死绕过 harness 预算直发 postMessage 的通道，回应设计自查题）；`agent-tools-shared.ts`（list/estimate 双壳单源）+main.ts hoist agentMeshExec/agentVerifyExec（写态执行体双壳同源）。③**e2e 双壳全链真浏览器实证**：mesh→verify fail→修复菜单→repair 0.72→final，**iframe 工程壳 badge 实变 73.0%**、顶栏预算表精确 539、诊断网格 8 格、单卡合并轨迹流；无 key 规则兜底=parseNL 经桥应用。④门禁 agent_bridge 24→**29 断言**（F 段桥接线 5 断言）+card_smoke 19/0+fix_check 28/0+nl_agent 48/0+build 绿。
 > - **浏览器端到端联调终验（同日，方向 A 收官章）**：真浏览器全链走通——`.verify/agent_e2e_server.mjs` 同源一体服务（静态页+OpenAI 兼容 mock 同端口）驱动：mesh(p88 k3)→design_verify(fail, manufacturing-audit)→**修复菜单轮注入→apply_repair{porosity:0.72}**→final，badge 实变 73.0%（修复补丁真实生效）；「第 3 轮 · 修复菜单」徽标/✎ 事件/秒表全渲染。**三个环境发现**：①MCP 托管 Chrome 拦跨源子资源（同源 POST 200/跨源 GET 即炸，SW 源码清白——故用同源一体服务绕行；真跨源行为由 preflight curl+GO 端点背书，用户侧 DeepSeek 实测仍待做）；②node 默认 keepAliveTimeout=5s 连接复用竞态=假 CORS 故障（第 1 轮成功第 2 轮 Failed to fetch，server.keepAliveTimeout=300s 修）；③gyroid p88 design_verify 的 minWallMm.medial=NaN→JSON 序列化为 null（薄壁端 medial EDT 无极大点，verdict 由 warnings 判 fail 正确；NaN 口径小瑕登记 bugs.md）。
 > - **A3b+GLM 真模型实证（同日）**：①**水密门回流**（上批自查题缺口闭合）：agent mesh 带 out 时同步等重建（awaitNextRebuild waiter，重建完成点 notify，120s 超时兜底挂后台导出）→nlDoExport 内联过水密门——**失败以 verifyFail 回流 apply_repair 修复菜单**（浏览器 M4 信号面对齐 CLI verify 含水密门语义）；门禁 D 段+1 结构断言=24 断言全绿，UI 双门 19/28 保持。②**GLM 真模型 CLI 侧全链实证**（Coding Plan key hub 在册，浏览器不可用=CORS 终判）：M3 一轮过（glm-5.3-flash 正确 tpms_mesh+双口径+安全文件名）；**M4 双路径**——lidinoid p0.75 k6 R96 水密失败→GLM patch_design{periods:4}（理由准确引用薄壁自触族）→PASS 交付实测 75.74%；cylinder+diamond p0.6→GLM **declare_unreachable**（准确引用深水区+分辨率上限诊断）exit3。用户提供的 UUID 格式 key（8b73d6a1…）三端点全 401=非智谱格式，已弃。
