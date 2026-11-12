@@ -1,0 +1,30 @@
+FoamFile
+{
+    format ascii;
+    class dictionary;
+    location "system";
+    object createNonConformalCouplesDict;
+}
+fields yes;
+nonConformalCouples
+{
+    xperiodic
+    {
+        owner
+        {
+            patch cycX0;
+            patchFields
+            {
+                U { type nonConformalCyclic; }
+                p { type nonConformalCyclic; }
+            }
+        }
+        neighbour
+        {
+            patch cycXL;
+            patchFields { $../../owner/patchFields; }
+        }
+        transform translational;
+        separation (6.283185307179586 0 0);
+    }
+}

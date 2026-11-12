@@ -1,0 +1,41 @@
+FoamFile
+{
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+dimensions      [0 1 -1 0 0 0 0];
+internalField   uniform (0 0 0);
+boundaryField
+{
+    cycX0
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    cycXL
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    sideY
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    sideZ
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    scaffoldWall
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    xperiodic_on_cycX0 { type nonConformalCyclic; }
+    xperiodic_on_cycXL { type nonConformalCyclic; }
+    nonConformalError_on_cycX0 { type nonConformalError; }
+    nonConformalError_on_cycXL { type nonConformalError; }
+}

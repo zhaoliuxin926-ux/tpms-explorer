@@ -1,0 +1,36 @@
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+dimensions      [0 2 -2 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    cycX0
+    {
+        type            zeroGradient;
+    }
+    cycXL
+    {
+        type            zeroGradient;
+    }
+    sideY
+    {
+        type            zeroGradient;
+    }
+    sideZ
+    {
+        type            zeroGradient;
+    }
+    scaffoldWall
+    {
+        type            zeroGradient;
+    }
+    xperiodic_on_cycX0 { type nonConformalCyclic; }
+    xperiodic_on_cycXL { type nonConformalCyclic; }
+    nonConformalError_on_cycX0 { type nonConformalError; }
+    nonConformalError_on_cycXL { type nonConformalError; }
+}

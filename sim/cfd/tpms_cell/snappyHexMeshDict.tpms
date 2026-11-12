@@ -1,0 +1,109 @@
+/* TPMS 单胞 Darcy 算例 snappyHexMesh（2026-11-12，anchor-1 定案参数移植）
+   近墙策略=已定案的 castellated/snap 层级 2 + 3 层棱柱（finalLayer 0.09/expand 1.3，
+   anchor-1 K +0.319% 实证口径）。locationInMesh=(π,π,π)：f=0<c=0.3 属孔隙相。 */
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+mergeTolerance  1e-6;
+
+geometry
+{
+    scaffoldWall
+    {
+        type triSurfaceMesh;
+        file "tpms_wall.stl";
+    }
+}
+
+castellatedMeshControls
+{
+    maxLocalCells       4000000;
+    maxGlobalCells      8000000;
+    minRefinementCells  0;
+    nCellsBetweenLevels 2;
+
+    features ();
+
+    refinementSurfaces
+    {
+        scaffoldWall
+        {
+            level (2 2);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 30;
+
+    // 孔隙相内一点：gyroid 中心 f=0 < c=0.3
+    locationInMesh (3.14159265 3.14159265 3.14159265);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+    nFeatureSnapIter 10;
+    implicitFeatureSnap true;
+    explicitFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes   false;
+
+    layers
+    {
+        scaffoldWall
+        {
+            nSurfaceLayers 3;
+        }
+    }
+
+    expansionRatio      1.3;
+    finalLayerThickness 0.09;
+    minThickness        0.02;
+
+    nGrow               0;
+    nBufferCellsNoExtrude 0;
+    nLayerIter          50;
+    featureAngle        60;
+    slipFeatureAngle    30;
+    nRelaxIter          5;
+    nSmoothSurfaceNormals 3;
+    nSmoothNormals      5;
+    nSmoothThickness    10;
+    maxFaceThicknessRatio 0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle  90;
+}
+
+meshQualityControls
+{
+    maxNonOrtho         65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave          80;
+    minVol              1e-13;
+    minTetQuality       1e-15;
+    minArea             -1;
+    minTwist            0.02;
+    minDeterminant      0.001;
+    minFaceWeight       0.02;
+    minVolRatio         0.01;
+    minTriangleTwist    -1;
+    nSmoothScale        4;
+    errorReduction      0.75;
+}
