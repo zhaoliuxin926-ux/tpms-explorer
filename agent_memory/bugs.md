@@ -43,6 +43,15 @@
 
 ## 二、开放风险（按日期）
 
+## 2026-11-12 【重大更正】TPMS 单胞 v1/v2 的 K=1.53e-4/1.5264e-4 mm² 判无效（死腔伪值）
+
+- **症状链**：KC（Sv=0.9796 实算）=0.042 mm² 与毛细管束 0.026 mm² 同侧高 CFD 200~277×；p 坡 5.166≈G·L=5.089 ✓（体积力静压假象）但 Ux 峰值仅 7.5e-3（应 ~0.1+）。
+- **根因**：v13 createNonConformalCouples 从不迁移面——`xperiodic_on_*` 恒 0 面，面留在原 cycX0/cycXL（type patch）；两端 0/U fixedValue=(0,0,0) ⇒ **闭合回流腔**，收敛解是腔内环流（p 坡=体积力静压分布，"K"=环流伪值）。v1 vs v2 差 0.006%=两个死腔互证，非壁面效应。
+- **官方语义考据**：annotated 模板 `patches (p1 p2)` 简式 ≠ 教程挡板 owner/neighbour 式（后者配 createBaffles 内部重合面）；官方 test（Lagrangian）couple 面也为 0+原 patch 加组标——NCC 流耦合面向**内部挡板**（TJunctionFan fan0/fan1 经 createBaffles 生成），**外部周期对的流耦合语义未证通**；原 patch 上直接写 nonConformalCyclic BC 报 cast patch→lduInterface 崩。
+- **待选修复路线**（下批拍板）：A) 读 createNonConformalCouples.C 源码 (~百行级) 弄清外部周期对流耦合的正解；B) 通透池旁路：x 两端改 p-inlet/p-outlet 压差驱动（K=nu·q/(ΔP/L)，无耦合烦恼，入口效应需披露/多胞缓解）；C) 共形 cyclic 强对称化（castellation 本应对称——面数不等疑为 snap 后质心漂移，试 createPatch matchTolerance 放宽）。
+- **资产状态**：网格链（strip_caps→blockMesh→snappy→checkMesh）与八坑语法沉淀**有效**；仅 K 数值作废。复跑脚本产出的 Ubar 需死腔判读（查 xperiodic_on_* nFaces>0 才有效）。
+
+
 ## 2026-11-11 浏览器 design_verify 的 minWallMm.medial=NaN 口径（小瑕，非阻塞）
 
 - **现象**：agent e2e 联调（gyroid p88 k3 R48）中 design_verify 结构化 JSON 输出 `minWallMm:null`——根因=薄壁端固相体素全为表面邻接、medial EDT 无局部极大点 → `rep.minWallMm.medial` 为 NaN，`Number(NaN.toFixed(3))` → `JSON.stringify(NaN)` 序列化为 null。

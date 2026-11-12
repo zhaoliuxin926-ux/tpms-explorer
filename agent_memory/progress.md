@@ -30,6 +30,11 @@
 >
 > ## 工位侧 11-12：anchor snappyHex 终判达标——TPMS 近墙策略定案（CFD 线里程碑）
 >
+> - **【重大更正·同日晚】TPMS 单胞 K 值判无效（死腔伪值）**：KC 对照（Sv=0.9796 实算→KC=0.042 mm²，毛细管束 0.026）高 CFD"K"200~277×触发深挖——**v13 NCC 从不迁移面（xperiodic_on_* 恒 0 面）**，面留原 cycX0/cycXL（fixedValue 两端）⇒ 闭合回流腔，v1/v2 的 1.53e-4/1.5264e-4 全为环流伪值（v1≈v2 的 0.006%=双死腔互证，壁面效应结论同废）。p 坡 5.166≈G·L 是体积力静压假象（耦合方向本身对）。官方语义考据：annotated 简式 `patches (p1 p2)` ≠ 教程挡板 owner/neighbour 式；NCC 流耦合面向 createBaffles 内部重合面（TJunctionFan），外部周期对流耦合未证通；原 patch 直写 nonConformalCyclic BC 崩（cast lduInterface）。**网格链+八坑语法沉淀仍有效**。修复三选（待拍板）：A 源码级弄通 NCC 外部周期/B 压差驱动通透池旁路（K=nu·q/(ΔP/L)）/C 共形 cyclic 对称化+matchTolerance 放宽。详见 bugs.md 当日条目。
+
+>
+> - **TPMS 单胞 v2 全 PBC（c2025be）——壁面效应实测定案**：y/z 三对非共形周期偶合（83,905 cells/Mesh OK/1500 iters 收敛 1e-9/Ubar 千位迭代稳定），**Ubar 2.10389358e-04 vs v1 壁面版 2.10401666e-04——差异仅 0.006%**（远低于 anchor 经验预估的 10% 量级）。机制：gyroid p60 迂回通道使 y/z 边界贴天然低流速区，无滑移几乎不动总量。**结论：v1 口径（y/z 壁面）K=1.527e-4 mm² 即本征渗透率，后续 R48 标定无需全 PBC**（省一半网格与偶合复杂度）。附带坑：NCC 偶合字典宏只解析祖先链不解析兄弟——y/z 对须字面 patchFields（不可 $../xperiodic/ 引用）。
+>
 > - **TPMS 单胞 Darcy 全链贯通（8f960a5，同日续）**：①**snappy 无棱判别对照**（自查题闭环）——无棱柱 +0.579% vs 棱柱版 +0.319%：**近壁修复主责=castellated/snap 表面细化（level 2），棱柱层仅再压一半残余**——TPMS 复杂曲面棱柱掉层时误差仍 <1%，鲁棒性利好。②**TPMS 单胞首算**（p3 k1 gyroid p60 流体域 STL → 剔端盖 → snappy 定案参数 → **v13 非共形周期对** → foamRun）：83,895 cells / Mesh OK / 1500 iters 收敛 1e-9 / Ubar 千位迭代 8 位稳定 → **K=1.53e-4 mm²**（v1 口径：y/z 壁面近似，全 PBC 留后续；数值仅作管线贯通证据）。③**v13 NCC 八坑全链固化**（skill v13-syntax.md）：cyclicAMI 不存在→nonConformalCyclic/createPatch 死路→createNonConformalCouples 工具/HOME 非法名目录炸工具/0 场 patch 名单精确一致/宏 $../../owner/patchFields/NCC 建 xperiodic_on_*+error 哨兵新 patch 而原 patch 成零面空壳须无害 BC/空壳 calculated 炸求解/wall 不得配 symmetry。共形 cyclic 在 TPMS 两端 MC 三角化差异下不可达（位移 1.14≫0.046）实测定案。④复跑脚本+字典+0 场模板入库 sim/cfd/tpms_cell/（repro 复跑验证中）。下一步：y/z 全 PBC（三对 NCC）→ R48 主力档 → K 与 Kozeny-Carman/文献带对照。
 >
 > - **终判数据**：snappyHex（blockMesh 背景 0.3+圆柱侧壁 STL+castellated/snap 层级 2+**3 层棱柱** finalLayer 0.09/expand 1.3）→ **134,589 cells / Mesh OK / 1500 迭代收敛 1e-8 / Ubar=1.002487 / K=0.972038 / 误差 +0.319% < 0.5% 阈**。路线对照终表：tet −13.5% / netgen −8.26% / hex O-grid −1.27% / **snappy +0.319%**（且对任意 STL 曲面通用=TPMS 实体网格正解）。误差符号转正（棱柱层近壁解析优于 hex 均匀径向）。下一步=TPMS 实体算例（p3 流体域 STL+snappy+端盖平移周期对）。
