@@ -1,0 +1,18 @@
+== blockMesh ==
+
+== snappyHexMesh ==
+Finished meshing without any errors
+Finished meshing in = 449.18274 s.
+== createNonConformalCouples ==
+4
+== checkMesh ==
+    cells:            299557
+Mesh OK.
+== foamRun ==
+[foamRun] iters=1500
+End
+== Ubar 末值（K=nu*eps*Ubar/G，eps 用 p3 fluid_frac）==
+1500            	(1.68833641e-04 -1.18199495e-07 -4.00005170e-07)
+# 【死腔伪值戳 2026-11-12】本 log 的 Ubar/K 无效（NCC 零面迁移⇒闭合回流腔，同 v1/v2）。
+# 有效部分：level 3 网格 299,557 cells（level2 3.6×）/ Mesh OK / snappy 449s——网格收敛链数据点。
+# 佐证：伪值 Ubar 随细化漂 19.8%（2.104e-4→1.688e-4）——真周期解 level2 应近无关，伪腔流才会大幅漂。
