@@ -51,7 +51,7 @@ tpms-explorer/
 └── tpms/
     ├── tpms-platform/            # Vite+TS 源码（main.ts 等）
     ├── agent/                    # CLI、Agent、工具脚本
-    └── .verify/                  # 审计/门禁脚本（run_ci_suite 49 门）
+    └── .verify/                  # 审计/门禁脚本（run_ci_suite 50 门）
 ```
 
 ---
@@ -77,7 +77,7 @@ tpms-explorer/
 
 | 层 | 内容 | 当前值 |
 |---|---|---|
-| 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****49 门**（main 现态，2026-10-11 strut_exit_audit+llm_driver_selftest 入列、2026-11-11 agent_bridge_audit 入列；**tag v1.0.3 时为 44**，docs_consistency/guard_audit 于 tag 后入列） |
+| 顶层调度 | `tpms/.verify/run_ci_suite.mjs` | ****50 门**（main 现态，2026-10-11 strut_exit_audit+llm_driver_selftest 入列、2026-11-11 agent_bridge_audit 入列、2026-11-12 harness_ui_check 入列；**tag v1.0.3 时为 44**，docs_consistency/guard_audit 于 tag 后入列） |
 | 断言示例 | parity 337 / schema 113（GUARD 98） / webgpu 119 / docs_consistency **349**（GUARD 313） | GUARD 锁下限 |
 | 三平台 | GitHub Actions Ubuntu/Windows/macOS | push 即跑 |
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |

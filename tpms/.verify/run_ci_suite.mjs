@@ -163,6 +163,8 @@ const SCHEDULE = [
   ['ui_jump_check 控制台分组导航（UI 重组回归）', '分组导航快检', 'ui_jump_check.mjs'],
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/动态SCHEDULE对拍/禁句/SEO三件哨兵/publish 同源+sync-publish/调色单例/徽章↔tag，CI 基线 313）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（18 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）', 'UI 回归', 'run_all.mjs'],
+  // 【2026-11-12 纳管】方向 B1 专属门：驾驶舱壳/iframe 桥/规则兜底三层活性（selector/fix_check 均不锚 harness.html）
+  ['harness_ui_check 双壳驾驶舱 UI 与桥冒烟（13 断言——外壳/工程壳/桥端到端写穿/标签/规则兜底）', '驾驶舱 UI 冒烟', 'harness_ui_check.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，56断言）', 'CLI 自检', '../agent/selftest.mjs'],

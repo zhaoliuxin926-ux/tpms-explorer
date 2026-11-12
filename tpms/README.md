@@ -1,7 +1,7 @@
 # TPMS Explorer · 工程中枢（tpms/）
 
 > **面向开发者、二次研究者与贡献者**：工程化平台（Vite + TS + Three.js + WebGPU）、Agent CLI 工具链与自动化验证门禁体系都在本目录。
-> 终端用户体验、在线入口与项目全景请看[仓库主页](../README.md)——49 道 CI 门禁、1000+ 断言的 verification-first 承诺由本中枢兑现。
+> 终端用户体验、在线入口与项目全景请看[仓库主页](../README.md)——50 道 CI 门禁、1000+ 断言的 verification-first 承诺由本中枢兑现。
 
 
 ---
@@ -57,7 +57,7 @@
 │   ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185，94 个源文件）
 │   │                          ←   Web Worker 重建 · 10+ 种导出格式（GLB/3MF/VTK/VTI/py/m …）
 │   ├── agent/                 ← AI Agent 与 CLI 工具链（tpms.mjs / llm-agent.mjs / fit-batch.mjs / agent-pipeline.mjs）
-│   ├── .verify/               ← 自动化验证门禁网（run_ci_suite.mjs 49 门调度 / parity_math.mjs / Playwright UI 回归）
+│   ├── .verify/               ← 自动化验证门禁网（run_ci_suite.mjs 50 门调度 / parity_math.mjs / Playwright UI 回归）
 │   └── prototypes/            ← MATLAB 早期原型（已归档）
 │
 ├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp）
@@ -166,13 +166,13 @@ npm run dev      # 访问 http://localhost:5173
 
 ### 验证（一键全量）
 ```bash
-node tpms/.verify/run_ci_suite.mjs     # 49 门全量调度（约 25 分钟，三平台同款）
+node tpms/.verify/run_ci_suite.mjs     # 50 门全量调度（约 25 分钟，三平台同款）
 cd tpms/.verify && node run_all.mjs    # 仅 18 套 UI 回归（run_all 自起 4814/8125 静态服务，无需手动开服）
 node tpms/.verify/parity_math.mjs      # 数学/导出一致性（纯 Node，无需浏览器与服务）
 ```
 工程版单独验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 调度 **49/49** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest/agent_bridge_audit 四项 CLI 门 + `strut_exit_audit` 桁架跨出口矩阵门（2026-10-11 纳管）+ `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
+> CI 数量口径：`run_ci_suite.mjs` 调度 **50/50** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest/agent_bridge_audit 四项 CLI 门 + `strut_exit_audit` 桁架跨出口矩阵门（2026-10-11 纳管）+ `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
 
 ### 工程版部署到 GitHub Pages
 ```bash
