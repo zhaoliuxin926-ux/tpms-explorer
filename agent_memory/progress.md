@@ -28,6 +28,11 @@
 > 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
 > 7. **CFD 量纲**：驱动幅度须高于残差地板 3+ 量级；v13 语法外部声称必实测。
 >
+> ## 工位侧 11-13：R48 全族 K(ε) 标定曲线首批（CFD 线 Phase 3 出数）
+>
+> - **四档通透池全绿（ac698b1）**：p50/p60/p70/p80（eps=0.499/0.600/0.701/0.802）→ **K=0.0521/0.0894/0.1459/0.2353 mm²**，1500 iters 全收敛（Ubar 千位稳定）；**幂律拟合 K=0.461·ε^3.17（R²=0.998）**——指数 3.17 与 KC 的 ε³ 同族微陡，KC 对照比 1.92→2.88 随孔隙率单调扩大（喉道效应超过比表面积标度）。K_scan_result.json+manifest 入库；R48 无棱扫描模式（p50 三层棱柱 SIGFPE=窄喉道放不下棱柱的档位边界——无棱判别结论即解）。
+> - **管线口径**：p3 k1 R48 四档 STL（fluid_frac dev≤0.19pp）→ strip_caps → snappy lvl2 无棱（65-67k cells Mesh OK 各档）→ 通透池 ΔP=5.089。**下一步**：lvl3 抽验一档网格无关性 → 平台 estimatePermeability 同 Sv 口径对照 → k2 双胞档入口效应分离 → CSV 契约交付 → Gemini 对照题。
+>
 > ## 工位侧 11-12：anchor snappyHex 终判达标——TPMS 近墙策略定案（CFD 线里程碑）
 >
 > - **【重大更正·同日晚】TPMS 单胞 K 值判无效（死腔伪值）**：KC 对照（Sv=0.9796 实算→KC=0.042 mm²，毛细管束 0.026）高 CFD"K"200~277×触发深挖——**v13 NCC 从不迁移面（xperiodic_on_* 恒 0 面）**，面留原 cycX0/cycXL（fixedValue 两端）⇒ 闭合回流腔，v1/v2 的 1.53e-4/1.5264e-4 全为环流伪值（v1≈v2 的 0.006%=双死腔互证，壁面效应结论同废）。p 坡 5.166≈G·L 是体积力静压假象（耦合方向本身对）。官方语义考据：annotated 简式 `patches (p1 p2)` ≠ 教程挡板 owner/neighbour 式；NCC 流耦合面向 createBaffles 内部重合面（TJunctionFan），外部周期对流耦合未证通；原 patch 直写 nonConformalCyclic BC 崩（cast lduInterface）。**网格链+八坑语法沉淀仍有效**。修复三选（待拍板）：A 源码级弄通 NCC 外部周期/B 压差驱动通透池旁路（K=nu·q/(ΔP/L)）/C 共形 cyclic 对称化+matchTolerance 放宽。详见 bugs.md 当日条目。
