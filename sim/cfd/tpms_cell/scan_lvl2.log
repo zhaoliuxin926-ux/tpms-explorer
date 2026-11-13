@@ -1,0 +1,20 @@
+/mnt/d/GITHUB/tpms/sim/cfd/t    faces on cells with determinant < 0.001                : 31
+displacementMedialAxis : Iteration 2
+Moving mesh using displacement scaling : min:0.5625  max:1
+Checking faces in error :
+#0  Foam::error::printStack(Foam::Ostream&) at ??:?
+#1  Foam::sigFpe::sigHandler(int) at ??:?
+#2  ? in "/usr/lib/x86_64-linux-gnu/libc.so.6"
+#3  Foam::primitiveMesh::makeFaceCentresAndAreas(Foam::Field<Foam::Vector<double> > const&, Foam::Field<Foam::Vector<double> >&, Foam::Field<Foam::Vector<double> >&, Foam::Field<double>&) const at ??:?
+#4  Foam::primitiveMesh::calcFaceCentresAndAreas() const at ??:?
+#5  Foam::primitiveMesh::faceAreas() const at ??:?
+#6  Foam::meshCheck::checkMesh(bool, Foam::polyMesh const&, Foam::dictionary const&, Foam::List<int> const&, Foam::List<Foam::Pair<int> > const&, Foam::HashSet<int, Foam::Hash<int> >&) at ??:?
+#7  Foam::motionSmootherAlgo::scaleMesh(Foam::List<int> const&, Foam::List<Foam::Pair<int> > const&, Foam::dictionary const&, Foam::dictionary const&, bool, int) at ??:?
+#8  Foam::medialAxisMeshMover::shrinkMesh(Foam::dictionary const&, int, Foam::List<int> const&) at ??:?
+#9  Foam::medialAxisMeshMover::move(Foam::dictionary const&, int, Foam::List<int> const&) at ??:?
+#10  Foam::snappyLayerDriver::addLayers(Foam::layerParameters const&, Foam::dictionary const&, Foam::List<int> const&, int, Foam::decompositionMethod&, Foam::fvMeshDistribute&) at ??:?
+#11  Foam::snappyLayerDriver::doLayers(Foam::dictionary const&, Foam::dictionary const&, Foam::layerParameters const&, bool, Foam::decompositionMethod&, Foam::fvMeshDistribute&) at ??:?
+#12  ? in "/opt/openfoam13/platforms/linux64GccDPInt32Opt/bin/snappyHexMesh"
+#13  ? in "/usr/lib/x86_64-linux-gnu/libc.so.6"
+#14  __libc_start_main in "/usr/lib/x86_64-linux-gnu/libc.so.6"
+#15  ? in "/opt/openfoam13/platforms/linux64GccDPInt32Opt/bin/snappyHexMesh"

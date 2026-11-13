@@ -1,0 +1,25 @@
+== [50] blockMesh+snappy ==
+== [50] checkMesh ==
+    cells:            65639
+Mesh OK.
+== [50] foamRun ==
+== [50] DONE iters=1500 Ubar: 1500            	(8.45930407e-02 -6.46499866e-03 -3.83725702e-03) ==
+== [60] blockMesh+snappy ==
+== [60] checkMesh ==
+    cells:            67014
+Mesh OK.
+== [60] foamRun ==
+== [60] DONE iters=1500 Ubar: 1500            	(1.20734133e-01 -5.63824091e-03 -4.79283123e-03) ==
+== [70] blockMesh+snappy ==
+== [70] checkMesh ==
+    cells:            65717
+Mesh OK.
+== [70] foamRun ==
+== [70] DONE iters=1500 Ubar: 1500            	(1.68693656e-01 -4.61667156e-03 -5.08465713e-03) ==
+== [80] blockMesh+snappy ==
+== [80] checkMesh ==
+    cells:            61153
+Mesh OK.
+== [80] foamRun ==
+== [80] DONE iters=1500 Ubar: 1500            	(2.37631109e-01 -3.62530434e-03 -3.99555293e-03) ==
+ALL-DONE
