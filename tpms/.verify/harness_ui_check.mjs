@@ -317,35 +317,39 @@ try {
   {
     await page.click('.tab[data-pane="pdiag"]');
     await page.waitForSelector('#sim-btn-lpbf', { timeout: 5000 });
+    const t0H1 = Date.now();
     await page.click('#sim-btn-lpbf');
     const lpbfDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('lpbf 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('LPBF 工艺窗口'),
     null, { timeout: 30000, polling: 300 }).then(() => true).catch(() => false);
-    ok('H1 点击 LPBF 热力残余应力完成 N=32 求解并刷新诊断网格', lpbfDone);
+    ok(`H1 点击 LPBF 热力残余应力完成 N=32 求解并刷新诊断网格（实际 ${((Date.now() - t0H1) / 1000).toFixed(1)}s）`, lpbfDone);
 
+    const t0H2 = Date.now();
     await page.click('#sim-btn-tissue');
     const tissueDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('tissue 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('Cool-Warm O₂')
       && (document.getElementById('pp-source-badge')?.textContent ?? '').includes('28天骨长入'),
     null, { timeout: 45000, polling: 300 }).then(() => true).catch(() => false);
-    ok('H2 28天骨组织生长完成求解 + 3D 氧浓度云图着染 + #iso-canvas 曲线渲染', tissueDone);
+    ok(`H2 28天骨组织生长完成求解 + 3D 氧浓度云图着染 + #iso-canvas 曲线渲染（实际 ${((Date.now() - t0H2) / 1000).toFixed(1)}s）`, tissueDone);
 
+    const t0H3 = Date.now();
     await page.click('#sim-btn-phononic');
     const phonDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('phononic 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('Bloch-Floquet 网格')
       && (document.getElementById('pp-source-badge')?.textContent ?? '').includes('声子色散能带'),
     null, { timeout: 45000, polling: 300 }).then(() => true).catch(() => false);
-    ok('H3 Bloch-Floquet N=7 声子晶体能带计算完成并绘制色散禁带图', phonDone);
+    ok(`H3 Bloch-Floquet N=7 声子晶体能带计算完成并绘制色散禁带图（实际 ${((Date.now() - t0H3) / 1000).toFixed(1)}s）`, phonDone);
 
+    const t0H4 = Date.now();
     await page.click('#sim-btn-levelset');
     const lsDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('levelset 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('已更新视口'),
     null, { timeout: 90000, polling: 300 }).then(() => true).catch(() => false);
-    ok('H4 Hamilton-Jacobi 水平集拓扑优化完成演化并写回 3D 视口曲面', lsDone);
+    ok(`H4 Hamilton-Jacobi 水平集拓扑优化完成演化并写回 3D 视口曲面（实际 ${((Date.now() - t0H4) / 1000).toFixed(1)}s）`, lsDone);
 
     await page.evaluate(() => {
       const input = document.getElementById('cmd');
