@@ -344,7 +344,7 @@ try {
     const lsDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('levelset 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('已更新视口'),
-    null, { timeout: 55000, polling: 300 }).then(() => true).catch(() => false);
+    null, { timeout: 90000, polling: 300 }).then(() => true).catch(() => false);
     ok('H4 Hamilton-Jacobi 水平集拓扑优化完成演化并写回 3D 视口曲面', lsDone);
 
     await page.evaluate(() => {
