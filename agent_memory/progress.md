@@ -11,7 +11,8 @@
 >   - **sim 单源**：tpms_fields.py（9 族场单源对齐平台 tpms-functions.ts）；p0/p3 支持 9 族+`--cell-size` 物理标度。
 > - **验证**：build 绿（1.30s，新 chunk harness-cae-dsh 26.1kB）；agent_bridge_audit 29→**53 断言**全绿；harness_ui_check 13→**38 断言**全绿；**全量 50/50 门本地绿**（含真浏览器 E2E：LPBF/骨长入/声子/水平集/场景交付/DSH 交互）；docs/platform 重建产物 hash 与重构建一致（确定性）；无敏感信息。
 > - **踩坑**：套件横幅断言数漂——run_ci_suite.mjs 横幅未随门禁扩容同步（13/29 断言→实际 38/53；另 parity_math 332→337 属预先存在漂移，同批顺手修正）；门禁文件头注无此问题。
-> - **下一步**：①推送+CI 三平台守望；②真机 CAE 实跑批（nTop/COMSOL/ABAQUS/WSL OF13 各引擎实算+四级对标真数据，需长时限单独批次）；③A 线剩余=真跨源实测（DeepSeek key 用户侧）；④CFD 线=k2 双胞入口效应→CSV 契约→Gemini 对照题。
+> - **CI 三红三修链（2026-11-14 当日闭环）**：①H4 无条件读 gitignored 本机产物（sim/out/csv_expl/gyroid_k2_p60_expl.csv）→ macos CI ENOENT 崩门 → **fixture 内嵌自包含**（30f89b7）；②J2/J3/K2 实跑需本机 trimesh/skimage/gmsh（CI 仅 numpy）→ **环境条件双档**（探针 pyCaeReady 分档：满配档真网格链 53 断言 / CI 静态契约钉 52 基线，webgpu_parity "真GPU环境+2" 先例；J3 无守卫解引用顺带修）+K1 python→python3 回退（macos 无裸 python 命令）（c66d05e）；③J2* 钉串 `"'--json'"` 带引号形式在 p1 不存在（argparse 双引号）→ **钉串提取脚本穷举验证**后修正（3538445）。**终态：CI 三平台全绿 + Pages 绿（run 43576989287）**；套件横幅已披露双档口径。
+> - **下一步**：①真机 CAE 实跑批（nTop/COMSOL/ABAQUS/WSL OF13 各引擎实算+四级对标真数据，需长时限单独批次）；②A 线剩余=真跨源实测（DeepSeek key 用户侧）；③CFD 线=k2 双胞入口效应→CSV 契约→Gemini 对照题。
 >
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
