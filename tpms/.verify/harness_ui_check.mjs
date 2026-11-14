@@ -28,6 +28,11 @@ await new Promise(r => setTimeout(r, 900));
 let pass = 0, fail = 0;
 const ok = (n, cond = true, d = '') => (cond ? (pass++, console.log('  ✓ ' + n)) : bad(n, d));
 const bad = (n, d = '') => { fail++; console.log('  ✗ ' + n + (d ? ' — ' + d : '')); };
+// 重计算 E2E 余量预警：耗时超预算 80% 打 WARN（不断言不失败，runner 换代/变慢趋势事前可见）
+const warnSlow = (name, t0, budgetMs) => {
+  const s = (Date.now() - t0) / 1000;
+  if (s > (budgetMs / 1000) * 0.8) console.log(`  ⚠ WARN: ${name} 耗时 ${s.toFixed(1)}s 已超预算 ${Math.round(budgetMs / 1000)}s 的 80%——余量收窄，下次超时前请重标定预算`);
+};
 const errors = [];
 
 const { chromium } = await import('playwright');
@@ -324,6 +329,7 @@ try {
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('LPBF 工艺窗口'),
     null, { timeout: 30000, polling: 300 }).then(() => true).catch(() => false);
     ok(`H1 点击 LPBF 热力残余应力完成 N=32 求解并刷新诊断网格（实际 ${((Date.now() - t0H1) / 1000).toFixed(1)}s）`, lpbfDone);
+    warnSlow('H1', t0H1, 30000);
 
     const t0H2 = Date.now();
     await page.click('#sim-btn-tissue');
@@ -333,6 +339,7 @@ try {
       && (document.getElementById('pp-source-badge')?.textContent ?? '').includes('28天骨长入'),
     null, { timeout: 45000, polling: 300 }).then(() => true).catch(() => false);
     ok(`H2 28天骨组织生长完成求解 + 3D 氧浓度云图着染 + #iso-canvas 曲线渲染（实际 ${((Date.now() - t0H2) / 1000).toFixed(1)}s）`, tissueDone);
+    warnSlow('H2', t0H2, 45000);
 
     const t0H3 = Date.now();
     await page.click('#sim-btn-phononic');
@@ -342,6 +349,7 @@ try {
       && (document.getElementById('pp-source-badge')?.textContent ?? '').includes('声子色散能带'),
     null, { timeout: 45000, polling: 300 }).then(() => true).catch(() => false);
     ok(`H3 Bloch-Floquet N=7 声子晶体能带计算完成并绘制色散禁带图（实际 ${((Date.now() - t0H3) / 1000).toFixed(1)}s）`, phonDone);
+    warnSlow('H3', t0H3, 45000);
 
     const t0H4 = Date.now();
     await page.click('#sim-btn-levelset');
@@ -350,6 +358,7 @@ try {
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('已更新视口'),
     null, { timeout: 150000, polling: 300 }).then(() => true).catch(() => false);
     ok(`H4 Hamilton-Jacobi 水平集拓扑优化完成演化并写回 3D 视口曲面（实际 ${((Date.now() - t0H4) / 1000).toFixed(1)}s）`, lsDone);
+    warnSlow('H4', t0H4, 150000);
 
     await page.evaluate(() => {
       const input = document.getElementById('cmd');
