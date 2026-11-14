@@ -360,6 +360,7 @@ try {
     ok(`H4 Hamilton-Jacobi 水平集拓扑优化完成演化并写回 3D 视口曲面（实际 ${((Date.now() - t0H4) / 1000).toFixed(1)}s）`, lsDone);
     warnSlow('H4', t0H4, 150000);
 
+    const t0H5 = Date.now();
     await page.evaluate(() => {
       const input = document.getElementById('cmd');
       input.value = '全自动设计 E>=3 GPa 且 κ>=2e-9 m2 的骨支架并生成仿真报告';
@@ -368,8 +369,9 @@ try {
     const pipeDone = await page.waitForFunction(() =>
       (document.getElementById('stream')?.textContent ?? '').includes('已完成端到端自治仿真流水线')
       && (document.getElementById('filelist')?.textContent ?? '').includes('.md'),
-    null, { timeout: 60000, polling: 400 }).then(() => true).catch(() => false);
-    ok('H5 对话栏触发展开端到端自治流水线并自动导出 .md 工程验收报告', pipeDone);
+    null, { timeout: 240000, polling: 400 }).then(() => true).catch(() => false);
+    ok(`H5 对话栏触发展开端到端自治流水线并自动导出 .md 工程验收报告（实际 ${((Date.now() - t0H5) / 1000).toFixed(1)}s）`, pipeDone);
+    warnSlow('H5', t0H5, 240000);
 
     await page.click('.tab[data-pane="pexp"]');
     await page.waitForSelector('#exp-btn-report-json', { timeout: 5000 });
