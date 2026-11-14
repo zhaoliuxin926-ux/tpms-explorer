@@ -1,6 +1,19 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
+> ## 🔖 新会话开工指引（2026-11-14 · 接手 11-13/14 孤儿批次归档 · 本地 50 门全绿）
+>
+> - **接手背景**：11-13 会话提交 CFD K(ε) 曲线（ac698b1）后继续做了平台 **Phase 2-5 大批次**（DSH CAE 工作台+本地桥），未归档未提交即中断（工作树 ~5000 行改动 + 新文件 5111 行，文件 mtime=11-13 13:34 → 11-14 00:27）。本轮接手完成盘点+验证+归档提交。
+> - **批次内容（Phase 2-5 全链）**：
+>   - **Phase 2**：浏览器工具面 4→**6 工具满配**（tpms_pareto 832 点扫描+tpms_scenario 场景模板）；**session-core.mjs** 会话与确定性指代单源抽离（从 agent-session.mjs，schema-core 同构架构，CLI/Web 双端共享，双语义锁 GEOMETRY/BINDING 不变）；estimate 增 OpenFOAM R48 校准对比（K=0.461·ε^3.17 常数入码）；ABAQUS EXPL ISO 13314 反演+Forchheimer 双点回填。
+>   - **Phase 3**：LPBF/骨长入/声子能带/水平集四物理模块接线进驾驶舱（模块本身既有，本轮接线+桥协议+自治流水线+工程报告 .md 导出）。
+>   - **Phase 4**：**DSH 三栏工作台**（dsh-rail/sidebar/slash-menu/Split Dock）+ **cae-daemon.mjs**（127.0.0.1:4830 本地桥：origin 白名单/路径穿越封堵/job 白名单/self-test，五 job kind=BL/OF/ABQ/COMSOL/pipeline）+ p1_bl_mesh（ntop/gmsh-bl/snappy-bl 三轨）+ p4_comsol_setup（COMSOL 6.2 Java 生成编译批跑）。
+>   - **Phase 5**：ntop_builder.py（nTopCL 6.3.3 .ntop 容器合成，sim/ntop/tpms_bl_cfd.ntop 入库）+ Mesh Doctor + RVE k=3→k_cfd=1 + p3_openfoam_solve（WSL OF13 主轨+FVM Brinkman 兜底）+ 双流速 Forchheimer/WSS 成骨窗口 + 前端残差/WSS SVG 监控+**四级保真度对标矩阵**（T1 解析/T2 浏览器/T3 本地 CFD/T4 工业多物理场）+ STL overlay 3D 视口。
+>   - **sim 单源**：tpms_fields.py（9 族场单源对齐平台 tpms-functions.ts）；p0/p3 支持 9 族+`--cell-size` 物理标度。
+> - **验证**：build 绿（1.30s，新 chunk harness-cae-dsh 26.1kB）；agent_bridge_audit 29→**53 断言**全绿；harness_ui_check 13→**38 断言**全绿；**全量 50/50 门本地绿**（含真浏览器 E2E：LPBF/骨长入/声子/水平集/场景交付/DSH 交互）；docs/platform 重建产物 hash 与重构建一致（确定性）；无敏感信息。
+> - **踩坑**：套件横幅断言数漂——run_ci_suite.mjs 横幅未随门禁扩容同步（13/29 断言→实际 38/53；另 parity_math 332→337 属预先存在漂移，同批顺手修正）；门禁文件头注无此问题。
+> - **下一步**：①推送+CI 三平台守望；②真机 CAE 实跑批（nTop/COMSOL/ABAQUS/WSL OF13 各引擎实算+四级对标真数据，需长时限单独批次）；③A 线剩余=真跨源实测（DeepSeek key 用户侧）；④CFD 线=k2 双胞入口效应→CSV 契约→Gemini 对照题。
+>
+> ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
 > **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
 >
