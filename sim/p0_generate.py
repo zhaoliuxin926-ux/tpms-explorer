@@ -21,31 +21,22 @@ import numpy as np
 import trimesh
 from skimage import measure
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tpms_fields import SUPPORTED_TYPES, evaluate_field  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[1]
 
 
-def gyroid_field(k: int, R: int) -> tuple[np.ndarray, np.ndarray]:
-    """无量纲 gyroid 场 f 与采样坐标。域 [0, 2πk]³，每周期 R 格。"""
-    n = k * R
-    ax = np.linspace(0.0, 2.0 * np.pi * k, n + 1)
-    x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
-    f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
-    return f, ax
+def _make_field(ftype: str):
+    def _eval(k: int, R: int) -> tuple[np.ndarray, np.ndarray]:
+        n = k * R
+        ax = np.linspace(0.0, 2.0 * np.pi * k, n + 1)
+        x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
+        return evaluate_field(ftype, x, y, z), ax
+    return _eval
 
 
-def diamond_field(k: int, R: int) -> tuple[np.ndarray, np.ndarray]:
-    """无量纲 diamond 场（与平台 tpms-functions.ts 同源四项式）。域 [0, 2πk]³。"""
-    n = k * R
-    ax = np.linspace(0.0, 2.0 * np.pi * k, n + 1)
-    x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
-    f = (np.sin(x) * np.sin(y) * np.sin(z)
-         + np.sin(x) * np.cos(y) * np.cos(z)
-         + np.cos(x) * np.sin(y) * np.cos(z)
-         + np.cos(x) * np.cos(y) * np.sin(z))
-    return f, ax
-
-
-FIELDS = {"gyroid": gyroid_field, "diamond": diamond_field}
+FIELDS = {t: _make_field(t) for t in SUPPORTED_TYPES}
 
 
 def solve_level(f: np.ndarray, solid_fraction: float) -> float:
@@ -103,7 +94,8 @@ def box_sdf(ax: np.ndarray, box_lo: float, box_hi: float) -> np.ndarray:
 
 
 def generate(k: int, R: int, porosity: float, ftype: str = "gyroid",
-             structure: str = "network", solid: float = 0.35
+             structure: str = "network", solid: float = 0.35,
+             cell_size_mm: float | None = None
              ) -> tuple[trimesh.Trimesh, float]:
     """生成水密 TPMS 实体。
 
@@ -119,14 +111,7 @@ def generate(k: int, R: int, porosity: float, ftype: str = "gyroid",
     box_lo, box_hi = 0.0, 2.0 * np.pi * k
     ax = np.linspace(-margin * dx, box_hi + margin * dx, k * R + 2 * margin + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
-    # 场分族（2026-10-31）：gyroid 原式；diamond 与平台 tpms-functions.ts 同源四项式
-    if ftype == "diamond":
-        f = (np.sin(x) * np.sin(y) * np.sin(z)
-             + np.sin(x) * np.cos(y) * np.cos(z)
-             + np.cos(x) * np.sin(y) * np.cos(z)
-             + np.cos(x) * np.cos(y) * np.sin(z))
-    else:
-        f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
+    f = evaluate_field(ftype, x, y, z)
     # 阈值只在盒内统计（与最终几何的统计域一致）
     eps = 1e-6
     in_box = ((x >= box_lo - eps) & (x <= box_hi + eps)
@@ -169,6 +154,8 @@ def generate(k: int, R: int, porosity: float, ftype: str = "gyroid",
         print(f"[fragment-filter] 剔除 {n_frag} 个孤立碎片域")
     dv_pct = fix_delta_v / vol_raw * 100 if vol_raw else 0.0
     flag = "WARN" if abs(dv_pct) > 1.0 else "ok"
+    if cell_size_mm and cell_size_mm > 0:
+        mesh.apply_scale(cell_size_mm / (2.0 * np.pi))
     print(f"[geom-audit] raw faces={faces_raw} vol={vol_raw:.2f} -> proc faces={faces_proc} "
           f"-> final faces={len(mesh.faces)} vol={mesh.volume:.2f} "
           f"meshfix_dV={fix_delta_v:+.3f}mm3 ({dv_pct:+.2f}%) [{flag}]")
@@ -177,7 +164,8 @@ def generate(k: int, R: int, porosity: float, ftype: str = "gyroid",
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--type", type=str, default="gyroid", choices=sorted(FIELDS), help="曲面类型（gyroid/diamond）")
+    ap.add_argument("--type", type=str, default="gyroid", choices=sorted(FIELDS),
+                    help="曲面类型（支持 gyroid/diamond/schwarz/neovius/iwp/frd/lidinoid/splitp/fks）")
     ap.add_argument("--structure", type=str, default="network", choices=["network", "sheet"],
                     help="network=单侧阈值固相网络（缺省）；sheet=绕中面区间提取薄片（八坑 #1 正解）")
     ap.add_argument("--k", type=int, default=2)
@@ -185,16 +173,17 @@ def main() -> int:
     ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率（sheet 模式下忽略）")
     ap.add_argument("--solid", type=float, default=0.35,
                     help="sheet 模式：目标固相率（决定壁厚；|∇f| 非常数故不用名义壁厚标定）")
+    ap.add_argument("--cell-size", type=float, default=None, help="物理单胞尺寸 (mm)，不传则维持无量纲 2π mm/cell")
     ap.add_argument("--out", type=str, default=None)
     args = ap.parse_args()
 
     t0 = time.time()
     if args.structure == "sheet":
         mesh, thr = generate(args.k, args.R, porosity=1.0 - args.solid, ftype=args.type,
-                             structure="sheet", solid=args.solid)
+                             structure="sheet", solid=args.solid, cell_size_mm=args.cell_size)
         thr_label = f"tfield={thr:.4f}"
     else:
-        mesh, thr = generate(args.k, args.R, args.por, args.type)
+        mesh, thr = generate(args.k, args.R, args.por, args.type, cell_size_mm=args.cell_size)
         thr_label = f"level_c={thr:.4f}"
     bbox = mesh.bounds[1] - mesh.bounds[0]
     actual_por = 1.0 - mesh.volume / float(np.prod(bbox))

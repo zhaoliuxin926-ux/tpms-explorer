@@ -143,6 +143,8 @@ export interface PlasticityParams {
   maxIter?: number;             // 每步 NR 上限（默认 40）
   pcgTol?: number;              // PCG 相对残差（默认 1e-6）
   pcgMaxIter?: number;          // PCG 上限（默认 3000）
+  maxSubsteps?: number;         // 单步手风琴自适应子步上限（默认 60）
+  minSubstepFrac?: number;      // 子步最小折半比例下限（默认 1/256）
   /** 每步收敛后回调：可改写 active 实现单元生死（Stage II 失效判据挂点） */
   onStep?: (ctx: PlasticityStepContext) => void;
   /**
@@ -346,6 +348,8 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
   const maxIter = params.maxIter ?? 40;
   const pcgTol = params.pcgTol ?? 1e-6;
   const pcgMaxIter = params.pcgMaxIter ?? 3000;
+  const maxSubsteps = Math.max(1, Math.round(params.maxSubsteps ?? 60));
+  const minSubstepFrac = params.minSubstepFrac ?? 1 / 256;
   // 默认 elastic（2026-09-20 geo 修复后定案）：受压下 geo 增广算子失去 SPD 性，
   // Jacobi-PCG 在部分合成掩码工况不收敛（门 27 E 组实测）；残差侧几何项恒在——
   // 真实 StVK 平衡/坍塌物理不受切线选择影响，elastic 切线是最鲁棒的修正牛顿口径。
@@ -1136,7 +1140,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
     stepWextAcc = 0; stepWintAcc = 0; stepWplAcc = 0;
     let iterTotal = 0;
     let stepConverged = false;
-    for (let safety = 0; safety < 60; safety++) {
+    for (let safety = 0; safety < maxSubsteps; safety++) {
       const sGoal = sApplied + totalDs * frac;
       UprevSub.set(U);
       EgpOld.set(Egp);
@@ -1157,7 +1161,7 @@ export function solvePlasticityCompression(params: PlasticityParams): Plasticity
         U.set(UprevSub);
         frac /= 2;
         fracCarry = frac;
-        if (frac < 1 / 256) break;
+        if (frac < minSubstepFrac) break;
       }
     }
     // 步长施加到位（数值容差）即认为整步收敛

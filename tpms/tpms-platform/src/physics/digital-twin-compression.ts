@@ -70,6 +70,16 @@ export interface CompressionTwinParams {
   steps?: number;
   maxStrain?: number;
   tol?: number;
+  /** 修正牛顿最大外迭代数（缺省 40，交互实时路径可传更小有界上限） */
+  maxIter?: number;
+  /** PCG 相对收敛容差（透传 PlasticityParams.pcgTol） */
+  pcgTol?: number;
+  /** PCG 最大内迭代数（透传 PlasticityParams.pcgMaxIter） */
+  pcgMaxIter?: number;
+  /** 单步子步上限（透传 PlasticityParams.maxSubsteps） */
+  maxSubsteps?: number;
+  /** 子步最小折半比例（透传 PlasticityParams.minSubstepFrac） */
+  minSubstepFrac?: number;
   /** 曲面类型：提供时平台参照走 FEA 标定幂律（gyroid=1.64·ρ̄^2.41，docs/fea-calibration.md），
    *  缺省保持 GA 0.3·ρ̄^1.5（其他 25 族无 FEA 证据，行为不变） */
   type?: string;
@@ -140,7 +150,11 @@ export function runCompressionDigitalTwin(params: CompressionTwinParams): Compre
     // 切线数学已同步修复（Simo-Taylor 完整式，FD 对拍 0.015%）留作后续场景研究。
     // 坍塌物理不受切线选择影响（残差侧几何项恒在）
     tangent: 'elastic',
-    maxIter: 40,
+    maxIter: params.maxIter ?? 40,
+    ...(params.pcgTol !== undefined ? { pcgTol: params.pcgTol } : {}),
+    ...(params.pcgMaxIter !== undefined ? { pcgMaxIter: params.pcgMaxIter } : {}),
+    ...(params.maxSubsteps !== undefined ? { maxSubsteps: params.maxSubsteps } : {}),
+    ...(params.minSubstepFrac !== undefined ? { minSubstepFrac: params.minSubstepFrac } : {}),
     stopOnDiverge: true,
     onPcgDiag: params.onPcgDiag,
     onStep: (ctx) => {

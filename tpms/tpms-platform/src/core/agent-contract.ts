@@ -5,11 +5,26 @@
  *（validateToolCalls 含 E5 联合算力预算 + E11 写写冲突，红队 17 案同源语义），
  * Vite 静态打包进浏览器产物——不复制第二份 schema，43 条回归契约跨端逐位一致。
  *
- * 浏览器工具面 v1 = 4 工具（list/estimate/mesh/design_verify）；tpms_scenario（design
- * 文件槽位，浏览器无文件语义）与 tpms_pareto（逆设计入口阻断中+扫描治理另批）暂不注册，
+ * 浏览器工具面 = 6 工具（list/estimate/mesh/scenario/design_verify/pareto——与 tools.schema.json 100% 满配）；
+ * 其中 tpms_scenario 以安全单段文件名路由至内置场景模板库或当前视口设计并产出 M5 验证报告，
  * 由 .verify/agent_bridge_audit.mjs 同源锁门断言「注册面 ⊆ schema 注册面」。
  */
 import { validateToolCalls as validateCore, REPAIR_TOOL as REPAIR_TOOL_CORE, schemaToOllamaTools } from '../../../agent/schema-core.mjs';
+import {
+  SESSION_SCHEMA_VERSION,
+  GEOMETRY_SEMANTICS,
+  BINDING_SEMANTICS,
+  newSession,
+  validateSessionObject,
+  recordPareto,
+  recordExecution,
+  candidateToMeshArgs,
+  resolveReference,
+  type AgentSessionState,
+  type SessionCandidate,
+  type SessionRecommendation,
+  type ReferenceResolution,
+} from '../../../agent/session-core.mjs';
 import rawSchema from '../../../agent/tools.schema.json';
 
 export interface ToolSchemaDef {
@@ -20,8 +35,31 @@ export interface ToolSchemaDef {
 
 export const TOOLS_SCHEMA = rawSchema as unknown as { tools: ToolSchemaDef[] };
 
-/** 浏览器 v1 注册面（其余 CLI 工具的排除理由见文件头） */
-export const BROWSER_TOOL_NAMES = ['tpms_list', 'tpms_estimate', 'tpms_mesh', 'tpms_design_verify'] as const;
+/** 浏览器注册面（与 CLI schema 6 工具完全同源：list/estimate/mesh/scenario/design_verify/pareto） */
+export const BROWSER_TOOL_NAMES = [
+  'tpms_list',
+  'tpms_estimate',
+  'tpms_mesh',
+  'tpms_scenario',
+  'tpms_design_verify',
+  'tpms_pareto',
+] as const;
+
+export {
+  SESSION_SCHEMA_VERSION,
+  GEOMETRY_SEMANTICS,
+  BINDING_SEMANTICS,
+  newSession,
+  validateSessionObject,
+  recordPareto,
+  recordExecution,
+  candidateToMeshArgs,
+  resolveReference,
+  type AgentSessionState,
+  type SessionCandidate,
+  type SessionRecommendation,
+  type ReferenceResolution,
+};
 
 export function browserToolsSchema(): { tools: ToolSchemaDef[] } {
   return { tools: TOOLS_SCHEMA.tools.filter((t) => (BROWSER_TOOL_NAMES as readonly string[]).includes(t.name)) };
@@ -55,7 +93,7 @@ export const VIEWPORT_OUT = '__active_viewport__';
 export function checkViewportConflicts(
   calls: Array<{ name: string; arguments: Record<string, unknown> }>,
 ): { ok: true } | { ok: false; errors: string[] } {
-  const WRITE_TOOLS = ['tpms_mesh'];
+  const WRITE_TOOLS = ['tpms_mesh', 'tpms_scenario'];
   let viewportSeen = false;
   const errors: string[] = [];
   for (const c of calls) {

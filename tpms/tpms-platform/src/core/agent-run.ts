@@ -23,6 +23,8 @@ export interface ToolExecResult {
   summary: string;
   /** design_verify 专用：制造审计 verdict=fail 时置位——触发修复轮 */
   verifyFail?: boolean;
+  /** 可选同步状态快照（避免写后立即再发 get-state RPC 在重绘期超时） */
+  state?: Record<string, unknown>;
 }
 
 export interface ToolImpl {
@@ -53,24 +55,30 @@ export interface RunDeps {
   onEvent?: (e: AgentEvent) => void;
   /** 用户手动停止（停止按钮置位） */
   isStopped?: () => boolean;
+  /** 可选多轮对话历史（滑动窗口 user/assistant 消息；不包含 system） */
+  history?: Array<Record<string, unknown>>;
 }
 
 const RUN_BUDGET = 4096;
 const VERIFY_COST = 512;
+const SCENARIO_COST = 216;
+const PARETO_COST = 64;
 const MAX_REPAIRS = 2;
 const DEFAULT_MAX_ROUNDS = 6;
 
-const SYSTEM_PROMPT = `你是 TPMS Explorer 平台内的设计助手（浏览器 Agent 模式）。用户用自然语言描述 TPMS 支架设计需求。
+const SYSTEM_PROMPT = `你是 TPMS Explorer 平台内的仿真与逆设计助手（浏览器 Agent 模式）。用户用自然语言描述 TPMS 支架或多孔介质设计需求。
 你必须通过 tool calling 响应——只填工具定义的参数槽位，不得臆造数值。
 工具选择：
-- tpms_mesh：从参数更新当前设计（改变视口几何）；带 out 槽位时在几何重建后导出 STL 文件。绝大多数"设计/建一个 X 支架"意图走这里。
-- tpms_estimate：仅估算力学指标（E*/屈服强度，Gibson-Ashby 解析口径），不改设计、不产文件。
-- tpms_design_verify：对当前设计做制造几何检查（最小壁厚/孔喉/封闭孔腔/连通性）。构建后验证或用户要求"检查可制造性/壁厚"时使用。
+- tpms_pareto：逆设计帕累托前沿推荐。给定目标等效模量（target_e_gpa，单位 GPa）与目标渗透率（target_k_nm2，单位 ×10⁻⁹ m²），在 26 族 × 孔隙率 0.55..0.90 × 单胞 2..5 mm 的解析前沿上推荐 top-k 方案。用户询问"推荐什么构型/选型"时优先调用此工具；给出推荐后等待用户选择或指代，除非用户明确要求同时构建，否则不要擅自覆盖视口。
+- tpms_mesh：从参数更新当前设计（改变视口几何）；带 out 槽位时在几何重建后导出 STL 文件。明确要求"构建/建模/改成/导出"时使用。
+- tpms_scenario：端到端 M5 场景交付与审计模板（参数为 design 单段安全文件名，如 bone_scaffold.json / gyroid_implant.json / diamond_load.json / primitive_flow.json / iwp_stiff.json / current.json），仅当用户明确要求运行场景模板或给出 .json 文件名时使用。
+- tpms_estimate：仅估算力学与渗透率指标（E*/屈服强度/Sv/Kozeny-Carman κ，以及 gyroid 的 OpenFOAM R48 CFD 标定 κ），不改设计、不产文件。
+- tpms_design_verify：对当前设计做制造与输运几何检查（最小壁厚/孔喉/封闭孔腔/连通性/三向迂曲度）。构建后验证或用户要求"检查可制造性/壁厚/连通性"时使用。
 - tpms_list：列曲面族/材料清单。
 - apply_repair（仅当上一轮 tpms_design_verify 失败后出现）：在有界修复菜单中选择下一步——patch_design 提交参数补丁（一次一小步，只动与失败相关的槽位）或 declare_unreachable 宣告结构化不可达（如深水区组合）。同一修复连续失败两次后应宣告不可达。
 口径：porosity 按用户表述习惯填 0-1 小数或 1-99 百分数；面板实际可调域为孔隙率 60~90、周期数 1~5，超出会被钳制并在结果中披露。
-指代条款：本循环无跨请求历史——"第一个/刚才那个"等指代无上下文可解析时，按默认参数处理并在回复中首先明示。
-用户面向回复一律用中文。`;
+指代条款：当会话层已启用确定性指代绑定时，"构建第 N 个"由确定性会话绑定直接处理；其他指代或无上下文时，先说明再按保守默认处理。
+用户面向回复一律用中文，并如实区分解析近似与 FE/CFD 标定口径，严禁将解析估算宣称为已实跑有限元或 CFD 仿真。`;
 
 function toolCallId(c: Record<string, unknown>, i: number): string {
   const fn = c.function as { name?: string } | undefined;
@@ -92,6 +100,7 @@ export async function runAgent(userText: string, deps: RunDeps): Promise<void> {
 
   const messages: Array<Record<string, unknown>> = [
     { role: 'system', content: SYSTEM_PROMPT },
+    ...(deps.history ?? []),
     { role: 'user', content: userText },
   ];
 
@@ -115,7 +124,9 @@ export async function runAgent(userText: string, deps: RunDeps): Promise<void> {
     let roundCost = 0;
     for (const c of checkFinal.calls) {
       if (c.name === 'tpms_mesh' && typeof c.arguments.periods === 'number') roundCost += c.arguments.periods ** 3;
+      if (c.name === 'tpms_scenario') roundCost += SCENARIO_COST;
       if (c.name === 'tpms_design_verify') roundCost += VERIFY_COST;
+      if (c.name === 'tpms_pareto') roundCost += PARETO_COST;
       if (c.name === 'apply_repair' && typeof c.arguments.patches === 'object' && c.arguments.patches != null
         && typeof (c.arguments.patches as Record<string, unknown>).periods === 'number') {
         roundCost += ((c.arguments.patches as Record<string, unknown>).periods as number) ** 3;

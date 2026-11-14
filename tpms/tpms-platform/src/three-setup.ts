@@ -312,6 +312,8 @@ export function initThree(container: HTMLElement): ThreeContext {
   // 12. Resize handler
   // ─────────────────────────────────────────────────────
   const resize = (w: number, h: number): void => {
+    // 隐藏选项卡（display:none）下容器为 0x0：禁止把 FBO 与相机长宽比设为 0/NaN
+    if (!(w > 0 && h > 0)) return;
     // 跨 DPI 屏（如窗口在显示器间拖动）devicePixelRatio 会变化，需重新设置
     const pr = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(pr);

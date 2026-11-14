@@ -120,6 +120,105 @@
   .file .st{font-size:11px;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:1px 8px}
   .file .st.rej{color:var(--fail);border-color:var(--fail)}
   .exp-empty{color:var(--ink-3);font-size:12px;padding:8px 2px}
+  .session-pill{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);background:var(--bg-0)}
+  .cand-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .cand-item{border:1px solid var(--line);border-radius:var(--r-s);padding:7px 9px;background:var(--bg-0);display:flex;flex-direction:column;gap:5px}
+  .cand-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--ink-1)}
+  .cand-meta{font-family:var(--mono);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1.45}
+  .cand-actions{display:flex;flex-wrap:wrap;gap:6px}
+  .cbtn{font-size:11px;padding:3px 9px;border-radius:var(--r-s);border:1px solid var(--accent-deep);color:var(--accent);background:rgba(34,211,238,.08)}
+  .cbtn:hover{background:rgba(34,211,238,.18)}
+  .cbtn.sec{border-color:var(--line);color:var(--ink-2);background:var(--bg-2)}
+  .cbtn.sec:hover{border-color:var(--accent-deep);color:var(--ink-1)}
+  .section-hd{margin:14px 0 8px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--ink-3);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .triangle{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}
+  .tri-card{border:1px solid var(--line);border-radius:var(--r-m);padding:9px 11px;background:var(--bg-1)}
+  .tri-card .tl{font-size:11px;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .tri-card .tv{font-family:var(--mono);font-size:13.5px;color:var(--ink-1);margin-top:4px;font-variant-numeric:tabular-nums}
+  .tri-card .ts{font-size:11px;color:var(--ink-2);margin-top:4px;line-height:1.45}
+  .runbook{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-m);padding:11px 13px;background:var(--bg-0)}
+  .rb-ctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 8px;font-size:11.5px;color:var(--ink-2)}
+  .rb-ctrl input{width:76px;font-family:var(--mono);font-size:11.5px;padding:3px 6px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-1);color:var(--ink-1)}
+  .rb-pre{font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--ink-1);white-space:pre-wrap;word-break:break-all;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-s);padding:9px 10px}
+  .rb-note{margin-top:6px;font-size:11px;color:var(--warn);line-height:1.45}
+  .rb-copy{font-size:11px;padding:2px 9px;border-radius:var(--r-s);border:1px solid var(--line);color:var(--ink-2)}
+  .rb-copy:hover{border-color:var(--accent-deep);color:var(--accent)}
+  .panel-box{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-m);padding:11px 13px;background:var(--bg-0)}
+  .btn-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .pp-canvas{width:100%;max-width:560px;height:190px;display:block;border:1px solid var(--line);border-radius:var(--r-s);background:var(--bg-1);margin:8px 0}
+  .pp-csv{width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-1);color:var(--ink-1);resize:vertical;margin-top:6px}
+  .fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:6px;margin:8px 0}
+  .fc-field{display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:var(--ink-3)}
+  .fc-field input{font-family:var(--mono);font-size:11.5px;padding:4px 7px;border-radius:var(--r-s);border:1px solid var(--line);background:var(--bg-1);color:var(--ink-1);width:100%}
+  .sc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+  .pp-status{font-size:11px;color:var(--ink-2);line-height:1.5;margin:4px 0 6px}
+
+  /* DSH Workbench Rail + Collapsible Sidebar + Split Dock + Collapsible Cards */
+  .dsh-rail{width:44px;flex:0 0 44px;background:#090f1c;border-right:1px solid #1b2840;display:flex;flex-direction:column;align-items:center;padding:8px 4px;gap:6px}
+  .dsh-rail-btn{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:transparent;color:#8aa0bd;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--mono);transition:all .15s}
+  .dsh-rail-btn:hover{background:#121e33;color:#d6e4f7}
+  .dsh-rail-btn.on{background:#10253a;border-color:#22d3ee;color:#22d3ee}
+  .dsh-rail-spacer{flex:1}
+  .dsh-sidebar{width:238px;flex:0 0 238px;background:#0c1424;border-right:1px solid #1b2840;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .dsh-sidebar.collapsed{width:0;flex:0 0 0;border-right:none;pointer-events:none}
+  .dsh-sb-hd{padding:10px 12px;border-bottom:1px solid #1b2840;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:#cfe2f7}
+  .dsh-sb-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;font-size:12px}
+  .dsh-sb-pane{display:none;flex-direction:column;gap:8px}
+  .dsh-sb-pane.on{display:flex}
+  .dsh-flow-step{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border-radius:8px;border:1px solid #1b2840;background:#101a2e}
+  .dsh-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:0 0 8px;background:#475569}
+  .dsh-dot.running{background:#f59e0b;box-shadow:0 0 8px #f59e0b}
+  .dsh-dot.done{background:#22c55e}
+  .dsh-dot.fail{background:#ef4444}
+  .dsh-plugin-card{padding:8px 10px;border-radius:8px;border:1px solid #1b2840;background:#101a2e;display:flex;flex-direction:column;gap:4px}
+  .dsh-plugin-top{display:flex;align-items:center;justify-content:space-between;gap:6px;font-weight:600;color:#e2edf9}
+  .dsh-pill{font-size:10px;padding:2px 6px;border-radius:99px;background:#17253e;color:#94a3b8;font-family:var(--mono)}
+  .dsh-pill.ok{background:#0f2e25;color:#34d399;border:1px solid #166534}
+  .dsh-pill.warn{background:#2f220d;color:#fbbf24;border:1px solid #92400e}
+  .dsh-pill.bad{background:#311419;color:#f87171;border:1px solid #991b1b}
+  .dsh-file-item{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid #1b2840;background:#0e1729;cursor:pointer;color:#cbd5e1;font-size:11px;font-family:var(--mono)}
+  .dsh-file-item:hover{border-color:#22d3ee;color:#fff}
+  .dsh-mini-btn{padding:4px 9px;border-radius:6px;border:1px solid #294163;background:#13233b;color:#bfe7ff;font-size:11px;cursor:pointer}
+  .dsh-mini-btn:hover{border-color:#22d3ee;color:#fff}
+  .tabs-spacer{flex:1}
+  .dock-select{background:#0d1628;color:#cbd5e1;border:1px solid #253652;border-radius:6px;padding:3px 7px;font-size:11px;margin:4px 4px 4px 0}
+  .dock-split-btn{padding:4px 10px;border-radius:6px;border:1px solid #253652;background:#101b30;color:#9cc2e6;font-size:11px;cursor:pointer;margin:4px 8px 4px 0}
+  .dock-split-btn[aria-pressed="true"]{border-color:#22d3ee;background:#0d2b3e;color:#22d3ee}
+  .stage.split{display:grid !important;grid-template-rows:auto minmax(0,1fr);grid-template-columns:1.1fr 0.9fr;grid-template-areas:"tabs tabs" "left right";min-height:0;overflow:hidden}
+  .stage.split > .tabs{grid-area:tabs}
+  .stage.split > .tabpane{display:none !important}
+  .stage.split > #p3d{display:flex !important;flex-direction:column;grid-area:left;min-width:0;min-height:0;overflow:hidden;border-right:1px solid #1b2840}
+  .stage.split > #p3d > .viewport{flex:1;min-height:0;height:auto}
+  .stage.split > .tabpane.split-secondary{display:flex !important;grid-area:right;min-width:0;min-height:0;overflow:auto}
+  .chat{position:relative}
+  .dsh-slash-menu{position:absolute;left:12px;right:12px;bottom:56px;background:#0b1322;border:1px solid #22d3ee;border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.55);padding:6px;z-index:20;display:flex;flex-direction:column;gap:4px}
+  .dsh-slash-menu[hidden]{display:none}
+  .dsh-slash-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-radius:6px;border:none;background:transparent;color:#dbeafe;text-align:left;cursor:pointer;font-size:12px}
+  .dsh-slash-opt:hover,.dsh-slash-opt.active{background:#142845;color:#22d3ee}
+  .dsh-slash-cmd{font-family:var(--mono);font-weight:700;color:#22d3ee}
+  .dsh-term-log{margin-top:8px;padding:8px 10px;background:#060a13;border:1px solid #1f2e47;border-radius:7px;color:#93c5fd;font-family:var(--mono);font-size:11px;line-height:1.45;max-height:170px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .dsh-term-log[hidden]{display:none}
+  .card.dsh-collapsed .card-body{display:none}
+  .card-hd.dsh-toggleable{cursor:pointer;user-select:none}
+  .cae-bl-grid{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 6px;font-size:11px;color:#b8c7dc}
+  .cae-bl-grid select,.cae-bl-grid input{background:#091120;color:#e2edf9;border:1px solid #294163;border-radius:5px;padding:3px 6px;font-size:11px}
+  .cae-bl-grid input[type="number"]{width:64px}
+  .cae-btn-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+  .cae-btn{padding:5px 10px;border-radius:6px;border:1px solid #22d3ee;background:#0d2336;color:#cffafe;font-size:11px;font-weight:600;cursor:pointer}
+  .cae-btn:hover{background:#133552}
+  .cae-btn:disabled{opacity:.5;cursor:not-allowed}
+  .cae-exec-chk{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#94a3b8;cursor:pointer}
+  .cae-monitor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:8px 0}
+  .cae-svg-card{border:1px solid #1b2840;border-radius:8px;padding:8px 10px;background:#09101d}
+  .cae-svg-title{font-size:11px;font-weight:600;color:#cfe2f7;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+  .cae-svg-card svg{width:100%;height:auto;display:block}
+  .cae-parity-wrap{overflow-x:auto;margin-top:8px}
+  .cae-parity-table{width:100%;border-collapse:collapse;font-size:11px;color:#cbd5e1}
+  .cae-parity-table th,.cae-parity-table td{border:1px solid #1e2d48;padding:5px 7px;text-align:left;white-space:nowrap}
+  .cae-parity-table th{background:#0f192d;color:#93c5fd;font-weight:600}
+  .cae-parity-table td.mono{font-family:var(--mono)}
+  .dsh-preview-btn{padding:2px 6px;border-radius:4px;border:1px solid #22d3ee;background:#0d2336;color:#cffafe;font-size:10px;cursor:pointer;flex:0 0 auto}
+  .dsh-preview-btn:hover{background:#143854}
 
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
@@ -130,6 +229,7 @@
   }
   /* ≤980px：38vh 吸顶舞台 + 62vh 对话流 */
   @media (max-width:980px){
+    .dsh-rail,.dsh-sidebar{display:none}
     .main{flex-direction:column-reverse}
     .chat{width:100%;min-width:0;flex:1;height:auto;border-right:none;border-top:1px solid var(--line)}
     .stage{height:38vh;flex:none}
@@ -138,12 +238,17 @@
     .chip{padding:7px 12px;min-height:38px}
     .brand small{display:none}
     .meter{display:none}
+    .session-pill{display:none}
     .statbar{margin-top:8px}
     .viewport{min-height:150px}
   }
 </style>
-  <script type="module" crossorigin src="./assets/harness-B1Mh6oRd.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/llm-provider-browser-ByAQfCAV.js">
+  <script type="module" crossorigin src="./assets/harness-D1kJvh60.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
+  <link rel="modulepreload" crossorigin href="./assets/gibson-ashby-CfdDFGgz.js">
+  <link rel="modulepreload" crossorigin href="./assets/inverse-design-B5GZY3TP.js">
+  <link rel="modulepreload" crossorigin href="./assets/llm-provider-browser-DkqpQq1q.js">
+  <link rel="modulepreload" crossorigin href="./assets/experimental-fit-BVfNbZgB.js">
 </head>
 <body>
 <div class="app">
@@ -154,12 +259,14 @@
       TPMS Harness <small>Agent 驾驶舱</small>
     </div>
     <div class="spacer"></div>
-    <span class="meter" title="本次指令算力预算（Σ periods³ + 512×verify ≤ 4096，Per-Prompt Run）">Σ <span id="budget-used">0</span><span class="bar"><i id="budget-bar"></i></span>4096</span>
+    <span class="meter" title="本次指令算力预算（Σ periods³ + 512×verify + 64×pareto ≤ 4096，Per-Prompt Run）">Σ <span id="budget-used">0</span><span class="bar"><i id="budget-bar"></i></span>4096</span>
+    <span class="session-pill" id="session-pill" title="确定性会话推荐与执行绑定计数">r0 · e0</span>
     <select class="select" id="provider" aria-label="Agent 后端">
       <option value="rules">本地规则</option>
       <option value="openai">OpenAI 兼容</option>
       <option value="ollama">Ollama 本地</option>
     </select>
+    <button class="tbtn" id="session-reset-btn" title="开启全新会话并清空推荐绑定上下文">新会话</button>
     <button class="tbtn" id="cfg-btn">设置</button>
     <span class="dot" id="status-dot" title="就绪"></span>
   </header>
@@ -174,6 +281,54 @@
 
   <div class="main">
 
+    <nav class="dsh-rail" aria-label="工作台视图切换">
+      <button id="dsh-rail-flow" class="dsh-rail-btn on" type="button" title="仿真流水线进度">F</button>
+      <button id="dsh-rail-plugins" class="dsh-rail-btn" type="button" title="CAE 求解器与插件状态">P</button>
+      <button id="dsh-rail-files" class="dsh-rail-btn" type="button" title="sim/out 产物文件树">D</button>
+      <button id="dsh-rail-solver" class="dsh-rail-btn" type="button" title="求解监控与多保真度对标">M</button>
+      <div class="dsh-rail-spacer"></div>
+      <button id="dsh-rail-toggle" class="dsh-rail-btn" type="button" title="折叠/展开左侧边栏">«</button>
+    </nav>
+
+    <aside id="dsh-sidebar" class="dsh-sidebar" aria-label="工程上下文侧边栏">
+      <div class="dsh-sb-hd">
+        <span id="dsh-sb-title">Flow 仿真流水线</span>
+        <button id="dsh-probe-env-btn" class="dsh-mini-btn" type="button">探测本地 CAE</button>
+      </div>
+      <div class="dsh-sb-body">
+        <div id="dsh-pane-flow" class="dsh-sb-pane on">
+          <div class="dsh-flow-step"><span class="dsh-dot" id="dsh-dot-design"></span><div><strong>1. 需求对齐与结构建模</strong><div id="dsh-txt-design" style="color:#8aa0bd">待设定孔隙率与单胞参数</div></div></div>
+          <div class="dsh-flow-step"><span class="dsh-dot" id="dsh-dot-bl"></span><div><strong>2. 边界层与体网格前处理</strong><div id="dsh-txt-bl" style="color:#8aa0bd">nTopCL 契约 / Gmsh BL / snappyHexMesh</div></div></div>
+          <div class="dsh-flow-step"><span class="dsh-dot" id="dsh-dot-solve"></span><div><strong>3. 多物理场 CAE 求解调度</strong><div id="dsh-txt-solve" style="color:#8aa0bd">OpenFOAM 13 · ABAQUS · COMSOL 6.2</div></div></div>
+          <div class="dsh-flow-step"><span class="dsh-dot" id="dsh-dot-post"></span><div><strong>4. 后处理曲线自动反演</strong><div id="dsh-txt-post" style="color:#8aa0bd">Forchheimer / WSS / ISO 13314</div></div></div>
+          <div class="dsh-flow-step"><span class="dsh-dot" id="dsh-dot-audit"></span><div><strong>5. 可制造性与工程交付</strong><div id="dsh-txt-audit" style="color:#8aa0bd">STL · BDF · INP · MPH</div></div></div>
+        </div>
+        <div id="dsh-pane-plugins" class="dsh-sb-pane">
+          <div class="dsh-plugin-card"><div class="dsh-plugin-top"><span>nTop Automate 6.3.3</span><span id="dsh-st-ntop" class="dsh-pill">待探测</span></div><div id="dsh-msg-ntop" style="color:#8aa0bd">ntopcl.exe + sim/ntop/*.ntop</div></div>
+          <div class="dsh-plugin-card"><div class="dsh-plugin-top"><span>Gmsh 边界层加密</span><span id="dsh-st-gmsh" class="dsh-pill">待探测</span></div><div id="dsh-msg-gmsh" style="color:#8aa0bd">Distance+Threshold → .msh/.bdf/.inp</div></div>
+          <div class="dsh-plugin-card"><div class="dsh-plugin-top"><span>OpenFOAM 13 (WSL)</span><span id="dsh-st-of" class="dsh-pill">待探测</span></div><div id="dsh-msg-of" style="color:#8aa0bd">snappyHexMesh addLayers + foamRun</div></div>
+          <div class="dsh-plugin-card"><div class="dsh-plugin-top"><span>ABAQUS Standard/Explicit</span><span id="dsh-st-abq" class="dsh-pill">待探测</span></div><div id="dsh-msg-abq" style="color:#8aa0bd">p0→p1→p2 + odbAccess CSV</div></div>
+          <div class="dsh-plugin-card"><div class="dsh-plugin-top"><span>COMSOL Multiphysics 6.2</span><span id="dsh-st-comsol" class="dsh-pill">待探测</span></div><div id="dsh-msg-comsol" style="color:#8aa0bd">comsolcompile + comsolbatch</div></div>
+        </div>
+        <div id="dsh-pane-files" class="dsh-sb-pane">
+          <div style="color:#8aa0bd">sim/out 产物列表（支持点击 👁️ 3D 视口叠加）：</div>
+          <div id="dsh-file-list"></div>
+          <pre id="dsh-file-preview" class="dsh-term-log" hidden></pre>
+        </div>
+        <div id="dsh-pane-solver" class="dsh-sb-pane">
+          <div class="dsh-plugin-card">
+            <div class="dsh-plugin-top"><span>Mesh Doctor 质量门禁</span><span id="dsh-doc-pill" class="dsh-pill">待检</span></div>
+            <div id="dsh-doc-detail" style="color:#8aa0bd;font-size:11px">运行 /ntop-bl 或 /openfoam 后显示 nTop C3D6/C3D4 与 SICN 自愈诊断。</div>
+          </div>
+          <div class="dsh-plugin-card">
+            <div class="dsh-plugin-top"><span>CFD 收敛 &amp; WSS 成骨窗口</span><span id="dsh-wss-pill" class="dsh-pill">待求解</span></div>
+            <div id="dsh-wss-detail" style="color:#8aa0bd;font-size:11px">目标：τ_w ∈ [5, 25] mPa 成骨刺激窗口占比与 Forchheimer K/β 反演。</div>
+          </div>
+          <button id="dsh-open-monitor-btn" class="cae-btn" type="button">📊 打开完整监控面板与对标表</button>
+        </div>
+      </div>
+    </aside>
+
     <section class="chat" aria-label="对话轨迹">
       <div class="stream" id="stream" aria-live="polite">
         <div class="empty" id="empty-hint">
@@ -182,12 +337,20 @@
         </div>
       </div>
       <div class="chips">
+        <button class="chip">推荐 E≥3 GPa 且 κ≥2×10⁻⁹ m² 的前 3 个构型</button>
+        <button class="chip">把第一个构建出来</button>
         <button class="chip">设计一个高孔隙 gyroid 支架（孔隙率 88%），并做制造检查</button>
-        <button class="chip">估算 diamond 孔隙率 75% 的力学指标</button>
-        <button class="chip">验证当前设计壁厚</button>
+        <button class="chip">估算 gyroid 孔隙率 70% 的力学与渗透率指标</button>
+      </div>
+      <div id="dsh-slash-menu" class="dsh-slash-menu" hidden role="listbox" aria-label="快捷 CAE 命令">
+        <button type="button" class="dsh-slash-opt" data-cmd="/ntop-bl"><span class="dsh-slash-cmd">/ntop-bl</span><span>导出 nTopCL 参数契约并运行边界层加密</span></button>
+        <button type="button" class="dsh-slash-opt" data-cmd="/openfoam"><span class="dsh-slash-cmd">/openfoam</span><span>OpenFOAM 13 snappyHexMesh 棱柱层 + 流体求解</span></button>
+        <button type="button" class="dsh-slash-opt" data-cmd="/abaqus"><span class="dsh-slash-cmd">/abaqus</span><span>生成 ABAQUS 压缩算例或联机求解</span></button>
+        <button type="button" class="dsh-slash-opt" data-cmd="/comsol"><span class="dsh-slash-cmd">/comsol</span><span>生成并编译/求解 COMSOL 6.2 Java 模型</span></button>
+        <button type="button" class="dsh-slash-opt" data-cmd="/pipeline"><span class="dsh-slash-cmd">/pipeline</span><span>一键执行设计 → BL 前处理 → CAE 就绪</span></button>
       </div>
       <div class="inputrow">
-        <input id="cmd" type="text" placeholder="描述设计目标，如：孔隙率 70% 的 diamond 支架并检查可制造性" aria-label="自然语言设计指令">
+        <input id="cmd" type="text" placeholder="描述设计目标或输入 / 触发 CAE 指令，如：/openfoam 或 孔隙率 70% 的 diamond 支架" aria-label="自然语言设计指令">
         <button class="stop" id="stop-btn" hidden title="停止推理"><span class="sq"></span><span id="clock">0s</span></button>
         <button class="send" id="send-btn">发送</button>
       </div>
@@ -198,10 +361,16 @@
         <button class="tab on" data-pane="p3d" role="tab">3D 视口</button>
         <button class="tab" data-pane="pdiag" role="tab">诊断</button>
         <button class="tab" data-pane="pexp" role="tab">导出</button>
+        <span class="tabs-spacer"></span>
+        <select id="dock-layout-select" class="dock-select" aria-label="分屏从栏选择">
+          <option value="pdiag">右栏: 诊断</option>
+          <option value="pexp">右栏: 导出</option>
+        </select>
+        <button id="dock-split-btn" class="dock-split-btn" type="button" aria-pressed="false">分屏对照</button>
       </div>
       <div class="tabpane on" id="p3d">
         <div class="viewport">
-          <iframe id="stage-frame" src="./index.html" title="TPMS 工程壳视口"></iframe>
+          <iframe id="stage-frame" src="./index.html?autoRotate=0" title="TPMS 工程壳视口"></iframe>
           <div class="loading" id="frame-loading">工程壳加载中…</div>
         </div>
         <div class="statbar" id="statbar">
@@ -211,10 +380,175 @@
       <div class="tabpane" id="pdiag">
         <div class="diag-empty" id="diag-empty">尚无制造审计结果——发送含「制造检查/壁厚」的指令后，诊断网格在此呈现。</div>
         <div class="diag" id="diag" hidden></div>
+        <div class="section-hd">多物理场三元核验（固体 · 流体 · 几何）<span id="sim-tri-tag">同步当前设计参数</span></div>
+        <div class="triangle" id="sim-triangle"></div>
+
+        <div class="panel-box" id="sim-live-section">
+          <div class="section-hd" style="margin-top:0">
+            <span>在线数值求解引擎（工程壳实跑 · 驱动 3D 云图）</span>
+            <span id="sim-live-tag" class="session-pill">待命</span>
+          </div>
+          <div class="btn-row">
+            <button class="cbtn" id="sim-btn-comp" type="button">⚡ 压缩数字孪生 (3D云图)</button>
+            <button class="cbtn sec" id="sim-btn-homog" type="button">🧭 各向异性均匀化</button>
+            <button class="cbtn sec" id="sim-btn-yield" type="button">🛡️ 四准则屈服+冲击</button>
+            <button class="cbtn sec" id="sim-btn-print" type="button">🖨️ 悬垂角+最优摆盘</button>
+            <button class="cbtn sec" id="sim-btn-all" type="button">🚀 全项快检</button>
+          </div>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="cbtn sec" id="sim-btn-lpbf" type="button">🔥 LPBF 热力残余应力</button>
+            <button class="cbtn sec" id="sim-btn-tissue" type="button">🧬 28天骨长入 (3D氧云图)</button>
+            <button class="cbtn sec" id="sim-btn-levelset" type="button">🎯 水平集拓扑优化重构</button>
+            <button class="cbtn sec" id="sim-btn-phononic" type="button">〰️ 声子晶体能带禁带</button>
+            <button class="cbtn" id="sim-btn-pipeline" type="button">🤖 全自动逆设计→仿真流水线</button>
+          </div>
+          <div class="pp-status" id="sim-live-status">点击按钮或直接在对话栏输入「跑压缩仿真/均匀化/悬垂审计」触发工程壳数值求解。</div>
+          <div class="diag" id="sim-live-grid" hidden></div>
+        </div>
+
+        <div class="panel-box" id="postproc-panel">
+          <div class="section-hd" style="margin-top:0">
+            <span>自动后处理工作台（ISO 13314 力学反演 · Forchheimer CFD）</span>
+            <span id="pp-source-badge" class="badge">就绪</span>
+          </div>
+          <div class="btn-row">
+            <button class="cbtn" id="pp-btn-dt" type="button">⚡ 在线数字孪生曲线</button>
+            <button class="cbtn sec" id="pp-btn-gyroid" type="button">🏛️ ABAQUS Gyroid p60 EXPL</button>
+            <button class="cbtn sec" id="pp-btn-diamond" type="button">🏛️ ABAQUS Diamond p60 EXPL</button>
+            <button class="cbtn sec" id="pp-btn-csv-toggle" type="button">📋 粘贴/导入 CSV</button>
+          </div>
+          <div id="pp-csv-box" hidden>
+            <div class="rb-ctrl">
+              <label for="pp-csv-type">格式：</label>
+              <select class="select" id="pp-csv-type">
+                <option value="displacement-force">位移-载荷 (mm, N)</option>
+                <option value="strain-stress">应变-应力 (ε, MPa)</option>
+              </select>
+              <label for="pp-csv-l0">L₀(mm):</label>
+              <input id="pp-csv-l0" type="number" step="0.1" value="12.5664">
+              <label for="pp-csv-area">A₀(mm²):</label>
+              <input id="pp-csv-area" type="number" step="0.1" value="157.91">
+              <button class="cbtn" id="pp-csv-run" type="button">反演 CSV</button>
+            </div>
+            <textarea class="pp-csv" id="pp-csv-text" rows="4" placeholder="粘贴 displacement_mm,force_N 或 strain,stress_MPa 数据行（支持 # lengthMm= 元数据头）"></textarea>
+          </div>
+          <canvas class="pp-canvas" id="iso-canvas" width="560" height="200"></canvas>
+          <div class="pp-status" id="iso-status">选择上方数据源，即可用 experimental-fit 核心引擎提取 E* / Rp0.2 / σ_pl / εd / 吸能 W。</div>
+          <div class="diag" id="iso-metrics" hidden></div>
+
+          <div class="section-hd" style="margin-top:14px">
+            <span>Forchheimer 双点压降分离（ΔP = A·Q + B·Q² → K_int & 剪应力带）</span>
+            <button class="cbtn sec" id="fc-run-btn" type="button">重算 CFD</button>
+          </div>
+          <div class="fc-grid">
+            <label class="fc-field">流速 v₁ (mm/s)<input id="fc-v1" type="number" step="0.1" min="0.01" value="1.0"></label>
+            <label class="fc-field">压差 ΔP₁ (Pa)<input id="fc-dp1" type="number" step="0.01" min="0.0001" value="1.2"></label>
+            <label class="fc-field">流速 v₂ (mm/s)<input id="fc-v2" type="number" step="0.5" min="0.02" value="10.0"></label>
+            <label class="fc-field">压差 ΔP₂ (Pa)<input id="fc-dp2" type="number" step="0.1" min="0.0001" value="14.5"></label>
+            <label class="fc-field">面积均 WSS (mPa)<input id="fc-wss" type="number" step="0.5" min="0" value="18.5"></label>
+          </div>
+          <div class="pp-status" id="fc-status">默认已按当前 R48/KC 参考渗透率预置典型灌流工况（可改写为实测 CFD 数据）。</div>
+          <div class="diag" id="fc-metrics"></div>
+        </div>
+
+        <div class="panel-box" id="cae-monitor-panel">
+          <div class="section-hd" style="margin-top:0">
+            <span>📊 求解监控与四级保真度交叉对标矩阵（Multi-Fidelity Parity）</span>
+            <span id="cae-mesh-doctor-badge" class="dsh-pill">Mesh Doctor 待检</span>
+          </div>
+          <div class="cae-monitor-grid">
+            <div class="cae-svg-card">
+              <div class="cae-svg-title"><span>CFD 残差收敛曲线 (Ux / Uy / Uz / p)</span><span id="cae-res-tier" class="dsh-pill">待求解</span></div>
+              <svg id="cae-residual-svg" viewBox="0 0 320 148" aria-label="CFD 残差收敛曲线"></svg>
+            </div>
+            <div class="cae-svg-card">
+              <div class="cae-svg-title"><span>WSS 成骨力学刺激窗口 [5, 25] mPa</span><span id="cae-wss-window-badge" class="dsh-pill">—</span></div>
+              <svg id="cae-wss-svg" viewBox="0 0 320 148" aria-label="WSS 成骨窗口分布"></svg>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="cbtn" id="cae-btn-auto-backfill" type="button">🔄 一键回填 CFD 压降 → Forchheimer</button>
+            <button class="cbtn sec" id="cae-btn-cert-json" type="button">📥 导出多保真度验证证书 (.json)</button>
+            <button class="cbtn sec" id="cae-btn-cert-md" type="button">📝 导出验证证书 (.md)</button>
+            <button class="cbtn sec" id="cae-btn-clear-overlay" type="button">🧹 清除 3D 流体域叠加</button>
+          </div>
+          <div class="pp-status" id="cae-parity-status">执行 /ntop-bl、/openfoam 或 /pipeline 后，将自动生成四级保真度误差分析与 Mesh Doctor 诊断。</div>
+          <div id="cae-parity-matrix" class="cae-parity-wrap"></div>
+        </div>
       </div>
       <div class="tabpane" id="pexp">
-        <div class="exp-empty" id="exp-empty">尚无导出物——指令中带「导出 STL」即在水密门通过后生成文件卡。</div>
+        <div class="exp-empty" id="exp-empty">尚无导出物——指令中带「导出 STL」或点击下方 CAE 交付按钮即生成文件卡。</div>
         <div class="filelist" id="filelist" hidden></div>
+
+        <div class="panel-box" id="cae-export-panel">
+          <div class="section-hd" style="margin-top:0">
+            <span>CAE / CFD 一键交付矩阵与 M5 场景模板（水密门同源执行）</span>
+          </div>
+          <div class="sc-row">
+            <select class="select" id="scenario-select" aria-label="M5 场景预设">
+              <option value="bone_scaffold.json">bone_scaffold.json（骨支架 Gyroid p65）</option>
+              <option value="gyroid_implant.json">gyroid_implant.json（植入物 Gyroid p70）</option>
+              <option value="diamond_load.json">diamond_load.json（承重 Diamond p60）</option>
+              <option value="primitive_flow.json">primitive_flow.json（高渗透 Schwarz p75）</option>
+              <option value="iwp_stiff.json">iwp_stiff.json（高刚度 IWP p60）</option>
+              <option value="current.json">current.json（当前 3D 视口设计）</option>
+            </select>
+            <button class="cbtn" id="scenario-run-btn" type="button">▶ 运行 M5 场景审计</button>
+          </div>
+          <div class="pp-status" id="scenario-status">可选择预设场景或直接输入「运行场景 bone_scaffold.json」，一次完成建模+水密+体素+悬垂审计。</div>
+          <div class="btn-row">
+            <button class="cbtn" id="exp-btn-pkg" type="button">📦 完整交付包 (.zip)</button>
+            <button class="cbtn sec" id="exp-btn-inp" type="button">🧱 Abaqus C3D8 (.inp)</button>
+            <button class="cbtn sec" id="exp-btn-of" type="button">🌊 OpenFOAM polyMesh (.zip)</button>
+            <button class="cbtn sec" id="exp-btn-rve" type="button">🔁 PBC 周期性 RVE</button>
+            <button class="cbtn sec" id="exp-btn-suite" type="button">🧪 CAE 验证套件 (.zip)</button>
+            <button class="cbtn sec" id="exp-btn-stl" type="button">🧊 水密 STL (.stl)</button>
+          </div>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="cbtn" id="exp-btn-report-md" type="button">📄 导出仿真验收报告 (.md)</button>
+            <button class="cbtn sec" id="exp-btn-report-json" type="button">🗂️ 导出仿真数据台账 (.json)</button>
+            <button class="cbtn sec" id="exp-btn-py" type="button">🐍 Python 脚本 (.py)</button>
+            <button class="cbtn sec" id="exp-btn-gcode" type="button">🖨️ 3D打印切片 (.gcode)</button>
+          </div>
+        </div>
+
+        <div class="runbook" id="cae-runbook">
+          <div class="section-hd" style="margin-top:0">
+            <span>CAE 前处理与本机四引擎联调调度（nTopCL / OpenFOAM 13 / ABAQUS / COMSOL 6.2）</span>
+            <button class="rb-copy" id="cae-copy-btn" type="button">复制命令</button>
+          </div>
+          <div class="rb-ctrl">
+            <label for="cae-strain">目标名义应变 ε：</label>
+            <input id="cae-strain" type="number" step="0.01" min="0.01" max="0.60" value="0.05">
+            <span id="cae-mode-badge" class="badge">Standard 线弹性/小应变</span>
+          </div>
+          <div class="cae-bl-grid">
+            <label>前处理后端:
+              <select id="cae-bl-backend" aria-label="边界层前处理后端">
+                <option value="auto">Auto (nTop优先→Gmsh)</option>
+                <option value="gmsh-bl">Gmsh 边界层加密</option>
+                <option value="snappy-bl">snappyHexMesh 棱柱层</option>
+                <option value="ntop">nTopCL 6.3.3</option>
+              </select>
+            </label>
+            <label>BL层数 <input id="cae-bl-layers" type="number" min="1" max="10" value="3"></label>
+            <label>首层h₁(mm) <input id="cae-bl-h1" type="number" step="0.005" min="0.005" max="0.5" value="0.03"></label>
+            <label>增长比 <input id="cae-bl-growth" type="number" step="0.05" min="1.05" max="1.8" value="1.25"></label>
+            <label>CFD RVE周期 <input id="cae-cfd-periods" type="number" min="1" max="4" value="1" title="流体RVE单胞周期数(k=1较k=3提速27x)"></label>
+          </div>
+          <div class="cae-btn-row" id="cae-action-bar">
+            <button id="cae-btn-bl" class="cae-btn" type="button">1. 边界层前处理</button>
+            <button id="cae-btn-of" class="cae-btn" type="button">2. OpenFOAM CFD</button>
+            <button id="cae-btn-abq" class="cae-btn" type="button">3. ABAQUS 压缩</button>
+            <button id="cae-btn-comsol" class="cae-btn" type="button">4. COMSOL 6.2 CFD</button>
+            <button id="cae-btn-pipeline" class="cae-btn" type="button">5. 全流程闭环</button>
+            <label class="cae-exec-chk"><input id="cae-live-exec" type="checkbox"> 实算求解（不勾选仅做预处理/编译检查）</label>
+          </div>
+          <div class="rb-note" id="cae-job-status">守护进程地址：http://127.0.0.1:4830（运行 node tpms/agent/cae-daemon.mjs 后可点击直接调度本机软件）</div>
+          <pre id="cae-term-out" class="dsh-term-log" hidden></pre>
+          <pre class="rb-pre" id="cae-cmd"></pre>
+          <div class="rb-note" id="cae-mode-note"></div>
+        </div>
       </div>
     </section>
   </div>

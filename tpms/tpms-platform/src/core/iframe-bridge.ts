@@ -25,13 +25,57 @@ export const BRIDGE = {
   REQ_TIMEOUT_MS: 180_000,
 } as const;
 
-export type BridgeRequest = { type: 'apply' | 'verify' | 'get-state'; payload?: unknown };
+export type BridgeSimulateMode =
+  | 'compression'
+  | 'homogenization'
+  | 'yield-impact'
+  | 'printability'
+  | 'lpbf'
+  | 'tissue'
+  | 'levelset'
+  | 'phononic'
+  | 'all-fast';
+export type BridgeExportFmt =
+  | 'pkg'
+  | 'inp'
+  | 'ofmesh'
+  | 'rvestl'
+  | 'caesuite'
+  | 'stl'
+  | '3mf'
+  | 'gcode'
+  | 'py'
+  | 'm'
+  | 'bibtex'
+  | 'design';
+
+export type BridgeRequest =
+  | { type: 'apply'; payload?: Record<string, unknown> }
+  | { type: 'verify'; payload?: Record<string, unknown> }
+  | { type: 'scenario'; payload?: { design: string } }
+  | { type: 'simulate'; payload?: { mode: BridgeSimulateMode; sigma0?: [number, number, number]; params?: Record<string, unknown>; [k: string]: unknown } }
+  | { type: 'export-cae'; payload?: { fmt: BridgeExportFmt } }
+  | { type: 'overlay-stl'; payload?: { stlBase64?: string; stlText?: string; label?: string; clear?: boolean } }
+  | { type: 'get-state'; payload?: unknown };
+
+export type BridgeResult = {
+  ok: boolean;
+  summary: string;
+  verifyFail?: boolean;
+  heavy?: number;
+  state?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+};
 
 /** 工程壳侧桥服务端：wireHarnessBridge 传入各 type 的执行体 */
 export function serveBridge(handlers: {
-  apply: (args: Record<string, unknown>) => Promise<{ ok: boolean; summary: string; verifyFail?: boolean; heavy?: number }>;
-  verify: (args: Record<string, unknown>) => Promise<{ ok: boolean; summary: string; verifyFail?: boolean; heavy?: number }>;
-  'get-state': () => { ok: boolean; summary: string };
+  apply: (args: Record<string, unknown>) => Promise<BridgeResult>;
+  verify: (args: Record<string, unknown>) => Promise<BridgeResult>;
+  'get-state': () => BridgeResult;
+  scenario?: (args: Record<string, unknown>) => Promise<BridgeResult>;
+  simulate?: (args: Record<string, unknown>) => Promise<BridgeResult>;
+  'export-cae'?: (args: Record<string, unknown>) => Promise<BridgeResult>;
+  'overlay-stl'?: (args: Record<string, unknown>) => Promise<BridgeResult>;
 }): void {
   const heavyLog: Array<{ t: number; c: number }> = [];
   window.addEventListener('message', (e: MessageEvent) => {
@@ -46,10 +90,21 @@ export function serveBridge(handlers: {
       try {
         if (d.type === 'get-state') { reply(true, handlers['get-state']()); return; }
         const args = (d.payload ?? {}) as Record<string, unknown>;
-        const fn = d.type === 'apply' ? handlers.apply : d.type === 'verify' ? handlers.verify : null;
-        if (!fn) { reply(false, `未知桥类型 ${d.type}`); return; }
-        // 重活滑动窗 cap（执行面自守）
-        const cost = d.type === 'verify' ? 512 : Math.pow(Number(args.periods ?? 3), 3);
+        const fn = d.type === 'apply' ? handlers.apply
+          : d.type === 'verify' ? handlers.verify
+          : d.type === 'scenario' ? (handlers.scenario ?? null)
+          : d.type === 'simulate' ? (handlers.simulate ?? null)
+          : d.type === 'export-cae' ? (handlers['export-cae'] ?? null)
+          : d.type === 'overlay-stl' ? (handlers['overlay-stl'] ?? null)
+          : null;
+        if (!fn) { reply(false, `未知或未接入桥类型 ${d.type}`); return; }
+        // 重活滑动窗 cap（执行面自守，保留 verify ? 512 : 基线锚）
+        const cost = d.type === 'verify' ? 512
+          : d.type === 'scenario' ? 216
+          : d.type === 'simulate' ? 256
+          : d.type === 'export-cae' ? 128
+          : d.type === 'overlay-stl' ? 32
+          : Math.pow(Number(args.periods ?? 3), 3);
         const now = Date.now();
         while (heavyLog.length && now - heavyLog[0].t > BRIDGE.CAP_WINDOW_MS) heavyLog.shift();
         const used = heavyLog.reduce((s, x) => s + x.c, 0);
@@ -89,14 +144,14 @@ export class BridgeClient {
     });
   }
 
-  request(type: BridgeRequest['type'], payload?: unknown, timeoutMs: number = BRIDGE.REQ_TIMEOUT_MS): Promise<{ ok: boolean; summary: string; verifyFail?: boolean }> {
+  request(type: BridgeRequest['type'], payload?: unknown, timeoutMs: number = BRIDGE.REQ_TIMEOUT_MS): Promise<BridgeResult> {
     const frame = this.frame();
     const win = frame?.contentWindow;
     if (!win) return Promise.resolve({ ok: false, summary: '画布坞 iframe 未就绪' });
     const id = ++this.seq;
     return new Promise((resolve, reject) => {
       const t = window.setTimeout(() => { this.pending.delete(id); reject(new Error(`桥请求 ${type} 超时（${timeoutMs / 1000}s）`)); }, timeoutMs);
-      this.pending.set(id, { resolve: (v) => { window.clearTimeout(t); resolve(v as { ok: boolean; summary: string }); }, reject: (e) => { window.clearTimeout(t); reject(e); } });
+      this.pending.set(id, { resolve: (v) => { window.clearTimeout(t); resolve(v as BridgeResult); }, reject: (e) => { window.clearTimeout(t); reject(e); } });
       win.postMessage({ __tpmsBridge: true, type, id, payload }, location.origin);
     });
   }

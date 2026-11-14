@@ -17,65 +17,96 @@
  * 与 strut-bcc 同款：负=固相、邻域局部化、胶囊端球水密；TpmsFunction 签名兼容。
  */
 import type { TpmsFunction, Weights } from './tpms-functions';
-import { segDist } from './strut-bcc';
 
-export const strutOctet: TpmsFunction = (mx: number, my: number, mz: number, w?: Weights) => {
-  const cell = 2 * Math.PI; // 一晶胞 = 一 TPMS 周期（域 [−πk,πk] 内恰 k 个 cell）
-  const r = (w && w[0] > 0 ? w[0] : 0.25) * cell / 2; // 杆半径 = w[0]·半胞（默认 1/8 胞宽）
-  const ci = Math.floor(mx / cell), cj = Math.floor(my / cell), cl = Math.floor(mz / cell);
-  // 面心偏移（6 面：(½,½,0)(½,0,½)(0,½,½) 各正负）
-  const FC: ReadonlyArray<readonly [number, number, number]> = [
-    [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5],
-  ];
-  const rodDistOfCell = (i: number, j: number, l: number) => {
-    // 该 cell 的 8 角
-    const corners: number[][] = [];
-    for (let vi = 0; vi < 2; vi++) for (let vj = 0; vj < 2; vj++) for (let vl = 0; vl < 2; vl++) {
-      corners.push([(i + vi) * cell, (j + vj) * cell, (l + vl) * cell]);
+const TWO_PI = 2 * Math.PI;
+// 面心偏移（6 面：(½,½,0)(½,0,½)(0,½,½) 各正负）
+const FC: ReadonlyArray<readonly [number, number, number]> = [
+  [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5],
+];
+
+/**
+ * 预计算单位晶胞 [0,1]³ 内完整 FCC Octet 拓扑 36 条无分配边表：
+ * 每条边 7 元组 [ax, ay, az, abx, aby, abz, invLenSq]，消除 2M 次 MC/体素查询时的堆分配与嵌套循环。
+ */
+const OCTET_UNIT_EDGES: Float64Array = (() => {
+  const corners: Array<[number, number, number]> = [];
+  for (let vi = 0; vi < 2; vi++) {
+    for (let vj = 0; vj < 2; vj++) {
+      for (let vl = 0; vl < 2; vl++) corners.push([vi, vj, vl]);
     }
-    // 该 cell 的 6 面心（3 轴向各 2：正负侧由 (1-fc) 偏移覆盖）
-    const faces: number[][] = [];
-    for (const [fx, fy, fz] of FC) {
-      faces.push([(i + fx) * cell, (j + fy) * cell, (l + fz) * cell]);
-      faces.push([(i + 1 - fx) * cell, (j + 1 - fy) * cell, (l + 1 - fz) * cell]);
-    }
-    let dm = 1e9;
-    // 角↔面心：FCC 最近邻判定=逐轴 |Δ| ≤ ½cell+eps（面心恰一轴与角同坐标、
-    // 两轴差 ½cell → 每角 12 个真邻接；多余的 Manhattan 条件曾全灭角杆，G2）
-    for (const c of corners) {
-      for (const f of faces) {
-        if (Math.abs(f[0] - c[0]) <= 0.501 * cell && Math.abs(f[1] - c[1]) <= 0.501 * cell && Math.abs(f[2] - c[2]) <= 0.501 * cell) {
-          dm = Math.min(dm, segDist(mx, my, mz, c[0], c[1], c[2], f[0], f[1], f[2]));
-        }
-      }
-    }
-    // 面心↔面心（不同轴向面心对，距离 = cell/√2）
-    for (let a = 0; a < faces.length; a++) {
-      for (let b = a + 1; b < faces.length; b++) {
-        const dx = faces[a][0] - faces[b][0], dy = faces[a][1] - faces[b][1], dz = faces[a][2] - faces[b][2];
-        const dist2 = dx * dx + dy * dy + dz * dz;
-        if (Math.abs(dist2 - 0.5 * cell * cell) < 1e-6) {
-          dm = Math.min(dm, segDist(mx, my, mz, faces[a][0], faces[a][1], faces[a][2], faces[b][0], faces[b][1], faces[b][2]));
-        }
-      }
-    }
-    return dm;
+  }
+  const faces: Array<[number, number, number]> = [];
+  for (const [fx, fy, fz] of FC) {
+    faces.push([fx, fy, fz]);
+    faces.push([1 - fx, 1 - fy, 1 - fz]);
+  }
+  const list: number[] = [];
+  const pushEdge = (a: readonly [number, number, number], b: readonly [number, number, number]) => {
+    const abx = b[0] - a[0], aby = b[1] - a[1], abz = b[2] - a[2];
+    const lenSq = abx * abx + aby * aby + abz * abz;
+    list.push(a[0], a[1], a[2], abx, aby, abz, 1 / lenSq);
   };
-  // AABB 剪枝：本 cell 的杆全落在其闭合 AABB 内（角↔面心/面心对均不越界），邻 cell
-  // 仅当 AABB 距离可能改进当前 d 时才遍历（octet 每查询 27×63 杆对 → 剪枝后均值级）
-  let d = rodDistOfCell(ci, cj, cl);
-  for (let di = -1; di <= 1; di++) {
-    for (let dj = -1; dj <= 1; dj++) {
-      for (let dl = -1; dl <= 1; dl++) {
-        if (!di && !dj && !dl) continue;
-        const i = ci + di, j = cj + dj, l = cl + dl;
-        const bx = Math.max(i * cell - mx, 0, mx - (i + 1) * cell);
-        const by = Math.max(j * cell - my, 0, my - (j + 1) * cell);
-        const bz = Math.max(l * cell - mz, 0, mz - (l + 1) * cell);
-        if (bx * bx + by * by + bz * bz >= d * d) continue; // 杆 ⊆ AABB：不可能改进 d
-        d = Math.min(d, rodDistOfCell(i, j, l));
+  for (const c of corners) {
+    for (const f of faces) {
+      if (Math.abs(f[0] - c[0]) <= 0.501 && Math.abs(f[1] - c[1]) <= 0.501 && Math.abs(f[2] - c[2]) <= 0.501) {
+        pushEdge(c, f);
       }
     }
   }
-  return d - r;
+  for (let a = 0; a < faces.length; a++) {
+    for (let b = a + 1; b < faces.length; b++) {
+      const dx = faces[a][0] - faces[b][0], dy = faces[a][1] - faces[b][1], dz = faces[a][2] - faces[b][2];
+      if (Math.abs(dx * dx + dy * dy + dz * dz - 0.5) < 1e-6) {
+        pushEdge(faces[a], faces[b]);
+      }
+    }
+  }
+  return Float64Array.from(list);
+})();
+
+const OCTET_EDGE_LEN = OCTET_UNIT_EDGES.length;
+
+function rodDistSqInCell(ux: number, uy: number, uz: number, bestD2: number): number {
+  let d2 = bestD2;
+  for (let k = 0; k < OCTET_EDGE_LEN; k += 7) {
+    const ax = OCTET_UNIT_EDGES[k], ay = OCTET_UNIT_EDGES[k + 1], az = OCTET_UNIT_EDGES[k + 2];
+    const abx = OCTET_UNIT_EDGES[k + 3], aby = OCTET_UNIT_EDGES[k + 4], abz = OCTET_UNIT_EDGES[k + 5];
+    const inv = OCTET_UNIT_EDGES[k + 6];
+    const rawT = ((ux - ax) * abx + (uy - ay) * aby + (uz - az) * abz) * inv;
+    const t = rawT <= 0 ? 0 : rawT >= 1 ? 1 : rawT;
+    const dx = ux - (ax + t * abx);
+    const dy = uy - (ay + t * aby);
+    const dz = uz - (az + t * abz);
+    const cur = dx * dx + dy * dy + dz * dz;
+    if (cur < d2) d2 = cur;
+  }
+  return d2;
+}
+
+export const strutOctet: TpmsFunction = (mx: number, my: number, mz: number, w?: Weights) => {
+  const r = (w && w[0] > 0 ? w[0] : 0.25) * Math.PI; // 杆半径 = w[0]·半胞（默认 1/8 胞宽）
+  const qx = mx / TWO_PI, qy = my / TWO_PI, qz = mz / TWO_PI;
+  const ci = Math.floor(qx), cj = Math.floor(qy), cl = Math.floor(qz);
+  // AABB 剪枝（在归一化 [0,1] 晶胞空间计算 d²，末尾单次 sqrt 缩放，数学等价且零堆分配）
+  let minD2 = rodDistSqInCell(qx - ci, qy - cj, qz - cl, 1e18);
+  for (let di = -1; di <= 1; di++) {
+    const i = ci + di;
+    const bx = qx < i ? i - qx : qx > i + 1 ? qx - (i + 1) : 0;
+    const bx2 = bx * bx;
+    if (bx2 >= minD2) continue;
+    for (let dj = -1; dj <= 1; dj++) {
+      const j = cj + dj;
+      const by = qy < j ? j - qy : qy > j + 1 ? qy - (j + 1) : 0;
+      const bxy2 = bx2 + by * by;
+      if (bxy2 >= minD2) continue;
+      for (let dl = -1; dl <= 1; dl++) {
+        if (!di && !dj && !dl) continue;
+        const l = cl + dl;
+        const bz = qz < l ? l - qz : qz > l + 1 ? qz - (l + 1) : 0;
+        if (bxy2 + bz * bz >= minD2) continue;
+        minD2 = rodDistSqInCell(qx - i, qy - j, qz - l, minD2);
+      }
+    }
+  }
+  return Math.sqrt(minD2) * TWO_PI - r;
 };

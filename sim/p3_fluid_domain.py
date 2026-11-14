@@ -16,13 +16,34 @@ import numpy as np
 import trimesh
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from p0_generate import box_sdf, solve_level  # noqa: E402
+from p0_generate import box_sdf, keep_dominant_components, solve_level, solve_sheet_halfwidth  # noqa: E402
+from tpms_fields import SUPPORTED_TYPES, evaluate_field  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 
 
+def find_interior_pore_seed(k: int, R: int, ftype: str, thr: float,
+                            structure: str = "network",
+                            cell_size_mm: float | None = None) -> list[float]:
+    """Locate a deep interior voxel center inside the fluid phase (g < 0) for snappyHexMesh."""
+    dx = 2.0 * np.pi / R
+    L = 2.0 * np.pi * k
+    ax = np.linspace(dx, L - dx, max(3, k * R - 1))
+    x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
+    f = evaluate_field(ftype, x, y, z)
+    scale = (cell_size_mm / (2.0 * np.pi)) if (cell_size_mm and cell_size_mm > 0) else 1.0
+    if structure == "sheet":
+        score = np.abs(f) - thr
+    else:
+        score = thr - f
+    idx = int(np.argmax(score))
+    i, j, m = np.unravel_index(idx, score.shape)
+    return [float(ax[i] * scale), float(ax[j] * scale), float(ax[m] * scale)]
+
+
 def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
-                   solid: float = 0.35):
+                   solid: float = 0.35, ftype: str = "gyroid",
+                   cell_size_mm: float | None = None):
     from skimage import measure
     margin = 2
     dx = 2.0 * np.pi / R
@@ -30,7 +51,7 @@ def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
     n = k * R + 2 * margin
     ax = np.linspace(-margin * dx, box_hi + margin * dx, n + 1)
     x, y, z = np.meshgrid(ax, ax, ax, indexing="ij")
-    f = np.sin(x) * np.cos(y) + np.sin(y) * np.cos(z) + np.sin(z) * np.cos(x)
+    f = evaluate_field(ftype, x, y, z)
     # 周期性浮点破缺根治（2026-11-07 工位自查题实验定位）：sin 大参数舍入使
     # f(x=0) 与 f(x=L) 切片系统性差 ~6.7e-16（实测 2477/2809 格点），经 MC case
     # 翻转放大为周期面轮廓环缺口（network 实测 3 顶点缺口/最大 2.34mm——COMSOL
@@ -86,43 +107,50 @@ def generate_fluid(k: int, R: int, porosity: float, structure: str = "network",
     mesh, n_frag = keep_dominant_components(mesh, keep=(2 if structure == "sheet" else 1))
     if n_frag:
         print(f"[fragment-filter] 剔除 {n_frag} 个孤立碎片域")
+    if cell_size_mm and cell_size_mm > 0:
+        mesh.apply_scale(cell_size_mm / (2.0 * np.pi))
     return mesh, t
 
 
-def periodic_pair_check(mesh: trimesh.Trimesh, k: int) -> tuple[bool, str]:
-    """信息性输出（非 gate）：边界 x≈0 与 x≈2πk 三角形计数。
+def periodic_pair_check(mesh: trimesh.Trimesh, k: int, L: float | None = None) -> tuple[bool, str]:
+    """信息性输出（非 gate）：边界 x≈0 与 x≈L 三角形计数。
 
-    截线的几何对应由数据周期性保证（f(0)=f(2πk)）；MC 边界三角剖分受两侧邻格
+    截线的几何对应由数据周期性保证（f(0)=f(L)）；MC 边界三角剖分受两侧邻格
     （非镜像 margin）影响计数可不等——配对属网格器职责（Gmsh periodic 约束 /
     COMSOL 周期面对），几何端不做硬 gate。
     """
-    L = 2.0 * np.pi * k
+    L_val = L if (L and L > 0) else (2.0 * np.pi * k)
     tri_x = mesh.triangles[:, :, 0]
-    near0 = np.all(tri_x < 1e-6, axis=1)
-    nearL = np.all(tri_x > L - 1e-6, axis=1)
+    near0 = np.all(tri_x < 1e-6 * max(1.0, L_val), axis=1)
+    nearL = np.all(tri_x > L_val - 1e-6 * max(1.0, L_val), axis=1)
     n0, nL = int(near0.sum()), int(nearL.sum())
-    return True, f"x=0 面 {n0} / x=2πk 面 {nL} 三角（计数差属 MC 邻格效应，配对在网格器侧处理）"
+    return True, f"x=0 面 {n0} / x=L 面 {nL} 三角（计数差属 MC 邻格效应，配对在网格器侧处理）"
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--type", type=str, default="gyroid", choices=sorted(SUPPORTED_TYPES),
+                    help="曲面族（gyroid/diamond/schwarz/neovius/iwp/frd/lidinoid/splitp/fks）")
     ap.add_argument("--k", type=int, default=1)        # 单胞优先（PBC 扫参主力，discuss-2 共识）
     ap.add_argument("--R", type=int, default=24)
     ap.add_argument("--por", type=float, default=0.60, help="network 模式：目标孔隙率")
     ap.add_argument("--structure", type=str, default="network", choices=["network", "sheet"])
     ap.add_argument("--solid", type=float, default=0.35, help="sheet 模式：目标固相率（与 p0 --solid 同源）")
+    ap.add_argument("--cell-size", type=float, default=None, help="物理单胞边长 (mm)，不传则保持无量纲 2π mm")
+    ap.add_argument("--out", type=str, default=None, help="输出 fluid STL 路径")
     ap.add_argument("--maze", type=str, default=None, choices=["gplus", "gminus"],
                     help="sheet 模式：只导出单迷宫（Q1 拆分单算裁决：对称 sheet 算单迷宫，K_eff=2×K_single）；"
                          "物理标注=界面顶点 f 场中位数符号（G+ 边界 f≈+t / G- 边界 f≈-t）")
     a = ap.parse_args()
 
     if a.structure == "sheet":
-        mesh, thr = generate_fluid(a.k, a.R, porosity=1.0 - a.solid, structure="sheet", solid=a.solid)
+        mesh, thr = generate_fluid(a.k, a.R, porosity=1.0 - a.solid, structure="sheet",
+                                   solid=a.solid, ftype=a.type, cell_size_mm=a.cell_size)
         fluid_target = (1.0 - a.solid) / 2 if a.maze else 1.0 - a.solid
         # --maze 单迷宫体积≈双迷宫一半，dev 按单迷宫参考值对比（0.65→0.325）
         thr_label = f"tfield={thr:.4f}"
     else:
-        mesh, thr = generate_fluid(a.k, a.R, a.por)
+        mesh, thr = generate_fluid(a.k, a.R, a.por, ftype=a.type, cell_size_mm=a.cell_size)
         fluid_target = a.por
         thr_label = f"level_c={thr:.4f}"
 
@@ -133,10 +161,10 @@ def main() -> int:
         parts = mesh.split(only_watertight=False)
         if len(parts) != 2:
             raise SystemExit(f"[FAIL] --maze 需要恰好 2 个连通域，实测 {len(parts)}")
+        inv_scale = ((2.0 * np.pi) / a.cell_size) if (a.cell_size and a.cell_size > 0) else 1.0
         def fmaze(comp):
-            v = comp.vertices
-            return float(np.median(np.sin(v[:, 0]) * np.cos(v[:, 1]) + np.sin(v[:, 1]) * np.cos(v[:, 2])
-                                   + np.sin(v[:, 2]) * np.cos(v[:, 0])))
+            v = comp.vertices * inv_scale
+            return float(np.median(evaluate_field(a.type, v[:, 0], v[:, 1], v[:, 2])))
         parts_sorted = sorted(parts, key=fmaze)  # f 中位数 -t → +t：[G-, G+]
         pick = parts_sorted[0] if a.maze == "gminus" else parts_sorted[1]
         print(f"[maze] G- f_med={fmaze(parts_sorted[0]):+.4f} vol={parts_sorted[0].volume:.2f} | "
@@ -147,17 +175,25 @@ def main() -> int:
 
     bbox = mesh.bounds[1] - mesh.bounds[0]
     fluid_frac = mesh.volume / float(np.prod(bbox))
-    pair_ok, pair_msg = periodic_pair_check(mesh, a.k)
+    phys_L = (a.k * a.cell_size) if (a.cell_size and a.cell_size > 0) else (2.0 * np.pi * a.k)
+    pair_ok, pair_msg = periodic_pair_check(mesh, a.k, phys_L)
     comps = len(mesh.split(only_watertight=False))
+    seed = find_interior_pore_seed(a.k, a.R, a.type, thr, a.structure, a.cell_size)
 
-    if a.structure == "sheet":
+    if a.out:
+        out = Path(a.out)
+    elif a.structure == "sheet":
         suffix = f"_{a.maze}" if a.maze else ""
-        out = REPO / "sim" / "out" / f"fluid_gyroid_sheet_k{a.k}_R{a.R}_s{int(a.solid*100)}{suffix}.stl"
+        cs_tag = f"_cs{a.cell_size:g}" if (a.cell_size and a.cell_size > 0) else ""
+        out = REPO / "sim" / "out" / f"fluid_{a.type}_sheet_k{a.k}_R{a.R}_s{int(a.solid*100)}{cs_tag}{suffix}.stl"
+    else:
+        cs_tag = f"_cs{a.cell_size:g}" if (a.cell_size and a.cell_size > 0) else ""
+        out = REPO / "sim" / "out" / f"fluid_{a.type}_k{a.k}_R{a.R}_p{int(a.por*100)}{cs_tag}.stl"
         # sheet 孔隙域预期 comp=2（G+/G- 双迷宫互不相通）——几何特征非缺陷；--maze 拆分后单迷宫 comp=1
+    if a.structure == "sheet":
         exp = 1 if a.maze else 2
         comp_note = f"comp={comps}（{'双迷宫预期' if comps == 2 else '单迷宫预期' if comps == exp else '⚠ 非预期'}，应={exp}）"
     else:
-        out = REPO / "sim" / "out" / f"fluid_gyroid_k{a.k}_R{a.R}_p{int(a.por*100)}.stl"
         comp_note = f"comp={comps}"
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -169,7 +205,7 @@ def main() -> int:
     print(f"[{'OK' if (ok and comps_ok) else 'WARN'}] {out.name}: faces={len(mesh.faces)} "
           f"watertight={mesh.is_watertight} {comp_note}{maze_note} "
           f"fluid_frac={fluid_frac:.4f} (target {fluid_target:.2f}, "
-          f"dev={abs(fluid_frac-fluid_target)*100:.2f}pp) | {thr_label} | 周期自检: {pair_msg}")
+          f"dev={abs(fluid_frac-fluid_target)*100:.2f}pp) | {thr_label} | seed={[round(s, 4) for s in seed]} | 周期自检: {pair_msg}")
     return 0 if (ok and comps_ok) else 1
 
 

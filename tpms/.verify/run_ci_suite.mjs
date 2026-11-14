@@ -122,7 +122,7 @@ function runStep(name, script) {
 // ── 调度清单（[汇报名, 步骤名, 脚本]；顺序 = 历史顺序，执行 = 并发池）──
 const SCHEDULE = [
   ['mesh_audit 几何质量门（34 案例）', '几何质量门', 'mesh_audit.mjs'],
-  ['parity_math 数学同源（332 断言）', '数学同源', 'parity_math.mjs'],
+  ['parity_math 数学同源（337 断言）', '数学同源', 'parity_math.mjs'],
   ['state_url_audit 状态隔离+分享恢复（门37）', '状态与分享审计', 'state_url_audit.mjs'],
   ['worker_bridge_audit Worker生命周期（门38，11断言）', 'Worker生命周期审计', 'worker_bridge_audit.mjs'],
   ['sim_export_check 仿真导出（CFD 分块 + 曲率健壮性）', '仿真导出校验', 'sim_export_check.mjs'],
@@ -164,7 +164,7 @@ const SCHEDULE = [
   ['docs_consistency_check 文档数字一致性（GUARD↔宣称/动态SCHEDULE对拍/禁句/SEO三件哨兵/publish 同源+sync-publish/调色单例/徽章↔tag，CI 基线 313）', '文档一致性', 'docs_consistency_check.mjs'],
   ['run_all UI 回归（18 套件——+slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）', 'UI 回归', 'run_all.mjs'],
   // 【2026-11-12 纳管】方向 B1 专属门：驾驶舱壳/iframe 桥/规则兜底三层活性（selector/fix_check 均不锚 harness.html）
-  ['harness_ui_check 双壳驾驶舱 UI 与桥冒烟（13 断言——外壳/工程壳/桥端到端写穿/标签/规则兜底）', '驾驶舱 UI 冒烟', 'harness_ui_check.mjs'],
+  ['harness_ui_check 双壳驾驶舱 UI 与桥冒烟（38 断言——外壳/工程壳/桥端到端写穿/规则兜底+逆设计选型与确定性指代+在线仿真/后处理/场景交付+LPBF/骨长入/声子/水平集自治流水线+DSH 三栏工作台+求解监控四级对标）', '驾驶舱 UI 冒烟', 'harness_ui_check.mjs'],
   // 【2026-09-10 纳管】两者均有「不在调度→静默红数天」事故史（schema_check frd 漂移漏检一天、
   // selftest list 14→18 断言红两天无人发现）——手动纪律已证失效，转正进调度
   ['agent_selftest CLI 自检（parseArgs/list/拒绝语义，56断言）', 'CLI 自检', '../agent/selftest.mjs'],
@@ -172,7 +172,7 @@ const SCHEDULE = [
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
   ['llm_provider_selftest M3 拦截器自检（69 断言/GUARD 69，离线；+嵌套必填/正文超时/备注双出口钉 2026-10-11）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
   // 【2026-11-11 纳管】方向 A（CLI/Web 合流）：契约同源锁+E5/E11 浏览器红队复刻+Key 零泄漏
-  ['agent_bridge_audit 方向A契约合流桥（同源锁/E5-E11 浏览器复刻/Key 零泄漏/规则路径钉+M4 修复循环真跑+水密门回流+双壳桥接线，29 断言）', 'Agent 合流桥审计', 'agent_bridge_audit.mjs'],
+  ['agent_bridge_audit 方向A契约合流桥（同源锁/E5-E11 浏览器复刻/Key 零泄漏/规则路径钉+M4 修复循环真跑+水密门回流+双壳桥接线+pareto/scenario 工具面/会话确定性指代/ABAQUS 反演/多物理场/cae-daemon 安全与 BL-COMSOL-nTop-RVE 链，53 断言）', 'Agent 合流桥审计', 'agent_bridge_audit.mjs'],
   ['guard_audit 元门（恒真高置信扫描+GUARD 基线账实对拍，2026-09-29 纳管）', '门禁元审计', 'guard_audit.mjs'],
   // 【2026-10-11 纳管】打磨计划批次 1A：strut 桁架族跨出口一致性（G1 尺度契约/G2 拓扑锚/
   // G3 分派哨兵/G4 脚本出口/G5 mesh-体素-RVE 矩阵；octet 非流形 fail-closed 契约钉）

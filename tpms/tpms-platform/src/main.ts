@@ -40,8 +40,8 @@ import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
 // 方向 A（2026-11-11）：NL 助手 LLM 合流——契约单源桥 + 浏览器 provider + Agent 循环
 import { runAgent, type ToolImpl, type ToolExecResult } from './core/agent-run';
-import { agentListExec, agentEstimateExec } from './core/agent-tools-shared';
-import { serveBridge } from './core/iframe-bridge';
+import { agentListExec, agentEstimateExec, agentParetoExec, resolveScenarioPreset } from './core/agent-tools-shared';
+import { serveBridge, type BridgeResult } from './core/iframe-bridge';
 import {
   createBrowserProvider, loadAgentCfg, saveAgentCfg, getByoKey, setByoKey,
   BrowserLlmError, DEFAULT_ENDPOINTS, DEFAULT_MODELS, type AgentCfg,
@@ -443,6 +443,8 @@ function requestRender(): void {
 }
 function renderFrame(): void {
   rafScheduled = false;
+  const container = document.getElementById('canvas-container');
+  if (document.hidden || !container || container.clientWidth <= 0 || container.clientHeight <= 0) return;
   const moving = ctx.controls.update();
   ctx.composer.render();
   if (moving) requestRender();
@@ -477,10 +479,14 @@ function updateImpactStats(): void {
 // 位移加载压至 4%，von Mises 逐帧映射顶点色（Cool-Warm 同源 LUT）。
 let plasRunning = false;
 
-function voxelizeCurrentTPMS(R: number, prune: (s: Uint8Array, r: number) => { islands: number; dangling: number }): { solid: Uint8Array; pruned: number; prunedDetail: string } {
+function voxelizeCurrentTPMS(
+  R: number,
+  prune: (s: Uint8Array, r: number) => { islands: number; dangling: number },
+  overridePeriods?: number,
+): { solid: Uint8Array; pruned: number; prunedDetail: string } {
   const st = getState();
   const fn = getTpmsFunction(st.type, st.customFormula);
-  const kk = st.cellSize;
+  const kk = overridePeriods ?? st.cellSize;
   const V = new Float64Array(R * R * R);
   for (let iz = 0; iz < R; iz++) {
     const wz = kk * (-Math.PI + (2 * Math.PI * (iz + 0.5)) / R);
@@ -502,7 +508,7 @@ function voxelizeCurrentTPMS(R: number, prune: (s: Uint8Array, r: number) => { i
   const iso = sorted[idx];
   // 容器裁剪（与 surface-nets boundAt 同域：cylinder px²+py²<1 且 |pz|<1）
   // 端板融合（mm→wc 域换算，镜像 surface-nets 端板语义）——曾缺失导致圆柱/端板模型被按立方无端板模拟
-  const epWc = st.endplateMm > 0 ? st.endplateMm / effMm(st) : 0;
+  const epWc = overridePeriods == null && st.endplateMm > 0 ? st.endplateMm / effMm(st) : 0;
   const solid = new Uint8Array(R * R * R);
   for (let iz = 0; iz < R; iz++) {
     const pz = -1 + (2 * (iz + 0.5)) / R;
@@ -2088,7 +2094,54 @@ function agentClampPorosity(p: number): { pct: number; clamped: boolean } {
   return { pct: c, clamped: Math.abs(c - pct) > 1e-9 };
 }
 
+/** Agent 写/桥共用的规范状态快照（单源构建，避免双处手写飘移） */
+function agentStateSnapshot(s: Readonly<AppState>): Record<string, unknown> {
+  return {
+    type: s.type,
+    porosity: s.porosity,
+    periods: s.cellSize,
+    specimenSizeMm: s.specimenSizeMm,
+    structureMode: s.structureMode,
+    containerShape: s.containerShape,
+    material: s.material,
+    model: s.model,
+  };
+}
+
 /** Agent 写态工具执行体（主壳直接执行；harness 壳经 iframe-bridge 驱动同一对函数——双壳单源） */
+/** 解析 agent `hybrid` 规格：支持 schema 形式 `typeB[:blend[:center[:width[:axis]]]]` 或简写 `A+B@center` / `B@center` */
+function parseAgentHybridSpec(raw: string): AppState['hybrid'] | null {
+  let str = raw.trim();
+  if (!str) return null;
+  let typeBRaw = '';
+  let blendRaw = '';
+  let centerRaw = '';
+  let widthRaw = '';
+  let axisRaw = '';
+  if (str.includes('@') && !str.includes(':')) {
+    const [left, cPart] = str.split('@', 2);
+    typeBRaw = left.includes('+') ? left.split('+')[1].trim() : left.trim();
+    centerRaw = (cPart ?? '').trim();
+  } else {
+    const parts = str.split(':');
+    typeBRaw = (parts[0] ?? '').trim();
+    if (typeBRaw.includes('+')) typeBRaw = typeBRaw.split('+')[1].trim();
+    blendRaw = (parts[1] ?? '').trim();
+    centerRaw = (parts[2] ?? '').trim();
+    widthRaw = (parts[3] ?? '').trim();
+    axisRaw = (parts[4] ?? '').trim();
+  }
+  if (!typeBRaw || typeBRaw === 'custom' || !VALID.type.includes(typeBRaw as AppState['type'])) return null;
+  const blendFunction: 'linear' | 'sigmoid' = blendRaw === 'linear' ? 'linear' : blendRaw === 'sigmoid' ? 'sigmoid' : (blendRaw ? 'sigmoid' : 'linear');
+  const cNum = centerRaw !== '' ? Number(centerRaw) : 0;
+  const wNum = widthRaw !== '' ? Number(widthRaw) : 0.5;
+  const blendCenter = Number.isFinite(cNum) ? Math.max(-1, Math.min(1, cNum)) : 0;
+  const blendWidth = Number.isFinite(wNum) ? Math.max(0.1, Math.min(2.0, wNum)) : 0.5;
+  const axis: AppState['hybrid']['axis'] =
+    axisRaw === 'x' || axisRaw === 'y' || axisRaw === 'z' || axisRaw === 'radial' ? axisRaw : 'x';
+  return { enabled: true, typeB: typeBRaw as AppState['type'], blendFunction, blendCenter, blendWidth, axis };
+}
+
 async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecResult> {
   const patches: Partial<AppState> = {};
   const notes: string[] = [];
@@ -2106,13 +2159,87 @@ async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecRes
   if (typeof args.material === 'string') patches.material = args.material as AppState['material'];
   if (typeof args.mode === 'string') patches.structureMode = args.mode as AppState['structureMode'];
   if (typeof args.container === 'string') patches.containerShape = args.container as AppState['containerShape'];
+  if (typeof args.specimen_size_mm === 'number' && Number.isFinite(args.specimen_size_mm)) {
+    patches.specimenSizeMm = args.specimen_size_mm;
+  }
+  if (args.isoGrad === null || args.isoGrad === false) {
+    patches.isoGrad = { ...DEFAULT_STATE.isoGrad, enabled: false };
+    notes.push('isoGrad 已关闭');
+  } else if (args.isoGrad && typeof args.isoGrad === 'object' && !Array.isArray(args.isoGrad)) {
+    const ig = args.isoGrad as { values?: unknown; band?: unknown };
+    const vals = Array.isArray(ig.values)
+      ? ig.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      : [];
+    if (vals.length >= 2) {
+      const clampIso = (v: number) => Math.max(-1.5, Math.min(1.5, v));
+      const hard = clampIso(vals[0]);
+      const soft = clampIso(vals[vals.length - 1]);
+      const band = typeof ig.band === 'number' && Number.isFinite(ig.band) ? Math.max(0, Math.min(2, ig.band)) : 0.4;
+      patches.isoGrad = { enabled: true, hard, soft, band };
+      if (!patches.structureMode && getState().structureMode !== 'solid_network') {
+        patches.structureMode = 'solid_network';
+        notes.push('isoGrad 仅支持 solid_network，已自动切换');
+      }
+      if (args.hybrid === undefined && getState().hybrid.enabled) {
+        patches.hybrid = { ...DEFAULT_STATE.hybrid, enabled: false };
+        notes.push('isoGrad 与 hybrid 互斥，已自动关闭 hybrid');
+      }
+      notes.push(`isoGrad=[${hard.toFixed(2)}, 0, ${soft.toFixed(2)}] band=${band.toFixed(2)}`);
+    } else {
+      notes.push('isoGrad.values 需至少 2 个有限数字，已忽略');
+    }
+  }
+  if (args.hybrid === null || args.hybrid === false) {
+    patches.hybrid = { ...DEFAULT_STATE.hybrid, enabled: false };
+    notes.push('hybrid 已关闭');
+  } else if (typeof args.hybrid === 'string' && args.hybrid.trim()) {
+    const hy = parseAgentHybridSpec(args.hybrid);
+    if (hy) {
+      patches.hybrid = hy;
+      if (!patches.structureMode && getState().structureMode !== 'solid_network') {
+        patches.structureMode = 'solid_network';
+        notes.push('hybrid 仅支持 solid_network，已自动切换');
+      }
+      if (args.isoGrad === undefined && getState().isoGrad.enabled) {
+        patches.isoGrad = { ...DEFAULT_STATE.isoGrad, enabled: false };
+        notes.push('hybrid 与 isoGrad 互斥，已自动关闭 isoGrad');
+      }
+      notes.push(`hybrid=${hy.typeB}:${hy.blendFunction}:${hy.blendCenter}:${hy.blendWidth}:${hy.axis}`);
+    } else {
+      notes.push(`hybrid 规格未识别 (${args.hybrid})，已忽略`);
+    }
+  } else if (args.hybrid && typeof args.hybrid === 'object' && !Array.isArray(args.hybrid)) {
+    const ho = args.hybrid as Record<string, unknown>;
+    const rawTypeB = typeof ho.typeB === 'string' ? ho.typeB : '';
+    if (ho.enabled === false) {
+      patches.hybrid = { ...DEFAULT_STATE.hybrid, enabled: false };
+      notes.push('hybrid 已关闭');
+    } else if (rawTypeB && rawTypeB !== 'custom' && VALID.type.includes(rawTypeB as AppState['type'])) {
+      const bf = ho.blendFunction === 'linear' ? 'linear' : 'sigmoid';
+      const bc = typeof ho.blendCenter === 'number' && Number.isFinite(ho.blendCenter) ? Math.max(-1, Math.min(1, ho.blendCenter)) : 0;
+      const bw = typeof ho.blendWidth === 'number' && Number.isFinite(ho.blendWidth) ? Math.max(0.1, Math.min(2.0, ho.blendWidth)) : 1.0;
+      const ax = (ho.axis === 'x' || ho.axis === 'y' || ho.axis === 'z' || ho.axis === 'radial') ? ho.axis : 'x';
+      patches.hybrid = { enabled: true, typeB: rawTypeB as AppState['type'], blendFunction: bf, blendCenter: bc, blendWidth: bw, axis: ax };
+      if (!patches.structureMode && getState().structureMode !== 'solid_network') {
+        patches.structureMode = 'solid_network';
+        notes.push('hybrid 仅支持 solid_network，已自动切换');
+      }
+      if (args.isoGrad === undefined && getState().isoGrad.enabled) {
+        patches.isoGrad = { ...DEFAULT_STATE.isoGrad, enabled: false };
+        notes.push('hybrid 与 isoGrad 互斥，已自动关闭 isoGrad');
+      }
+      notes.push(`hybrid=${rawTypeB}:${bf}:${bc}:${bw}:${ax}`);
+    }
+  }
   setState(patches);
   const sNew = getState();
   syncUI(sNew);
   updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
-  scheduleRebuild(false);
+  const fastScreen = args.fastScreen === true;
+  scheduleRebuild(fastScreen);
   nlRebuildPending = true;
-  scheduleHdUpgrade();
+  if (!fastScreen) scheduleHdUpgrade();
+  const sizeNote = sNew.specimenSizeMm != null ? ` L=${sNew.specimenSizeMm}mm` : '';
   let outNote = '';
   if (typeof args.out === 'string' && args.out) {
     // A3：同步等重建→水密门→导出（失败以 verifyFail 回流修复菜单）；超时兜底=挂起后台导出
@@ -2121,28 +2248,31 @@ async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecRes
       nlPendingExport = { fmt: 'stl', name: args.out };
       outNote = `；重建超时，已挂起后台导出 ${args.out}`;
     } else {
-      const baseSummary = `${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${notes.length ? '；' + notes.join('；') : ''}`;
+      const baseSummary = `${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${sizeNote}${notes.length ? '；' + notes.join('；') : ''}`;
       try {
         await nlDoExport('stl', args.out);
-        return { ok: true, summary: `已导出 ${args.out}（水密门通过）——${baseSummary}` };
+        return { ok: true, summary: `已导出 ${args.out}（水密门通过）——${baseSummary}`, state: agentStateSnapshot(sNew) };
       } catch (e) {
         return {
           ok: false,
           verifyFail: true,   // 触发下一轮 apply_repair（降 periods/换族/调孔隙率）
           summary: `导出被水密门拒绝——${e instanceof Error ? e.message : String(e)}。当前设计：${baseSummary}。请在修复菜单中选择补丁后重试`,
+          state: agentStateSnapshot(sNew),
         };
       }
     }
   }
   return {
     ok: true,
-    summary: `已更新设计：${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize} ${sNew.structureMode} ${sNew.containerShape}（几何重建中）${notes.length ? '；' + notes.join('；') : ''}${outNote}`,
+    summary: `已更新设计：${sNew.type} p=${sNew.porosity}% k=${sNew.cellSize}${sizeNote} ${sNew.structureMode} ${sNew.containerShape}（几何重建中）${notes.length ? '；' + notes.join('；') : ''}${outNote}`,
+    state: agentStateSnapshot(sNew),
   };
 }
 
 async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecResult> {
   // design_verify 与 mesh 同槽位：先应用设计参数（无 out），再从新状态直接体素审计
-  await agentMeshExec({ type: args.type, porosity: args.porosity, periods: args.periods, material: args.material, mode: args.mode, container: args.container });
+  const fastScreen = args.resolution !== undefined && Number(args.resolution) <= 36;
+  await agentMeshExec({ type: args.type, porosity: args.porosity, periods: args.periods, material: args.material, mode: args.mode, container: args.container, specimen_size_mm: args.specimen_size_mm, isoGrad: args.isoGrad, hybrid: args.hybrid, fastScreen });
   const s = getState();
   if (s.model === 'strut') return { ok: false, summary: '线框模式无壁厚语义——制造检查仅支持曲面族' };
   const unsupported = voxelUnsupportedReasons(s);
@@ -2158,6 +2288,15 @@ async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecR
   const hMm = vox.hWc * effMm(s);
   const { auditManufacturing } = await import('./physics/manufacturing-audit');
   const rep = auditManufacturing(vox, hMm, { minWallMm: 0.4 });
+  const tort = analyzeTortuosity3D(
+    {
+      type: s.type, customFormula: s.customFormula, weights: s.weights,
+      periods: s.cellSize, mode: s.structureMode, gradientDir: s.gradientDir,
+      container: s.containerShape, isoUsed: vox.isoUsed, endplateMm: s.endplateMm,
+    },
+    Math.min(40, Rmfg),
+  );
+  const fmtTau = (v: number) => (Number.isFinite(v) ? Number(v.toFixed(3)) : null);
   const suggestions: string[] = [];
   if (rep.warnings.length) suggestions.push('壁厚不足：优先降 periods 或换低谐波曲面族后重调 tpms_mesh；升 resolution 次之');
   if (rep.mainPoreFraction < 0.999) suggestions.push(`孔隙未全连通（主域 ${(rep.mainPoreFraction * 100).toFixed(1)}%）——换族或降孔隙率`);
@@ -2170,8 +2309,620 @@ async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecR
       minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
       closedDomains: rep.closedDomains, closedPoreFraction: Number((rep.closedPoreFraction * 100).toFixed(2)),
       mainPoreFraction: Number((rep.mainPoreFraction * 100).toFixed(1)),
+      tortuosity: { tau: tort.tau.map(fmtTau), percolating: tort.percolating, gridN: tort.gridN },
       warnings: rep.warnings, suggestions, R: rep.R, minWallThresholdMm: 0.4,
     }),
+  };
+}
+
+async function agentScenarioExec(args: Record<string, unknown>): Promise<ToolExecResult & { data?: Record<string, unknown> }> {
+  const resolved = resolveScenarioPreset(String(args.design ?? ''));
+  if (!resolved.ok) return { ok: false, summary: resolved.error };
+  const preset = resolved.preset;
+  if (preset) {
+    if (rebuildTimer) { clearTimeout(rebuildTimer); rebuildTimer = null; }
+    if (hdUpgradeTimer) { clearTimeout(hdUpgradeTimer); hdUpgradeTimer = null; }
+    const { pct } = agentClampPorosity(preset.porosity);
+    const k = Math.min(5, Math.max(1, Math.round(preset.periods)));
+    setState({
+      type: preset.type as AppState['type'],
+      porosity: pct,
+      cellSize: k,
+      material: preset.material as AppState['material'],
+      structureMode: preset.mode as AppState['structureMode'],
+      containerShape: preset.container as AppState['containerShape'],
+      specimenSizeMm: preset.specimenSizeMm,
+    });
+    const sApplied = getState();
+    syncUI(sApplied);
+    updateBadges(sApplied.type, sApplied.model, sApplied.material, sApplied.structureMode);
+  }
+  const s = getState();
+  if (!baseGeo || !baseGeo.index) {
+    scheduleRebuild(false);
+    await awaitNextRebuild(15_000);
+  }
+  const baseR = hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize);
+  const startR = (s.type === 'gyroid' || s.type === 'diamond')
+    ? Math.min(96, Math.max(baseR, s.cellSize * 22))
+    : baseR;
+  const hdOk = baseGeo && baseGeo.index ? await ensureExportGradeGeometry(s, startR) : false;
+  if (!hdOk || !baseGeo || !baseGeo.index) {
+    return { ok: false, summary: `场景 ${resolved.design} 几何构建未就绪`, state: agentStateSnapshot(s) };
+  }
+  let pos = baseGeo.attributes.position.array as Float32Array;
+  let idx = baseGeo.index.array as Uint32Array;
+  let a7 = auditMeshIndices(pos, idx);
+  if (a7.openEdges !== 0 || a7.nonManifoldEdges !== 0 || a7.degenTris !== 0) {
+    const escR = Math.min(128, Math.max(startR + 8, s.cellSize * 32));
+    if (escR > lastBuildResolution && await ensureExportGradeGeometry(s, escR)) {
+      pos = baseGeo.attributes.position.array as Float32Array;
+      idx = baseGeo.index.array as Uint32Array;
+      a7 = auditMeshIndices(pos, idx);
+    }
+  }
+  const watertight = a7.openEdges === 0 && a7.nonManifoldEdges === 0 && a7.degenTris === 0;
+  const estRes = await agentEstimateExec({
+    type: s.type,
+    porosity: s.porosity / 100,
+    material: s.material === 'auto' ? 'tc4' : s.material,
+    cellSize: effWidthMm(s) / Math.max(1, s.cellSize),
+  });
+  const estimate = estRes.ok ? (JSON.parse(estRes.summary) as Record<string, unknown>) : {};
+  let voxReport: Record<string, unknown> | null = null;
+  const unsupported = voxelUnsupportedReasons(s);
+  if (s.model !== 'strut' && unsupported.length === 0) {
+    const Rmfg = 32;
+    const exp = await loadExport();
+    const vox = exp.buildVoxelModel({
+      type: s.type,
+      periods: s.cellSize,
+      weights: s.weights,
+      structureMode: s.structureMode,
+      containerShape: s.containerShape,
+      thickness: s.thickness,
+      targetPorosity: s.porosity / 100,
+      iso: 0,
+      customFormula: s.customFormula,
+      stress: s.stress,
+    }, Rmfg);
+    const { auditManufacturing } = await import('./physics/manufacturing-audit');
+    const rep = auditManufacturing(vox, vox.hWc * effMm(s), { minWallMm: 0.4 });
+    voxReport = {
+      R: Rmfg,
+      solidElems: vox.solidCount,
+      voxelPorosity: Number((1 - vox.solidCount / (Rmfg ** 3)).toFixed(4)),
+      minWallMm: Number(rep.minWallMm.medial.toFixed(3)),
+      minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
+      mainPoreFractionPct: Number((rep.mainPoreFraction * 100).toFixed(1)),
+      warnings: rep.warnings,
+    };
+  }
+  let overhangCriticalPct: number | null = null;
+  if (watertight) {
+    try {
+      const { auditOverhang } = await import('./physics/printability-audit');
+      const oh = auditOverhang(pos, idx, [0, 0, 1], 45);
+      overhangCriticalPct = Number((oh.criticalAreaRatio * 100).toFixed(2));
+    } catch { /* 开放或退化体积跳过悬垂角 */ }
+  }
+  const meshPorosity = lastMeshSolidFraction != null ? Number((1 - lastMeshSolidFraction).toFixed(4)) : null;
+  const triCount = (idx.length / 3) | 0;
+  const baseName = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
+  const payload: Record<string, unknown> = {
+    command: 'scenario',
+    design: resolved.design,
+    source: preset ? 'builtin-preset' : 'viewport-state',
+    label: preset?.label ?? `当前视口场景 (${s.type} p=${s.porosity}%)`,
+    watertight,
+    meshAudit: { openEdges: a7.openEdges, nonManifoldEdges: a7.nonManifoldEdges, degenTris: a7.degenTris, tris: triCount },
+    meshPorosity,
+    voxel: voxReport,
+    overhang45CriticalPct: overhangCriticalPct,
+    estimate,
+    deliverables: [`${baseName}.stl`, `${baseName}-voxel.inp`, `${baseName}-polymesh.zip`],
+    caliber: 'M5 场景端到端验证（精确网格水密门 + C3D8 体素双口径核验 + 45° 悬垂审计 + 解析力学/CFD 估标）',
+  };
+  return {
+    ok: watertight,
+    summary: JSON.stringify(payload),
+    state: agentStateSnapshot(s),
+    data: payload,
+  };
+}
+
+async function agentSimulateExec(args: Record<string, unknown>): Promise<BridgeResult> {
+  const pArgs = (args.params && typeof args.params === 'object' ? args.params : args) as Record<string, unknown>;
+  const pickNum = (key: string, fallback: number): number => {
+    const v = pArgs[key] ?? args[key];
+    return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+  };
+  const mode = String(args.mode ?? 'all-fast') as
+    | 'compression'
+    | 'homogenization'
+    | 'yield-impact'
+    | 'printability'
+    | 'lpbf'
+    | 'tissue'
+    | 'levelset'
+    | 'phononic'
+    | 'all-fast';
+  const s = getState();
+  const rho = Math.max(0.02, Math.min(0.95, lastMeshSolidFraction ?? (1 - s.porosity / 100)));
+  const matKey = s.material === 'auto' ? 'tc4' : s.material;
+  const baseE = BASE_MODULUS[matKey] ?? BASE_MODULUS.tc4;
+  const sigmaYs = BASE_YIELD_STRENGTH[matKey] ?? BASE_YIELD_STRENGTH.tc4;
+  const result: Record<string, unknown> = {
+    mode,
+    type: s.type,
+    porosityPct: s.porosity,
+    periods: s.cellSize,
+    material: matKey,
+    structureMode: s.structureMode,
+  };
+
+  if (mode === 'homogenization' || mode === 'all-fast') {
+    const { orthotropicCompliance, sampleDirectionalGrid, directionalModulus } = await loadHomogenization();
+    const anis = estimateAnisotropicStiffness(rho, s.type);
+    const S = orthotropicCompliance(anis.E[0], anis.E[1], anis.E[2], 0.3);
+    const grid = sampleDirectionalGrid(S, 24, 48);
+    const eMinGPa = Number((grid.emin * baseE).toFixed(3));
+    const eMaxGPa = Number((grid.emax * baseE).toFixed(3));
+    result.homogenization = {
+      Ex_GPa: Number((anis.E[0] * baseE).toFixed(3)),
+      Ey_GPa: Number((anis.E[1] * baseE).toFixed(3)),
+      Ez_GPa: Number((anis.E[2] * baseE).toFixed(3)),
+      Emin_GPa: eMinGPa,
+      Emax_GPa: eMaxGPa,
+      E100_GPa: Number((directionalModulus(S, 1, 0, 0) * baseE).toFixed(3)),
+      anisotropyRatio: Number((eMaxGPa / Math.max(1e-6, eMinGPa)).toFixed(2)),
+    };
+  }
+
+  if (mode === 'yield-impact' || mode === 'all-fast') {
+    const ys = await loadYieldSurface();
+    const d = ys.deriveScaffoldYieldConfigs(rho, s.type, s.porosity / 100, matKey);
+    const rawSig = Array.isArray(args.sigma0) && args.sigma0.length === 3 ? args.sigma0.map(Number) : [-10, 0, 0];
+    const sigma0: [number, number, number] = [
+      Number.isFinite(rawSig[0]) && Math.hypot(rawSig[0], rawSig[1], rawSig[2]) > 1e-6 ? rawSig[0] : -10,
+      Number.isFinite(rawSig[1]) ? rawSig[1] : 0,
+      Number.isFinite(rawSig[2]) ? rawSig[2] : 0,
+    ];
+    const crit = ys.criticalMode([
+      { kind: 'hill48', config: d.hill },
+      { kind: 'tsaiwu', config: d.tsaiwu },
+      { kind: 'gurson', config: d.gurson },
+      { kind: 'drucker-prager', config: d.dp },
+    ], sigma0);
+    const cr = computeCrush(rho, s.type, sigmaYs);
+    const md = computeModal(rho, s.type, s.cellSize);
+    result.yieldImpact = {
+      sigma0_MPa: sigma0,
+      sigmaPlRef_MPa: Number(d.sigmaPl.toFixed(2)),
+      criticalCriterion: crit ? ys.YIELD_CRITERIA_LABEL[crit.kind] : 'n/a',
+      safetyFactor: crit ? Number(Math.min(999, crit.result.sf).toFixed(2)) : null,
+      envelopeRadius_MPa: crit ? Number(crit.result.envelopeRadius.toFixed(2)) : null,
+      sea_J_per_g: Number(cr.seaJPerG.toFixed(2)),
+      epsilonD_pct: Number((cr.epsilonD * 100).toFixed(1)),
+      f1_Hz: Number(md.f1.toFixed(1)),
+    };
+  }
+
+  if (mode === 'printability' || mode === 'all-fast') {
+    if (!baseGeo || !baseGeo.index) await awaitNextRebuild(15_000);
+    const fastPrintR = mode === 'all-fast'
+      ? Math.min(32, hdResolution(s.type, s.structureMode, s.gradientDir, s.cellSize))
+      : undefined;
+    if (baseGeo && baseGeo.index && (await ensureExportGradeGeometry(s, fastPrintR))) {
+      try {
+        const { auditOverhang, searchBuildOrientation } = await import('./physics/printability-audit');
+        const pos = baseGeo.attributes.position.array as Float32Array;
+        const idx = baseGeo.index.array as Uint32Array;
+        const oh = auditOverhang(pos, idx, [0, 0, 1], 45);
+        const opt = searchBuildOrientation(pos, idx, 45, 96);
+        result.printability = {
+          tris: oh.tris,
+          criticalDeg: oh.criticalDeg,
+          downFacingPct: Number(((oh.downFacingArea / Math.max(1e-12, oh.totalArea)) * 100).toFixed(1)),
+          criticalAreaPct: Number((oh.criticalAreaRatio * 100).toFixed(2)),
+          bestDir: opt.bestDir.map((v) => Number(v.toFixed(3))),
+          bestCriticalAreaPct: Number((opt.bestCriticalRatio * 100).toFixed(2)),
+        };
+      } catch (err) {
+        result.printabilityError = err instanceof Error ? err.message : String(err);
+      }
+    } else {
+      result.printabilityError = '网格未就绪，无法审计悬垂角';
+    }
+  }
+
+  if (mode === 'compression' || mode === 'all-fast') {
+    if (s.structureMode !== 'solid_network') {
+      const msg = `弹塑性压缩数字孪生目前仅支持 solid_network 模式（当前为 ${s.structureMode}）`;
+      if (mode === 'compression') {
+        return { ok: false, summary: msg, state: agentStateSnapshot(s) };
+      }
+      result.compressionError = msg;
+    } else {
+    const { runCompressionDigitalTwin, pruneUnloadedVoxels } = await loadDigitalTwin();
+    const { mapElementFieldToVertexColors } = await loadPlasticityColor();
+    const R = 8;
+    const solvePeriods = 1;
+    const { solid, pruned, prunedDetail } = voxelizeCurrentTPMS(R, pruneUnloadedVoxels, solvePeriods);
+    const syRel = sigmaYs / (baseE * 1000);
+    const res = runCompressionDigitalTwin({
+      R,
+      solid,
+      porosity: s.porosity / 100,
+      sigmaYRatio: syRel,
+      failureStrain: 0.025,
+      hardening: 0.05,
+      steps: 7,
+      maxStrain: 0.035,
+      tol: mode === 'all-fast' ? 1.5e-4 : 1e-4,
+      maxIter: mode === 'all-fast' ? 24 : 28,
+      pcgTol: mode === 'all-fast' ? 1.5e-4 : 1e-4,
+      pcgMaxIter: mode === 'all-fast' ? 200 : 350,
+      maxSubsteps: mode === 'all-fast' ? 8 : 20,
+      minSubstepFrac: mode === 'all-fast' ? 1 / 8 : 1 / 32,
+      type: s.type,
+    });
+    const geo = baseGeo;
+    const pos = geo?.getAttribute('position')?.array as Float32Array | undefined;
+    if (geo && pos) {
+      let vmMaxAll = 0;
+      for (let i = 0; i < res.vonMises.length; i++) vmMaxAll = Math.max(vmMaxAll, res.vonMises[i]);
+      const normPos = new Float32Array(pos.length);
+      const kPer = Math.max(1, s.cellSize);
+      for (let i = 0; i < pos.length; i++) {
+        const u = Math.max(-1, Math.min(1, pos[i] / Math.PI));
+        if (kPer > 1) {
+          const frac = ((u + 1) * 0.5 * kPer) % 1;
+          normPos[i] = (frac < 0 ? frac + 1 : frac) * 2 - 1;
+        } else {
+          normPos[i] = u;
+        }
+      }
+      if (!geo.getAttribute('color')) {
+        geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.length), 3));
+      }
+      const colors = mapElementFieldToVertexColors(normPos, R, res.vonMises, 0, vmMaxAll || 1, sampleCoolWarmInto);
+      (geo.getAttribute('color').array as Float32Array).set(colors);
+      geo.getAttribute('color').needsUpdate = true;
+      if (meshFill && meshFill.material instanceof THREE.Material) {
+        (meshFill.material as THREE.MeshPhysicalMaterial).vertexColors = true;
+        meshFill.material.needsUpdate = true;
+      }
+      requestRender();
+    }
+    const eMPa = baseE * 1000;
+    const curveMPa = res.curve.map((c) => ({
+      strain: Number(c.strain.toFixed(5)),
+      stressMPa: Number((c.stress * eMPa).toFixed(3)),
+      peeq: Number(c.peeq.toExponential(2)),
+      activeElems: c.activeElems,
+    }));
+    const effModGPa = curveMPa.length >= 2 && curveMPa[1].strain > 0
+      ? Number(((curveMPa[1].stressMPa / curveMPa[1].strain) / 1000).toFixed(3))
+      : null;
+    let maxStressMPa = 0;
+    for (const pt of curveMPa) if (pt.stressMPa > maxStressMPa) maxStressMPa = pt.stressMPa;
+    result.compression = {
+      R,
+      solveScope: s.cellSize > 1 ? `1-cell RVE 周期代理 (R=${R}→${s.cellSize}³ 视口云图)` : `全试样 (R=${R})`,
+      allConverged: res.allConverged,
+      collapsed: res.collapsed,
+      collapseStrain: res.collapseStrain != null ? Number(res.collapseStrain.toFixed(4)) : null,
+      effectiveModulusGPa: effModGPa,
+      maxStressMPa: Number(maxStressMPa.toFixed(2)),
+      plateauStressMPa: Number.isFinite(res.plateauStress) ? Number((res.plateauStress * eMPa).toFixed(2)) : null,
+      dtVsRefRatio: Number.isFinite(res.calibrationRatio) ? Number(res.calibrationRatio.toFixed(2)) : null,
+      totalDead: res.totalDead,
+      maxPEEQ: Number((res.peeq.length ? res.peeq.reduce((a, b) => Math.max(a, b), 0) : 0).toExponential(2)),
+      pruned,
+      prunedDetail,
+      elapsedMs: Math.round(res.elapsedMs),
+      curve: curveMPa,
+      vertexColored: Boolean(geo && pos),
+    };
+    }
+  }
+
+  if (mode === 'lpbf') {
+    const { simulateLPBF } = await loadLpbf();
+    const power = Math.min(600, Math.max(50, pickNum('power', 200)));
+    const speed = Math.min(3.0, Math.max(0.1, pickNum('speed', 1.0)));
+    const totalTime = Math.min(5e-3, Math.max(1e-4, pickNum('totalTime', 1.2e-3)));
+    const res = simulateLPBF({ N: 32, dx: 25e-6, power, speed, totalTime });
+    result.lpbf = {
+      N: 32,
+      dxUm: 25,
+      powerW: power,
+      speedMs: speed,
+      window: res.window,
+      peakTemperatureK: Math.round(res.peakTemperature),
+      meltPoolVoxels: res.meltPoolVoxels,
+      coolingRateKs: Math.round(res.coolingRate),
+      thermalGradientKm: Math.round(res.thermalGradient),
+      gR: Number(res.gR.toExponential(3)),
+      residualStressMPa: Number((res.residualStress / 1e6).toFixed(1)),
+      distortionUm: Number((res.distortion * 1e6).toFixed(2)),
+      energyDensityJm3: Number(res.energyDensity.toExponential(3)),
+      energyBalancePct: Number((res.energyBalance * 100).toFixed(3)),
+      stabilityOk: res.stability.ok,
+      elapsedMs: Math.round(res.elapsedMs),
+    };
+  }
+
+  if (mode === 'tissue' || mode === 'levelset' || mode === 'phononic') {
+    const analyticSupported = analyticFieldValue(s.type, 0, 0, 0, s.weights) !== null;
+    if (s.type === 'custom' || s.hybrid.enabled || s.isoGrad.enabled || (s.structureMode !== 'solid_network' && !analyticSupported)) {
+      return {
+        ok: false,
+        summary: `${mode} 体素求解暂不支持 custom/hybrid/isoGrad 或非解析族 shell 模式（当前 type=${s.type}, mode=${s.structureMode}）`,
+        state: agentStateSnapshot(s),
+      };
+    }
+
+    const buildVoxelMask = (R: number, overridePeriods?: number, forceCube = false): Uint8Array => {
+      const kk = overridePeriods ?? s.cellSize;
+      if (s.structureMode === 'solid_network' && !forceCube) {
+        return voxelizeCurrentTPMS(R, () => ({ islands: 0, dangling: 0 }), overridePeriods).solid;
+      }
+      if (s.structureMode === 'solid_network' && forceCube) {
+        const fn = getTpmsFunction(s.type, s.customFormula);
+        const V = new Float64Array(R * R * R);
+        for (let iz = 0; iz < R; iz++) {
+          const wz = kk * (-Math.PI + (2 * Math.PI * (iz + 0.5)) / R);
+          for (let iy = 0; iy < R; iy++) {
+            const wy = kk * (-Math.PI + (2 * Math.PI * (iy + 0.5)) / R);
+            for (let ix = 0; ix < R; ix++) {
+              const wx = kk * (-Math.PI + (2 * Math.PI * (ix + 0.5)) / R);
+              const av = analyticFieldValue(s.type, wx, wy, wz, s.weights);
+              V[ix + iy * R + iz * R * R] = av !== null ? av : fn(wx, wy, wz, s.weights);
+            }
+          }
+        }
+        const sorted = Float64Array.from(V).sort();
+        const targetSolid = Math.max(0.02, Math.min(0.98, 1 - s.porosity / 100));
+        const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(targetSolid * sorted.length)));
+        const iso = sorted[idx];
+        const out = new Uint8Array(R * R * R);
+        for (let i = 0; i < out.length; i++) out[i] = V[i] < iso ? 1 : 0;
+        return out;
+      }
+      const sp: SectionAnalysisParams = {
+        type: s.type,
+        customFormula: s.customFormula,
+        weights: [...s.weights] as [number, number, number, number],
+        periods: kk,
+        mode: s.structureMode,
+        gradientDir: s.gradientDir,
+        container: forceCube ? 'cube' : s.containerShape,
+        isoUsed: overridePeriods == null && lastIsoUsed ? lastIsoUsed : baseIso(s) || Math.max(0.05, s.thickness * 0.75),
+        endplateMm: forceCube || overridePeriods != null ? 0 : s.endplateMm,
+      };
+      const out = new Uint8Array(R * R * R);
+      for (let iz = 0; iz < R; iz++) {
+        const pz = -1 + (2 * (iz + 0.5)) / R;
+        for (let iy = 0; iy < R; iy++) {
+          const py = -1 + (2 * (iy + 0.5)) / R;
+          for (let ix = 0; ix < R; ix++) {
+            const px = -1 + (2 * (ix + 0.5)) / R;
+            out[ix + iy * R + iz * R * R] = isSolidAt(sp, px, py, pz) ? 1 : 0;
+          }
+        }
+      }
+      return out;
+    };
+
+    if (mode === 'tissue') {
+      const { simulateTissueGrowth } = await loadTissue();
+      const R = Math.min(24, Math.max(16, Math.round(pickNum('R', 20))));
+      const days = Math.min(42, Math.max(7, Math.round(pickNum('days', 28))));
+      const solid = buildVoxelMask(R);
+      const res = simulateTissueGrowth({ R, solid, days });
+      const lastO2 = res.o2Frames[res.o2Frames.length - 1];
+      if (!baseGeo || !baseGeo.index) await awaitNextRebuild(10_000);
+      const geo = baseGeo;
+      const pos = geo?.attributes.position?.array as Float32Array | undefined;
+      let vertexColored = false;
+      if (geo && pos && lastO2) {
+        const { mapElementFieldToVertexColors } = await loadPlasticityColor();
+        const normPos = new Float32Array(pos.length);
+        for (let i = 0; i < pos.length; i++) {
+          normPos[i] = Math.max(-1, Math.min(1, pos[i] / Math.PI));
+        }
+        const colors = mapElementFieldToVertexColors(normPos, R, lastO2, 0, 1, sampleCoolWarmInto);
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geo.attributes.color.needsUpdate = true;
+        if (meshFill && meshFill.material instanceof THREE.MeshPhysicalMaterial) {
+          meshFill.material.vertexColors = true;
+          meshFill.material.needsUpdate = true;
+        }
+        vertexColored = true;
+      }
+      const lastStat = res.stats[res.stats.length - 1];
+      result.tissue = {
+        R,
+        days,
+        finalMeanO2: Number((lastStat?.meanO2 ?? 0).toFixed(4)),
+        finalViabilityPct: Number(((lastStat?.viability ?? 0) * 100).toFixed(1)),
+        finalNecrosisPct: Number((lastStat?.necrosisPct ?? 0).toFixed(1)),
+        finalMineralPct: Number((lastStat?.mineralPct ?? 0).toFixed(1)),
+        meanO2Core: Number(res.meanO2Core.toFixed(4)),
+        meanO2Shell: Number(res.meanO2Shell.toFixed(4)),
+        coreToShellO2Ratio: Number((res.meanO2Shell > 1e-6 ? res.meanO2Core / res.meanO2Shell : 0).toFixed(3)),
+        massBalancePct: Number((res.massBalance * 100).toFixed(3)),
+        curve: res.stats,
+        vertexColored,
+        elapsedMs: Math.round(res.elapsedMs),
+      };
+    }
+
+    if (mode === 'levelset') {
+      const { evolveLevelSet, phiToVField } = await loadLevelSet();
+      const R = Math.min(20, Math.max(12, Math.round(pickNum('R', 16))));
+      const steps = Math.min(16, Math.max(2, Math.round(pickNum('steps', 4))));
+      const wStiff = pickNum('wStiff', 1);
+      const wFlow = pickNum('wFlow', 0.25);
+      const solid = buildVoxelMask(R);
+      const phi0 = new Float64Array(R * R * R);
+      for (let i = 0; i < phi0.length; i++) phi0[i] = solid[i] ? 1 : -1;
+      const res = evolveLevelSet({ R, phi0, steps, wStiff, wFlow });
+      const c0 = res.compliance[0] ?? 0;
+      const cEnd = res.compliance[res.compliance.length - 1] ?? c0;
+      const complianceDropPct = c0 > 1e-12 ? ((c0 - cEnd) / c0) * 100 : 0;
+      const f0 = res.flowProxy[0] ?? 0;
+      const fEnd = res.flowProxy[res.flowProxy.length - 1] ?? f0;
+      const sfEnd = res.solidFraction[res.solidFraction.length - 1] ?? (res.solidFraction[0] ?? 0);
+      const applyToViewport = pArgs.applyToViewport !== false && args.applyToViewport !== false;
+      let appliedToViewport = false;
+      let vertCount = 0;
+      let triCount = 0;
+      if (applyToViewport) {
+        const vField = phiToVField(res.phi, R, 0);
+        if (rebuildTimer) { clearTimeout(rebuildTimer); rebuildTimer = null; }
+        if (hdUpgradeTimer) { clearTimeout(hdUpgradeTimer); hdUpgradeTimer = null; }
+        bridge.invalidate();
+        const surf = buildSurface({
+          type: s.type,
+          iso: 0,
+          periods: s.cellSize,
+          resolution: R,
+          targetPorosity: undefined as unknown as number,
+          weights: [...s.weights] as [number, number, number, number],
+          structureMode: 'solid_network',
+          containerShape: s.containerShape,
+          thickness: s.thickness,
+          gradientDir: s.gradientDir,
+          hybrid: s.hybrid,
+          customFormula: s.customFormula,
+          preview: true,
+          endplateMm: s.endplateMm,
+          mmPerWc: effMm(s),
+          gpuVField: vField,
+        });
+        if (surf.type === 'result' && surf.positions && surf.normals && surf.indices && surf.vertCount > 0 && surf.triCount > 0) {
+          lastPorosityEstimate = surf.porosityEstimate;
+          lastMeshSolidFraction = surf.meshSolidFraction ?? null;
+          lastIsoUsed = surf.isoUsed;
+          lastBuildResolution = R;
+          lastAppliedGeometryKey = buildRequestKey(s, R);
+          levelsetOverrideStateKey = geometryStateKey(s);
+          if (surf.surfaceArea != null && surf.envelopeVolume != null) {
+            lastPhysicsMetrics = computePhysicsMetrics(
+              s.type,
+              surf.porosityEstimate,
+              surf.surfaceArea,
+              surf.envelopeVolume,
+              s.material,
+              s.structureMode,
+            );
+          }
+          if (microTimer) { clearTimeout(microTimer); microTimer = null; }
+          lastMicroTort = '水平集派生结果暂不支持';
+          lastMicroStiff = '—';
+          applyGeometry(surf.positions, surf.normals, surf.indices, surf.vertCount, surf.triCount);
+          appliedToViewport = true;
+          vertCount = surf.vertCount;
+          triCount = surf.triCount;
+        }
+      }
+      result.levelset = {
+        R,
+        steps,
+        wStiff,
+        wFlow,
+        initialCompliance: Number(c0.toFixed(4)),
+        finalCompliance: Number(cEnd.toFixed(4)),
+        complianceDropPct: Number(complianceDropPct.toFixed(2)),
+        initialFlowProxy: Number(f0.toFixed(4)),
+        finalFlowProxy: Number(fEnd.toFixed(4)),
+        finalSolidPct: Number((sfEnd * 100).toFixed(1)),
+        gradNormMean: Number(res.gradNormMean.toFixed(3)),
+        appliedToViewport,
+        vertCount,
+        triCount,
+        elapsedMs: Math.round(res.elapsedMs),
+      };
+    }
+
+    if (mode === 'phononic') {
+      const { solvePhononicBands } = await loadPhononic();
+      const rawN = Math.round(pickNum('N', 7));
+      const N = Math.min(11, Math.max(5, rawN % 2 === 0 ? rawN + 1 : rawN));
+      const solid = buildVoxelMask(N, 1, true);
+      const rhoS = matKey === 'polymer' ? 1250 : matKey === 'thermal' ? 2700 : 4430;
+      const matrixEPa = baseE * 1e9;
+      const unitMm = (s.specimenSizeMm ?? s.cellSize) / Math.max(1, s.cellSize);
+      const cellSizeM = pickNum('cellSizeM', unitMm * 1e-3);
+      try {
+        const res = solvePhononicBands({
+          N,
+          solid,
+          rhoS,
+          matrixEPa,
+          cellSizeM,
+          numBands: 8,
+          kPointsPerSeg: 4,
+          maxIter: 100,
+        });
+        const hzOf = (w: number) => w / (2 * Math.PI);
+        const waveSpeedRatio = res.cTargetMs > 0 ? res.cMeasuredMs / res.cTargetMs : 0;
+        result.phononic = {
+          N,
+          rhoS,
+          matrixEGPa: baseE,
+          cellSizeMm: Number((cellSizeM * 1000).toFixed(3)),
+          zeroModesAtGamma: res.zeroModesAtGamma,
+          waveSpeedRatio: Number(waveSpeedRatio.toFixed(3)),
+          relativeDensity: Number(res.solidFraction.toFixed(3)),
+          bandgaps: res.bandgaps.map((g) => ({
+            lowerHz: Math.round(hzOf(g.lower)),
+            upperHz: Math.round(hzOf(g.upper)),
+            bgPct: Number(g.bgPct.toFixed(2)),
+            between: g.between,
+          })),
+          pathX: res.pathX,
+          ticks: pathTicks(res),
+          bandsHz: res.bands.map((b) => b.map((w) => Number(hzOf(w).toFixed(1)))),
+          elapsedMs: Math.round(res.elapsedMs),
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          summary: `声子能带求解失败：${err instanceof Error ? err.message : String(err)}`,
+          state: agentStateSnapshot(s),
+        };
+      }
+    }
+  }
+
+  return { ok: true, summary: JSON.stringify(result), state: agentStateSnapshot(s), data: result };
+}
+
+async function agentExportCaeExec(args: Record<string, unknown>): Promise<BridgeResult> {
+  const fmt = String(args.fmt ?? 'pkg').toLowerCase();
+  const allowed = ['pkg', 'inp', 'ofmesh', 'rvestl', 'caesuite', 'stl', '3mf', 'gcode', 'py', 'm', 'bibtex', 'design'];
+  if (!allowed.includes(fmt)) {
+    return {
+      ok: false,
+      summary: `不支持的 CAE 导出格式 "${fmt}"（支持 ${allowed.join('/')}）`,
+      state: agentStateSnapshot(getState()),
+    };
+  }
+  if (!baseGeo || !baseGeo.index) {
+    await awaitNextRebuild(15_000);
+  }
+  const out = await handleExportInner(fmt);
+  const sNow = getState();
+  return {
+    ok: out.ok,
+    verifyFail: out.verifyFail,
+    summary: out.summary,
+    state: agentStateSnapshot(sNow),
+    data: { fmt, filename: out.filename ?? `tpms-${sNow.type}-p${sNow.porosity}.${fmt}` },
   };
 }
 
@@ -2180,8 +2931,131 @@ function buildAgentTools(): ToolImpl[] {
     { name: 'tpms_list', write: false, exec: () => agentListExec() },
     { name: 'tpms_estimate', write: false, exec: (args) => agentEstimateExec(args) },
     { name: 'tpms_mesh', write: true, exec: agentMeshExec },
+    { name: 'tpms_scenario', write: true, exec: agentScenarioExec },
     { name: 'tpms_design_verify', write: false, exec: agentVerifyExec },
+    { name: 'tpms_pareto', write: false, exec: (args) => agentParetoExec(args) },
   ];
+}
+
+let caeOverlayGroup: THREE.Group | null = null;
+
+function disposeCaeOverlay(): void {
+  if (!caeOverlayGroup) return;
+  caeOverlayGroup.traverse((obj) => {
+    const anyObj = obj as THREE.Mesh | THREE.LineSegments;
+    if (anyObj.geometry) anyObj.geometry.dispose();
+    if (anyObj.material) {
+      if (Array.isArray(anyObj.material)) anyObj.material.forEach((m) => m.dispose());
+      else anyObj.material.dispose();
+    }
+  });
+  ctx?.scene.remove(caeOverlayGroup);
+  caeOverlayGroup = null;
+}
+
+function parseStlTriangles(buf: Uint8Array, textFallback?: string): Float32Array {
+  const headText = textFallback ?? new TextDecoder('ascii').decode(buf.subarray(0, Math.min(256, buf.length)));
+  if (headText.trimStart().startsWith('solid') && headText.includes('facet')) {
+    const txt = textFallback ?? new TextDecoder('utf-8').decode(buf);
+    const coords: number[] = [];
+    const re = /vertex\s+([+\-0-9.eE]+)\s+([+\-0-9.eE]+)\s+([+\-0-9.eE]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(txt)) !== null) {
+      coords.push(Number(m[1]), Number(m[2]), Number(m[3]));
+    }
+    return new Float32Array(coords);
+  }
+  if (buf.byteLength < 84) return new Float32Array(0);
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const nTri = dv.getUint32(80, true);
+  const safeTri = Math.min(nTri, Math.floor((buf.byteLength - 84) / 50));
+  const out = new Float32Array(safeTri * 9);
+  for (let i = 0; i < safeTri; i++) {
+    const base = 84 + i * 50 + 12;
+    for (let k = 0; k < 9; k++) {
+      out[i * 9 + k] = dv.getFloat32(base + k * 4, true);
+    }
+  }
+  return out;
+}
+
+async function agentOverlayStlExec(args: Record<string, unknown>): Promise<BridgeResult> {
+  if (args.clear === true) {
+    disposeCaeOverlay();
+    if (meshFill && meshFill.material instanceof THREE.MeshPhysicalMaterial) {
+      meshFill.material.opacity = 1;
+      meshFill.material.transparent = false;
+      meshFill.material.needsUpdate = true;
+    }
+    return { ok: true, summary: '已清除 3D 视口 STL 流体域叠加层' };
+  }
+  let rawBytes = new Uint8Array(0);
+  const stlText = typeof args.stlText === 'string' ? args.stlText : undefined;
+  if (typeof args.stlBase64 === 'string' && args.stlBase64.length > 0) {
+    const bin = atob(args.stlBase64);
+    rawBytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) rawBytes[i] = bin.charCodeAt(i);
+  } else if (stlText) {
+    rawBytes = new TextEncoder().encode(stlText);
+  }
+  const positions = parseStlTriangles(rawBytes, stlText);
+  if (positions.length < 9) {
+    return { ok: false, summary: 'STL 叠加解析异常：未包含有效三角面片' };
+  }
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i], y = positions[i + 1], z = positions[i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  const cx = 0.5 * (minX + maxX), cy = 0.5 * (minY + maxY), cz = 0.5 * (minZ + maxZ);
+  const span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1e-6);
+  const sc = (2 * Math.PI * DISPLAY_SCALE) / span;
+  for (let i = 0; i < positions.length; i += 3) {
+    positions[i] = (positions[i] - cx) * sc;
+    positions[i + 1] = (positions[i + 1] - cy) * sc;
+    positions[i + 2] = (positions[i + 2] - cz) * sc;
+  }
+
+  disposeCaeOverlay();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.computeVertexNormals();
+
+  const grp = new THREE.Group();
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: 0x22d3ee,
+    roughness: 0.25,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.36,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  grp.add(new THREE.Mesh(geo, mat));
+  const wf = new THREE.LineSegments(
+    new THREE.WireframeGeometry(geo),
+    new THREE.LineBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.28 }),
+  );
+  grp.add(wf);
+  ctx?.scene.add(grp);
+  caeOverlayGroup = grp;
+
+  if (meshFill && meshFill.material instanceof THREE.MeshPhysicalMaterial) {
+    meshFill.material.transparent = true;
+    meshFill.material.opacity = 0.22;
+    meshFill.material.needsUpdate = true;
+  }
+
+  const label = typeof args.label === 'string' && args.label ? args.label : 'CFD STL';
+  const nTri = Math.round(positions.length / 9);
+  return {
+    ok: true,
+    summary: `已叠加 3D STL 网格预览：${label}（${nTri.toLocaleString()} 三角面）`,
+    data: { label, triangles: nTri },
+  };
 }
 
 /** 双壳桥（方向 B1）：被嵌入时开桥——harness 壳经桥驱动同一套执行体（同源校验+重活滑动窗 cap 自守） */
@@ -2190,9 +3064,18 @@ function wireHarnessBridge(): void {
   serveBridge({
     apply: agentMeshExec,
     verify: agentVerifyExec,
+    scenario: agentScenarioExec,
+    simulate: agentSimulateExec,
+    'export-cae': agentExportCaeExec,
+    'overlay-stl': agentOverlayStlExec,
     'get-state': () => {
       const s = getState();
-      return { ok: true, summary: `${s.type} p=${s.porosity}% k=${s.cellSize} ${s.structureMode} ${s.containerShape}` };
+      const sizeTxt = s.specimenSizeMm != null ? ` L=${s.specimenSizeMm}mm` : '';
+      return {
+        ok: true,
+        summary: `${s.type} p=${s.porosity}% k=${s.cellSize}${sizeTxt} ${s.structureMode} ${s.containerShape}`,
+        state: agentStateSnapshot(s),
+      };
     },
   });
 }
@@ -4295,7 +5178,8 @@ function bindInverseCtHierStress(): void { // 逆向设计/CT/分形/应力引�
 
   // 窗口大小变化
   window.addEventListener('resize', () => {
-    const container = document.getElementById('canvas-container')!;
+    const container = document.getElementById('canvas-container');
+    if (!container || container.clientWidth <= 0 || container.clientHeight <= 0) return;
     ctx.resize(container.clientWidth, container.clientHeight);
     requestRender(); // 按需渲染：视口变化重绘
   });
@@ -5643,15 +6527,18 @@ function buildDesignFile(s: AppState): Record<string, unknown> {
 /** 统一导出分发：根据格式调用对应导出器 */
 async function handleExport(fmt: string | null): Promise<void> {
   if (!fmt) return;
-  return handleExportInner(fmt);
+  await handleExportInner(fmt);
 }
 
-async function handleExportInner(fmt: string): Promise<void> {
+async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail?: boolean; filename?: string; summary: string }> {
   const s = getState();
   const base = `tpms-${s.type}-p${s.porosity}-${s.structureMode}`;
+  let exportedFile = `${base}.${fmt}`;
   const needGeo = fmt === 'stl' || fmt === 'vtk' || fmt === 'cfdstl' || fmt === 'glb' || fmt === '3mf' || fmt === 'gcode' || fmt === 'pkg';
   // 导出级 HD 确保提取为 ensureExportGradeGeometry（与配图模式共享锁，2026-09-15）
-  if (needGeo && !(await ensureExportGradeGeometry(s))) return;
+  if (needGeo && !(await ensureExportGradeGeometry(s))) {
+    return { ok: false, summary: '导出失败：高清几何尚未就绪' };
+  }
   // 网格交付门（2026-10-24 实用性审查 #7：网页与 CLI 同一口径）：三角网格导出前独立审计
   // 三硬指标——任一非零即硬拒（与 CLI mesh 水密门一致），不触发下载。此前网页仅查
   // "结果非空"+构建期一次性非流形 toast，非流形网格仍可进入 STL/3MF 导出交付。
@@ -5671,8 +6558,9 @@ async function handleExportInner(fmt: string): Promise<void> {
       }
     }
     if (bad(a7)) {
-      flashToast(`已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`);
-      return;
+      const msg = `已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`;
+      flashToast(msg);
+      return { ok: false, verifyFail: true, summary: msg };
     }
   }
   const exp = await loadExport();
@@ -5682,23 +6570,27 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'stl': {
         // 与 btn-stl 工具栏入口共用同一 mm 缩放（wc 域 ±π → cellSize mm），两入口产物必须一致
         const stlNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exp.exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.stl`, meshCont ? meshCont.scale : effMm(getState()), stlNormals);
+        exportedFile = `${base}.stl`;
+        exp.exportBinarySTL(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, exportedFile, meshCont ? meshCont.scale : effMm(getState()), stlNormals);
         break;
       }
       case 'vtk': {
         const vtkNormals = baseGeo!.attributes.normal?.array as Float32Array | undefined;
-        exp.exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.vtk`, meshCont ? meshCont.scale : effMm(getState()), vtkNormals);
+        exportedFile = `${base}.vtk`;
+        exp.exportVTK(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, exportedFile, meshCont ? meshCont.scale : effMm(getState()), vtkNormals);
         break;
       }
       case 'glb': {
         // 彩色 GLB：携带当前顶点色（着色模式开启时）+ mm 缩放，COLOR_0 Float32
         const glbColors = (baseGeo!.getAttribute('color')?.array as Float32Array | undefined) ?? null;
-        exp.exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, `${base}.glb`, meshCont ? meshCont.scale : effMm(getState()), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
+        exportedFile = `${base}.glb`;
+        exp.exportGLB(baseGeo!.attributes.position.array as Float32Array, baseGeo!.attributes.normal?.array as Float32Array | undefined, baseGeo!.index!.array as Uint32Array, glbColors, exportedFile, meshCont ? meshCont.scale : effMm(getState()), { type: s.type, mode: s.structureMode, porosityPct: s.porosity });
         break;
       }
       case '3mf': {
         // 工业格式：mm 尺度 + 端板/构型元数据（切片机可读自定义 metadata）
-        exp.export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, `${base}.3mf`, meshCont ? meshCont.scale : effMm(getState()), {
+        exportedFile = `${base}.3mf`;
+        exp.export3MF(baseGeo!.attributes.position.array as Float32Array, baseGeo!.index!.array as Uint32Array, exportedFile, meshCont ? meshCont.scale : effMm(getState()), {
           configName: base, porosity: s.porosity, endplateMm: s.endplateMm, structureMode: s.structureMode,
         });
         break;
@@ -5749,8 +6641,9 @@ async function handleExportInner(fmt: string): Promise<void> {
         // （wrapped 提取管线，与屏幕几何无关），STL 为开放缝合网格 + JSON 配对表
         if (s.containerShape !== 'cube' || s.structureMode === 'gradient_shell' || s.hybrid.enabled || s.endplateMm > 0
           || s.isoGrad.enabled || s.hierarchical.enabled || s.neural.enabled) {
-          flashToast('周期性 RVE 需：立方体容器 + solid/shell 模式 + 关闭混合/端板/渐变等值场/分形/神经场（批十一：这些配置不在周期单胞语义内，静默导出=均匀几何冒充）');
-          return;
+          const msg = '周期性 RVE 需：立方体容器 + solid/shell 模式 + 关闭混合/端板/渐变等值场/分形/神经场（批十一：这些配置不在周期单胞语义内，静默导出=均匀几何冒充）';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         const rveR = 48;
         const rvePoro = resolveExportPorosity(s);
@@ -5763,11 +6656,13 @@ async function handleExportInner(fmt: string): Promise<void> {
           mmPerWc: effMm(s),
         });
         if (rveRes.type !== 'result' || rveRes.vertCount === 0 || !rveRes.pbcPairs) {
-          flashToast('周期性 RVE 构建失败：当前参数无有效周期曲面');
-          return;
+          const msg = '周期性 RVE 构建失败：当前参数无有效周期曲面';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         const scaleRve = effMm(s);
-        exp.exportBinarySTL(rveRes.positions!, rveRes.indices!, `${base}-pbc-rve.stl`, scaleRve, rveRes.normals);
+        exportedFile = `${base}-pbc-rve.stl`;
+        exp.exportBinarySTL(rveRes.positions!, rveRes.indices!, exportedFile, scaleRve, rveRes.normals);
         const sidecar = {
           format: 'tpms-pbc-rve/1.0',
           unit: 'millimeter',
@@ -5783,27 +6678,31 @@ async function handleExportInner(fmt: string): Promise<void> {
           },
         };
         downloadText(JSON.stringify(sidecar, null, 2), `${base}-pbc-rve.json`, 'application/json');
+        exportedFile = `${base}-pbc-rve.stl + .json`;
         break;
       }
       case 'inp':
       case 'ofmesh': {
         // 【v3.0 阶段 III】CAE 体网格：Abaqus C3D8 INP / OpenFOAM polyMesh（体素级）
         if (s.type === 'custom' && !s.customFormula.trim()) {
-          flashToast('自定义公式为空，无法导出体网格');
-          return;
+          const msg = '自定义公式为空，无法导出体网格';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         // 【2026-10-02 审查 M4】外部 STL 容器下体素类导出此前静默按 cube/cylinder
         // 体素化（与屏幕保形几何语义相悖且无提示）——违反无静默回退铁律，改 fail-closed
         if (meshCont) {
-          flashToast('外部 STL 容器暂不支持体素网格导出（INP/polyMesh 为 cube/cylinder 口径）——请先移除容器或改用 STL/GLB 导出');
-          return;
+          const msg = '外部 STL 容器暂不支持体素网格导出（INP/polyMesh 为 cube/cylinder 口径）——请先移除容器或改用 STL/GLB 导出';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         // 【批十一 P1】体素模型为均匀多孔段语义（无端板覆写/混合/渐变场/分形/神经场自由度），
         // 这些配置开启时静默导出=交付几何与 INP 不对应——fail-closed（同 meshCont 先例）
         const voxUnsupported = voxelUnsupportedReasons(s);
         if (voxUnsupported.length) {
-          flashToast('体网格导出暂不支持：' + voxUnsupported.join('、') + '（体素口径为基础均匀多孔段）——请关闭相关配置，或改用 STL/GLB 网格导出');
-          return;
+          const msg = '体网格导出暂不支持：' + voxUnsupported.join('、') + '（体素口径为基础均匀多孔段）——请关闭相关配置，或改用 STL/GLB 网格导出';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         const caeR = 40;   // 体素分辨率/轴（INP/polyMesh 共用；均衡文件体积与工程精度）
         const caePoro = resolveExportPorosity(s);
@@ -5821,13 +6720,15 @@ async function handleExportInner(fmt: string): Promise<void> {
         if (fmt === 'inp') {
           const eGPa = BASE_MODULUS[s.material] ?? BASE_MODULUS.tc4;
           const nu = s.material === 'polymer' ? 0.35 : s.material === 'thermal' ? 0.22 : 0.34;
+          exportedFile = `${base}-voxel.inp`;
           exp.exportAbaqusInp(vox, {
             youngModulusMPa: eGPa * 1000, poisson: nu,
             nominalStrain: 0.05, specimenSizeMm: specimen,
-          }, `${base}-voxel.inp`);
+          }, exportedFile);
           flashToast(`Abaqus INP 导出：${vox.solidCount} 个 C3D8 单元（体素 h≈${(specimen / caeR).toFixed(3)} mm）`);
         } else {
-          exp.exportOpenfoamPolyMesh(vox, specimen, `${base}-polymesh.zip`, downloadBlob);
+          exportedFile = `${base}-polymesh.zip`;
+          exp.exportOpenfoamPolyMesh(vox, specimen, exportedFile, downloadBlob);
           flashToast('OpenFOAM polyMesh 导出：解压到 case 的 constant/polyMesh/ 即可求解');
         }
         break;
@@ -5835,8 +6736,9 @@ async function handleExportInner(fmt: string): Promise<void> {
       case 'caesuite': {
         // 【v4.0 阶段 III】CAE 验证脚本包：Abaqus/OpenFOAM 自动化求解脚本 + 壳 + 对比模板
         if (meshCont) {
-          flashToast('外部 STL 容器暂不支持 CAE 验证套件导出（体素为 cube/cylinder 口径）');
-          return;
+          const msg = '外部 STL 容器暂不支持 CAE 验证套件导出（体素为 cube/cylinder 口径）';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         const suitePoro = resolveExportPorosity(s);
         // 【批十四 P1-01】同 INP/polyMesh：体素二分需有限 targetPorosity（见上）
@@ -5846,9 +6748,10 @@ async function handleExportInner(fmt: string): Promise<void> {
           thickness: s.thickness, targetPorosity: s.porosity / 100,
           iso: suitePoro.iso, customFormula: s.customFormula, stress: s.stress,
         }, 40);
+        exportedFile = `${base}-cae-verification.zip`;
         exp.exportVerificationSuite(
           { type: s.type, solidCount: voxV.solidCount, voidCount: 40 ** 3 - voxV.solidCount },
-          `${base}-cae-verification.zip`,
+          exportedFile,
           downloadBlob,
           effWidthMm(s),   // 【批十七 P1-06】总宽随包贯通（壳脚本缺省/runner --specimen）
         );
@@ -5856,16 +6759,19 @@ async function handleExportInner(fmt: string): Promise<void> {
       }
       case 'vti': {
         if (s.type === 'custom' && !s.customFormula.trim()) {
-          flashToast('自定义公式为空，无法导出体素场');
-          return;
+          const msg = '自定义公式为空，无法导出体素场';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         if (meshCont) {
-          flashToast('外部 STL 容器暂不支持 VTI 体素场导出（场为 cube/cylinder 口径）');
-          return;
+          const msg = '外部 STL 容器暂不支持 VTI 体素场导出（场为 cube/cylinder 口径）';
+          flashToast(msg);
+          return { ok: false, summary: msg };
         }
         const { field, dims } = buildVtiField(s);
+        exportedFile = `${base}.vti`;
         // FieldData 携带 re-contour 所需 iso 与 mm 单位（solid 用 isoUsed，shell 类用 0）
-        exp.exportVTI(field, dims, `${base}.vti`, {
+        exp.exportVTI(field, dims, exportedFile, {
           cellSizeMm: effWidthMm(s),   // 【批十四 P1-03】物理总宽（显式优先；此前 s.cellSize 把 20mm 设计缩成 3mm）
           isoUsed: lastIsoUsed,
           type: s.type,
@@ -5880,27 +6786,32 @@ async function handleExportInner(fmt: string): Promise<void> {
           try {
             getCompiledCustomFormula(s.customFormula);
           } catch (err) {
-            flashToast('自定义公式无法翻译为脚本：' + (err instanceof Error ? err.message : String(err)));
-            return;
+            const msg = '自定义公式无法翻译为脚本：' + (err instanceof Error ? err.message : String(err));
+            flashToast(msg);
+            return { ok: false, summary: msg };
           }
         }
-        if (fmt === 'py') exp.exportPythonScript(s, `${base}.py`);
-        else exp.exportMatlabScript(s, `${base}.m`);
+        exportedFile = fmt === 'py' ? `${base}.py` : `${base}.m`;
+        if (fmt === 'py') exp.exportPythonScript(s, exportedFile);
+        else exp.exportMatlabScript(s, exportedFile);
         break;
       case 'bibtex': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(exp.generateBibTeX(s, lastPhysicsMetrics, meshHash, buildShareURL()), `${base}.bib`, 'text/plain');
+        exportedFile = `${base}.bib`;
+        downloadText(exp.generateBibTeX(s, lastPhysicsMetrics, meshHash, buildShareURL()), exportedFile, 'text/plain');
         break;
       }
       case 'json': {
         const pos = baseGeo?.attributes.position?.array as Float32Array | undefined;
         const meshHash = pos ? hashArray(pos) : 'nogeo';
-        downloadText(exp.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }, buildShareURL()), `${base}.json`, 'application/json');
+        exportedFile = `${base}.json`;
+        downloadText(exp.generateJSONSidecar(s, lastPhysicsMetrics, meshHash, { resolution: lastBuildResolution, isoUsed: lastIsoUsed }, buildShareURL()), exportedFile, 'application/json');
         break;
       }
       case 'design': {
-        downloadText(JSON.stringify(buildDesignFile(s), null, 2), `tpms-design-${s.type}-p${s.porosity}.json`, 'application/json');
+        exportedFile = `tpms-design-${s.type}-p${s.porosity}.json`;
+        downloadText(JSON.stringify(buildDesignFile(s), null, 2), exportedFile, 'application/json');
         break;
       }
       case 'pkg': {
@@ -5965,17 +6876,21 @@ async function handleExportInner(fmt: string): Promise<void> {
         ]);
         const ts = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
         const zipAb = zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength) as ArrayBuffer;
-        downloadBlob(new Blob([zipAb], { type: 'application/zip' }), `tpms-pkg-${s.type}-p${s.porosity}-${ts}.zip`);
+        exportedFile = `tpms-pkg-${s.type}-p${s.porosity}-${ts}.zip`;
+        downloadBlob(new Blob([zipAb], { type: 'application/zip' }), exportedFile);
         break;
       }
       default:
-        return;
+        return { ok: false, summary: `未知导出格式：${fmt}` };
     }
     flashToast(`已导出 ${fmt.toUpperCase()}`);
     taskFlow.exportSig = geometryStateKey(s);
     refreshTaskFlow();
+    return { ok: true, filename: exportedFile, summary: `已导出 ${exportedFile}（${fmt.toUpperCase()}）` };
   } catch (err) {
-    flashToast('导出失败：' + (err instanceof Error ? err.message : String(err)));
+    const msg = '导出失败：' + (err instanceof Error ? err.message : String(err));
+    flashToast(msg);
+    return { ok: false, summary: msg };
   }
 }
 
