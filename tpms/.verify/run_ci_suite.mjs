@@ -172,7 +172,7 @@ const SCHEDULE = [
   // 【2026-09-12 纳管】M3 验收产出：拦截器（schema 校验/路径狱/畸形拒绝）离线自检，无外部依赖
   ['llm_provider_selftest M3 拦截器自检（69 断言/GUARD 69，离线；+嵌套必填/正文超时/备注双出口钉 2026-10-11）', 'LLM 拦截器自检', '../agent/llm_provider_selftest.mjs'],
   // 【2026-11-11 纳管】方向 A（CLI/Web 合流）：契约同源锁+E5/E11 浏览器红队复刻+Key 零泄漏
-  ['agent_bridge_audit 方向A契约合流桥（同源锁/E5-E11 浏览器复刻/Key 零泄漏/规则路径钉+M4 修复循环真跑+水密门回流+双壳桥接线+pareto/scenario 工具面/会话确定性指代/ABAQUS 反演/多物理场/cae-daemon 安全与 BL-COMSOL-nTop-RVE 链，53 断言）', 'Agent 合流桥审计', 'agent_bridge_audit.mjs'],
+  ['agent_bridge_audit 方向A契约合流桥（同源锁/E5-E11 浏览器复刻/Key 零泄漏/规则路径钉+M4 修复循环真跑+水密门回流+双壳桥接线+pareto/scenario 工具面/会话确定性指代/ABAQUS 反演/多物理场/cae-daemon 安全与 BL-COMSOL-nTop-RVE 链，53 断言满配档；CI 无 trimesh/gmsh 环境 52 断言基线——J2*/K2* 降静态契约钉，webgpu_parity 先例）', 'Agent 合流桥审计', 'agent_bridge_audit.mjs'],
   ['guard_audit 元门（恒真高置信扫描+GUARD 基线账实对拍，2026-09-29 纳管）', '门禁元审计', 'guard_audit.mjs'],
   // 【2026-10-11 纳管】打磨计划批次 1A：strut 桁架族跨出口一致性（G1 尺度契约/G2 拓扑锚/
   // G3 分派哨兵/G4 脚本出口/G5 mesh-体素-RVE 矩阵；octet 非流形 fail-closed 契约钉）
