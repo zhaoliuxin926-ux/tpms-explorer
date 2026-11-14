@@ -1050,6 +1050,10 @@ def main() -> int:
     L = (cfd_k * cs) if cs else (2.0 * math.pi * cfd_k)
     if args.lmax is None:
         args.lmax = round(max(0.08, L / 14.0), 4)
+    if args.backend == 'snappy-bl' and args.lmax < 0.2:
+        print(f"[warn] lmax={args.lmax}mm < 0.2mm：snappy 加密触发层添加质量反噬风险"
+              f"（2026-11-14 RVE 实测 skew 5.05~5.14 超阈、加密反而恶化）——建议先跑 skew 判别或回退缺省口径")
+
 
     por_eff = (1.0 - args.solid) if args.structure == "sheet" else args.por
     cs_tag = f"_cs{cs:g}" if cs else ""

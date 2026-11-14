@@ -471,14 +471,18 @@ export function initHarnessCaeDsh(bridge: DshHarnessBridge): void {
       },
       {
         tier: 'T3 本地边界层 CFD',
-        engine: `${pre?.ntop?.ntopExecuted ? 'nTopCL+' : 'GmshBL+'}${cfd?.solverTier === 'openfoam13_wsl' ? 'OF13' : 'FVM-RVE'}`,
+        engine: `${pre?.ntop?.ntopExecuted ? 'nTopCL+' : 'GmshBL+'}${cfd?.solverTier === 'openfoam13_wsl' ? 'OF13（真解）' : 'FVM-RVE（冒烟档）'}`,
         modulusGPa: '—',
-        permM2: cfdK != null ? `${cfdK.toExponential(2)}` : '待求解',
+        permM2: cfdK != null && cfd?.solverTier === 'openfoam13_wsl'
+          ? `${cfdK.toExponential(2)}`
+          : cfdK != null ? `${cfdK.toExponential(2)}⚠` : '待求解',
         betaM1: cfd?.beta_m1 != null ? `${Number(cfd.beta_m1).toFixed(1)}` : '—',
         osteoWss: cfd?.wssOsteogenicWindowPct != null
           ? `${Number(cfd.wssOsteogenicWindowPct).toFixed(1)}% (${Number(cfd.wssMean_mPa).toFixed(1)} mPa)`
           : '—',
-        statusDelta: cfdK && cfd ? `${String(cfd.solverTier)} (RVE k=${cfd.cfdPeriods ?? 1})` : '待运行 /openfoam',
+        statusDelta: cfdK && cfd
+          ? `${String(cfd.solverTier)} (RVE k=${cfd.cfdPeriods ?? 1})${cfd.solverTier === 'openfoam13_wsl' ? '' : ' · 近似口径 K/β/WSS 不可信（体素 Brinkman 双向失真，见报告披露）'}`
+          : '待运行 /openfoam',
       },
       {
         tier: 'T4 工业多物理场',
@@ -535,7 +539,10 @@ export function initHarnessCaeDsh(bridge: DshHarnessBridge): void {
     const fcTxt = bridge.runForchheimerPanel(false);
     setFlowStep('post', 'done', `CFD ΔP₁/ΔP₂ 已回填 Forchheimer`);
     renderParityMatrix();
-    return fcTxt;
+    const tierWarn = cfd.solverTier && cfd.solverTier !== 'openfoam13_wsl'
+      ? ' ⚠ FVM 冒烟档回填：K/β 受体素近似双向失真影响（实测 vs WSL OF13 偏差 586×），仅链路演示不作物理结论'
+      : '';
+    return fcTxt + tierWarn;
   };
 
   const renderMonitorFromResult = (kind: string, resObj: Record<string, any>): void => {
