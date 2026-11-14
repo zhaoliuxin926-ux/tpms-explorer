@@ -26,6 +26,12 @@
 > - **两变体实测**：lmax 0.15（27³ 背景+level 2 近壁 0.037mm）+3 层 → 76,878 cells 但 **skew 5.05（7 面）checkMesh 失败**；同配置+2 层 → 覆盖率 36.8%→75.5% 但 **skew 5.14（29 面）反而更差**。**结论：加密使层添加终止区斜扭面增多（gyroid 曲率+featureAngle 130 覆盖率上限），粗网格 20³+2 层/0.04/1.2 是当前 p1 RVE 管线的 skew<4 可行域边界**。−22% 偏差归因重定性：非"网格不够密"，而是"加密被层添加质量反噬"——后续正解=棱柱层参数面向曲率适配（finalLayer 口径/featureAngle 调优/或接受无棱口径再证 snappy 无棱判别经验：表面细化主导近壁修复）。
 > - **负结果价值**：锚定了 p1 snappy RVE 管线的参数可行域边界；K=0.115 mm²@−22% 作为 RVE 档位披露值继续有效。
 >
+> ### 11-14 深夜收尾批：T3 降级标注+CI windows H4 超时定案（aae367a/61abfc0，三平台全绿）
+>
+> - **UI solverTier 动态降级标注落地（aae367a，上轮自查题选项①）**：四级对标矩阵 T3 行 engine 分档"OF13（真解）"/"FVM-RVE（冒烟档）"、FVM K 加 ⚠ 尾标、statusDelta 追加"近似口径 K/β/WSS 不可信（体素 Brinkman 双向失真）"披露串；Forchheimer 回填对 FVM 档追加 586× 偏差警告。**门禁语义对齐教训**：J2 钉的是"FVM 档数值可见+档位标注"——首版隐藏数值比门禁语义激进，回退为标注式（诚实披露≠隐藏数据）。p1 snappy 档 lmax<0.2 层质量反噬告警同步入码。
+> - **CI windows H4 两连红判别链**：同树 macos/ubuntu 双绿→fresh run 判别（43600130130）再红同断言=**确定性单平台失败非 flake**；日志 0 pageerror/console.error=非 JS 回归→**重计算 E2E 超时预算不足**（55s 阈值在快工位机标定，windows runner 慢 2-4×）→ H4 55→90s 修复（61abfc0），**断言语义不变**，三平台全绿（run 43603749077）。红队 E2 教训（预算按慢端标定）在 CI E2E 场景的同款落地。
+> - **今日提交链终态**：3b951cb（Phase 2-5 归档）→5ca8ba6/117a1c7（docs）→30f89b7（H4 fixture）→c66d05e（环境双档）→3538445（钉串穷举）→3bbcf42（真机批）→3f5f9ca（加密负结果）→aae367a（T3 标注）→61abfc0（H4 预算）——**main=61abfc0 三平台全绿+Pages 绿**。
+>
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
 > **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
