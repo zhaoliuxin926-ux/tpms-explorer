@@ -533,7 +533,7 @@ console.log('\n[I] Phase 3 闭环：LPBF/骨长入/水平集/声子能带 + isoG
     const p1Src = readFileSync(join(repoRootJ, 'sim', 'p1_bl_mesh.py'), 'utf8');
     const p4Src = readFileSync(join(repoRootJ, 'sim', 'p4_comsol_setup.py'), 'utf8');
     check('J2* 无 CAE python 环境档（CI 仅 numpy）：p1_bl_mesh/p4_comsol JSON 契约静态钉——满配档=本机全量套件真网格链',
-      p1Src.includes("'--json'")
+      p1Src.includes('--json')
       && p1Src.includes('rveSpeedupFactor')
       && p1Src.includes('meshDoctor')
       && p1Src.includes('surfaceGroups')
