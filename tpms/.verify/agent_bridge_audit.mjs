@@ -324,7 +324,36 @@ console.log('\n[H] Phase 2 闭环：6/6 Schema 工具 + 后处理反演 + 在线
     finH?.budgetUsed === 216,
     `budget=${finH?.budgetUsed}`);
 
-  const gyCsv = readFileSync(join(HERE, '../../sim/out/csv_expl/gyroid_k2_p60_expl.csv'), 'utf8');
+  // H4 fixture 自包含（2026-11-14 CI 修复）：原读 sim/out/csv_expl/gyroid_k2_p60_expl.csv——gitignored 本机产物，
+  // macos CI ENOENT 崩溃（exit 1 / 0.4s）。内嵌确定性 fixture：原文提取自 abaqus-explicit-sim ODB（gyroid k2 p60，11-01 批）。
+  const gyCsv = `# source=abaqus-explicit-sim
+# porosity=0.60
+# type=gyroid
+# lengthMm=12.5664
+# widthMm=12.5664
+# thicknessMm=12.5664
+displacement_mm,force_N
+0.000000,0.0000
+0.006558,28.0751
+0.048420,171.6165
+0.150599,510.5893
+0.327648,908.2839
+0.585440,1161.9918
+0.922238,1297.7471
+1.330260,1368.5054
+1.795386,1417.7974
+2.300877,1456.2043
+2.827780,1492.9060
+3.354315,1526.8538
+3.859972,1566.5367
+4.325031,1628.6154
+4.732716,1701.4566
+5.069633,1778.3096
+5.327415,1878.5058
+5.504381,1950.6284
+5.606498,2002.3067
+5.648318,2026.4793
+5.654860,2022.4044`;
   const isoRes = fitExperimentalCurve({
     text: gyCsv,
     inputType: 'displacement-force',
