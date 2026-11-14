@@ -12,7 +12,14 @@
 > - **验证**：build 绿（1.30s，新 chunk harness-cae-dsh 26.1kB）；agent_bridge_audit 29→**53 断言**全绿；harness_ui_check 13→**38 断言**全绿；**全量 50/50 门本地绿**（含真浏览器 E2E：LPBF/骨长入/声子/水平集/场景交付/DSH 交互）；docs/platform 重建产物 hash 与重构建一致（确定性）；无敏感信息。
 > - **踩坑**：套件横幅断言数漂——run_ci_suite.mjs 横幅未随门禁扩容同步（13/29 断言→实际 38/53；另 parity_math 332→337 属预先存在漂移，同批顺手修正）；门禁文件头注无此问题。
 > - **CI 三红三修链（2026-11-14 当日闭环）**：①H4 无条件读 gitignored 本机产物（sim/out/csv_expl/gyroid_k2_p60_expl.csv）→ macos CI ENOENT 崩门 → **fixture 内嵌自包含**（30f89b7）；②J2/J3/K2 实跑需本机 trimesh/skimage/gmsh（CI 仅 numpy）→ **环境条件双档**（探针 pyCaeReady 分档：满配档真网格链 53 断言 / CI 静态契约钉 52 基线，webgpu_parity "真GPU环境+2" 先例；J3 无守卫解引用顺带修）+K1 python→python3 回退（macos 无裸 python 命令）（c66d05e）；③J2* 钉串 `"'--json'"` 带引号形式在 p1 不存在（argparse 双引号）→ **钉串提取脚本穷举验证**后修正（3538445）。**终态：CI 三平台全绿 + Pages 绿（run 43576989287）**；套件横幅已披露双档口径。
-> - **下一步**：①真机 CAE 实跑批（nTop/COMSOL/ABAQUS/WSL OF13 各引擎实算+四级对标真数据，需长时限单独批次）；②A 线剩余=真跨源实测（DeepSeek key 用户侧）；③CFD 线=k2 双胞入口效应→CSV 契约→Gemini 对照题。
+> - **下一步**：①~~真机 CAE 实跑批~~（**已完成 2026-11-14 晚**，见下段）；②A 线剩余=真跨源实测（DeepSeek key 用户侧）；③CFD 线=k2 双胞入口效应→CSV 契约→Gemini 对照题。
+>
+> ## 工位侧 11-14 晚：真机 CAE 实跑批——四级对标首批真数据（WSL OF13 真解算器打通 + FVM 冒烟定级）
+>
+> - **四级真数据（gyroid network ε=0.699, 单胞 4mm, 试样 12mm）**：**T3 WSL OF13 真解**（snappy 40,914 cells Mesh OK/skew 3.83<4 → foamRun 147 步×2 流速收敛，177s）→ **K=1.15e-4 mm²（1.15e-10 m²）@β=272 m⁻¹/Fo=0.00035**，WSS v1 均值 4.96 mPa、成骨窗口 [5,25]mPa=34.8%；ΔP₁:ΔP₂=1:10 精确线性=达西区自洽；vs R48 曲线 −22.4%（粗网格 R20+BL 覆盖 56.6%+侧壁口径，方向一致）。**T4 ABAQUS INP 三段式就绪**（水密 STL dev 0.18pp）；**T4 COMSOL 6.2 Java 编译通过**（就绪档，batch 实算待拍板）；**T3' FVM 兜底轨定级冒烟档**（双向失真，见 bugs.md）。汇总件 sim/out/rve_real_fix/multifidelity_verification_report.json。
+> - **两发现**：①**FVM 兜底轨双向失真**（直管解析锚 ΔP+31×/gyroid −413×，体素 Brinkman 近似结构性缺陷）→ 定级"链路贯通冒烟档"，T3 层以 WSL OF13 为唯一物理权威源（bugs.md 登记）；②**v13 surfaceFieldValue 语法断代又一例**（regionType+name=v11 旧语法 → v13 `patch <name>`，ETC patchAverage 实证，p1 模板已修）。
+> - **过程坑（快账）**：WSL 服务 E_UNEXPECTED → `wsl --shutdown` 重启修复；snappy skew 4.23（4 面）→ BL 参数 3层/0.03/1.25 → 2层/0.04/1.2 后 Mesh OK（40,914 cells/覆盖率 36.8%→56.6%）；**多保真对标矩阵首战即抓层级失配**（FVM vs WSL 586×）——四级对标设计价值实证。
+> - **下一步**：①ABAQUS 显式实算+COMSOL batch 实算（小时~天级，待用户拍板）；②满配 snappy 参数（11-12 定案）RVE 复跑收窄 −22% 偏差；③FVM 修复研究批（可选）；④A 线真跨源实测（DeepSeek key 用户侧）；⑤CFD 线 k2 双胞→CSV 契约→Gemini 对照题。
 >
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 

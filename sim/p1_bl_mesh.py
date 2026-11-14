@@ -726,8 +726,7 @@ functions
         writeControl    writeTime;
         log             true;
         writeFields     false;
-        regionType      patch;
-        name            inlet;
+        patch           inlet;
         operation       areaAverage;
         fields          (p);
     }}
@@ -739,8 +738,7 @@ functions
         writeControl    writeTime;
         log             true;
         writeFields     false;
-        regionType      patch;
-        name            outlet;
+        patch           outlet;
         operation       areaAverage;
         fields          (p);
     }}

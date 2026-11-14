@@ -43,6 +43,11 @@
 
 ## 二、开放风险（按日期）
 
+## 2026-11-14 真机 CAE 实跑批两发现（FVM 双向失真 + v13 surfaceFieldValue 语法断代）
+
+- **发现 1（FVM 兜底轨，未修=研究级）**：p3_openfoam_solve FVM Brinkman 兜底轨 K=0.0675 mm² vs 同 case WSL OF13 真解算器 K=1.15e-4 mm²（586×）。解析锚判别（working/scratch/fvm_capillary_test.py）：直管方通道 FVM ΔP 高估 31×（24³ 体素近壁 Brinkman 阻尼 μ/(h·d_eff)，d_eff≤1.5h 把 6 格宽流道堵死）；gyroid RVE ΔP 低估 413×（孔道内部零形状阻力 → 迂曲拖曳缺失）。**双向失真=体素近似求解器结构性缺陷，K/β/WSS 数值不可信，定级"链路贯通冒烟档"**——多保真矩阵 T3 层以 WSL OF13 为唯一物理权威源；修复属研究级批次（孔道内部形状阻力项重设计），非单点单位 bug。
+- **发现 2（已修复，随本次提交入库）**：p1_bl_mesh.py OF case 模板的 surfaceFieldValue 用 `regionType+name`——**v11 旧语法**，v13 只认 `patch <name>` 选择器（foamRun 启动即 FATAL IO ERROR "None of the options selected"）。ETC 模板 patchAverage 实证 + 现场改 controlDict 后 foamRun 147 步收敛跑通。已修 p1 模板两处。
+
 ## 2026-11-12 【重大更正→已修复】TPMS 单胞 K：v1/v2 周期驱动版判无效（死腔伪值）→ 路线 B 通透池定案 0.0811 mm²
 
 - **修复落地（900bb30，路线 B 压差通透池）**：x 两端 Dirichlet 压差（ΔP=5.089 kinematic，零体力），K=eps·Ubar/(ΔP/L)。**K=0.0808@lvl2(83.9k) / 0.0811@lvl3(299.6k)——网格无关性 0.44%<0.5% 阈**；残差 1e-13~3e-15 机器零；Ubar 千位迭代稳定。**验证三角闭合**：KC 独立对照 CFD/KC=1.92×（窄缝喉道合理带，KC 低估 TPMS 属文献常态）；毛细管束 3.1×。开闸倍数 529×（0.1113 vs 死腔 2.1e-4）。
