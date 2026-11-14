@@ -19,7 +19,12 @@
 > - **四级真数据（gyroid network ε=0.699, 单胞 4mm, 试样 12mm）**：**T3 WSL OF13 真解**（snappy 40,914 cells Mesh OK/skew 3.83<4 → foamRun 147 步×2 流速收敛，177s）→ **K=1.15e-4 mm²（1.15e-10 m²）@β=272 m⁻¹/Fo=0.00035**，WSS v1 均值 4.96 mPa、成骨窗口 [5,25]mPa=34.8%；ΔP₁:ΔP₂=1:10 精确线性=达西区自洽；vs R48 曲线 −22.4%（粗网格 R20+BL 覆盖 56.6%+侧壁口径，方向一致）。**T4 ABAQUS INP 三段式就绪**（水密 STL dev 0.18pp）；**T4 COMSOL 6.2 Java 编译通过**（就绪档，batch 实算待拍板）；**T3' FVM 兜底轨定级冒烟档**（双向失真，见 bugs.md）。汇总件 sim/out/rve_real_fix/multifidelity_verification_report.json。
 > - **两发现**：①**FVM 兜底轨双向失真**（直管解析锚 ΔP+31×/gyroid −413×，体素 Brinkman 近似结构性缺陷）→ 定级"链路贯通冒烟档"，T3 层以 WSL OF13 为唯一物理权威源（bugs.md 登记）；②**v13 surfaceFieldValue 语法断代又一例**（regionType+name=v11 旧语法 → v13 `patch <name>`，ETC patchAverage 实证，p1 模板已修）。
 > - **过程坑（快账）**：WSL 服务 E_UNEXPECTED → `wsl --shutdown` 重启修复；snappy skew 4.23（4 面）→ BL 参数 3层/0.03/1.25 → 2层/0.04/1.2 后 Mesh OK（40,914 cells/覆盖率 36.8%→56.6%）；**多保真对标矩阵首战即抓层级失配**（FVM vs WSL 586×）——四级对标设计价值实证。
-> - **下一步**：①ABAQUS 显式实算+COMSOL batch 实算（小时~天级，待用户拍板）；②满配 snappy 参数（11-12 定案）RVE 复跑收窄 −22% 偏差；③FVM 修复研究批（可选）；④A 线真跨源实测（DeepSeek key 用户侧）；⑤CFD 线 k2 双胞→CSV 契约→Gemini 对照题。
+> - **下一步**：①ABAQUS 显式实算+COMSOL batch 实算（小时~天级，待用户拍板）；②~~满配 snappy 复跑收窄 −22%~~（**已试，负结果定案**，见下）；③FVM 修复研究批（可选）；④A 线真跨源实测（DeepSeek key 用户侧）；⑤CFD 线 k2 双胞→CSV 契约→Gemini 对照题。
+>
+> ### 11-14 晚续：RVE snappy 加密负结果（−22% 偏差维持披露口径，20³+2 层=当前管线可行域边界）
+>
+> - **两变体实测**：lmax 0.15（27³ 背景+level 2 近壁 0.037mm）+3 层 → 76,878 cells 但 **skew 5.05（7 面）checkMesh 失败**；同配置+2 层 → 覆盖率 36.8%→75.5% 但 **skew 5.14（29 面）反而更差**。**结论：加密使层添加终止区斜扭面增多（gyroid 曲率+featureAngle 130 覆盖率上限），粗网格 20³+2 层/0.04/1.2 是当前 p1 RVE 管线的 skew<4 可行域边界**。−22% 偏差归因重定性：非"网格不够密"，而是"加密被层添加质量反噬"——后续正解=棱柱层参数面向曲率适配（finalLayer 口径/featureAngle 调优/或接受无棱口径再证 snappy 无棱判别经验：表面细化主导近壁修复）。
+> - **负结果价值**：锚定了 p1 snappy RVE 管线的参数可行域边界；K=0.115 mm²@−22% 作为 RVE 档位披露值继续有效。
 >
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
