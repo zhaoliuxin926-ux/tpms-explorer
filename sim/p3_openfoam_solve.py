@@ -518,6 +518,9 @@ def solve_dual_velocity_cfd(
     return {
         "ok": True,
         "solverTier": solver_tier,
+        # Gemini 2026-11-15 Q4 硬要求：FVM 体素 Brinkman 轨双向失真定级冒烟档——
+        # 硬编码护栏防上层 LLM Agent 误读为真实物理量（fidelity_warning 字段恒在）
+        "fidelity_warning": "SMOKE_TEST_ONLY_DO_NOT_CITE" if solver_tier == "fvm_brinkman_rve" else None,
         "wslAttempt": wsl_diag,
         "type": ftype,
         "structure": structure,

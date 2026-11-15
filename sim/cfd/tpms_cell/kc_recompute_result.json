@@ -1,0 +1,39 @@
+{
+ "note": "Q2 交叉实证后权威重算：旧 K_kc 的 Sv 序列物理反常（随 ε 上升，Gemini 逆向取证精确吻合）→口径作废；本表=Sv 用 STL 实测（scaffoldWall 面网格 area/box_vol，无截断面污染）；真实 Kozeny 常数带见 kozeny_c_real",
+ "old_K_kc": {
+  "50": 0.027144965826374986,
+  "60": 0.040945886076272864,
+  "70": 0.059037917451828896,
+  "80": 0.08179155640497758
+ },
+ "recomputed": {
+  "50": {
+   "eps": 0.499,
+   "Sv_stl_per_mm": 0.499,
+   "K_kc_stl_mm2": 0.0998,
+   "CFD_over_KC": 0.522,
+   "kozeny_c_real": 9.57
+  },
+  "60": {
+   "eps": 0.5999,
+   "Sv_stl_per_mm": 0.4885,
+   "K_kc_stl_mm2": 0.180941,
+   "CFD_over_KC": 0.494,
+   "kozeny_c_real": 10.12
+  },
+  "70": {
+   "eps": 0.7005,
+   "Sv_stl_per_mm": 0.4593,
+   "K_kc_stl_mm2": 0.325883,
+   "CFD_over_KC": 0.448,
+   "kozeny_c_real": 11.17
+  },
+  "80": {
+   "eps": 0.8019,
+   "Sv_stl_per_mm": 0.4033,
+   "K_kc_stl_mm2": 0.634066,
+   "CFD_over_KC": 0.371,
+   "kozeny_c_real": 13.48
+  }
+ }
+}
