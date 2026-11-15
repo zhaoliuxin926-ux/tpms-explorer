@@ -1,0 +1,5 @@
+porosity_target,eps_measured,K_cell_mm2,K_true_mm2,entry_effect_pct,correction_factor,grid,solver
+50,0.4990,0.05212,0.04998,-4.00,0.9594,snappy-lvl2-R48-noLayer,OF13-wsl-permeation-pool
+60,0.5999,0.08942,0.08580,-3.75,0.9594,snappy-lvl2-R48-noLayer,OF13-wsl-permeation-pool
+70,0.7005,0.14590,0.13996,-4.26,0.9594,snappy-lvl2-R48-noLayer,OF13-wsl-permeation-pool
+80,0.8019,0.23527,0.22578,-4.22,0.9594,snappy-lvl2-R48-noLayer,OF13-wsl-permeation-pool
