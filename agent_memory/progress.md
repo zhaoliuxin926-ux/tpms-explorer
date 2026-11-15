@@ -43,7 +43,14 @@
 >
 > - **四点全族表（k2_scan_result.json）**：p50 −4.0% / p60 −3.75% / p70 −4.26% / p80 −4.22%——**四档全在 −4.26~−3.75% 窄带（均值 −4.06%）**，端部效应与孔隙率基本无关 → **全族统一修正因子 0.9594 成立（实测非外推）**，K_true = K_cell × 0.9594。上轮自查题"单点披露 vs 全族外推"两难被实测消解：不是外推，是四点独立的同带证据。
 > - **资产**：run_tpms_k2_scan.sh（三档循环+eps 从 k2_eps.json 读+FAIL 续跑下一档，仿 run_K_scan.sh 模式）；k2_eps.json（四档 eps 实测）；k2_scan_result.json（四点对照+summary）；三档双胞 STL 不入库（*.stl ignore，再生命令同 p60）。
-> - **下一步**：CSV 契约交付（带全族 0.9594 口径注记）→ Gemini 对照题；其余待拍板项不变。
+>
+> ### 11-15 深夜 II：T4 ABAQUS 静态实算闭环——四级对标最后真空位填上（p2 INC 缺陷修复）
+>
+> - **T4 真数据**：gyroid k2 R20 p70 cellSize 4mm，C3D10 83,540 单元弹性静态（E=2000MPa/ν=0.3/strain 5%）→ **E_eff=138.29 MPa（弹性段 51 点回归 R²=1.000000）vs T1 幂律 139.79 MPa → −1.07%**——0.9914·ρ̂^2.2028 标定幂律在独立 ABAQUS 链上复现。四级对标矩阵四层全部有真数据（T1 幂律/T2 浏览器/T3 WSL OF13/T4 ABAQUS）。
+> - **过程两轮失败+修复**：①p2 调用参数错（我把输出名当输入传）→诚实更正 11-14"INP 就绪"归档错误（当时只有网格 INP，P2_EXIT=1 被漏读）；②**p2 生成器真缺陷**：*STEP 缺 INC——field/history 输出点数（200）> STEP 增量上限（缺省 100）被 pre-processor 拒收 → p2 源码修复（Standard 模式 INC=1000）+现场 INP 补丁 → 求解成功（~40 分钟 200 增量）。
+> - **经验**：ABAQUS/Standard 规则=输出/重启时间点数不得超过 STEP 的 INC 上限；`cmd //c`（双斜杠）绕 MSYS 路径转换跑 bat；Node 25 --experimental-strip-types 可直接 import 平台 .ts 内核（experimental-fit 零依赖纯函数）做 Node 侧反演。
+> - **Gemini 对照题已起草**（collab/gemini/2026-11-15-cfd-calibration-k-entry-effect-consult.md，自包含三问：修正口径/CFD-KC 趋势/试验对照口径裂缝）——**待用户代贴**。
+> - **下一步**：COMSOL batch 试跑（T4 第二格，license 未知）；Gemini 回执处置（用户代贴后）；其余待拍板项不变。
 >
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
