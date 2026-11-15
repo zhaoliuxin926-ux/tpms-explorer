@@ -473,3 +473,10 @@
 > - **尝试**：Node 25 strip-types 直跑 DT 内核（experimental-fit 同法已证可行）——联编五文件（DT/plasticity/gibson-ashby/permeability/pore-analysis，sed 补 .ts 后缀）加载 ✓，但 runCompressionDigitalTwin 求解 50 分钟无产出（CPU 仅 43s=异常挂起，疑似内核内 navigator/WebGPU 探测或隐式等待）。
 > - **处置（11-16 更新：浏览器路径亦受阻，双路径合并挂起）**：①node 化 50 分钟无产出（CPU 43s 异常挂起）；②浏览器 playwright 探针四轮（static-server 目录错指源码层→修正 docs/platform 后业务链通但主 frame 元素始终 frameExists=false/title 空——壳未就绪原因未定位，vs harness_ui_check 同款等待在 CI/本地均绿）。**T2 取数改走人工浏览器会话**（harness UI 手动真跑+控制台提取，登记待专项）；t2kernel 联编+探针脚本留 working/scratch/ 可复用。四级对标 T1/T3/T4 三层真数据已齐，T2 锦上添花非阻塞。
 > - **提交暂存核对铁律已落地**（progress 铁律段：commit 前 status+diff --cached --stat 双核对；Edit 失败时连带提交必须中止）。
+
+> ### 11-16 续：COMSOL batch 试跑——license 在位+23s 求解但 API 断代崩，挂起登记
+>
+> - **进展**：p4 None 修复后试跑——**comsolcompile ✓（9.6s）+ comsolbatch 启动 ✓（23.1s，license 在位）**——但 batch 崩在 `ClassCastException: Integer cannot be cast to CommandAnswer`（模型创建早期，.class 运行即崩），solved.mph 未生成，dp/wss CSV 未导出。
+> - **根因面**：p4 生成的 Model Java 模板与 COMSOL 6.2.0.290 API 有断代（某处 set 传值形式不被新版接受）。已排除 blnlayers 单元素数组（生成 Java 无此形式）；精确调用点需逐 set 试错（每轮 compile 10s+batch 23s，无头绪=无底洞风险）。
+> - **裁定**：按"事不过三+最小必要"挂起——T4 流体侧与 T3 WSL OF13 同物理冗余交叉，边际价值中低；留专项（有 COMSOL API 经验时逐调用定位）。**T4 层真数据以 ABAQUS E_eff 为准**。
+> - 资产：java/class/batch.log 留 sim/out/rve_real_comsol/comsol/；p4 None 修复已入库（872b8c3）。
