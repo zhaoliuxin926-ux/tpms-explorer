@@ -471,5 +471,5 @@
 > ### 11-16：T2 层真数据尝试挂起（node 化 DT 内核隐藏阻塞）
 >
 > - **尝试**：Node 25 strip-types 直跑 DT 内核（experimental-fit 同法已证可行）——联编五文件（DT/plasticity/gibson-ashby/permeability/pore-analysis，sed 补 .ts 后缀）加载 ✓，但 runCompressionDigitalTwin 求解 50 分钟无产出（CPU 仅 43s=异常挂起，疑似内核内 navigator/WebGPU 探测或隐式等待）。
-> - **处置**：按"事不过三"停手挂起。**T2 取数改走浏览器会话路径**（harness UI 在线仿真真跑+落 JSON，下批执行）；t2kernel 联编资产留 working/scratch/ 可复用。四级对标 T1/T3/T4 三层真数据已齐，T2 为锦上添花非阻塞。
+> - **处置（11-16 更新：浏览器路径亦受阻，双路径合并挂起）**：①node 化 50 分钟无产出（CPU 43s 异常挂起）；②浏览器 playwright 探针四轮（static-server 目录错指源码层→修正 docs/platform 后业务链通但主 frame 元素始终 frameExists=false/title 空——壳未就绪原因未定位，vs harness_ui_check 同款等待在 CI/本地均绿）。**T2 取数改走人工浏览器会话**（harness UI 手动真跑+控制台提取，登记待专项）；t2kernel 联编+探针脚本留 working/scratch/ 可复用。四级对标 T1/T3/T4 三层真数据已齐，T2 锦上添花非阻塞。
 > - **提交暂存核对铁律已落地**（progress 铁律段：commit 前 status+diff --cached --stat 双核对；Edit 失败时连带提交必须中止）。
