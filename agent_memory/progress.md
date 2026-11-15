@@ -39,6 +39,12 @@
 > - **资产入库**：blockMeshDict.tpms_k2 / snappyHexMeshDict.scan_k2 / run_tpms_k2.sh（域 [0,4π]、同 snappy 定案参数、ΔP=10.178 同梯度、seed=(3π,π/2,π/2) 板条内流体点）；k2 STL（9.7M）不入库（sim/.gitignore *.stl，再生命令：p3_fluid_domain --k 2 --R 48 --por 0.60 → strip_caps）。
 > - **过程坑（快账）**：①MSYS 路径转换撕 wsl 参数（MSYS_NO_PATHCONV=1 老坑三犯）；②p3 --k 2 STL 是 [0,4π]³ 全域盒，其 seed z=10.21 超出 [0,4π]×[0,2π]² 板条域→snappy "not inside the mesh" 崩，手挑 (3π,π/2,π/2)（f=−1<c ✓）替换；③派生 snappy 字典漏了 snapControls/addLayersControls/meshQualityControls 三段（k1 有而手写漏抄）→subDict 崩，程序化从 k1 提取拼接修复。
 >
+> ### 11-15 深夜：k2 全族对照收官——入口效应四点实测定案（外推问题消解）
+>
+> - **四点全族表（k2_scan_result.json）**：p50 −4.0% / p60 −3.75% / p70 −4.26% / p80 −4.22%——**四档全在 −4.26~−3.75% 窄带（均值 −4.06%）**，端部效应与孔隙率基本无关 → **全族统一修正因子 0.9594 成立（实测非外推）**，K_true = K_cell × 0.9594。上轮自查题"单点披露 vs 全族外推"两难被实测消解：不是外推，是四点独立的同带证据。
+> - **资产**：run_tpms_k2_scan.sh（三档循环+eps 从 k2_eps.json 读+FAIL 续跑下一档，仿 run_K_scan.sh 模式）；k2_eps.json（四档 eps 实测）；k2_scan_result.json（四点对照+summary）；三档双胞 STL 不入库（*.stl ignore，再生命令同 p60）。
+> - **下一步**：CSV 契约交付（带全族 0.9594 口径注记）→ Gemini 对照题；其余待拍板项不变。
+>
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
 > **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
