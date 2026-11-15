@@ -351,7 +351,7 @@ def main() -> int:
             )
             summary["executed"] = (bp.returncode == 0)
             summary["solveSec"] = round(time.time() - t0, 2)
-            summary["message"] = (bp.stdout + "\n" + bp.stderr).strip()[:1200]
+            summary["message"] = ((bp.stdout or "") + "\n" + (bp.stderr or "")).strip()[:1200]
             dp = parse_comsol_table_csv(out_dp_csv)
             wss = parse_comsol_table_csv(out_wss_csv)
             summary["dpPa"] = dp
