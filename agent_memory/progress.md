@@ -32,6 +32,12 @@
 > - **CI windows H4 两连红判别链**：同树 macos/ubuntu 双绿→fresh run 判别（43600130130）再红同断言=**确定性单平台失败非 flake**；日志 0 pageerror/console.error=非 JS 回归→**重计算 E2E 超时预算不足**（55s 阈值在快工位机标定，windows runner 慢 2-4×）→ H4 55→90s 修复（61abfc0），**断言语义不变**，三平台全绿（run 43603749077）。红队 E2 教训（预算按慢端标定）在 CI E2E 场景的同款落地。
 > - **今日提交链终态**：3b951cb（Phase 2-5 归档）→5ca8ba6/117a1c7（docs）→30f89b7（H4 fixture）→c66d05e（环境双档）→3538445（钉串穷举）→3bbcf42（真机批）→3f5f9ca（加密负结果）→aae367a（T3 标注）→61abfc0（H4 预算 90s）→c11cc50（收尾入档）→**1cada2d（H1-H4 耗时自观测：耗时拼进断言名过/挂都落日志；本机基线 H4=25.6s）**→**9f15a0f（H4 预算 90→150s：自观测实证 windows 92.8s 差 2.8s 超阈，6× 基线标定安全带）**→**2ce63bd（H1-H4 余量预警线：耗时>预算 80% 打 WARN 不断言）**→**9eca213（H5 自治流水线预算 60→240s+自观测+WARN——fresh run 实证 H4 118.5s 通过后雪球滚到 H5，本机 H5 基线 14.4s）**——**main=9eca213 三平台全绿+Pages 绿（run 43633016501，H4=98.7s/H5=66.9s 零 WARN）**。
 > - **E2E 慢 runner 预算链全景（windows 样本）**：H4 {92.8s 挂(55s)/<90s 绿/59.3s 绿/118.5s 绿/98.7s 绿}→150s 三连绿；H5 66.9s@240s。**方法论三件套定案**：①重计算 E2E 必配耗时自观测（拼断言名，过/挂都落日志）②预算按 6-16× 快机基线标定（覆盖 3.6× 实测慢比+波动余量）③余量预警线（>80% 打 WARN）让 runner 变慢趋势事前可见。④click TimeoutError"performing click action"挂死=深水风暴家族 VM 瞬态（11-07 ubuntu 同款，fresh run 未复现确证）——**fail-soft safeClick 加固已落地（f5b3fa9）：H1-H4 click 瞬态落证后由 waitForFunction 自然判 fail，门继续跑保住后续断言数据；clickErrors 独立收集不污染 Z 段 pageerror 语义**（verify.mjs ui_diag 先例同款）；三平台全绿（run 43668156870）。⑤**瞬态自动重试定案=YAGNI 不做**（fail-soft 保数据完整性已够；重试通过率会滑坡掩盖真回归——若未来要做，判据铁律=仅"重试通过且重试耗时<预算"允许且标注 retry-ok，超时类失败永不重试）。
+> ### 11-15 晚：k2 双胞入口效应分离定案（CFD 标定线主线，同链同梯度唯一变量=胞数）
+>
+> - **结果**：k2 双胞通透池 133,881 cells Mesh OK、1500 iters 收敛（Ubar 千位稳定 0.116114249 mm/s）→ **K2=0.0861 mm² @ eps=0.6004（p3 STL 实测 dev 0.04pp）** vs k1 R48 p60 参照 K=0.0894 @ eps=0.5999 → **入口效应=−3.7%**（单胞口径高估 K ~3.7%）。机制解读：Dirichlet 端部低压降伪影在 1 周期域占比过半→单胞 K 偏高；双胞把端部段稀释到 1/4，−3.7%=端部效应净贡献上界；与"1-2 周期充分发展"文献带一致。
+> - **对标定线的影响**：R48 全族曲线（单胞口径）系统性偏高 ~3.7%——披露为"单胞口径 +3.7% 端部偏差（k2 双胞对照实测，p60 单点）"；CSV 契约交付注明口径；需保守值可乘 0.963 修正因子。**k1 参照选择注意**：k2 对照必须用 R48 口径（K_scan 0.0894@0.5999），勿混 11-12 的 R24 口径 0.0811@0.5877。
+> - **资产入库**：blockMeshDict.tpms_k2 / snappyHexMeshDict.scan_k2 / run_tpms_k2.sh（域 [0,4π]、同 snappy 定案参数、ΔP=10.178 同梯度、seed=(3π,π/2,π/2) 板条内流体点）；k2 STL（9.7M）不入库（sim/.gitignore *.stl，再生命令：p3_fluid_domain --k 2 --R 48 --por 0.60 → strip_caps）。
+> - **过程坑（快账）**：①MSYS 路径转换撕 wsl 参数（MSYS_NO_PATHCONV=1 老坑三犯）；②p3 --k 2 STL 是 [0,4π]³ 全域盒，其 seed z=10.21 超出 [0,4π]×[0,2π]² 板条域→snappy "not inside the mesh" 崩，手挑 (3π,π/2,π/2)（f=−1<c ✓）替换；③派生 snappy 字典漏了 snapControls/addLayersControls/meshQualityControls 三段（k1 有而手写漏抄）→subDict 崩，程序化从 k1 提取拼接修复。
 >
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 

@@ -1,0 +1,110 @@
+/* TPMS 双胞 snappyHexMesh（2026-11-15，k2 入口效应分离批）
+   参数与 k1 定案（snappyHexMeshDict.scan）逐项一致：castellated/snap level 2、无棱柱
+   （R48 扫描族无棱模式）、上限留单胞 2 倍余量；唯一差异=locationInMesh 种子移到
+   双胞第二胞孔隙内（p3 实测流体点 [5.4978, 0.7854, 10.2102]）与 STL 换 k2 版。 */
+FoamFile
+{
+    format      ascii;
+    class      dictionary;
+    object      snappyHexMeshDict;
+}
+
+castellatedMesh true;
+snap            true;
+addLayers       false;
+
+mergeTolerance  1e-6;
+
+geometry
+{
+    scaffoldWall
+    {
+        type triSurfaceMesh;
+        file "tpms_wall.stl";
+    }
+}
+
+castellatedMeshControls
+{
+    maxLocalCells       8000000;
+    maxGlobalCells      16000000;
+    minRefinementCells  0;
+    nCellsBetweenLevels 2;
+
+    features ();
+
+    refinementSurfaces
+    {
+        scaffoldWall
+        {
+            level (2 2);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 30;
+
+    // 双胞第二胞孔隙内一点（板条域内手挑：f(3pi,pi/2,pi/2)=-1<c=0.3124 孔隙相；p3 seed z=10.21 超 [0,2pi] 板条域作废）
+    locationInMesh (9.42477796 1.57079633 1.57079633);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+    nFeatureSnapIter 10;
+    implicitFeatureSnap true;
+    explicitFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes   false;
+
+    layers
+    {
+        scaffoldWall
+        {
+            nSurfaceLayers 3;
+        }
+    }
+
+    expansionRatio      1.3;
+    finalLayerThickness 0.09;
+    minThickness        0.02;
+
+    nGrow               0;
+    nBufferCellsNoExtrude 0;
+    nLayerIter          50;
+    featureAngle        60;
+    slipFeatureAngle    30;
+    nRelaxIter          5;
+    nSmoothSurfaceNormals 3;
+    nSmoothNormals      5;
+    nSmoothThickness    10;
+    maxFaceThicknessRatio 0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle  90;
+}
+
+meshQualityControls
+{
+    maxNonOrtho         65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave          80;
+    minVol              1e-13;
+    minTetQuality       1e-15;
+    minArea             -1;
+    minTwist            0.02;
+    minDeterminant      0.001;
+    minFaceWeight       0.02;
+    minVolRatio         0.01;
+    minTriangleTwist    -1;
+    nSmoothScale        4;
+    errorReduction      0.75;
+}
