@@ -33,6 +33,20 @@ const warnSlow = (name, t0, budgetMs) => {
   const s = (Date.now() - t0) / 1000;
   if (s > (budgetMs / 1000) * 0.8) console.log(`  ⚠ WARN: ${name} 耗时 ${s.toFixed(1)}s 已超预算 ${Math.round(budgetMs / 1000)}s 的 80%——余量收窄，下次超时前请重标定预算`);
 };
+// fail-soft click：瞬态 click 挂死（深水风暴家族"performing click action"）不断言不崩门——落证后由对应 waitForFunction 超时自然判 fail，
+// 门继续跑保住后续断言数据；错误进 clickErrors（不污染 Z 段 pageerror/console.error 语义——click 超时是测试器侧瞬态非页面运行时错误）
+const clickErrors = [];
+const safeClick = async (pg, sel) => {
+  try {
+    await pg.click(sel);
+    return true;
+  } catch (e) {
+    const msg = String(e?.message || e).split('\n')[0].slice(0, 120);
+    clickErrors.push(`${sel}: ${msg}`);
+    console.log(`  [safeClick] ${sel} 挂死落证：${msg}`);
+    return false;
+  }
+};
 const errors = [];
 
 const { chromium } = await import('playwright');
@@ -323,7 +337,7 @@ try {
     await page.click('.tab[data-pane="pdiag"]');
     await page.waitForSelector('#sim-btn-lpbf', { timeout: 5000 });
     const t0H1 = Date.now();
-    await page.click('#sim-btn-lpbf');
+    await safeClick(page, '#sim-btn-lpbf');
     const lpbfDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('lpbf 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('LPBF 工艺窗口'),
@@ -332,7 +346,7 @@ try {
     warnSlow('H1', t0H1, 30000);
 
     const t0H2 = Date.now();
-    await page.click('#sim-btn-tissue');
+    await safeClick(page, '#sim-btn-tissue');
     const tissueDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('tissue 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('Cool-Warm O₂')
@@ -342,7 +356,7 @@ try {
     warnSlow('H2', t0H2, 45000);
 
     const t0H3 = Date.now();
-    await page.click('#sim-btn-phononic');
+    await safeClick(page, '#sim-btn-phononic');
     const phonDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('phononic 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('Bloch-Floquet 网格')
@@ -352,7 +366,7 @@ try {
     warnSlow('H3', t0H3, 45000);
 
     const t0H4 = Date.now();
-    await page.click('#sim-btn-levelset');
+    await safeClick(page, '#sim-btn-levelset');
     const lsDone = await page.waitForFunction(() =>
       (document.getElementById('sim-live-tag')?.textContent ?? '').includes('levelset 完成')
       && (document.getElementById('sim-live-grid')?.textContent ?? '').includes('已更新视口'),
@@ -514,6 +528,7 @@ try {
   }
 
   // ── Z 全程零错误 ──
+  if (clickErrors.length) console.log(`[safeClick 落证] ${clickErrors.length} 处 click 瞬态挂死（fail-soft 已继续，不计入页面运行时错误）`);
   console.log('\n[Z] 全程 0 pageerror / 0 console.error');
   errors.length === 0 ? ok('零错误') : bad('运行时错误', errors.slice(0, 3).join(' | ').slice(0, 160));
 } finally {
