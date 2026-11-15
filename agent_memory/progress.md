@@ -84,6 +84,7 @@
 > 2. **构建**：`cd /d/GITHUB/tpms/tpms/tpms-platform && npm run build`——禁止 build|tail 进 && 链。
 > 3. **历史重写**：仓库冻结+fresh-clone+git filter-repo（filter-branch 弃用）。
 > 4. **wsl**：内联 bash -c 撕参数——一律脚本文件；外部克隆走 Windows git。
+> - **提交暂存核对铁律（2026-11-15 事故入档）**：涉及代码修改的提交，commit 前必须 `git status --short` + `git diff --cached --stat` 核对暂存与提交意图一致（1477845 事故：Edit 被拒后连带 commit 照常执行，消息声明修复但未包含）——Edit 失败时同一消息内的连带提交必须中止。
 > 5. **git add -A 禁手**（二犯）：提交前 status 明细必查。
 > 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
 > 7. **CFD 量纲**：驱动幅度须高于残差地板 3+ 量级；v13 语法外部声称必实测。
@@ -466,3 +467,9 @@
 > ## 详细历史
 >
 > - 2026-11-02 及更早：git log 与 agent_memory/archive/progress_2026-10.md（整理轮/二次清洗/转公开/发版链闭环）
+
+> ### 11-16：T2 层真数据尝试挂起（node 化 DT 内核隐藏阻塞）
+>
+> - **尝试**：Node 25 strip-types 直跑 DT 内核（experimental-fit 同法已证可行）——联编五文件（DT/plasticity/gibson-ashby/permeability/pore-analysis，sed 补 .ts 后缀）加载 ✓，但 runCompressionDigitalTwin 求解 50 分钟无产出（CPU 仅 43s=异常挂起，疑似内核内 navigator/WebGPU 探测或隐式等待）。
+> - **处置**：按"事不过三"停手挂起。**T2 取数改走浏览器会话路径**（harness UI 在线仿真真跑+落 JSON，下批执行）；t2kernel 联编资产留 working/scratch/ 可复用。四级对标 T1/T3/T4 三层真数据已齐，T2 为锦上添花非阻塞。
+> - **提交暂存核对铁律已落地**（progress 铁律段：commit 前 status+diff --cached --stat 双核对；Edit 失败时连带提交必须中止）。
