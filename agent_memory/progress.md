@@ -52,6 +52,14 @@
 > - **Gemini 对照题已起草**（collab/gemini/2026-11-15-cfd-calibration-k-entry-effect-consult.md，自包含三问：修正口径/CFD-KC 趋势/试验对照口径裂缝）——**待用户代贴**。
 > - **下一步**：COMSOL batch 试跑（T4 第二格，license 未知）；Gemini 回执处置（用户代贴后）；其余待拍板项不变。
 >
+> ### 11-15 深夜 III：Gemini 回执四问全闭环——k3 预言命中+KC 口径勘误+三证据链（7b18bc5）
+>
+> - **Q1 k3 预言验证命中**：Gemini 串联水阻渐近律预言 K(3)/K(1)=0.9467±0.006 → k3 三胞实测 0.137993 mm² → **0.9458 命中**——端面迂曲旁路机制+统一修正 0.9594 被 k3 三胞实验锁死（k3 链：63×21×21 背景/197,879 cells Mesh OK/1500 iters，字典程序化派生+k3 剔端盖 STL 617,987 faces）。
+> - **Q2 交叉实证（部分修正 Gemini）**：旧 K_kc 的 Sv 反解序列（0.9568→1.1229 随 ε 上升）物理反常**成立**（Gemini 反解与 K_scan_result.json 精确吻合）；但**端盖归因需修正**——我方 STL=scaffoldWall 面网格（只含流固界面曲面，无截断面），实测 Sv=0.4990→0.4033 随 ε 下降方向正常；反解序列≈STL 实测+端盖口径（偏差 2-5%=当时可能用近似值），**机制归因存疑但结论不受影响**：旧 K_kc 口径作废。**STL 权威重算**：CFD/KC=0.522/0.494/0.448/0.371（<1 递减），真实 Kozeny 常数 9.57→13.48 递增带（gyroid 形状阻力+迂曲自洽，与 Gemini 方向一致、数值带不同=其 S_v,int 还原值系统性偏低 3-12%）。
+> - **Q4 三证据全闭环**：①p50 双点锚 PASS（E_eff=425.00 MPa，Standard 口径 −0.90%/STL 口径 −1.32%，跨 ρ̄∈[0.30,0.50] 均匀<3% 判据）；②体积拆账：R=20 STL 实测 ρ̄=0.2982/0.4970 → 实测口径下偏差 **+0.25%/+0.02%≈0**——**−1.07% 偏差几乎全部=MC 离散体积亏损**（幂律与 ABAQUS 实质一致 <0.3%）；③代理适用域分级声明入 fea-calibration.md（T1 认证域=线弹性 E_eff；Rp0.2/平台=经验外推待 EXPL 链核验）。**T3' fidelity_warning 护栏落地**（Gemini 硬要求："SMOKE_TEST_ONLY_DO_NOT_CITE" 恒注入 FVM 轨 JSON）。
+> - **坑**：k3 脚本 CRLF 行尾炸 WSL bash（bugs.md 在案再犯）→转 LF；`for l of` JS 语法混入 python heredoc（被我当场拦截未入库）。
+> - **下一步**：CFD 标定线文档收官注记（k3/KC 勘误进 cfd-calibration.md）；Q3 实验设计登记待 S1 解冻；其余待拍板项不变。
+>
 > ## 🔖 旧开工指引（2026-11-08 深夜交接 · UI 三批+PWA+CFD 矩阵全落地 · CI 绿）
 
 > **仓库态**：main=b60f0a9（树=图标 SVG 版+清理后），**CI 对 f229d20 三平台绿**（树等价，仅差 agent_memory 进度行）——Pages 供最新版（含 PWA/3 步引导/气泡 mini 卡/SVG 图标）。工作树净。**宿舍机：fetch + reset --hard origin/main**（f229d20 前无重写，本次无碍；bundle 备份两个在 D:\GITHUB	pms-bundle-backup*.bundle 勿删）。
