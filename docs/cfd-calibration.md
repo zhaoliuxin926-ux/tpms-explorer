@@ -49,3 +49,22 @@ wsl bash /mnt/d/GITHUB/tpms/sim/cfd/tpms_cell/run_tpms_k2_scan.sh
 python sim/p3_fluid_domain.py --k 2 --R 48 --por 0.60 --out <raw.stl>
 python sim/cfd/tpms_cell/strip_caps.py <raw.stl> <k2.stl>
 ```
+
+## 入口效应机制锁死与 KC 对照勘误（2026-11-15 深夜，Gemini 回执四问闭环）
+
+**k3 预言验证命中**：Gemini 串联水阻渐近律预言 K(3)/K(1)=0.9467±0.006 → k3 三胞 p70 实测 0.137993 mm² → **0.9458 命中**——"端面迂曲旁路"机制（k=1 端面短程旁路 vs k≥2 胞间流线连续性）与统一修正因子 0.9594 被三胞实验锁死。k3 链资产：blockMeshDict.tpms_k3/snappyHexMeshDict.scan_k3/run_tpms_k3.sh（63×21×21 背景/197,879 cells Mesh OK）。
+
+**KC 对照口径勘误（重要更正）**：Gemini 逆向取证发现旧 K_kc 表的隐含 Sv 序列（0.9568→1.1229）随 ε 上升——物理反常（真实内界面应随 ε 下降 ~19%，STL 面网格实测 0.4990→0.4033 证实）。我方交叉实证：反解数字与旧 K_kc 精确吻合（取证成立），但端盖归因部分修正（我方 scaffoldWall STL 为面网格，无截断面污染；反解序列≈实测+端盖口径，偏差 2-5%）。**结论不受影响：旧 K_kc 作废**。STL 实测 Sv 权威重算：
+
+| ε | Sv_stl (mm⁻¹) | K_KC_stl (mm²) | CFD/KC | 真实 Kozeny 常数 |
+|---|---|---|---|---|
+| 0.4990 | 0.4990 | 0.0998 | 0.522 | 9.57 |
+| 0.5999 | 0.4885 | 0.1809 | 0.494 | 10.12 |
+| 0.7005 | 0.4593 | 0.3259 | 0.448 | 11.17 |
+| 0.8019 | 0.4033 | 0.6341 | 0.371 | 13.48 |
+
+CFD/KC < 1 且随 ε 递减——三维 gyroid 的形状阻力（鞍部喉道缩扩）+迂曲使真实 Kozeny 常数（9.6→13.5）高于等截面直管假设（5），流体力学自洽。
+
+**T3' 冒烟档护栏**：FVM 体素 Brinkman 兜底轨 JSON 恒注入 `fidelity_warning: "SMOKE_TEST_ONLY_DO_NOT_CITE"`（Gemini 硬要求——防上层 Agent 误读；双向失真不可兼得性裁定在案）。
+
+**T1 代理认证（三证据链闭环）**：T4 ABAQUS 静态弹性双点盲测 p70 −1.07%/p50 −0.90%（Standard 口径）；体积拆账——R=20 STL 实测 ρ̄=0.2982/0.4970，**实测口径下偏差 +0.25%/+0.02%≈0**（−1.07% 几乎全部=MC 离散体积亏损）；代理适用域分级声明见 docs/fea-calibration.md。
