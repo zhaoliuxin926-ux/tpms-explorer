@@ -133,7 +133,8 @@ def assemble(mesh_inp: Path, strain: float, E: float, nu: float,
     if explicit_ms:
         buf.append("*STEP, NAME=COMPRESSION")   # Explicit 恒大变形，无 NLGEOM 参数
     else:
-        buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}")
+        # Standard 模式 INC=1000：field/history 输出点数（200 点档）不得超过 STEP 增量上限（缺省 100 会 pre-processor 拒收）
+        buf.append(f"*STEP, NAME=COMPRESSION, NLGEOM={'YES' if nlgeom else 'NO'}, INC=1000")
     if explicit_ms:
         buf.append("*DYNAMIC, EXPLICIT")
         # 自动时间增量数据行：字段1空、字段2=时间周期（首字段填值会被当 dt 触错）
