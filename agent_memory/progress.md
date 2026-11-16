@@ -35,6 +35,15 @@
 > - **v13 语法断代三例**：meanVelocityForce/acceleration/surfaceFieldValue regionType——外部声称必实测 ETC
 > - **构建/历史重写/wsl/物理量纲**：见 archive/progress_2026-11-early.md 铁律段（仍然有效）
 >
+
+> ### 11-16 续 II：仓库瘦身 32G→2.4G（用户授权清理批，bf3b60e）
+>
+> - **清理四类**：①35 个标定 ODB（18G）→ **全量曲线提取 35/35 零失败**入 sim/csv_archive/（tracked，42K）后删；②T4 p50/p70 ODB（10.2G）删（curve CSV+LE_static INP 双留证，E_eff 已入档）；③标定期 ABAQUS 副产物（.stt/.dat/.prt 等 ~1.4G）+可再生网格 INP/MSH/labeled STL（~1G）清（p0→p1 链完备再生）；④根目录散落验证 STL 233M+D:\GITHUB	mp 150M 清。
+> - **保留判定**：specimens 1.3G 全保（S1-S8×4 统计重复件=上机必需）；sim/out 293M（csv 现场+calibration_curves.png+rve_* 近期现场+comsol）；.git 77M；tpms/ 620M（源码+node_modules）。
+> - **归档增益**：multifidelity 报告从 gitignored 区入 docs/cfd-multifidelity-report.json；标定曲线原始数据首次全量入库（此前 csv_expl 只有 6 份，本次 35 份补全——**ODB 原始证据降级为 CSV 证据，重跑成本从删库不可逆变为 Explicit 小时~天级**）。
+> - **尺寸口径钉**：标定族提取统一 12.5664mm（k2 无量纲 4π，CSV 头部元数据实证）。
+> - **D:\GITHUB 层待用户拍板**：tpms 三个 bundle（pre-purge 85M/backup2-20261108 79M/backup-20261107 76M，历史重写保险，memory 曾标注勿删——距重写已 8 天+远端稳定，可考虑只留最新一个）+两个 mirror.git（scrub2/explorer-backup 各 ~75M，重写流程中间产物，建议可删）——共 ~390M。编号 01-21 小游戏项目=用户其他作品，未动。
+
 > ## 三天工作摘要（2026-11-14 ~ 11-16，37 提交）
 >
 > ### 11-14：孤儿批次接手 + CI 三红三修 + 真机批开闸
