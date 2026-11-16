@@ -1,0 +1,73 @@
+{
+ "schema": "tpms-multifidelity-certificate-v1",
+ "generatedAt": "2026-11-14",
+ "note": "真机 CAE 实跑批——四级保真度对标首批真数据（gyroid network ε=0.699, 单胞 4mm, 试样 12mm, RVE k_cfd=1）",
+ "design": {
+  "type": "gyroid",
+  "structure": "network",
+  "periods": 3,
+  "porosity": 0.7,
+  "cellSizeMm": 4.0,
+  "specimenSizeMm": 12.0,
+  "rvePorosity": 0.69915
+ },
+ "tiers": {
+  "T3_wsl_openfoam13": {
+   "status": "REAL_SOLVED",
+   "solverTier": "openfoam13_wsl",
+   "mesh": "snappy 40914 cells / Mesh OK / skew 3.83<4 / BL 2层覆盖率56.6%",
+   "K_m2": 1.1519e-10,
+   "K_mm2": 0.00011519,
+   "beta_m1": 272.22,
+   "Fo_v2": 0.00035,
+   "dp1_Pa": 30.907,
+   "dp2_Pa": 309.171,
+   "wss_v1_mean_mPa": 4.9559,
+   "wssOsteogenicWindowPct": 34.76,
+   "iterations": 147,
+   "elapsedSec": 177.1,
+   "crossCheck": {
+    "r48Curve_mm2": 0.1484,
+    "deviation": "-22.4%",
+    "disclaimer": "粗网格 R20 STL+40k cells+BL 覆盖率 56.6%（非 11-12 定案的满配 snappy 参数）+y/z 侧壁有限试样口径——方向一致，量级可信"
+   }
+  },
+  "T3_fvm_brinkman": {
+   "status": "SMOKE_ONLY",
+   "solverTier": "fvm_brinkman_rve",
+   "K_m2": 6.7547e-08,
+   "K_mm2": 0.0675,
+   "disclosure": "链路贯通冒烟档——体素 Brinkman 近似求解器双向失真实证：直管解析锚 ΔP 高估 31×、gyroid RVE ΔP 低估 413×（K 反向 322×）——K/β 数值不可信，仅验链路；修复属研究级批次，见 bugs.md"
+  },
+  "T4_comsol_62": {
+   "status": "READY_COMPILED",
+   "javaPath": "sim/out/rve_real_comsol/comsol/TpmsComsol_fluid_gyroid_network_k1_R20_p70_cs4.java",
+   "compiled": true,
+   "executed": false,
+   "disclosure": "COMSOL 6.2 Model Java 已生成并 comsolcompile 通过（分钟级）；batch 实算（小时级）待用户拍板"
+  },
+  "T4_abaqus": {
+   "status": "REAL_SOLVED",
+   "staticInpPath": "sim/out/rve_real_abq/gyroid_k2_R20_p70_cs4mm_LE_static.inp",
+   "job": "tpms_gyroid_k2_R20_p70_LE",
+   "mesh": "C3D10 83,540 elems / H=W=T=8mm / strain 5% 弹性静态（E=2000MPa ν=0.3）",
+   "E_eff_MPa": 138.29,
+   "elasticFitR2": 1.0,
+   "crossCheck": {
+    "t1_powerlaw_MPa": 139.79,
+    "deviation": "-1.07%",
+    "note": "四级对标 T4 vs T1 首个真数据交叉——0.9914·ρ̂^2.2028 幂律在独立 FEA 链上复现"
+   }
+  },
+  "T4_abaqus_rego": {
+   "note": "初次求解失败两轮：p2 生成器 *STEP 缺 INC（输出点数 200>100 增量上限）→ p2 源码修复（INC=1000）；findings 更新"
+  }
+ },
+ "findings": [
+  "FVM 兜底轨双向失真（直管+31×/gyroid −413× ΔP）→ 定级冒烟档，physics 修复属研究级",
+  "WSL OF13 真解算器全链打通：snappy Mesh OK 门（skew<4）+ v13 surfaceFieldValue patch 选择器语法修复（regionType+name 为 v11 旧语法）",
+  "WSL K=0.115 mm² vs R48 曲线 −22%（粗网格+部分 BL+侧壁口径，方向一致）",
+  "ΔP₁:ΔP₂=1:10 精确线性（Fo=0.00035）=达西区自洽验证",
+  "T4 ABAQUS 静态弹性实算闭环：E_eff=138.29 MPa vs T1 幂律 −1.07%（R²=1.0）；p2 生成器 *STEP 缺 INC 缺陷修复（LE 模式 INC=1000）"
+ ]
+}
