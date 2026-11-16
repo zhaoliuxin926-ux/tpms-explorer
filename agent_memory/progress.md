@@ -84,6 +84,7 @@
 > 2. **构建**：`cd /d/GITHUB/tpms/tpms/tpms-platform && npm run build`——禁止 build|tail 进 && 链。
 > 3. **历史重写**：仓库冻结+fresh-clone+git filter-repo（filter-branch 弃用）。
 > 4. **wsl**：内联 bash -c 撕参数——一律脚本文件；外部克隆走 Windows git。
+> - **后台/试错任务时间盒（2026-11-16 细化）**：试错型任务（调参/探针/兼容性试错）15 分钟时间盒，超盒必须产出中间证据或停（T2 node 化 50 分钟教训：CPU 43s/墙钟 50min 异常比值即停信号）；**守望型任务豁免**（CI 守望/实验收敛等待——有明确完成判据，轮询即可）。
 > - **提交暂存核对铁律（2026-11-15 事故入档）**：涉及代码修改的提交，commit 前必须 `git status --short` + `git diff --cached --stat` 核对暂存与提交意图一致（1477845 事故：Edit 被拒后连带 commit 照常执行，消息声明修复但未包含）——Edit 失败时同一消息内的连带提交必须中止。
 > 5. **git add -A 禁手**（二犯）：提交前 status 明细必查。
 > 6. **gmsh**：O-grid 中心块双切向 nArc/arc 中点角 90°+90k/面分类用 getCenterOfMass/体单元必须 3D 物理组。
