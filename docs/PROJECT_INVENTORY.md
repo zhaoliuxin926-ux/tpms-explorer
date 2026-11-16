@@ -1,6 +1,6 @@
 # 项目总览（PROJECT INVENTORY）
 
-> 生成：2026-09-23 · 产品版本 **v1.2.0**（稳定序列，2026-11-16 刷新）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
+> 生成：2026-09-23 · 产品版本 **v1.3.0**（稳定序列，2026-11-16 刷新）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
 > 口径：功能标签写「原型期 vN」；产品自称只用 v1.0.x。
 
 ---
@@ -51,7 +51,7 @@ tpms-explorer/
 │   ├── blog/ + publish/          # 技术博客 + 粘贴版
 │   ├── career/interview-pack.md  # 求职弹药
 │   ├── paper/                    # SoftwareX 材料（投稿搁置）
-│   └── releases/                 # RELEASE_NOTES_v*.md ×17（版本档案）
+│   └── releases/                 # RELEASE_NOTES_v*.md ×18（版本档案）
 ├── sim/                          # 高保真 CAE 管线（ABAQUS/OpenFOAM/COMSOL/nTop + csv_archive/ 35 曲线）
 ├── collab/                       # 多 Agent 异步协作黑板
 ├── agent_memory/                 # 跨设备交接文档（progress/context/machine-facts/bugs）
@@ -92,7 +92,7 @@ tpms-explorer/
 | 快检 | `schema_check --fast`（~28s，GUARD 40）+ matrix + boundary + docs + sync-publish | ~1 min |
 | 拦截覆盖 | `regression_matrix.mjs` 注入合法/非法 toolCalls | 3×6 绿 |
 | 博客同源 | `sync-publish.mjs --check` | 粘贴版漂移 exit 1 |
-| 版本哨兵 | 导出物 v1.2.0 / 落地页「原型期」/ fcky / fit 诚实 | docs 门禁内 |
+| 版本哨兵 | 导出物 v1.3.0 / 落地页「原型期」/ fcky / fit 诚实 | docs 门禁内 |
 
 **宣称纪律**：命令可指认；性能 grep 调用点；数字以 SCHEDULE/GUARD 为准（见 CONTRIBUTING）。
 

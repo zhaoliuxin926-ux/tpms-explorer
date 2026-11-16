@@ -2,7 +2,7 @@
 
 > **中文** · [English](README_EN.md) — English overview: [README_EN.md](README_EN.md)
 
-![release](https://img.shields.io/badge/release-v1.2.0-2563eb)
+![release](https://img.shields.io/badge/release-v1.3.0-2563eb)
 ![ci](https://img.shields.io/badge/CI-50%2F50%20gates%C2%B71000%2B%20assertions-16a34a)
 ![platform](https://img.shields.io/badge/CI%20matrix-Ubuntu%20%C2%B7%20Windows%20%C2%B7%20macOS-8b5cf6)
 ![watertight](https://img.shields.io/badge/STL-watertight%20100%25-16a34a)
@@ -18,7 +18,7 @@
 | ⚖️ 严谨性与学术诚信 | [docs/HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md)（16 条定案诚实边界）· [BENCHMARKS.md](BENCHMARKS.md)（26 族可产性公开基准实测） |
 | 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队）· [docs/fea-calibration.md](docs/fea-calibration.md)（FEA 标定幂律）· [docs/cfd-calibration.md](docs/cfd-calibration.md)（CFD 渗透率标定 + [CSV](docs/cfd-k-curve.csv)） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
-| 🕘 版本变更 | [v1.2.0](docs/releases/RELEASE_NOTES_v1.2.0.md)（当前；功能别名 tag v9.4.0 同提交）｜[v1.1.0](docs/releases/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/releases/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/releases/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 见 docs/releases/） |
+| 🕘 版本变更 | [v1.3.0](docs/releases/RELEASE_NOTES_v1.3.0.md)（当前；功能别名 tag v9.5.0 同提交）｜[v1.2.0](docs/releases/RELEASE_NOTES_v1.2.0.md) ｜ [v1.1.0](docs/releases/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/releases/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/releases/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 见 docs/releases/） |
 | 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图）· [docs/agent-architecture.md](docs/agent-architecture.md)（Agent 架构扩展者手册） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
@@ -59,7 +59,7 @@
 └── plans/         分批实施计划与调研沉淀（随仓库跟踪）
 ```
 
-### 科研与增材制造特性矩阵（v1.2.0 · 稳定序列）
+### 科研与增材制造特性矩阵（v1.3.0 · 稳定序列）
 
 | 能力 | 说明 | 验证 |
 |---|---|---|

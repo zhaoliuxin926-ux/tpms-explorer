@@ -2,7 +2,7 @@
 
 - 仓库：D:\GITHUB\tpms，TPMS 参数化设计与分析平台（用户个人作品集，与导师课题无关）
 - 核心：tpms/tpms-platform（Vite+TS 单页）、tpms/agent（CLI/基准/回归）、tpms/.verify（**50 门** CI 门禁）、sim/（ABAQUS/OpenFOAM/COMSOL 仿真管线）
-- 平台现状：**26 族**（24 TPMS+strutbcc/strutoctet）；Pareto 全家+26 族画廊；产品号 v1.2.0 稳定序列（功能标签「原型期 vN」双轨）；release notes 在 docs/releases/
+- 平台现状：**26 族**（24 TPMS+strutbcc/strutoctet）；Pareto 全家+26 族画廊；产品号 v1.3.0 稳定序列（功能标签「原型期 vN」双轨）；release notes 在 docs/releases/
 - **Agent 面（6 工具满配）**：list/estimate/mesh/scenario/design_verify/pareto；**session-core.mjs 会话与确定性指代单源**（CLI/Web 双端共享，双语义锁）；**DSH 三栏 CAE 工作台+cae-daemon 本地桥**（127.0.0.1:4830，五 job kind）
 - 权威口径（2026-11-16 规整）：**50 门**三平台绿；docs_consistency **349**；schema_check **113**；llm_provider 101；nl_agent 48；agent_bridge **53**（满配档）/52（CI 基线）；harness_ui_check **38**；llm_driver_selftest 10
 - **CFD 标定线（完全自持）**：三层交付=数据（K_scan/k2_scan/k3_prophecy/kc_recompute/k_inf JSON）+权威文档（docs/cfd-calibration.md）+消费件（docs/cfd-k-curve.csv）；口径三层=K_cell（R48 单胞）×0.9594（N=2 实用修正）→K_true=0.442·ε^3.17；K∞=0.1342 mm²（N→∞ 渐近参考）；KC 对照=STL 实测 Sv 口径（CFD/KC=0.52→0.37，真实 Kozeny 9.6→13.5）；FVM 兜底轨=冒烟档（fidelity_warning 护栏）

@@ -6186,7 +6186,7 @@ async function runSweep(): Promise<void> {
           gradientDir: frameState.gradientDir,
         },
         generatedAt: new Date().toISOString(),
-        platform: 'TPMS Explorer v1.2.0',
+        platform: 'TPMS Explorer v1.3.0',
       };
       configs.push(config);
       frameRows.push({
@@ -6511,7 +6511,7 @@ function resolveExportPorosity(s: AppState): { iso: number; targetPorosity: numb
 function buildDesignFile(s: AppState): Record<string, unknown> {
   return {
     format: 'tpms-design/1.0',
-    platform: 'TPMS Explorer v1.2.0',
+    platform: 'TPMS Explorer v1.3.0',
     savedAt: new Date().toISOString(),
     shareUrl: buildShareURL(),
     formula: s.customFormula,
@@ -6839,7 +6839,7 @@ async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail
         const aPkg = auditMeshIndices(pkgPos, pkgIdx);
         const manifest = {
           format: 'tpms-delivery/1.0',
-          platform: 'TPMS Explorer v1.2.0',
+          platform: 'TPMS Explorer v1.3.0',
           savedAt: new Date().toISOString(),
           sizeContract: {
             totalWidthMm: meshCont ? null : effWidthMm(s),
