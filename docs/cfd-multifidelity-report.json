@@ -12,6 +12,38 @@
   "rvePorosity": 0.69915
  },
  "tiers": {
+  "T1_analytic_powerlaw": {
+   "status": "COMPUTED",
+   "engine": "Gibson-Ashby / FEA Power-Law + Kozeny-Carman (bulk Sv)",
+   "E_Es_ratio": 0.068145,
+   "E_eff_Es2000_MPa_measuredDensity": 139.79,
+   "E_eff_Es2000_MPa_nominal030": 136.29,
+   "E_eff_TC4_110GPa": 7.496,
+   "svRatio_mm1": 0.7725,
+   "K_kc_m2": 1.1495e-7,
+   "K_kc_mm2": 0.115
+  },
+  "T2_browser_hybrid": {
+   "status": "REAL_SOLVED",
+   "engine": "Dual-Shell Harness UI E2E + R=20 Voxel Micro-FEA (KUBC) + FD-Darcy + Forchheimer",
+   "capturedAt": "2026-11-16",
+   "dt_E_TC4_GPa": 5.519,
+   "dt_E_Es2000_MPa": 100.35,
+   "homog_E100_TC4_GPa": 4.518,
+   "homog_E100_Es2000_MPa": 82.15,
+   "microFea_R20_E11_norm": 0.155017,
+   "microFea_R20_KUBC_MPa": 310.03,
+   "microFea_R20_TC4_GPa": 17.052,
+   "zenerRatio": 1.1498,
+   "lbm_K_m2": 1.51e-7,
+   "fdDarcy_R20_kappaLU": 0.51524,
+   "fdDarcy_R20_diffusiveTortuosity": 1.3586,
+   "forchheimer_K_int_mm2": 0.00011519,
+   "crossCheck": {
+    "bracketTheorem": "homog(82.15 MPa) < DT_R8(100.35 MPa) < T4_ABAQUS_C3D10(138.29 MPa) ≈ T1_powerlaw(139.79 MPa) < T2_R20_KUBC(310.03 MPa)",
+    "disclaimer": "已修复 t2_browser_probe.mjs 静态路径误指并完成双壳 E2E 与 R=20 内核实测；体素 KUBC 刚性边界呈上界刚化，FD-Darcy 为标量扩散传导因子，Forchheimer 回代 T3 压降精确还原 K_int=1.15e-4 mm²"
+   }
+  },
   "T3_wsl_openfoam13": {
    "status": "REAL_SOLVED",
    "solverTier": "openfoam13_wsl",
@@ -68,6 +100,7 @@
   "WSL OF13 真解算器全链打通：snappy Mesh OK 门（skew<4）+ v13 surfaceFieldValue patch 选择器语法修复（regionType+name 为 v11 旧语法）",
   "WSL K=0.115 mm² vs R48 曲线 −22%（粗网格+部分 BL+侧壁口径，方向一致）",
   "ΔP₁:ΔP₂=1:10 精确线性（Fo=0.00035）=达西区自洽验证",
-  "T4 ABAQUS 静态弹性实算闭环：E_eff=138.29 MPa vs T1 幂律 −1.07%（R²=1.0）；p2 生成器 *STEP 缺 INC 缺陷修复（LE 模式 INC=1000）"
+  "T4 ABAQUS 静态弹性实算闭环：E_eff=138.29 MPa vs T1 幂律 −1.07%（R²=1.0）；p2 生成器 *STEP 缺 INC 缺陷修复（LE 模式 INC=1000）",
+  "T2 浏览器在线与体素内核实测闭环（2026-11-16）：修复 t2_browser_probe 静态服务路径误指，harness E2E (DT=100.35 MPa 折算) + R=20 Micro-FEA KUBC (310.03 MPa 上界) + R=20 FD-Darcy (kappaLU=0.51524) + T1 (139.79 MPa) 齐备，形成 T1/T2/T3/T4 四级保真度完整上下界包络"
  ]
 }

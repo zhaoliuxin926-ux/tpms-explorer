@@ -45,6 +45,68 @@ const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 /** @type {Map<string, any>} */
 const JOBS = new Map();
 const MAX_LOG_LINES = 500;
+export const JOBS_JSONL_PATH = path.join(SIM_OUT_DIR, 'jobs.jsonl');
+
+/**
+ * Append a compact single-line JSON provenance record to sim/out/jobs.jsonl
+ * when a CAE job finishes (inspired by agent-autoloop event sourcing).
+ */
+export function appendJobEvent(job) {
+  try {
+    fs.mkdirSync(SIM_OUT_DIR, { recursive: true });
+    const summary = job?.result
+      ? {
+          mode: job.result.mode ?? null,
+          solverTier: job.result.cfdSummary?.solverTier ?? job.result.darcy?.solverTier ?? null,
+          K_m2: job.result.cfdSummary?.K_m2 ?? job.result.darcy?.permeabilityM2 ?? null,
+          staticInpPath: job.result.staticInpPath ?? job.result.abaqus?.staticInpPath ?? null,
+          javaPath: job.result.javaPath ?? job.result.comsol?.javaPath ?? null,
+        }
+      : null;
+    const record = {
+      ts: job.finishedAt || new Date().toISOString(),
+      id: job.id,
+      kind: job.kind,
+      status: job.status,
+      startedAt: job.startedAt,
+      finishedAt: job.finishedAt,
+      exitCode: job.exitCode,
+      why: job.params?.why || job.params?.source || 'api',
+      params: job.params || {},
+      summary,
+      error: job.error || null,
+    };
+    fs.appendFileSync(JOBS_JSONL_PATH, `${JSON.stringify(record)}\n`, 'utf8');
+  } catch {
+    // Non-fatal: persistence failure must not crash daemon job lifecycle
+  }
+}
+
+/**
+ * Read up to `limit` most recent job provenance records from sim/out/jobs.jsonl
+ * in newest-first order.
+ */
+export function readJobHistory(limit = 50) {
+  const cap = Math.max(1, Math.min(500, Number(limit) || 50));
+  if (!fs.existsSync(JOBS_JSONL_PATH)) return [];
+  try {
+    const raw = fs.readFileSync(JOBS_JSONL_PATH, 'utf8').trim();
+    if (!raw) return [];
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    const slice = lines.slice(-cap).reverse();
+    const out = [];
+    for (const line of slice) {
+      try {
+        out.push(JSON.parse(line));
+      } catch {
+        // Ignore partially flushed or malformed lines
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
 
 export function isAllowedOrigin(origin) {
   if (!origin) return true; // curl / local Node test without Origin header
@@ -172,6 +234,7 @@ export async function probeCaeEnvironment() {
       },
     },
     recentFiles: recentFiles.slice(0, 32),
+    persistedHistoryCount: readJobHistory(500).length,
   };
 }
 
@@ -675,6 +738,7 @@ async function executeJob(job) {
     appendLog(job, `[error] ${job.error}`);
   } finally {
     job.finishedAt = new Date().toISOString();
+    appendJobEvent(job);
   }
 }
 
@@ -782,6 +846,30 @@ export function createCaeServer() {
       return sendJson(res, 200, env, origin);
     }
 
+    if (req.method === 'GET' && pathname === '/api/cae/status') {
+      const history = readJobHistory(500);
+      return sendJson(res, 200, {
+        ok: true,
+        daemon: 'tpms-cae-daemon',
+        activeJobs: [...JOBS.values()].filter((j) => j.status === 'running').length,
+        inMemoryJobs: JOBS.size,
+        persistedHistoryCount: history.length,
+        logPath: 'sim/out/jobs.jsonl',
+        latestJob: history[0] || null,
+      }, origin);
+    }
+
+    if (req.method === 'GET' && pathname === '/api/cae/history') {
+      const limit = Number(url.searchParams.get('limit') || 50);
+      const history = readJobHistory(limit);
+      return sendJson(res, 200, {
+        ok: true,
+        logPath: 'sim/out/jobs.jsonl',
+        count: history.length,
+        history,
+      }, origin);
+    }
+
     if (req.method === 'GET' && pathname.startsWith('/api/cae/job/')) {
       const id = pathname.slice('/api/cae/job/'.length).trim();
       if (!SAFE_NAME_RE.test(id)) {
@@ -860,6 +948,23 @@ export function createCaeServer() {
 
 async function runSelfTest() {
   const env = await probeCaeEnvironment();
+  let historyEndpointOk = false;
+  let statusEndpointOk = false;
+  const testSrv = createCaeServer();
+  try {
+    await new Promise((resolve) => testSrv.listen(0, '127.0.0.1', resolve));
+    const port = testSrv.address().port;
+    const hRes = await fetch(`http://127.0.0.1:${port}/api/cae/history?limit=10`);
+    const hJson = await hRes.json();
+    historyEndpointOk = hRes.status === 200 && hJson.ok === true && Array.isArray(hJson.history);
+    const sRes = await fetch(`http://127.0.0.1:${port}/api/cae/status`);
+    const sJson = await sRes.json();
+    statusEndpointOk = sRes.status === 200 && sJson.ok === true && typeof sJson.persistedHistoryCount === 'number';
+  } finally {
+    testSrv.closeIdleConnections?.();
+    testSrv.closeAllConnections?.();
+    await new Promise((resolve) => testSrv.close(resolve));
+  }
   const checks = {
     envOk: env.ok === true,
     ntopTemplateReady: Array.isArray(env.engines?.ntop?.templates) && env.engines.ntop.templates.length > 0,
@@ -869,10 +974,13 @@ async function runSelfTest() {
     rawTraversalBlocked: resolveArtifactRawPath('../../etc/passwd') === null && resolveArtifactRawPath('sim/out/../../secret.stl') === null && resolveArtifactRawPath('bad.exe') === null,
     rawValidStl: resolveArtifactRawPath('sim/out/test_fluid.stl') !== null && resolveArtifactRawPath('test_fluid.stl') !== null,
     validOutPath: resolveSafeOutPath('test_file.json') !== null,
+    historyReadable: Array.isArray(readJobHistory(10)),
+    historyEndpointOk,
+    statusEndpointOk,
   };
   const allOk = Object.values(checks).every(Boolean);
   console.log(JSON.stringify({ ok: allOk, checks, env }, null, 2));
-  process.exit(allOk ? 0 : 1);
+  process.exitCode = allOk ? 0 : 1;
 }
 
 const isCliMain = process.argv[1] && path.resolve(process.argv[1]) === __filename;

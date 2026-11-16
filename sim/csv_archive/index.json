@@ -1,0 +1,798 @@
+{
+  "schema": "tpms-csv-archive-index-v1",
+  "generatedAt": "2026-11-16",
+  "totalFiles": 37,
+  "iso13314ExtractedCount": 5,
+  "countsByCategory": {
+    "ABAQUS_Standard_RVE_calibration": 25,
+    "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa": 10,
+    "T4_blind_validation_8mm_Es2000MPa": 2
+  },
+  "records": [
+    {
+      "file": "d60_p50_base.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "d60_p50_fixv3.csv",
+      "bytes": 487,
+      "sha256_16": "c74bd20f0d7c0f57",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 7.46,
+      "regime": "elastic_static",
+      "E_lin_MPa": 373.18,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "d60_p50_rebase.csv",
+      "bytes": 487,
+      "sha256_16": "259a60b82298ae6b",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 7.46,
+      "regime": "elastic_static",
+      "E_lin_MPa": 373.19,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "d60ex_p50.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "d60ex_p50dense.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "d60ex_p50fine.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "d60ex_p60.csv",
+      "bytes": 499,
+      "sha256_16": "65b4ff4f8102bd88",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.45,
+      "stressPeak_MPa": 8.94,
+      "regime": "iso13314_full",
+      "E_lin_MPa": 219.66,
+      "iso13314": {
+        "E_eff_MPa": 219.66,
+        "E_eff_GPa": 0.2197,
+        "Rp02_MPa": 4.81,
+        "firstPeak_MPa": 8.43,
+        "plateau_MPa": 8.14,
+        "densificationStatus": "not-observed",
+        "densificationStrain": null,
+        "energyW_MJ_m3": 3.545
+      },
+      "guardNote": null
+    },
+    {
+      "file": "d60ex_p70.csv",
+      "bytes": 482,
+      "sha256_16": "e396961d13ec81a9",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.45,
+      "stressPeak_MPa": 4.86,
+      "regime": "iso13314_full",
+      "E_lin_MPa": 118.58,
+      "iso13314": {
+        "E_eff_MPa": 118.58,
+        "E_eff_GPa": 0.1186,
+        "Rp02_MPa": 2.85,
+        "firstPeak_MPa": 4.82,
+        "plateau_MPa": 4.47,
+        "densificationStatus": "not-observed",
+        "densificationStrain": null,
+        "energyW_MJ_m3": 1.97
+      },
+      "guardNote": null
+    },
+    {
+      "file": "d60le_p50.csv",
+      "bytes": 487,
+      "sha256_16": "f276fcfb50f86ca8",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 7.47,
+      "regime": "elastic_static",
+      "E_lin_MPa": 373.25,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "d60le_p60.csv",
+      "bytes": 482,
+      "sha256_16": "2ba2e7318ed52883",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 4.49,
+      "regime": "elastic_static",
+      "E_lin_MPa": 224.59,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "d60le_p70.csv",
+      "bytes": 479,
+      "sha256_16": "f59725d5d0cd6ec7",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 2.43,
+      "regime": "elastic_static",
+      "E_lin_MPa": 121.28,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "dc_e50.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_e70.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_expl.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_k1.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p2v2.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p2v3.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p2v4.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p30.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p30s.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p45f.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "dc_p45s.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "diamond_k2_p50_fix.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "g60ex_k1.csv",
+      "bytes": 481,
+      "sha256_16": "2ca0d7dba519b1ba",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.225,
+      "stressPeak_MPa": 1.88,
+      "regime": "truncated_lt_40pct",
+      "E_lin_MPa": 65.68,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "g60ex_p50.csv",
+      "bytes": 500,
+      "sha256_16": "356aef7761d43961",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.45,
+      "stressPeak_MPa": 22.98,
+      "regime": "iso13314_full",
+      "E_lin_MPa": 351.53,
+      "iso13314": {
+        "E_eff_MPa": 351.53,
+        "E_eff_GPa": 0.3515,
+        "Rp02_MPa": 7.29,
+        "firstPeak_MPa": 14.52,
+        "plateau_MPa": 16.76,
+        "densificationStatus": "not-observed",
+        "densificationStrain": null,
+        "energyW_MJ_m3": 6.837
+      },
+      "guardNote": null
+    },
+    {
+      "file": "g60ex_p70.csv",
+      "bytes": 482,
+      "sha256_16": "1883cc736b0c8254",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.45,
+      "stressPeak_MPa": 6.17,
+      "regime": "iso13314_full",
+      "E_lin_MPa": 115.18,
+      "iso13314": {
+        "E_eff_MPa": 115.18,
+        "E_eff_GPa": 0.1152,
+        "Rp02_MPa": 2.6,
+        "firstPeak_MPa": 4.9,
+        "plateau_MPa": 4.9,
+        "densificationStatus": "not-observed",
+        "densificationStrain": null,
+        "energyW_MJ_m3": 2.104
+      },
+      "guardNote": null
+    },
+    {
+      "file": "g60le_p50.csv",
+      "bytes": 489,
+      "sha256_16": "62d03567f67c81f3",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 8.51,
+      "regime": "elastic_static",
+      "E_lin_MPa": 425.4,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "g60le_p70.csv",
+      "bytes": 480,
+      "sha256_16": "67a05c9bf123cb65",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 2.7,
+      "regime": "elastic_static",
+      "E_lin_MPa": 135.1,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "g60le_p70R32.csv",
+      "bytes": 480,
+      "sha256_16": "5f486857e5d3a0a5",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 2.75,
+      "regime": "elastic_static",
+      "E_lin_MPa": 137.42,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "gyroid_k2_p60_expl.csv",
+      "bytes": 499,
+      "sha256_16": "dce2470f59df5e63",
+      "points": 21,
+      "category": "ABAQUS_Explicit_k2_12.5664mm_Es2000MPa",
+      "solver": "ABAQUS Explicit (ductile crush, Es=2000 MPa)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.45,
+      "stressPeak_MPa": 12.83,
+      "regime": "iso13314_full",
+      "E_lin_MPa": 221.57,
+      "iso13314": {
+        "E_eff_MPa": 221.57,
+        "E_eff_GPa": 0.2216,
+        "Rp02_MPa": 4.73,
+        "firstPeak_MPa": 9.22,
+        "plateau_MPa": 10.01,
+        "densificationStatus": "not-observed",
+        "densificationStrain": null,
+        "energyW_MJ_m3": 4.15
+      },
+      "guardNote": null
+    },
+    {
+      "file": "gyroid_k2_p60_p30.csv",
+      "bytes": 518,
+      "sha256_16": "c13fe5e2e754257a",
+      "points": 22,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.172,
+      "stressPeak_MPa": 9.25,
+      "regime": "truncated_lt_40pct",
+      "E_lin_MPa": 230.15,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "gyroid_k2_p60_p30s.csv",
+      "bytes": 104,
+      "sha256_16": "48751f6370f40383",
+      "points": 1,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0,
+      "stressPeak_MPa": 0,
+      "regime": "aborted_or_empty",
+      "E_lin_MPa": null,
+      "iso13314": null,
+      "guardNote": "有效数据点不足（1 < 10）"
+    },
+    {
+      "file": "gyroid_k2_p60_p45f.csv",
+      "bytes": 858,
+      "sha256_16": "8cddb3d5eb5e4aa7",
+      "points": 38,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.1787,
+      "stressPeak_MPa": 9.3,
+      "regime": "truncated_lt_40pct",
+      "E_lin_MPa": 220.26,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "gyroid_k2_p60_p45s.csv",
+      "bytes": 640,
+      "sha256_16": "b0a6bd281d998c8a",
+      "points": 28,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.2077,
+      "stressPeak_MPa": 9.49,
+      "regime": "truncated_lt_40pct",
+      "E_lin_MPa": 220.26,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "gyroid_k2_p60_static.csv",
+      "bytes": 482,
+      "sha256_16": "36d014bb637ccc99",
+      "points": 21,
+      "category": "ABAQUS_Standard_RVE_calibration",
+      "solver": "ABAQUS Standard (*STATIC / RVE calibration)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 12.5664,
+        "widthMm": 12.5664,
+        "thicknessMm": 12.5664
+      },
+      "epsMax": 0.02,
+      "stressPeak_MPa": 5.31,
+      "regime": "elastic_static",
+      "E_lin_MPa": 265.64,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "tpms_gyroid_k2_R20_p50_LE_curve.csv",
+      "bytes": 3939,
+      "sha256_16": "910998d1cddaa7d7",
+      "points": 201,
+      "category": "T4_blind_validation_8mm_Es2000MPa",
+      "solver": "ABAQUS Standard (C3D10 static LE 5%, Es=2000 MPa, ν=0.3)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 8,
+        "widthMm": 8,
+        "thicknessMm": 8
+      },
+      "epsMax": 0.05,
+      "stressPeak_MPa": 21.25,
+      "regime": "elastic_static",
+      "E_lin_MPa": 425,
+      "iso13314": null,
+      "guardNote": null
+    },
+    {
+      "file": "tpms_gyroid_k2_R20_p70_LE_curve.csv",
+      "bytes": 3852,
+      "sha256_16": "3e8ecd7656f7b711",
+      "points": 201,
+      "category": "T4_blind_validation_8mm_Es2000MPa",
+      "solver": "ABAQUS Standard (C3D10 static LE 5%, Es=2000 MPa, ν=0.3)",
+      "dimensionSource": "csv_header",
+      "specimenMm": {
+        "lengthMm": 8,
+        "widthMm": 8,
+        "thicknessMm": 8
+      },
+      "epsMax": 0.05,
+      "stressPeak_MPa": 6.91,
+      "regime": "elastic_static",
+      "E_lin_MPa": 138.29,
+      "iso13314": null,
+      "guardNote": null
+    }
+  ]
+}

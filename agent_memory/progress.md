@@ -2,16 +2,16 @@
 
 > ## 🔖 新会话开工指引（2026-11-16 规整版 · v1.3.0 发版收官）
 >
-> - **仓库态**：**v1.3.0（别名 tag v9.5.0）已正式发布**（[GitHub Release](https://github.com/zhaoliuxin926-ux/tpms-explorer/releases/tag/v1.3.0)，`gh` CLI 已持久化登录，`About` 简介已更新为 `50 CI gates (v1.3.0)`），工作树净，**50 门 CI 三平台与 Pages 全绿**。已吸收 DeepSeek × 卡兹克开源精髓落地三项收官资产：①总览文档防脑腐哨兵（`docs_consistency_check.mjs`）；②博客五《从 586 倍失真到 0.02% 闭合》（`docs/blog/2026-11-16-multifidelity-calibration.md` + `publish/`）；③EXPL 塑性段目标七问任务书（`plans/2026-11-16_EXPL塑性段与上机正交实验_目标任务书.md`）。**宿舍机开工：fetch + reset --hard origin/main**。
+> - **仓库态**：**v1.3.0（别名 tag v9.5.0）已正式发布**（[GitHub Release](https://github.com/zhaoliuxin926-ux/tpms-explorer/releases/tag/v1.3.0)，`gh` CLI 已持久化登录，`About` 简介已更新为 `50 CI gates (v1.3.0)`），工作树净，**50 门 CI 三平台与 Pages 全绿**。已先后落地 DeepSeek × 卡兹克开源机制吸收（总览防脑腐哨兵 + 博客五 + EXPL 任务书）与 **v1.3.0 后三项闭环**（T2 浏览器与体素内核四级对标包络闭环、T4 盲测 CSV 抢救入库 + 37 曲线 `index.json`/`README.md` 谱系索引、`cae-daemon.mjs` 持久化 `jobs.jsonl` 事件溯源）。**宿舍机开工：fetch + reset --hard origin/main**。
 >
 > ### 各线终态（五线全绿或自持）
 >
 > | 线 | 终态 |
 > |---|---|
 > | **CFD 标定线** | **完全自持**：三层交付（数据 JSON/md/CSV）+ 口径三层（0.9594 N=2 实用修正 / K∞=0.1342 渐近参考 / KC 重算 Kozeny 9.6→13.5）+ 机制证据链（k2 窄带+k3 预言命中+k∞ 外推） |
-> | **四级对标** | T1/T3/T4 真数据齐（E_eff 双口径 <1.1%，实测 ρ̄ 口径 <0.3%）；T2 双路径挂起→人工会话登记 |
-> | **平台线** | Phase 2-5 全链（6 工具满配+session-core 单源+DSH 工作台+cae-daemon）50 门三平台绿；E2E 预算链四层闭环 |
-> | **架构沉淀** | agent-architecture.md 扩展者手册 + DeepSeek 调研归档 + 流程铁律三项（暂存核对/时间盒/钉串穷举验证） |
+> | **四级对标** | **T1/T2/T3/T4 全量真数据齐备**：`E_eff` 包络 `homog(82.15) < DT_R8(100.35) < ABAQUS(138.29) ≈ T1(139.79) < R20_KUBC(310.03) MPa`；Forchheimer 回代 T3 压降还原 `K_int=1.15e-4 mm²`（`docs/cfd-multifidelity-report.json`） |
+> | **平台线** | Phase 2-5 全链（6 工具满配+session-core 单源+DSH 工作台+`cae-daemon` 含 `jobs.jsonl` 溯源）50 门三平台绿；E2E 预算链四层闭环 |
+> | **架构沉淀** | agent-architecture.md 扩展者手册 + DeepSeek 调研归档 + 37 曲线谱系索引（`sim/csv_archive/index.json`）+ 流程铁律三项 |
 > | **外评通道** | Gemini 四问全闭环（k3 预言命中/KC 勘误/三证据链/护栏）；下次触发=EXPL 塑性段交叉核验 |
 >
 > ### 下一步队列（按价值排序，全部标注依赖）
@@ -19,9 +19,9 @@
 > 1. **EXPL 链塑性段实跑**（小时~天级）→ Rp0.2 代理升档 → **下次 Gemini 触发点**（fea-calibration 分级声明的预留节点）
 > 2. **S1 上机解冻**（卡用户）→ Q3 四步正交实验（Gemini 设计在案：称重 ε/长度序列 TLM/端面车削/多流速）
 > 3. **DeepSeek/LLM key**（卡用户）→ 真跨源实测 + 43 条 LLM 回归
-> 4. **T2 人工会话取数**（登记专项）：harness UI 手动真跑+控制台提取（node 化与 playwright 探针双路径均已受阻挂起，资产在 working/scratch/）
+> 4. ~~T2 人工会话取数~~（**2026-11-16 已解锁闭环**：根因系 `working/scratch/t2_browser_probe.mjs` 第 9 行服务目录误指不存在的 `../../tpms-platform` 致 404，修正为 `docs/platform` 后双壳 E2E 与 R=20 体素内核均一次实算通过）
 > 5. **COMSOL API 专项**（挂起）：Model Java 与 6.2.0.290 断代（ClassCastException）需逐 set 试错定位；license 在位（compile 9.6s+batch 启动 23.1s 实证）
-> 6. 名义 vs 实测参数口径普查（可选审计，体积拆账发现衍生）
+> 6. 名义 vs 实测参数口径普查（可选审计；`sim/csv_archive/` 全量 37 曲线谱系与 SHA256 清单已先行落盘 `index.json`/`README.md`）
 >
 > ### 铁律速查（本周期沉淀，合并版）
 >
@@ -64,6 +64,7 @@
 > - **T2 双路径挂起**（0e21687）：node 化 50 分钟无产出+playwright 四轮主 frame 未就绪→人工会话登记
 > - **COMSOL batch 挂起**（33ad807）：license 在位（compile 9.6s+batch 23.1s）但 API 断代 ClassCastException→留专项
 > - **k∞ 渐近外推**（a7e70e3）：三点 R²=0.9992 → **K∞=0.1342 mm²**；**诚实更正**：实测 K(N) 递减与 Gemini 串联阻力模型方向相反，k3"命中"=两点内插巧合；口径层级=0.9594（N=2 实用）/ K∞（渐近参考）
+- **T2 浏览器探针解锁 + CSV 谱系 + Daemon 事件溯源（11-16 续 IV）**：①定位 `t2_browser_probe.mjs` 挂起根因为服务路径误指不存在的 `../../tpms-platform`，切回 `docs/platform` 后一次全绿跑通，补齐 `docs/cfd-multifidelity-report.json` 四级包络；②抢救 `tpms_gyroid_k2_R20_p50/p70_LE_curve.csv` 入 `sim/csv_archive/`（共 37 条 CSV），批量生成 `index.json` 与 `README.md`（检出 16 条相同 `<10` 点空桩 `48751f6370f40383`、5 条 `ε≥0.40` ISO 全提取、p50 跨尺寸复现差 0.09%）；③`cae-daemon.mjs` 实装 `sim/out/jobs.jsonl` 追加写与 `GET /api/cae/history`、`/api/cae/status` 路由（Node 25 `--self-test` 顺带修复 `UV_HANDLE_CLOSING`）。
 >
 > ## 详细历史
 >
