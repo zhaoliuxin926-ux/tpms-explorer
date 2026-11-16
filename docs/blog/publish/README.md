@@ -1,7 +1,7 @@
 # 博客发布套件（知乎/掘金粘贴版）
 
-> 本目录是三篇技术博客的**发布就绪版**：对外链接已绝对化，直接全文复制粘贴即可。
-> 正式版在上级 `docs/blog/`。blog1 正式版与粘贴版当前逐字节一致（文内链接本就绝对化）；blog2 正式版文内用相对链接、粘贴版已改绝对——内容同源，**修改先改正式版**，再跑 `node tpms/agent/sync-publish.mjs` 自动同步（`--check` 只校验不写，漂移 exit 1）。
+> 本目录是五篇技术博客的**发布就绪版**：对外链接已绝对化，直接全文复制粘贴即可。
+> 正式版在上级 `docs/blog/`。blog1 正式版与粘贴版当前逐字节一致（文内链接本就绝对化）；blog2–blog5 正式版文内用相对链接、粘贴版已改绝对——内容同源，**修改先改正式版**，再跑 `node tpms/agent/sync-publish.mjs` 自动同步（`--check` 只校验不写，漂移 exit 1）。
 
 ## 文件
 
@@ -10,8 +10,10 @@
 | `2026-09-16-44-gates.md` | 知乎专栏 + 掘金 | 44 道门禁：在 LLM 时代交付"真的能用"的科研工具 |
 | `2026-09-17-agent-architecture.md` | 知乎专栏 + 掘金 | 从一句话到水密 STL：给科研工具装 LLM Agent 的安全架构实录 |
 | `2026-09-30-wgsl-never-executed.md` | 知乎专栏 + 掘金 | 你的 WGSL 从未被执行过——一个 secure context 静默陷阱的排查实录 |
+| `2026-10-05-strut-sdf-to-specimen.md` | 知乎专栏 + 掘金 | 水密≠正确（两次）：一根杆从胶囊 SDF 到上机试样的全链实录 |
+| `2026-11-16-multifidelity-calibration.md` | 知乎专栏 + 掘金 | 从 586 倍失真到 0.02% 闭合：当浏览器 CAE 代理遇上 ABAQUS 与 OpenFOAM 真解 |
 
-发布状态（2026-10-06）：**三篇全部双平台发布**——博客一（2026-10-02）、博客二/三（2026-10-06），四条链接见 `agent_memory/job_narrative.md` 投递清单；后续新文章沿用本套件流程。
+发布状态（2026-11-16）：**一/二/三双平台已发布**（链接见 `agent_memory/job_narrative.md` 投递清单），**四/五定稿粘贴版就绪待发**。
 
 发布顺序建议：先发《44 道门禁》，隔 1-2 天发第二篇（第二篇开头引用了第一篇的绝对链接，先发的那篇拿到阅读量后引用才有效）。
 
@@ -45,10 +47,10 @@
 > 当 LLM 成为工具调用者，如何让它产出的每个参数可被信任？六阶段信任边界（M0–M5）、schema 逐槽位校验拦截器、六个代表性打穿（全是确定性代码的缝，不是模型骗过系统）、三层验收语义拆分「模型自觉」与「护栏功劳」。
 
 **GitHub About 一句话**  
-> TPMS Explorer — 浏览器端三周期极小曲面生成式设计平台：24 族 level-set、水密 STL/Abaqus/OpenFOAM 交付、LLM Agent 安全闭环，46 道 CI 门禁三平台矩阵。
+> TPMS Explorer - browser-based TPMS + strut lattice generative design & CAE workbench: 26 families (BCC/Octet), Pareto inverse design, FEA/CFD calibrated surrogates, watertight STL/Abaqus/OpenFOAM delivery, LLM agent safety loop, 50 CI gates (v1.3.0)
 
 **B 站正片简介（BV1hVeS6jEBM）**  
-> TPMS Explorer 操作演示（104s）：曲面轮播 / 孔隙率实时重建 / radial-grad 径向梯度 / 直接层切 / HD 水密 STL 导出。在线体验：https://zhaoliuxin926-ux.github.io/tpms-explorer/ ｜ 源码与 45 道 CI 门禁：https://github.com/zhaoliuxin926-ux/tpms-explorer
+> TPMS Explorer 操作演示（104s）：曲面轮播 / 孔隙率实时重建 / radial-grad 径向梯度 / 直接层切 / HD 水密 STL 导出。在线体验：https://zhaoliuxin926-ux.github.io/tpms-explorer/ ｜ 源码与 50 道 CI 门禁：https://github.com/zhaoliuxin926-ux/tpms-explorer
 
 **标签建议**  
 掘金：`前端` `测试` `AI编程`（第一篇）/ `AI大模型` `架构` `安全`（第二篇）  

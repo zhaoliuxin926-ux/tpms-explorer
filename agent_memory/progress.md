@@ -1,8 +1,8 @@
 # progress — 当前任务进度
 
-> ## 🔖 新会话开工指引（2026-11-16 规整版 · 三天全链收官 · main=a7e70e3）
+> ## 🔖 新会话开工指引（2026-11-16 规整版 · v1.3.0 发版收官）
 >
-> - **仓库态**：main=a7e70e3 已推送（docs 变更触发 Pages），工作树净，**CI 三平台全绿+Pages 绿**（最后 gate run 43668156870；其后 docs/agent_memory 提交不触发 gate）。**宿舍机开工：fetch + reset --hard origin/main**（本周期无历史重写，直接对齐）。
+> - **仓库态**：**v1.3.0（别名 tag v9.5.0）已正式发布**（[GitHub Release](https://github.com/zhaoliuxin926-ux/tpms-explorer/releases/tag/v1.3.0)，`gh` CLI 已持久化登录，`About` 简介已更新为 `50 CI gates (v1.3.0)`），工作树净，**50 门 CI 三平台与 Pages 全绿**。已吸收 DeepSeek × 卡兹克开源精髓落地三项收官资产：①总览文档防脑腐哨兵（`docs_consistency_check.mjs`）；②博客五《从 586 倍失真到 0.02% 闭合》（`docs/blog/2026-11-16-multifidelity-calibration.md` + `publish/`）；③EXPL 塑性段目标七问任务书（`plans/2026-11-16_EXPL塑性段与上机正交实验_目标任务书.md`）。**宿舍机开工：fetch + reset --hard origin/main**。
 >
 > ### 各线终态（五线全绿或自持）
 >

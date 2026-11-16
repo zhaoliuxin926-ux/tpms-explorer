@@ -47,8 +47,13 @@ console.log('\n[A] GUARD 基线 ↔ 文档宣称');
   (readme + readmeEn).includes(`${gateN}`) && new RegExp(`${gateN}/${gateN}|${gateN} 道|${gateN} gates`, 'i').test(readme + readmeEn)
     ? ok(`README 双语宣称 ${gateN} 门（对拍 SCHEDULE）`) : bad(`README 宣称 ${gateN} 门`, '与 SCHEDULE 不一致');
   const tpmsReadme = read('tpms/README.md');
+  const projSum = read('docs/PROJECT_SUMMARY.md');
+  const projInv = read('docs/PROJECT_INVENTORY.md');
   new RegExp(`${gateN}\\s*(门|道|gates)|${gateN}/${gateN}`).test(tpmsReadme)
-    ? ok('tpms/README 门数对拍 SCHEDULE') : bad('tpms/README 门数漂移', `期望 ${gateN}`);
+    && projSum.includes(`门禁体系（${gateN} 项`)
+    && projInv.includes(`${gateN} 门`)
+    ? ok('tpms/README + PROJECT_SUMMARY/INVENTORY 门数对拍 SCHEDULE')
+    : bad('tpms/README 或总览文档门数漂移', `期望 ${gateN}`);
   const ip = read('docs/career/interview-pack.md');
   new RegExp(`${gateN} 道 CI 门禁`).test(ip)
     ? ok('interview-pack 门数对拍 SCHEDULE') : bad('interview-pack 门数漂移', `期望 ${gateN} 道`);
@@ -198,9 +203,11 @@ console.log('\n[C2] 调色预设结构');
   // RELEASE_NOTES 一律带「发布时点快照」边界（防当轮门禁数被读成现态）
   const rnFiles = readdirSync(path.join(ROOT, 'docs/releases')).filter((f) => f.startsWith('RELEASE_NOTES'));
   const rnMissing = rnFiles.filter((f) => !read('docs/releases/' + f).includes('发布时点快照'));
-  rnMissing.length === 0
-    ? ok(`RELEASE_NOTES 快照边界全覆盖（${rnFiles.length} 份）`)
-    : bad('RELEASE_NOTES 缺快照边界', rnMissing.join(','));
+  const sumHasRn = read('docs/PROJECT_SUMMARY.md').includes(`${rnFiles.length} 份`);
+  const invHasRn = read('docs/PROJECT_INVENTORY.md').includes(`×${rnFiles.length}`);
+  rnMissing.length === 0 && sumHasRn && invHasRn
+    ? ok(`RELEASE_NOTES 快照边界全覆盖且总览份数同步（${rnFiles.length} 份）`)
+    : bad('RELEASE_NOTES 缺快照边界或总览份数漂移', rnMissing.join(',') || `期望 ${rnFiles.length} 份`);
 
   // 版本纪元：产品自称 v1.0.x；用户可见功能标签须带「原型期」
   const expHeaders = [
@@ -222,9 +229,23 @@ console.log('\n[C2] 调色预设结构');
     ? bad('文档自称旧产品版本', '应 v1.0.x')
     : ok('学习路径/总纲/工作流自称 v1.0.x');
 
-  // 三主线交付物在位
+  // 三主线交付物在位（含诚实边界表双源零漂移 + 总览条数同步）
   for (const rel of ['docs/QUICKSTART.md', 'CONTRIBUTING.md', 'docs/HONESTY_BOUNDARIES.md', 'docs/regression-matrix.md', 'docs/LAB_ONE_PAGER.md', 'docs/PROJECT_INVENTORY.md', 'docs/LIT_BAND_CARD.md', 'docs/YOUR_10_MIN.md', 'docs/VIRTUAL_CALIBRATION.md']) {
-    existsSync(path.join(ROOT, rel)) ? ok('交付物 ' + rel) : bad('缺交付物 ' + rel);
+    if (rel === 'docs/HONESTY_BOUNDARIES.md') {
+      try {
+        execSync('node tpms/agent/gen-boundary-table.mjs --check', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe', timeout: 10_000 });
+        const hb = read(rel);
+        const bCount = (hb.match(/^\| \d+ \|/gm) || []).length;
+        const bSynced = read('README.md').includes(`${bCount} 条定案诚实边界`)
+          && read('docs/PROJECT_SUMMARY.md').includes(`完整 ${bCount} 条定案`)
+          && read('docs/PROJECT_INVENTORY.md').includes(`（${bCount} 条`);
+        bSynced ? ok(`交付物 ${rel}（双源零漂移 + 三处总览 ${bCount} 条同步）`) : bad(`${rel} 条数在总览文档漂移`, `期望 ${bCount} 条`);
+      } catch (e) {
+        bad('gen-boundary-table --check 失败', String(e.stderr || e.message).slice(0, 80));
+      }
+    } else {
+      existsSync(path.join(ROOT, rel)) ? ok('交付物 ' + rel) : bad('缺交付物 ' + rel);
+    }
   }
 
   // 红队修复哨兵

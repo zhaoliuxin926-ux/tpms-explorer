@@ -26,3 +26,15 @@
 1. **立即做**：docs/agent-architecture.md——吸收两家之长（harness 的 Goal→Mechanism 扩展点表+superagent 编号顺序体系），显式化 tpms agent 线五子系统（工具面/预算/会话/桥/daemon）扩展点。纯文档零风险。
 2. 待用户：Gemini 代贴（CFD 三问）；DeepSeek/LLM key；COMSOL license。
 3. 登记不立项：Cordis 插件框架；DreamCraft3D 生成式路线；推理基础设施全家。
+
+---
+
+## 续篇：数字生命卡兹克（KKKKhazix）开源全景与三方融合落地（2026-11-16）
+
+通过 GitHub API 对 `KKKKhazix` 开源矩阵（4 仓库总计 4.3 万+ ★）完成交叉对照，提炼并落地三项机制至本仓：
+
+| 对标项目（Star） | 核心机制 | 在 tpms-explorer 的落地动作（2026-11-16） |
+|---|---|---|
+| `khazix-skills/neat-freak` (22.3k ★) | 三层文档/规则/记忆对齐防脑腐 | 升级 `tpms/.verify/docs_consistency_check.mjs`：把 `PROJECT_SUMMARY.md` / `PROJECT_INVENTORY.md` 的门数、诚实边界条数、`RELEASE_NOTES` 份数及 `gen-boundary-table.mjs --check` 动态锁入 CI（保持 349 断言恒定） |
+| `khazix-skills/leader` + `agent-autoloop` (5.6k ★) | 目标七问（完成态/反作弊/未知挂起）+ 事件溯源 + TTL 跳数熔断 | 固化 [plans/2026-11-16_EXPL塑性段与上机正交实验_目标任务书.md](../../plans/2026-11-16_EXPL塑性段与上机正交实验_目标任务书.md)，为 Explicit 塑性段批跑设定 `ALLKE/ALLIE < 10%` 硬判据、TTL=3 熔断与 `jobs.jsonl` 溯源格式 |
+| `human-writing` / `khazix-writer` (4.6k ★) | 去 AI 腔硬规则 + 真实数据叙事 | 撰写系列第五篇技术博客 [docs/blog/2026-11-16-multifidelity-calibration.md](../../docs/blog/2026-11-16-multifidelity-calibration.md) 并同步 `publish/` 粘贴版与双语 README 入口 |

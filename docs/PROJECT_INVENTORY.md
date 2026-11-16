@@ -114,7 +114,7 @@ tpms-explorer/
 | 5 分钟上手 | `docs/QUICKSTART.md` | 可用 |
 | 实战指南（TOC 1–36） | `docs/WORKFLOW_GUIDE.md` | 可用 |
 | 面试包 | `docs/career/interview-pack.md` | 中英对称 |
-| 博客×4 | `docs/blog/` + `publish/` | 博客一/二/三已发布（掘金+知乎），博客四定稿待发 |
+| 博客×5 | `docs/blog/` + `publish/` | 一/二/三已发（掘金+知乎），四/五定稿粘贴版就绪 |
 | SoftwareX | `docs/paper/` | 材料齐，**投稿搁置** |
 | 社交图 | `docs/screenshots/social-preview.png` | **已上传生效** |
 
