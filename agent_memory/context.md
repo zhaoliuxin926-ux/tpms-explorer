@@ -13,4 +13,4 @@
 - CFD 判断层 skill：openfoam-cfd（~/.zcode/skills/）——v13 语法断代/Anchor 阶梯/量纲地板/近壁离散全部沉淀；CFD 任务开工先读
 - 形态拍板：network（solid）终态（拓竹 P1S FDM+PLA+0.2 喷嘴）；sheet 标定链不启动
 - 已发布博客：一/二/三双平台（掘金+知乎）；博客四定稿待发
-- 仓库已转私有；多设备纪律见 machine-facts.md（新设备第一读）
+- 仓库当前为 Public（公开作品集+Pages）；内网 IP 与 key 严禁落盘；多设备纪律见 machine-facts.md（新设备第一读）

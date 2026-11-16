@@ -15,11 +15,11 @@
 | 🎓 第一次接触 TPMS，想系统入门 | [docs/LEARNING_PATH.md](docs/LEARNING_PATH.md)（五阶学习路径 + 概念动画） |
 | 🖱️ 不想读文字，直接上手玩 | [docs/index.html](docs/index.html)（浏览器打开即用，零安装；说明见 [docs/README-体验说明.md](docs/README-体验说明.md)） |
 | 📄 三分钟了解项目全貌 | 本文件，加 [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)（架构与门禁矩阵详解） |
-| ⚖️ 严谨性与学术诚信 | [docs/HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md)（15 条定案诚实边界）· [BENCHMARKS.md](BENCHMARKS.md)（26 族可产性公开基准实测） |
-| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队） |
+| ⚖️ 严谨性与学术诚信 | [docs/HONESTY_BOUNDARIES.md](docs/HONESTY_BOUNDARIES.md)（16 条定案诚实边界）· [BENCHMARKS.md](BENCHMARKS.md)（26 族可产性公开基准实测） |
+| 🔬 科研 / 增材制造实战 | [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md)（三十七章：AM/CFD/RVE/红队）· [docs/fea-calibration.md](docs/fea-calibration.md)（FEA 标定幂律）· [docs/cfd-calibration.md](docs/cfd-calibration.md)（CFD 渗透率标定 + [CSV](docs/cfd-k-curve.csv)） |
 | 📤 投稿 / 作者与许可信息 | [docs/paper/SUBMISSION_CHECKLIST.md](docs/paper/SUBMISSION_CHECKLIST.md)（投稿清单）· [LICENSE](LICENSE)（MIT）· 手稿源 [docs/paper/latex/main.tex](docs/paper/latex/main.tex) |
 | 🕘 版本变更 | [v1.2.0](docs/releases/RELEASE_NOTES_v1.2.0.md)（当前；功能别名 tag v9.4.0 同提交）｜[v1.1.0](docs/releases/RELEASE_NOTES_v1.1.0.md) ｜ [v1.0.3](docs/releases/RELEASE_NOTES_v1.0.3.md) ｜ [v1.0.0](docs/releases/RELEASE_NOTES_v1.0.0.md)（版本纪元说明；v2.4~v9.2 原型期 notes 见 docs/releases/） |
-| 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图） |
+| 💻 开发 / CLI / Agent 路线 | [tpms/README.md](tpms/README.md)（工程版）· [tpms/agent/ROADMAP.md](tpms/agent/ROADMAP.md)（Agent 路线图）· [docs/agent-architecture.md](docs/agent-architecture.md)（Agent 架构扩展者手册） |
 | 🇬🇧 English overview | [README_EN.md](README_EN.md) |
 
 本工作区只有一个主项目，外加开发 / 验证辅助目录。
@@ -35,11 +35,11 @@
 |---|---|---|
 | ![教学版概念视频](docs/screenshots/teaching-video.png) | ![工程版 radial-grad](docs/screenshots/engineering-rg.png) | ![Agent 终端演示](docs/screenshots/agent-terminal.png) |
 
-🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，**六工具**含 `tpms_pareto` 逆设计推荐——"我要 E≥2GPa κ≥5×10⁻⁹ 的支架选什么构型"直达 top-k 设计参数（CLI：`node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`）；**`--session` 显式会话**（2026-10-11）：推荐→退出→"把第一个构建出来"跨进程确定性绑定（指代不经模型，越界/歧义/损坏/语义版本变化全 exit2）；**`agent-pipeline` 有界多步任务**：推荐→选取（拒产按修复预算顺延）→构建→水密验收→悬垂可打印性报告（三层口径分开+预算耗尽 exit4 如实报告）；**`--max-rounds` LLM 有界编排**（工具历史 tool_call_id 关联+逐轮 schema 校验）；回归 43 条双轮 43/43×2（n=2，勿称确定性；含逆设计意图用例）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
+🤖 **AI Agent 闭环已全线**（自然语言 → 逐槽位校验拦截器（越界拒绝） → 确定性执行 → 水密验收，**六工具**含 `tpms_pareto` 逆设计推荐——"我要 E≥2GPa κ≥5×10⁻⁹ 的支架选什么构型"直达 top-k 设计参数（CLI：`node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`）；**CLI/Web 双端共享单源核心**（`session-core.mjs` + `schema-core.mjs`，2026-11-11 合流）：推荐→退出→"把第一个构建出来"跨进程与跨端确定性绑定（指代不经模型，越界/歧义/损坏/语义版本变化全 exit2）；**双壳 Agent 驾驶舱与 DSH 三栏 CAE 工作台**（`platform/harness.html` + `iframe-bridge` 重活滑动窗 cap + `cae-daemon.mjs` 本地求解桥 `127.0.0.1:4830`）；**`agent-pipeline` 有界多步任务**：推荐→选取（拒产按修复预算顺延）→构建→水密验收→悬垂可打印性报告（三层口径分开+预算耗尽 exit4 如实报告）；**`--max-rounds` LLM 有界编排**（工具历史 tool_call_id 关联+逐轮 schema 校验）；回归 43 条双轮 43/43×2（n=2，勿称确定性；含逆设计意图用例）、对抗零非法执行——详见[项目中枢](tpms/README.md#-ai-agent-闭环m0-m5-全通)）。
 
-🚀 **在线即用（零安装）**：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [工程版工作站](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html)
+🚀 **在线即用（零安装）**：[落地页](https://zhaoliuxin926-ux.github.io/tpms-explorer/) ｜ [工程版工作站](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/) ｜ [Agent 驾驶舱 / CAE 工作台](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/harness.html) ｜ [教学版](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html)
 
-📺 **深度解读与视频**：[B 站 104s 操作演示（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）
+📺 **深度解读与视频**：[B 站 104s 操作演示（CC 字幕）](https://www.bilibili.com/video/BV1hVeS6jEBM/) ｜ 技术博客：[《44 道门禁：LLM 时代的验证方法论》](docs/blog/2026-09-16-44-gates.md)（已发布：[掘金](https://juejin.cn/post/7691244760439439414) ｜ [知乎](https://zhuanlan.zhihu.com/p/2089373962224538897)）｜ [《LLM Agent 的安全架构实录》](docs/blog/2026-09-17-agent-architecture.md)（已发布：[掘金](https://juejin.cn/post/7692881705648685097) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090752932518151852)）｜ [《你的 WGSL 从未被执行过》](docs/blog/2026-09-30-wgsl-never-executed.md)（已发布：[掘金](https://juejin.cn/post/7692977150127259711) ｜ [知乎](https://zhuanlan.zhihu.com/p/2090753535692612246)）｜ [《水密≠正确：桁架胶囊 SDF 从嵌合体到 32 件试样全链》](docs/blog/2026-10-05-strut-sdf-to-specimen.md)
 
 
 ```
@@ -47,13 +47,13 @@
 ├── docs/          单文件版主交付（GitHub Pages 源目录，index.html / app.html，双击即开；**功能冻结教学版**——仅随一致性/安全修复维护，全部新特性落工程版）
 │   ├── WORKFLOW_GUIDE.md   📖 科研与增材制造实战指南（AM/CFD/脚本/AST 沙箱/空间映射/RVE/红队矩阵）
 │   ├── ROADMAP.md          🗺️ 路线图（已定案方向 + 明确不做）
-│   └── platform/           工程版在线部署
+│   └── platform/           工程版在线部署（含双壳驾驶舱 harness.html）
 ├── tpms/
 │   ├── tpms-platform/ 工程化进阶版（Vite + TS，独立子工程）
 │   ├── prototypes/    MATLAB 早期原型（已归档）
 │   └── .verify/       自研审计门禁与 Playwright UI 回归脚本
 ├── specimens/     上机试样库（8 组 ×4 件；STL 大文件被 gitignore，README 索引入库）
-├── sim/           高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp，Phase 1 打通）
+├── sim/           高保真仿真管线（Python 隐式场 → Gmsh C3D10 / nTop → ABAQUS .inp & OpenFOAM v13 CFD，FEA/CFD 双标定线收官 + 35 份标定曲线归档 csv_archive/）
 ├── collab/        多 Agent 协作黑板（ZCode 主控 × 外部 AI 评审：任务审计/技术辩论/处置留痕）
 ├── agent_memory/  跨设备交接文档（progress / context / machine-facts，随仓库跟踪）
 └── plans/         分批实施计划与调研沉淀（随仓库跟踪）
@@ -105,7 +105,7 @@
 | 🌀 径向梯度构型 radial-grad (v9.1→v9.2) | 中心膨胀 K/边缘 1 的度规逆映构型（arctanh 径向 + 有理轴向双通道 + 壁厚补偿阈值场，K∈[1,3]）；**v9.2 新增 UI 卡**（视图与工具组：MT 预览 R48 + HD STL 导出 R96 内置水密审计门，与 CLI 逐位同源） | cae_mesh_audit F 组 6 断言 + radialgrad 冒烟 7 断言（toast 实证/竞态回归） |
 | 🧩 径向双族分区 region (2026-09-17) | 域内双构型：内区/外区各放一族（如外壳 gyroid+内核 diamond），过渡带 smoothstep 凸组合（同号不变性⟹无额外零面）；两族零面拓扑重组为 surface-nets 结构性非流形（实测 nm 20~52 与 blend 无关）→ MT 管线提取（radial-grad 先例同机理）；UI 卡与 CLI `mesh --region-inner` 同源；rSplit 端点=单族字节级退化锚 | probe_region 10 断言（退化锚/解析锚/连续性/同号不变性）+ region 冒烟 6 断言（CLI 实测矩阵 8/8 watertight） |
 | 🔺 双提取器格局 (v9.1) | **Marching Tetrahedra**（6-tet 分解/边共享顶点/corner 正则化——不光滑场的免疫提取器，radial-grad 专属管线五 K 档全水密产出）与 surface-nets（光滑场主力）并存 | cae_mesh_audit F6 球锚（水密 + 4π/3 偏差 0.13%@R48） |
-| 🧪 高保真 CAE 管线 `sim/` (2026-10-28+) | Python 隐式场（整数周期盒+盒内阈值二分，孔隙率偏差 0.02pp）→ Gmsh HXT **C3D10** 二阶四面体（21 万单元、minSICN>0.05、零翻转）→ ABAQUS `.inp`（meshio 节点序验证）；ABAQUS 求解与流体线（Phase 2/3）推进中，多 Agent 协作评审留痕见 `collab/` | Phase 1 实测（2026-10-28/29）；管线脚本 `sim/p0_generate.py` · `sim/p1_mesh.py` |
+| 🧪 高保真 CAE 管线 `sim/` (2026-10-28 ~ 11-16) | Python 隐式场 → Gmsh HXT **C3D10** 二阶四面体 → **ABAQUS 静态/显式 FEA 标定**（network gyroid $E^*/E_s=0.9914\bar{\rho}^{2.2028}$ / diamond $0.7871\bar{\rho}^{2.0709}$ STL 实测口径；T4 独立盲测偏差 $-1.07\%$，实测 $\bar{\rho}$ 口径 $<0.3\%$；35 份标定 ODB 曲线归档 `sim/csv_archive/`）+ **WSL OpenFOAM v13 CFD 渗透率标定**（通透池压差驱动，$K_{\text{true}}=0.442\varepsilon^{3.17}$，$k_2$ 修正因子 $0.9594$ / $k_3$ 实测验证 / $K_\infty=0.1342\text{ mm}^2$ 渐近参考 / STL 实测 $S_v$ 重算 Kozeny $9.6\to 13.5$）+ **DSH 三栏 CAE 工作台与 `cae-daemon` 本地桥**（四级保真度对标矩阵 [cfd-multifidelity-report.json](docs/cfd-multifidelity-report.json)） | `agent_bridge_audit` 53 断言（满配档）+ `harness_ui_check` 38 断言；权威文档 [fea-calibration.md](docs/fea-calibration.md) · [cfd-calibration.md](docs/cfd-calibration.md) · [cfd-k-curve.csv](docs/cfd-k-curve.csv) |
 
 > 📝 **Release Notes**：**[v1.0.0（版本纪元重置·稳定序列起点）](docs/releases/RELEASE_NOTES_v1.0.0.md)**｜[v9.1.0](docs/releases/RELEASE_NOTES_v9.1.0.md)（双提取器/CFD 链/可打印性审计）｜[v9.0.0](docs/releases/RELEASE_NOTES_v9.0.0.md)｜[v8.0.0](docs/releases/RELEASE_NOTES_v8.0.0.md)（中英双语明细）｜[v7.0.0](docs/releases/RELEASE_NOTES_v7.0.0.md)｜[v6.0.0](docs/releases/RELEASE_NOTES_v6.0.0.md)｜[v5.0.0](docs/releases/RELEASE_NOTES_v5.0.0.md)｜[v4.0.0](docs/releases/RELEASE_NOTES_v4.0.0.md)｜[v3.0.0](docs/releases/RELEASE_NOTES_v3.0.0.md)
 >
@@ -116,7 +116,7 @@
 - 单文件版（在线）：GitHub Pages 自动部署，访问站点首页即可。
 - 单文件版（本地）：`docs/index.html` 落地页 → `docs/app.html` 主应用（Three.js 本地 vendor 打包，无构建）——功能冻结于 8 族经典（file:// 双击即玩是其独有交付形态，工程版 dist 不支持 file://）。
 - 工程版：`cd tpms/tpms-platform && npm install && npm run dev` → http://localhost:5173。
-- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 50/50（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + agent selftest/schema_check/llm_provider_selftest/agent_bridge_audit 四项 CLI 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门）。
+- 已通过多轮审计：`tsc` 0 错 / `vite build` 成功 / 浏览器冒烟 0 报错；`run_ci_suite` 顶层调度 50/50（口径：39 道行为审计 + `ui_jump_check` 快检 + `docs_consistency_check` 文档一致性 + `run_all` UI 聚合 + `harness_ui_check` 驾驶舱 E2E + agent selftest/schema_check/llm_provider_selftest/agent_bridge_audit/llm_driver_selftest 五项 Agent 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门）。
 - 快速自检（秒–分级，适合提交前/面试前）：`node tpms/agent/schema_check.mjs --fast`（契约/静态/拒收，GUARD 40）· `node tpms/.verify/docs_consistency_check.mjs`（文档数字一致性 349 断言，GUARD 313）· `node tpms/agent/sync-publish.mjs --check`（博客粘贴版未漂移）；完整几何对拍用无参 `schema_check.mjs`（约 5–10 min）。
 - **60 秒自证（访客/面试官，无需 npm install——以下两门纯 node:fs 零依赖）**：
 

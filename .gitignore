@@ -106,3 +106,4 @@ tpms/.verify/*.inp
 !specimens/README.md
 tpms/tpms-platform/shots/
 tpms/tpms-platform/tpms-*-verified.stl
+working/

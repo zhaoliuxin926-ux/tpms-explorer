@@ -24,12 +24,12 @@ Personal, independently maintained open-source project.
 |---|---|---|
 | ![Teaching](docs/screenshots/teaching-video.png) | ![Engineering](docs/screenshots/engineering-rg.png) | ![Agent terminal](docs/screenshots/agent-terminal.png) |
 
-Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) | [engineering](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/)
+Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](https://zhaoliuxin926-ux.github.io/tpms-explorer/app.html) | [engineering](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/) | [agent harness / CAE](https://zhaoliuxin926-ux.github.io/tpms-explorer/platform/harness.html)
 
 
 ## AI Agent loop (M0-M5, fully wired)
 
-**Natural language → schema-validating interceptor (reject on violation) → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or validated by deterministic code. **Six tools** incl. `tpms_pareto` inverse design ("I need E≥2 GPa and κ≥5e-9 — which family?" → top-k designs; CLI: `node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`):
+**Natural language → schema-validating interceptor (reject on violation) → deterministic CLI → gate verification → bounded repair loop** — the LLM only fills intent slots; every number is generated or validated by deterministic code. **Six tools** incl. `tpms_pareto` inverse design ("I need E≥2 GPa and κ≥5e-9 — which family?" → top-k designs; CLI: `node tpms/agent/tpms.mjs pareto --target-e 2 --target-k 5`), **CLI/Web single-source session & budget cores** (`session-core.mjs` / `schema-core.mjs` deterministic reference binding), **dual-shell Agent Harness** (`platform/harness.html` + `iframe-bridge` sliding-window budget cap), and **DSH 3-column CAE workbench** with `cae-daemon.mjs` local solver bridge (`127.0.0.1:4830`):
 
 ```
 "Design a 75%-porosity Gyroid bone scaffold"
@@ -42,12 +42,12 @@ Live: [landing](https://zhaoliuxin926-ux.github.io/tpms-explorer/) | [teaching](
 |---|---|
 | 43 bilingual instructions | **glm-5.3-flash 43/43 ×2 rounds** (n=2, not claimed deterministic; 6/6 endpoint×model matrix on record; H-group inverse-design intents added 2026-10-06) |
 | Adversarial prompts (path traversal / out-of-range / injection) | **zero transmissions** across four models |
-| The interceptor itself | 39 offline deterministic assertions (guard 37; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) |
+| The interceptor itself | **101 offline deterministic assertions** (`llm_provider_selftest`, guard 101; incl. live `../x.stl` traversal block, toolCalls cap, Anthropic-channel provider) + **53-assertion CLI/Web bridge audit** (`agent_bridge_audit`) |
 | Closed-loop driver | injected-defect designs converge in ≤5 rounds (LLM picks repair strategy only) |
 
 Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, see [LLM_REGRESSION_LIVE](docs/LLM_REGRESSION_LIVE.md)): `TPMS_LLM_TIMEOUT_MS=170000 TPMS_LLM_BASE_URL=https://open.bigmodel.cn/api/anthropic node tpms/agent/llm-agent.mjs --provider anthropic --model glm-5.3 "design a 75% porosity gyroid scaffold"` (terminal demo = third panel of the three-screen tour above).
 
-📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](docs/blog/2026-09-16-44-gates.md) (published: [Juejin](https://juejin.cn/post/7691244760439439414) | [Zhihu](https://zhuanlan.zhihu.com/p/2089373962224538897)) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](docs/blog/2026-09-17-agent-architecture.md) (published: [Juejin](https://juejin.cn/post/7692881705648685097) | [Zhihu](https://zhuanlan.zhihu.com/p/2090752932518151852)) | [Your WGSL Was Never Executed](docs/blog/2026-09-30-wgsl-never-executed.md) (published: [Juejin](https://juejin.cn/post/7692977150127259711) | [Zhihu](https://zhuanlan.zhihu.com/p/2090753535692612246)) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
+📘 **Technical narratives**: [44 Gates: Verification Methodology in the LLM Era](docs/blog/2026-09-16-44-gates.md) (published: [Juejin](https://juejin.cn/post/7691244760439439414) | [Zhihu](https://zhuanlan.zhihu.com/p/2089373962224538897)) | [From One Sentence to Watertight STL: LLM Agent Security Architecture](docs/blog/2026-09-17-agent-architecture.md) (published: [Juejin](https://juejin.cn/post/7692881705648685097) | [Zhihu](https://zhuanlan.zhihu.com/p/2090752932518151852)) | [Your WGSL Was Never Executed](docs/blog/2026-09-30-wgsl-never-executed.md) (published: [Juejin](https://juejin.cn/post/7692977150127259711) | [Zhihu](https://zhuanlan.zhihu.com/p/2090753535692612246)) | [Watertight ≠ Correct: Strut-Truss Capsule SDF Pipeline](docs/blog/2026-10-05-strut-sdf-to-specimen.md) | **Video demo (Bilibili, 104 s, CC subtitles)**: <https://www.bilibili.com/video/BV1hVeS6jEBM/>
 
 ## Highlights
 
@@ -56,7 +56,7 @@ Reproduce (GLM Coding Plan subscription — the Anthropic-compatible channel, se
 - **Watertight meshing pipeline**: edge-crossing Surface Nets with global orientation propagation — open edges, non-manifold and degenerate triangles are hard-failed before any STL is written.
 - **Physics suite**: Gibson-Ashby stiffness/yield, permeability, tortuosity, homogenization (Voigt–Reuss bounds), phononic band gaps (Bloch–Floquet), tissue ingrowth (reaction–diffusion), LPBF thermo-mechanical, topology optimization, ML surrogate Pareto.
 - **Pareto front explorer** (2026-10-04): the bone-scaffold trilemma (E↑ mechanics × κ↑ transport × Sv↑ bioactivity) — millisecond analytical-proxy scan over 26 families × porosity × density → non-dominated front on a log-log canvas → hover readouts → **click to write design parameters back**; constraint filtering (front recomputed on the feasible subset, not a naive filter) + front CSV export + dual-family hybrid blending (E/Sv convex combination, κ recomputed via Kozeny–Carman; b=0/1 degenerates to single families) + **inverse-design recommendation** (enter target E/κ → minimal-overrun feasible points when the target is attainable, nearest top-3 compromises when not, ★ target marker with log10 distances). Gate: ml_pareto_audit 16 assertions.
-- **CAE direct-pass**: Abaqus INP (C3D8 + load steps + RF/U history output) and **runnable OpenFOAM cases** (SIMPLE steady dict set, embedded dP/WSS probes) straight from the browser — no snappyHexMesh. `cfd-post` turns two flow-rate runs into a Forchheimer separation: intrinsic permeability K_int = 2.34×10⁻⁹ m² (measured, in the bone-scaffold literature band) with a wall-shear mineralization-window check.
+- **CAE direct-pass & multi-fidelity calibration**: Abaqus INP (C3D8 + load steps + RF/U history output) and **runnable OpenFOAM cases** (SIMPLE steady dict set, embedded dP/WSS probes) straight from the browser — no snappyHexMesh. `cfd-post` turns two flow-rate runs into a Forchheimer separation: intrinsic permeability K_int = 2.34×10⁻⁹ m² (measured, in the bone-scaffold literature band) with a wall-shear mineralization-window check. High-fidelity `sim/` calibration pipelines have completed Phase 2–5: **ABAQUS C3D10 FEA calibration** ([fea-calibration.md](docs/fea-calibration.md); T4 blind validation error −1.07%, <0.3% under measured $\bar{\rho}$; 35 ODB curves archived in `sim/csv_archive/`) and **WSL OpenFOAM v13 CFD permeability calibration** ([cfd-calibration.md](docs/cfd-calibration.md); $K_{\text{true}} = 0.442\,\varepsilon^{3.17}$ with $N=2$ entry-effect factor $0.9594$, $k_3$ validation, and $K_\infty = 0.1342\text{ mm}^2$ asymptotic reference; multi-fidelity report in [cfd-multifidelity-report.json](docs/cfd-multifidelity-report.json)).
 - **Bimodal region blending** (2026-09-17): two TPMS families in one domain (e.g. gyroid shell + diamond core) joined by a smoothstep convex combination; family zero-level-set reconnection is structurally non-manifold for Surface Nets (measured nm 20-52, blend-independent) → extracted via the Marching Tetrahedra pipeline (same rationale as radial-grad); one-shot UI card bit-identical to `mesh --region-inner`, with endpoint rSplit serving as byte-level single-family anchors (probe: 10 assertions; CLI matrix 8/8 watertight).
 - **Dual mesh extractors** (v9.1): Surface Nets for smooth fields + **Marching Tetrahedra** for non-smooth fields — ships a **one-shot UI card** (MT preview at R48 + HD STL export at R96 behind a built-in watertight audit gate, bit-identical to the CLI) for the **radial-grad family** (center-dilated K / edge-1 metric remap with wall-thickness compensation, K∈[1,3], K=1.5 measured design density ≈54.7 % (192,784 tris, v9.2 bit-exact wording)) to ship watertight STL across K = 1…2 (sphere anchor 4π/3 deviation 0.13 %).
 - **Printability audit** (v9.1): overhang area statistics (α = arccos(−N·b) industrial convention) + deterministic Fibonacci-sphere build-orientation search. Measured: TPMS lattices are near-isotropic — orientation gain ≈ ±1 pp, a quantitative basis for leaving support control to the slicer.
@@ -93,7 +93,7 @@ node tpms/.verify/guard_audit.mjs            # meta-gate: audits the gates thems
 node tpms/.verify/docs_consistency_check.mjs # doc-number consistency, 349 assertions (~10s)
 ```
 
-The 48-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
+The 50-gate badge is not a claim — these two commands let you watch the gate suite audit itself.
 
 ## Quick links
 
@@ -105,6 +105,9 @@ The 48-gate badge is not a claim — these two commands let you watch the gate s
 - [LAB_ONE_PAGER.md](docs/LAB_ONE_PAGER.md) — print & test card
 - [regression-matrix.md](docs/regression-matrix.md) — interceptor coverage matrix
 - [LIT_BAND_CARD.md](docs/LIT_BAND_CARD.md) — literature band deviation card
+- [fea-calibration.md](docs/fea-calibration.md) — ABAQUS C3D10 FEA calibration & T4 validation
+- [cfd-calibration.md](docs/cfd-calibration.md) — OpenFOAM v13 CFD permeability calibration ([CSV](docs/cfd-k-curve.csv))
+- [agent-architecture.md](docs/agent-architecture.md) — Agent extender guide (000–005)
 
 ## Verification
 

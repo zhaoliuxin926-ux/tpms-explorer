@@ -21,7 +21,7 @@
 |---|---|
 | 中英指令回归（43 条） | **glm-5.3-flash 多轮 43/43**（含 H 组逆设计意图用例；n=2 勿称确定性。历史五档矩阵 2026-10-01 为当时 37 条口径：4-flash 34/37×2 · 5.3-flash 37/37×2） |
 | 对抗指令（路径穿越/越界/注入） | 四模型**零非法执行**（平台拒/模型拒/模型改发合法值三形态均零执行） |
-| 拦截器自身 | 离线确定性门禁 40 断言（含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截） |
+| 拦截器自身 | 离线确定性门禁 **101 断言**（`llm_provider_selftest` GUARD 101：含 `../x.stl` 穿越写、裸 `..` 读、Win 设备名大小写实测拦截）+ 双端同源桥门禁 **53 断言**（`agent_bridge_audit` 满配档 / CI 基线 52） |
 | 闭环驱动器 | 注入缺陷方案 ≤5 轮自动收敛（LLM 只选修复策略，应用与验收全确定性） |
 
 📘 技术叙事：[《44 道门禁：在 LLM 时代交付"真的能用"的科研工具》](../docs/blog/2026-09-16-44-gates.md)（红队实录与验证方法论）｜ [《从一句话到水密 STL：LLM Agent 的安全架构实录》](../docs/blog/2026-09-17-agent-architecture.md)（工具调用安全与闭环驱动器）。
@@ -50,17 +50,17 @@
 │   ├── index.html / app.html       ← 落地页与主应用（Three.js 本地 vendor，离线双击即开）
 │   ├── README-体验说明.md          ← 单文件版使用说明
 │   ├── screenshots/ · shots/       ← 展示图与自动化验证截图（生成器 .verify/gen_showcase_shots.mjs 可复现）
-│   └── platform/                   ← 工程版在线部署（dist 产物）
+│   └── platform/                   ← 工程版在线部署（dist 产物，含双壳驾驶舱 harness.html）
 │
 ├── tpms/                      ← 工程化与开发辅助（你正在看的中枢）
 │   ├── README.md              ← 本文件
-│   ├── tpms-platform/         ← 工程化进阶版（Vite 8 + TS 6 + Three 0.185，94 个源文件）
-│   │                          ←   Web Worker 重建 · 10+ 种导出格式（GLB/3MF/VTK/VTI/py/m …）
-│   ├── agent/                 ← AI Agent 与 CLI 工具链（tpms.mjs / llm-agent.mjs / fit-batch.mjs / agent-pipeline.mjs）
-│   ├── .verify/               ← 自动化验证门禁网（run_ci_suite.mjs 50 门调度 / parity_math.mjs / Playwright UI 回归）
+│   ├── tpms-platform/         ← 工程化进阶版（Vite + TS 6 + Three 0.185，含 harness-main.ts / iframe-bridge.ts）
+│   │                          ←   Web Worker 重建 · 10+ 种导出格式（GLB/3MF/VTK/VTI/py/m …）· DSH 三栏 CAE 工作台
+│   ├── agent/                 ← AI Agent 与 CLI 工具链（tpms.mjs / llm-agent.mjs / schema-core.mjs / session-core.mjs / cae-daemon.mjs）
+│   ├── .verify/               ← 自动化验证门禁网（run_ci_suite.mjs 50 门调度 / parity_math.mjs / harness_ui_check / Playwright UI 回归）
 │   └── prototypes/            ← MATLAB 早期原型（已归档）
 │
-├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 → ABAQUS .inp）
+├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 / nTop → ABAQUS .inp & OpenFOAM v13 CFD，FEA/CFD 双标定线收官 + csv_archive/ 35 份标定曲线归档）
 ├── collab/                    ← 多 Agent 协作黑板（任务审计/技术辩论/处置留痕）
 ├── agent_memory/              ← 跨设备交接文档（progress/context/machine-facts，随仓库跟踪）
 └── plans/                     ← 分批实施计划与调研沉淀
@@ -172,7 +172,7 @@ node tpms/.verify/parity_math.mjs      # 数学/导出一致性（纯 Node，无
 ```
 工程版单独验证用 `vite preview --port 4811`；Playwright 点击重建后的 DOM 会挂在 actionability 检查，用 evaluate 原生 click。
 
-> CI 数量口径：`run_ci_suite.mjs` 调度 **50/50** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + agent selftest/schema_check/llm_provider_selftest/agent_bridge_audit 四项 CLI 门 + `strut_exit_audit` 桁架跨出口矩阵门（2026-10-11 纳管）+ `docs_consistency_check` 文档一致性门（2026-09-23 纳管；2026-09-10 起 selftest/schema_check 转正、2026-09-12 llm_provider_selftest 纳管、2026-09-13 experimental_fit/conformal_fill 纳管——三者均有静默红事故史或 M3 验收产出）。
+> CI 数量口径：`run_ci_suite.mjs` 调度 **50/50** = 39 道行为审计门 + `ui_jump_check` 顶层快检 + `run_all` UI 聚合门 + `harness_ui_check` 双壳驾驶舱 E2E + agent `selftest`/`schema_check`/`llm_provider_selftest`/`agent_bridge_audit`/`llm_driver_selftest` 五项 Agent 门 + `guard_audit` 元门 + `strut_exit_audit` 桁架跨出口矩阵门 + `docs_consistency_check` 文档一致性门。
 
 ### 工程版部署到 GitHub Pages
 ```bash

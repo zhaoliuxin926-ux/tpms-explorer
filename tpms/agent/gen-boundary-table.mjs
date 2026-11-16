@@ -17,7 +17,7 @@ function resolve(a, b) { return join(a, b); }
 
 const bugs = readFileSync(join(ROOT, 'agent_memory/bugs.md'), 'utf8');
 const start = bugs.indexOf('## 一、已定案边界');
-const end = bugs.search(/^## 二、/m);
+const end = bugs.search(/^### 环境注意事项|^## 二、/m);
 if (start < 0 || end < 0) {
   console.error('bugs.md 未找到「已定案边界」节');
   process.exit(1);

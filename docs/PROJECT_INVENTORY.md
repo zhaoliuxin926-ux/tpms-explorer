@@ -1,6 +1,6 @@
 # 项目总览（PROJECT INVENTORY）
 
-> 生成：2026-09-23 · 产品版本 **v1.2.0**（稳定序列，2026-10-19 刷新）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
+> 生成：2026-09-23 · 产品版本 **v1.2.0**（稳定序列，2026-11-16 刷新）· 仓库 `zhaoliuxin926-ux/tpms-explorer`  
 > 口径：功能标签写「原型期 vN」；产品自称只用 v1.0.x。
 
 ---
@@ -15,7 +15,8 @@
   |---|---|---|
   | 教学版单文件 | `docs/app.html` | 8 族经典，file:// 双击，功能冻结 |
   | 工程版 SPA | `tpms/tpms-platform` → `docs/platform/` | 26 族（24 TPMS + 2 桁架）+ 全链仿真/导出 |
-  | CLI / Agent | `tpms/agent/` | 脚本化、门禁、LLM tool-calling |
+  | 双壳驾驶舱 / CAE 工作台 | `docs/platform/harness.html` | NL 多轮闭环 + DSH 三栏 CAE 工作台 + 四级保真度对标 |
+  | CLI / Agent | `tpms/agent/` | 脚本化、门禁、LLM tool-calling、`cae-daemon` 本地桥 |
   | Pages | https://zhaoliuxin926-ux.github.io/tpms-explorer/ | 在线零安装 |
 
 ---
@@ -31,14 +32,18 @@ tpms-explorer/
 ├── LICENSE (MIT)
 ├── docs/
 │   ├── index.html / app.html     # 落地页 / 教学版
-│   ├── platform/                 # 工程版部署产物（无 .map）
+│   ├── platform/                 # 工程版部署产物（含 harness.html，无 .map）
 │   ├── QUICKSTART.md             # 5 分钟三 Demo
 │   ├── WORKFLOW_GUIDE.md         # 36+ 章实战指南（TOC 1–36，另有零散章）
 │   ├── LEARNING_PATH.md          # 学习路径
-│   ├── HONESTY_BOUNDARIES.md     # 诚实边界表（自动生成）
+│   ├── HONESTY_BOUNDARIES.md     # 诚实边界表（自动生成，16 条）
 │   ├── regression-matrix.md      # 拦截器覆盖矩阵
 │   ├── LAB_ONE_PAGER.md          # 打印/试验工位卡
-│   ├── fea-calibration.md        # FEA 标定组（sheet gyroid 幂律+双求解器+k≥2 域）
+│   ├── agent-architecture.md     # Agent 架构扩展者手册（000–005）
+│   ├── fea-calibration.md        # FEA 标定组（network gyroid/diamond 实测幂律 + T4 盲测）
+│   ├── cfd-calibration.md        # CFD 渗透率标定（通透池 K(ε) + k2/k3/k∞ + KC 重算）
+│   ├── cfd-k-curve.csv           # CFD 标定曲线消费件
+│   ├── cfd-multifidelity-report.json # 四级保真度对标报告
 │   ├── fit-report.md             # ISO 反演报告（最近一次仿真/试验 CSV）
 │   ├── fit-report-expl.md        # Explicit 四点全特征报告
 │   ├── fit-report.mock.md        # mock 自测报告（合成曲线经真实内核路径）
@@ -47,10 +52,14 @@ tpms-explorer/
 │   ├── career/interview-pack.md  # 求职弹药
 │   ├── paper/                    # SoftwareX 材料（投稿搁置）
 │   └── releases/                 # RELEASE_NOTES_v*.md ×17（版本档案）
-├── specimens/                    # 物理试样 STL（gitignored）
+├── sim/                          # 高保真 CAE 管线（ABAQUS/OpenFOAM/COMSOL/nTop + csv_archive/ 35 曲线）
+├── collab/                       # 多 Agent 异步协作黑板
+├── agent_memory/                 # 跨设备交接文档（progress/context/machine-facts/bugs）
+├── plans/                        # 分批实施计划与调研沉淀
+├── specimens/                    # 物理试样 STL（gitignored，README 索引入库）
 └── tpms/
-    ├── tpms-platform/            # Vite+TS 源码（main.ts 等）
-    ├── agent/                    # CLI、Agent、工具脚本
+    ├── tpms-platform/            # Vite+TS 源码（main.ts / harness-main.ts 等）
+    ├── agent/                    # CLI、Agent、单源核心（schema-core/session-core/cae-daemon）
     └── .verify/                  # 审计/门禁脚本（run_ci_suite 50 门）
 ```
 
@@ -63,13 +72,13 @@ tpms-explorer/
 | 几何 | 26 族（24 level-set + 2 桁架 SDF）；水密 Surface Nets + MT 双提取器；exact 孔隙率（solid_network；shell 为体素二分近似） | 完整 |
 | 构型 | hybrid / isoGrad / region / radial-grad / C5 保形容器 | 完整（互斥硬拒） |
 | 导出 | STL/GLB/3MF/VTK/VTI/CFD STL/RVE/INP/OpenFOAM/CAE 包/脚本/BibTeX/JSON/**G-code** | 完整（G-code 单壁+扫描填充） |
-| 力学 | Gibson-Ashby（其余 24 族）+ FEA 标定幂律（gyroid/diamond，见 fea-calibration.md）、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
-| 流体/热 | NS 渗流、LPBF 热-力 | 完整（研究级口径） |
+| 力学 | Gibson-Ashby（其余 24 族）+ FEA 标定幂律（gyroid/diamond 实测口径，T1 线弹性盲测偏差 <1.1%，见 fea-calibration.md）、弹塑性压溃、数字孪生、屈服包络 | 完整/半（k≥2 求解域见边界表） |
+| 流体/热 | NS 渗流、LPBF 热-力 + WSL OpenFOAM v13 通透池 CFD 标定曲线（见 cfd-calibration.md） | 完整（研究级 + 标定曲线） |
 | 优化 | 逆向设计、水平集拓扑、组织长入、声子能带、SIREN 神经场 | 完整/半（部分拒 custom/C2 族） |
 | 试验 | ISO 13314 反演 UI、fit-batch 批量反演（真实内核）、上机卡 | 待真实 CSV |
-| Agent | NL→schema 拦截→CLI→有界修复（M0–M5） | 完整（回归见矩阵） |
+| Agent | NL→schema 拦截→CLI/Web 双端单源（`session-core` / `schema-core`）→双壳驾驶舱（`harness.html`）→有界修复（M0–M5） | 完整（43 条回归 + 50 门守卫） |
 
-互斥与诚实边界：见 `docs/HONESTY_BOUNDARIES.md`（13 条，由 `bugs.md` 重生）。
+互斥与诚实边界：见 `docs/HONESTY_BOUNDARIES.md`（16 条，由 `bugs.md` 重生）。
 
 ---
 
@@ -93,8 +102,8 @@ tpms-explorer/
 
 - Provider：`openai`（含智谱兼容）/ `ollama` / `mock`
 - 拦截：`validateToolCalls` 逐槽位 schema；非法 exit 2
-- 回归：`llm_regression.mjs`（37 条，需密钥）；`regression_matrix.mjs`（离线拦截矩阵）
-- 历史战绩口径：**须带样本量**（如 glm-5.3-flash 多轮 37/37，C3 缓解后 n≥2；勿称确定性）
+- 回归：`llm_regression.mjs`（43 条，需密钥）；`regression_matrix.mjs`（离线拦截矩阵）
+- 历史战绩口径：**须带样本量**（glm-5.3-flash 双轮 43/43×2，n=2 勿称确定性；历史 2026-10-01 37 条口径：多轮 37/37，C3 缓解后 n≥2，勿称确定性）
 
 ---
 
@@ -105,9 +114,9 @@ tpms-explorer/
 | 5 分钟上手 | `docs/QUICKSTART.md` | 可用 |
 | 实战指南（TOC 1–36） | `docs/WORKFLOW_GUIDE.md` | 可用 |
 | 面试包 | `docs/career/interview-pack.md` | 中英对称 |
-| 博客×2 | `docs/blog/` + `publish/` | 粘贴就绪，**未发布** |
+| 博客×4 | `docs/blog/` + `publish/` | 博客一/二/三已发布（掘金+知乎），博客四定稿待发 |
 | SoftwareX | `docs/paper/` | 材料齐，**投稿搁置** |
-| 社交图 | `docs/screenshots/social-preview.png` | **未上传** |
+| 社交图 | `docs/screenshots/social-preview.png` | **已上传生效** |
 
 ---
 

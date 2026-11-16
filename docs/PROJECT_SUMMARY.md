@@ -1,6 +1,6 @@
 # TPMS Explorer 项目全貌总结（v1.2.0）
 
-> 生成：2026-08-29 ｜ 最近刷新：2026-09-27（v9.1 增量已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **50 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **26**（24 TPMS + 2 桁架） ｜ Agent 路线 **M0-M5 全线打通**
+> 生成：2026-08-29 ｜ 最近刷新：2026-11-16（Phase 2-5 全链 + FEA/CFD 双标定线收官已入表；v1.0.x 起产品号纪元重置，功能引入仍记「原型期 vN」）｜ **50 道 CI 门禁三平台全绿 · 1000+ 断言** ｜ 曲面族 **26**（24 TPMS + 2 桁架） ｜ Agent 路线 **M0-M5 全线打通**
 > 本文是全仓库文件内容的归纳整理：结构、模块、门禁、文档、版本史与已知边界。逐版本明细见 docs/releases/RELEASE_NOTES_v*.md（17 份）。
 
 ---
@@ -33,8 +33,11 @@
 │   │   └── src/{core,geometry,physics,export,measure,worker}/ + main.ts + index.html
 │   ├── .verify/               ← 39 道行为审计门 + run_ci_suite 调度器 + run_all UI 回归（18 套件）+ slicepv 冒烟
 │   ├── agent/                 ← Agent CLI（六命令 + NL 工具调用 + 闭环驱动器 + 三 Provider + 五件自检）
-│   ├── agent_memory/          ← context / progress / bugs 三件套（AI 协作记忆，gitignored）
 │   └── prototypes/            ← MATLAB 原型（归档）
+├── sim/                       ← 高保真仿真管线（Python 隐式场 → Gmsh C3D10 / nTop → ABAQUS .inp & OpenFOAM v13 CFD + csv_archive/）
+├── collab/                    ← 多 Agent 协作黑板（审计/辩论/裁定留痕）
+├── agent_memory/              ← 跨设备交接文档（progress / context / machine-facts / bugs，随仓库跟踪）
+├── plans/                     ← 分批实施计划与调研沉淀
 └── .github/workflows/         ← CI（三平台矩阵）
 ```
 
@@ -44,6 +47,8 @@
 | 文件 | 职责 |
 |---|---|
 | main.ts | 全部 UI 接线、重建调度（三级 LOD）、颜色管线、导出/仿真面板、💬 AI 助手 |
+| harness.html + harness-main.ts | 双壳 Agent 驾驶舱 + DSH 三栏 CAE 工作台（轨迹流 / 3D 画布 / 四级保真度对标） |
+| core/iframe-bridge.ts + core/harness-cae-dsh.ts | 驾驶舱壳↔工程壳同源桥（请求-回执配对 + 60s 重活滑动窗 cap）与 DSH 面板逻辑 |
 | state.ts / types.ts / url-params.ts | 状态机 + URL 全量分享恢复 + Undo/Redo |
 | three-setup.ts | Three.js 场景/相机/后处理 |
 | ui-helpers.ts | 公式栏/术语/侧栏渲染 |
@@ -98,19 +103,27 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 游标卡尺 · 三维边界条件拾取器（法向角区域生长→INP/FOAM 注入）· SVG 剖面 ·
 包围盒标注；Web Worker 承载重建（Transferable 零拷贝）。
 
-## 四、Agent 层（tpms/agent/，M0-M5 全线 + M3→M4 桥接）
+## 四、Agent 层（tpms/agent/，M0-M5 全线 + M3→M4 桥接 + 双端合流）
 
 | 组件 | 职责 |
 |---|---|
-| tpms.mjs | 九子命令 list/estimate/mesh/verify/solve/scenario/slice/overhang/cfd-post（JSON 输出；exact 孔隙率求解器 Diamond R96 0.13pp） |
+| tpms.mjs | 十子命令 list/estimate/mesh/verify/solve/scenario/slice/overhang/cfd-post/pareto（JSON 输出；exact 孔隙率求解器 Diamond R96 0.13pp） |
 | tools.schema.json | **六工具**注册面（+tpms_design_verify 闭环入口+tpms_pareto 逆设计推荐），枚举/数值域/路径狱与 CLI 逐项对拍 |
-| llm-provider.mjs | 三 Provider（Ollama / OpenAI 兼容端点 / Mock）+ validateToolCalls 拦截器（逐槽位校验，越界拒绝） |
+| schema-core.mjs / session-core.mjs | CLI/Web 双端共享单源核心（零 Node/DOM 依赖）：逐槽位校验拦截、Per-Prompt 算力预算、会话双语义锁与确定性指代绑定 |
+| llm-provider.mjs | 四 Provider（OpenAI 兼容 / Anthropic 兼容 / Ollama / Mock）+ validateToolCalls 拦截器（逐槽位校验，越界拒绝） |
 | llm-agent.mjs | 自然语言 → LLM tool calling → 拦截器 → CLI 确定性执行（退出码 0/2/3/4） |
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
-| 验收 | 真实模型 37 条中英回归（**glm-5.3 与 5.3-flash 双档多轮 n=2 各 37/37（2026-10-01 anthropic 通道=Coding Plan 订阅直抵）**；五档画像：4-flash 34×2/4.5 通/4.6 35/5.3 37×2/5.3-flash 37×2，flashx 套餐未开放；temp=0 服务端单条方差全档在案）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 61（+fit-batch 真实内核验收 5 锚 2026-10-20 +样本 CV 锚/尺寸契约 5 锚 2026-10-24） + schema_check 113（GUARD 98） + llm_provider_selftest 101（GUARD 101） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 20（管线链+M4+错误路径故障注入+预算/缓冲/会话错误归因，2026-10-19） |
+| cae-daemon.mjs | 本地 CAE 求解桥（`127.0.0.1:4830`，支持 preprocess-bl / openfoam-cfd / abaqus-fea / comsol-cfd / pipeline 五类 job） |
+| 验收 | 真实模型 43 条中英回归（**glm-5.3-flash 双轮 43/43×2（n=2，勿称确定性）**；历史 2026-10-01 37 条口径：5.3 与 5.3-flash 双档多轮 n=2 各 37/37）；Mock 闭环自检 6/6 + 真实 2/2 |
+| 自检（CI 纳管） | agent_selftest 61 + schema_check 113（GUARD 98） + llm_provider_selftest 101（GUARD 101） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 20 + agent_bridge_audit 53（CI 基线 52） + harness_ui_check 38 |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
+
+### 2026-11 Phase 2-5 全链与 FEA/CFD 双标定线收官
+
+- **双壳驾驶舱与 DSH 三栏 CAE 工作台**：`harness.html` + `iframe-bridge.ts` 实现驾驶舱壳↔工程壳同源写穿与 60s 重活滑动窗 cap；`harness-cae-dsh.ts` + `cae-daemon.mjs` 打通四级保真度对标矩阵（T1 解析幂律 / T2 浏览器 / T3 WSL OF13 / T4 ABAQUS 静态实算）。
+- **FEA 标定线收官**（[docs/fea-calibration.md](fea-calibration.md)）：network 双族 STL 实测口径幂律（gyroid $E^*/E_s=0.9914\bar{\rho}^{2.2028}$ / diamond $0.7871\bar{\rho}^{2.0709}$）；T4 ABAQUS 静态盲测验证 $E_{\text{eff}}=138.29\text{ MPa}$（vs T1 偏差 $-1.07\%$，实测 $\bar{\rho}$ 口径 $<0.3\%$）；35 份标定 ODB 曲线提取归档 `sim/csv_archive/`。
+- **CFD 渗透率标定线收官**（[docs/cfd-calibration.md](cfd-calibration.md) · [docs/cfd-k-curve.csv](cfd-k-curve.csv)）：WSL OpenFOAM v13 通透池压差驱动四点幂律 $K_{\text{cell}}=0.461\varepsilon^{3.17}$，$k_2$ 四点入口效应统一修正因子 $0.9594$（$K_{\text{true}}=0.442\varepsilon^{3.17}$），$k_3$ 实测验证，$k_\infty$ 三点渐近外推 $K_\infty=0.1342\text{ mm}^2$，STL 实测 $S_v$ 重算 Kozeny 常数（$9.6\to 13.5$）。
 
 ### v9.1.0 增量（2026-09-13~15 · 十五战 · 封板后功能演进）
 
@@ -131,14 +144,14 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 - **寿极对抗审查 v3**（4 红队 0C+10M+20m 全修：UI 互斥守卫/tb 量化/GPU 对拍漏列/披露漂移 13+/论文 bibitem ×2）
 - **bugs.md 清欠零挂账**（七件套真修 + 13 条定案披露，历史 368 行归档）
 
-## 五、门禁体系（45 项，run_ci_suite.mjs 调度，三平台矩阵）
+## 五、门禁体系（50 项，run_ci_suite.mjs 调度，三平台矩阵）
 
-入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 39 道行为审计（含 experimental_fit 实验曲线反演 + conformal_fill 保形填充，v9.0 门 43/44）
-（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + run_all（18 套 UI 回归，含 slicepv/radialgrad/region/card_smoke/expfit/meshcont/mobile/selector/server_edge/isograd法线/file冒烟/真实规模scale钉）+
-agent_selftest/schema_check/llm_provider_selftest 三项 CLI 门。每门带 pass 下限守卫
+入口：`cd tpms/tpms-platform && npm run test:all`（本机 6-10 分钟）。构成 = 39 道行为审计（含 experimental_fit 实验曲线反演 + conformal_fill 保形填充）
+（rolldown 打包 TS 源实跑，无 mock 数学）+ ui_jump_check 快检 + docs_consistency_check（349 断言，GUARD 313）+ run_all（18 套 UI 回归）+ harness_ui_check（38 断言双壳驾驶舱 E2E）+
+agent_selftest / schema_check / llm_provider_selftest / agent_bridge_audit / llm_driver_selftest 五项 Agent 门 + guard_audit 元门 + strut_exit_audit 桁架跨出口矩阵门。每门带 pass 下限守卫
 （断言被中和/跳过不得绿灯）。大断言门：parity_math 337 · redteam_matrix 100 ·
-custom_equation 73 · periodic_rve 88 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119 基线+真GPU ×2（万点对拍 0.00e+0）·
-schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（直接层切 F1-F6 + 可打印性审计 F7 十断言：球面积极分解析锚/方向语义钉/摆盘寻优）；conformal 30（C5 SDF+体积对拍+四 patch polyMesh）。全 45 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
+custom_equation 73 · periodic_rve 92 · cae_mesh 67（INP 历史输出 + CFD case 模板 + Forchheimer + radial-grad/MT 球锚）· webgpu_parity 119 基线+真GPU ×2（万点对拍 0.00e+0）·
+schema_check 113（GUARD 98，含 README 门数防漂移守卫）；gcode 32（直接层切 F1-F6 + 可打印性审计 F7 十断言：球面积极分解析锚/方向语义钉/摆盘寻优）；conformal 30（C5 SDF+体积对拍+四 patch polyMesh）。全 50 项清单见 `tpms/.verify/run_ci_suite.mjs` 或 README 特性矩阵。
 
 ## 六、文档体系
 
@@ -163,9 +176,9 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 
 > 表止于原型期 v8.0；v9.0–v9.2 与 v1.0.x 增量见 docs/releases/RELEASE_NOTES_*.md。
 
-## 八、诚实边界（全部披露于源码注释与 Release Notes）
+## 八、诚实边界（完整 16 条定案见 `docs/HONESTY_BOUNDARIES.md`）
 
-1. 微观 FEA 剪切波动场 b=0 结构性未解——C44-C66 为 Voigt 上界口径；
+1. 微观 FEA 剪切口径已于 2026-10-26 修复真收敛（C44=0.120 ≤ Voigt 上界 φμ=0.185），残余真实边界为结构化体素网格的一阶离散误差与 KUBC 代表性；
 2. LBM D3Q19 降级 FD-Darcy（bounce-back 动量吸收不稳定，三版重构未解）；
 3. DT/GA 平台应力标定比 ≈1.7-2.0（体素 FEM 偏刚），守稳定带而非裸 ±10%；
 4. WASM 加速档降级 TS 热循环（wabt.js/V8 编码分歧，实验件保留）；
@@ -173,7 +186,8 @@ schema_check 106（GUARD 98，含 README 门数防漂移守卫）；gcode 32（�
 6. 薄壁自触族可用域 fail-closed（frd/fks/fky/gprime-k6/lidinoid 高孔隙等，实测 nm 钉进 schema）；
 7. cylinder+diamond 深水区全分辨率拒产且非单调不收敛（独立机制，fail-closed 正确）；
 8. k=6 非标定域；ML 代理为演示精度；G-code 单壁轮廓 + 体积偏差 ≤10%（修正后）；
-9. GPU wall-time 目标需真机 WebGPU 实测（headless 无 WebGPU）。
+9. GPU wall-time 目标需真机 WebGPU 实测（headless 无 WebGPU）；
+10. 纯静态隐式体素 FEM 塑性坍塌段收敛边界定理（2026-11-05 定案，见 [HONESTY_BOUNDARIES.md](HONESTY_BOUNDARIES.md) #18）：ε≈5–7.5% 为无阻尼纯静态隐式物理范式边界，生产口径 0→5% 稳定覆盖 $E^*/\sigma_{0.2}$ 提取窗口。
 
 ## 九、常用命令
 

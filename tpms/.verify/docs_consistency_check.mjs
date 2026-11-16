@@ -286,7 +286,7 @@ console.log('\n[D] 版本徽章 ↔ 最新 tag');
   // v9.3.0-strut-pareto，与徽章 v1.1.0 恒不等 → 单轨断言在双轨下必假红）
   let tag = 'v1.0.3';
   try {
-    const v1tags = execSync("git tag -l 'v1.*' --sort=-creatordate", { cwd: ROOT, encoding: 'utf8' })
+    const v1tags = execSync('git tag -l "v1.*" --sort=-creatordate', { cwd: ROOT, encoding: 'utf8' })
       .split('\n').map((s) => s.trim()).filter(Boolean);
     if (v1tags.length) tag = v1tags[0];
   } catch { /* 无 git 时用默认 */ }

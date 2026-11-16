@@ -17,6 +17,8 @@
   （活跃度看门狗+SDF 三线性降采样+升档单 job 化）、LLM 回归 43 条 n=2 满贯（含逆设计意图+指代 fail-safe）
   （智谱三端点接入矩阵）、试样矩阵 24→32 件（+桁架对照组 S7/S8；2026-10-11 真场修正+S8 焊接解锁后 32 件全可打印）、
   pack 历史清洗（86.57→59.40MiB）
+- 2026-10-19 **v1.2.0（v9.4.0）发布**：Agent 显式会话（`--session` 跨进程确定性指代）+ `agent-pipeline` 有界多步管线 + Octet 桁架非流形短边焊接根治（32 件试样全水密）+ 48 门 CI
+- 2026-11-16 **Phase 2-5 全链与双标定线收官**：双壳 Agent 驾驶舱（`harness.html` + `iframe-bridge`）+ DSH 三栏 CAE 工作台 + `cae-daemon` 本地桥 + `session-core`/`schema-core` 双端单源 + FEA 双族标定与 T4 ABAQUS 盲测（$E_{\text{eff}}$ 偏差 $-1.07\%$，实测 $\bar{\rho}$ 口径 $<0.3\%$；35 份 ODB 曲线归档 `sim/csv_archive/`）+ CFD 渗透率标定三层交付（$0.9594$ 双胞修正 / $k_3$ 实测验证 / $K_\infty=0.1342\text{ mm}^2$ 渐近外推 / KC 重算 Kozeny $9.6\to 13.5$）+ 50 门 CI 三平台全绿
 
 ## 近期（转化期，等外部输入）
 
