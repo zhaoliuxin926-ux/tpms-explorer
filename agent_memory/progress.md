@@ -66,6 +66,15 @@
 > - **k∞ 渐近外推**（a7e70e3）：三点 R²=0.9992 → **K∞=0.1342 mm²**；**诚实更正**：实测 K(N) 递减与 Gemini 串联阻力模型方向相反，k3"命中"=两点内插巧合；口径层级=0.9594（N=2 实用）/ K∞（渐近参考）
 - **T2 浏览器探针解锁 + CSV 谱系 + Daemon 事件溯源（11-16 续 IV）**：①定位 `t2_browser_probe.mjs` 挂起根因为服务路径误指不存在的 `../../tpms-platform`，切回 `docs/platform` 后一次全绿跑通，补齐 `docs/cfd-multifidelity-report.json` 四级包络；②抢救 `tpms_gyroid_k2_R20_p50/p70_LE_curve.csv` 入 `sim/csv_archive/`（共 37 条 CSV），批量生成 `index.json` 与 `README.md`（检出 16 条相同 `<10` 点空桩 `48751f6370f40383`、5 条 `ε≥0.40` ISO 全提取、p50 跨尺寸复现差 0.09%）；③`cae-daemon.mjs` 实装 `sim/out/jobs.jsonl` 追加写与 `GET /api/cae/history`、`/api/cae/status` 路由（Node 25 `--self-test` 顺带修复 `UV_HANDLE_CLOSING`）。
 >
+
+> ### 11-18：课题组资料包吸收 + nTop 实跑闭环 + MPh 路线打通（T4 COMSOL 复活）
+>
+> - **用户资料包**（课题组学习资料.zip 179MB）：ntop docx=官方学习入口（learn.ntop.com/support.ntop.com）；隐式建模白皮书=SDF 理论（与平台隐式场同源背书）；COMSOL CFD 简介=物理场接口指南（5.6 版营销文档，非网格手册）；**Abaqus Standard/Explicit 讲义（SIMULIA 官方培训）=EXPL 塑性段七问任务的理论前置**（第十讲准静态分析 p190：质量缩放/能量平衡判据/加载速率敏感性——fea-calibration"EXPL E* 口径差 17%"的敏感性验证官方出处）。其余（王勖成 FEM/弹性力学/MS/UG/SolidWorks）=工具书按需查；DeepSeek/Hermes 教程已解压待阅。
+> - **nTop 实跑首次闭环**：ntop_builder --in-stl 实跑 ntopcl headless——license 成功加载+BLVolumeMesh 623ms+Export INP/BDF+"nTop successfully built"；**10,620 C3D6 真棱柱+11,859 C3D4**，minSICN 0.11，产物 sim/out/ntop_test/（inp 1.3M/bdf 2.4M/stl）。三轨网格器中唯一产真拓扑棱柱层；p1 --backend ntop 主轨激活（此前仅容器签名验证）。
+> - **MPh 路线打通（T4 COMSOL 复活）**：pip install MPh 1.4.0（COMSOL 官方 API 的 Python 封装）——8 轮错误消息驱动迭代（server 36s 起→comp1 创建→geom1 序列→**STL type="file"+filename 后缀驱动**（p4 模板 type:"stl" 是 6.2 前旧值——正是 ClassCastException 断代根因之一！）→mph 保存 1.78MB PASS）。**绕开 Java 模板断代**：MPh 客户端 API 与 COMSOL 版本同源，无手工拼 Java 的版本漂移。
+> - **COMSOL STL→BL 网格路线（用户建议）落地路径**：MPh 导 STL 为几何（已证）→ COMSOL Boundary Layers 网格特征（p4 模板已有 bl1 代码）→ LaminarFlow 求解 → ΔP/WSS 导出——T4 流体侧真数据闭环路线图齐备，下批实跑。
+> - **坑账**：MPh model.java 桥层级三连错（geometry()/geom(comp1)/type:"stl"）——正确链=j.component().create→j.component().geom().create("geom1",3)→geom("geom1").create("imp1","Import")→imp1.set("type","file")+filename；bash cwd 漂移三犯（heredoc 落错目录）——重要脚本一律绝对路径 cat。
+
 > ## 详细历史
 >
 > - **2026-11-13 及更早**：`agent_memory/archive/progress_2026-11-early.md`（11-13 R48 曲线/11-12 anchor 终判/11-11 平台化咨询/11-07-08 Anchor 病灶与 sheet 管线/11-04~06 Gemini FEA 线）
