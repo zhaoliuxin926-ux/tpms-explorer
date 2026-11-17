@@ -76,6 +76,8 @@
 > - **MPh 路线打通（T4 COMSOL 复活）**：pip install MPh 1.4.0（COMSOL 官方 API 的 Python 封装）——8 轮错误消息驱动迭代（server 36s 起→comp1 创建→geom1 序列→**STL type="file"+filename 后缀驱动**（p4 模板 type:"stl" 是 6.2 前旧值——正是 ClassCastException 断代根因之一！）→mph 保存 1.78MB PASS）。**绕开 Java 模板断代**：MPh 客户端 API 与 COMSOL 版本同源，无手工拼 Java 的版本漂移。
 > - **COMSOL STL→BL 网格路线（用户建议）落地路径**：MPh 导 STL 为几何（已证）→ COMSOL Boundary Layers 网格特征（p4 模板已有 bl1 代码）→ LaminarFlow 求解 → ΔP/WSS 导出——T4 流体侧真数据闭环路线图齐备，下批实跑。
 > - **坑账**：MPh model.java 桥层级三连错（geometry()/geom(comp1)/type:"stl"）——正确链=j.component().create→j.component().geom().create("geom1",3)→geom("geom1").create("imp1","Import")→imp1.set("type","file")+filename；bash cwd 漂移三犯（heredoc 落错目录）——重要脚本一律绝对路径 cat。
+> - **OF 边界层能力盘点核实（11-18 咨询批）**：仓内三处在案实跑——anchor-1 定案带棱柱（K +0.319% vs .nolayer 对照 +0.579%，层贡献≈0.26pp、主责=表面加密，8f960a5）、tpms_cell 单胞通透池 K=0.0811 即带层定案（anchor 配方移植一次成功）、生产 p1_bl_mesh.py 模板出厂 addLayers true（3b951cb；lmax<0.2 层质量反噬告警 aae367a）；生产 K 案（WSL feaBoneReanalysis 树）addLayers false 实锤。**勘误上轮试点案名**：K_1.5_AE 在 WSL 两树未复现（*1.5* find 全量仅 BE_fine/equalp_E/C），在案三水平族改 K_1.25_AE（trial1/trial2+meshfine/fine）；live 树 fea_bone_reanalysis_20260922 为空，生产案唯一副本在 _bak 树（单副本风险，论文项目面）。封版不动裁定维持；对 T4 COMSOL BL 主轨不冲突（OF 层=线内精度手段，COMSOL=独立求解器交叉验证）。
+> - **仓根规整批（11-18，用户三项拍板后执行）**：课题组学习资料.zip（179MB，已吸收 study_pack）删除；原型/harness-驾驶舱.html git mv → tpms/prototypes/（根目录唯一中文顶层目录消除；harness.html 设计源注释两处同步=改源+重建+重灌 docs/platform，parity OK+docs_consistency 349 PASS 零漂移验证）；明确不动清单=sim/cfd 定案现场（tpms_cell 148M+anchor1 41M，删=证据降级）/docs 根散 .md（docs_consistency 扫描面）/specimens 1.3G（上机必需）。
 
 > ## 详细历史
 >
