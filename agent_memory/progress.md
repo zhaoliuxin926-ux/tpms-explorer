@@ -16,13 +16,13 @@
 >
 > ### 下一步队列（按价值排序，全部标注依赖）
 >
-> 1. **T4 COMSOL MPh 实跑批**（最近可做项）：MPh 导 STL 已证 → 补 Boundary Layers 网格特征+LaminarFlow 求解+ΔP/WSS 导出（路线图在 11-18 段；探针 working/scratch/mph_probe.py）；EXPL 七问任务书在案
-> 2. **EXPL 链塑性段实跑**（小时~天级）→ Rp0.2 代理升档 → **下次 Gemini 触发点**（理论前置=Abaqus 讲义第十讲准静态分析，working/study_pack/）
-> 2. **S1 上机解冻**（卡用户）→ Q3 四步正交实验（Gemini 设计在案：称重 ε/长度序列 TLM/端面车削/多流速）
-> 3. **DeepSeek/LLM key**（卡用户）→ 真跨源实测 + 43 条 LLM 回归
-> 4. ~~T2 人工会话取数~~（**2026-11-16 已解锁闭环**：根因系 `working/scratch/t2_browser_probe.mjs` 第 9 行服务目录误指不存在的 `../../tpms-platform` 致 404，修正为 `docs/platform` 后双壳 E2E 与 R=20 体素内核均一次实算通过）
-> 5. ~~COMSOL API 专项~~（**已被 MPh 路线取代**：绕开 Java 模板，Python 客户端 API 与 COMSOL 版本同源）
-> 6. 名义 vs 实测参数口径普查（可选审计；`sim/csv_archive/` 全量 37 曲线谱系与 SHA256 清单已先行落盘 `index.json`/`README.md`）
+> 1. **T4 COMSOL MPh 实跑批**（最近可做项）：MPh 导 STL 已证 → 补 Boundary Layers 网格特征+LaminarFlow 求解+ΔP/WSS 导出（路线图在 11-18 段；探针 working/scratch/mph_probe.py）
+> 2. **EXPL 链塑性段实跑**（小时~天级）→ Rp0.2 代理升档 → **下次 Gemini 触发点**（理论前置=Abaqus 讲义第十讲准静态分析，working/study_pack/；EXPL 七问任务书在案）
+> 3. **S1 上机解冻**（卡用户）→ Q3 四步正交实验（Gemini 设计在案：称重 ε/长度序列 TLM/端面车削/多流速）
+> 4. **DeepSeek/LLM key**（卡用户）→ 真跨源实测 + 43 条 LLM 回归
+> 5. ~~T2 人工会话取数~~（**2026-11-16 已解锁闭环**：根因系 `working/scratch/t2_browser_probe.mjs` 第 9 行服务目录误指不存在的 `../../tpms-platform` 致 404，修正为 `docs/platform` 后双壳 E2E 与 R=20 体素内核均一次实算通过）
+> 6. ~~COMSOL API 专项~~（**已被 MPh 路线取代**：绕开 Java 模板，Python 客户端 API 与 COMSOL 版本同源）
+> 7. 名义 vs 实测参数口径普查（可选审计；`sim/csv_archive/` 全量 37 曲线谱系与 SHA256 清单已先行落盘 `index.json`/`README.md`）
 >
 > ### 铁律速查（本周期沉淀，合并版）
 >
