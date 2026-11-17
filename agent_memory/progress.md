@@ -12,15 +12,16 @@
 > | **四级对标** | **T1/T2/T3/T4 全量真数据齐备**：`E_eff` 包络 `homog(82.15) < DT_R8(100.35) < ABAQUS(138.29) ≈ T1(139.79) < R20_KUBC(310.03) MPa`；Forchheimer 回代 T3 压降还原 `K_int=1.15e-4 mm²`（`docs/cfd-multifidelity-report.json`） |
 > | **平台线** | Phase 2-5 全链（6 工具满配+session-core 单源+DSH 工作台+`cae-daemon` 含 `jobs.jsonl` 溯源）50 门三平台绿；E2E 预算链四层闭环 |
 > | **架构沉淀** | agent-architecture.md 扩展者手册 + DeepSeek 调研归档 + 37 曲线谱系索引（`sim/csv_archive/index.json`）+ 流程铁律三项 |
-> | **外评通道** | Gemini 四问全闭环（k3 预言命中/KC 勘误/三证据链/护栏）；下次触发=EXPL 塑性段交叉核验 |
+> | **外评通道+工具链** | Gemini 四问闭环；**三轨网格器全实证**（nTop headless 首跑闭环：license+10,620 真棱柱+minSICN 0.11，产物 sim/out/ntop_test/）；**MPh 1.4.0 路线打通**（COMSOL STL 导入已证，绕 Java 断代——T4 COMSOL 挂起项复活） |
 >
 > ### 下一步队列（按价值排序，全部标注依赖）
 >
-> 1. **EXPL 链塑性段实跑**（小时~天级）→ Rp0.2 代理升档 → **下次 Gemini 触发点**（fea-calibration 分级声明的预留节点）
+> 1. **T4 COMSOL MPh 实跑批**（最近可做项）：MPh 导 STL 已证 → 补 Boundary Layers 网格特征+LaminarFlow 求解+ΔP/WSS 导出（路线图在 11-18 段；探针 working/scratch/mph_probe.py）；EXPL 七问任务书在案
+> 2. **EXPL 链塑性段实跑**（小时~天级）→ Rp0.2 代理升档 → **下次 Gemini 触发点**（理论前置=Abaqus 讲义第十讲准静态分析，working/study_pack/）
 > 2. **S1 上机解冻**（卡用户）→ Q3 四步正交实验（Gemini 设计在案：称重 ε/长度序列 TLM/端面车削/多流速）
 > 3. **DeepSeek/LLM key**（卡用户）→ 真跨源实测 + 43 条 LLM 回归
 > 4. ~~T2 人工会话取数~~（**2026-11-16 已解锁闭环**：根因系 `working/scratch/t2_browser_probe.mjs` 第 9 行服务目录误指不存在的 `../../tpms-platform` 致 404，修正为 `docs/platform` 后双壳 E2E 与 R=20 体素内核均一次实算通过）
-> 5. **COMSOL API 专项**（挂起）：Model Java 与 6.2.0.290 断代（ClassCastException）需逐 set 试错定位；license 在位（compile 9.6s+batch 启动 23.1s 实证）
+> 5. ~~COMSOL API 专项~~（**已被 MPh 路线取代**：绕开 Java 模板，Python 客户端 API 与 COMSOL 版本同源）
 > 6. 名义 vs 实测参数口径普查（可选审计；`sim/csv_archive/` 全量 37 曲线谱系与 SHA256 清单已先行落盘 `index.json`/`README.md`）
 >
 > ### 铁律速查（本周期沉淀，合并版）
@@ -32,6 +33,7 @@
 > - **MSYS 路径转换**：wsl 参数用 `MSYS_NO_PATHCONV=1`；cmd 跑 bat 用 `cmd //c`
 > - **CRLF**：跨系统脚本一律 LF 归一后交付 WSL
 > - **Node 25 strip-types**：零依赖 TS 内核可 `node --experimental-strip-types` 直跑（experimental-fit ✓）；DT 内核例外（隐藏阻塞，见 T2 挂起）
+> - **MPh API 链**（COMSOL 6.2）：`mph.start()` → `j.component().create("comp1", True)` → `j.component("comp1").geom().create("geom1", 3)` → `geom("geom1").create("imp1", "Import")` → **`imp1.set("type", "file")`**（"stl" 是 6.2 前旧值）+filename 后缀驱动格式；每轮失败读 FlException 错误消息（=文档）
 > - **v13 语法断代三例**：meanVelocityForce/acceleration/surfaceFieldValue regionType——外部声称必实测 ETC
 > - **构建/历史重写/wsl/物理量纲**：见 archive/progress_2026-11-early.md 铁律段（仍然有效）
 >
