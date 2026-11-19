@@ -9,7 +9,7 @@
 > | 线 | 终态 |
 > |---|---|
 > | **CFD 标定线** | **完全自持**：三层交付（数据 JSON/md/CSV）+ 口径三层（0.9594 N=2 实用修正 / K∞=0.1342 渐近参考 / KC 重算 Kozeny 9.6→13.5）+ 机制证据链（k2 窄带+k3 预言命中+k∞ 外推） |
-> | **四级对标** | **T1/T2/T3/T4 全量真数据齐备**：`E_eff` 包络 `homog(82.15) < DT_R8(100.35) < ABAQUS(138.29) ≈ T1(139.79) < R20_KUBC(310.03) MPa`；Forchheimer 回代 T3 压降还原 `K_int=1.15e-4 mm²`（`docs/cfd-multifidelity-report.json`） |
+> | **四级对标** | T1/T3/T4 具定量可信度（E_eff T4 vs T1 −1.07%；T3 OF13 K=1.15e-4 mm²）；**T2 链路已打通但为降阶代理**：R20 KUBC 310 MPa 是粗网格上界（T4 的 2.24×），Forchheimer 项以 T3 压降为输入属自洽回代、非独立验证（2026-11-19 勘误，见 `docs/cfd-multifidelity-report.json`） |
 > | **平台线** | Phase 2-5 全链（6 工具满配+session-core 单源+DSH 工作台+`cae-daemon` 含 `jobs.jsonl` 溯源）50 门三平台绿；E2E 预算链四层闭环 |
 > | **架构沉淀** | agent-architecture.md 扩展者手册 + DeepSeek 调研归档 + 37 曲线谱系索引（`sim/csv_archive/index.json`）+ 流程铁律三项 |
 > | **外评通道+工具链** | Gemini 四问闭环；**三轨网格器全实证**（nTop headless 首跑闭环：license+10,620 真棱柱+minSICN 0.11，产物 sim/out/ntop_test/）；**MPh 1.4.0 路线打通**（COMSOL STL 导入已证，绕 Java 断代——T4 COMSOL 挂起项复活） |
@@ -40,9 +40,9 @@
 
 > ### 11-16 续 II：仓库瘦身 32G→2.4G（用户授权清理批，bf3b60e）
 >
-> - **清理四类**：①35 个标定 ODB（18G）→ **全量曲线提取 35/35 零失败**入 sim/csv_archive/（tracked，42K）后删；②T4 p50/p70 ODB（10.2G）删（curve CSV+LE_static INP 双留证，E_eff 已入档）；③标定期 ABAQUS 副产物（.stt/.dat/.prt 等 ~1.4G）+可再生网格 INP/MSH/labeled STL（~1G）清（p0→p1 链完备再生）；④根目录散落验证 STL 233M+D:\GITHUB	mp 150M 清。
+> - **清理四类**：①35 个标定 ODB（18G）→ 曲线提取脚本 35/35 未报错，入 sim/csv_archive/（tracked，42K）后删——**⚠ 2026-11-19 勘误：其中 17 份为空桩（仅表头+原点，SHA256-16 全同 `48751f6370f40383`），有效标定曲线 18 条**；dc_p2v2/v3/v4 经 log 证实为 pre.exe 失败作业，其余 ODB 已删无法回查（清单见 `sim/csv_archive/README.md` 第三节）；②T4 p50/p70 ODB（10.2G）删（curve CSV+LE_static INP 双留证，E_eff 已入档）；③标定期 ABAQUS 副产物（.stt/.dat/.prt 等 ~1.4G）+可再生网格 INP/MSH/labeled STL（~1G）清（p0→p1 链完备再生）；④根目录散落验证 STL 233M+D:\GITHUB	mp 150M 清。
 > - **保留判定**：specimens 1.3G 全保（S1-S8×4 统计重复件=上机必需）；sim/out 293M（csv 现场+calibration_curves.png+rve_* 近期现场+comsol）；.git 77M；tpms/ 620M（源码+node_modules）。
-> - **归档增益**：multifidelity 报告从 gitignored 区入 docs/cfd-multifidelity-report.json；标定曲线原始数据首次全量入库（此前 csv_expl 只有 6 份，本次 35 份补全——**ODB 原始证据降级为 CSV 证据，重跑成本从删库不可逆变为 Explicit 小时~天级**）。
+> - **归档增益**：multifidelity 报告从 gitignored 区入 docs/cfd-multifidelity-report.json；标定曲线原始数据首次入库（此前 csv_expl 只有 6 份，本次 35 份文件、其中有效 18 条——**ODB 原始证据降级为 CSV 证据，重跑成本从删库不可逆变为 Explicit 小时~天级**）。
 > - **尺寸口径钉**：标定族提取统一 12.5664mm（k2 无量纲 4π，CSV 头部元数据实证）。
 > - **D:\GITHUB 层已清（用户拍板"没用全删"，11-16 续 III）**：3 bundle+2 mirror.git（~390M 重写备份，远端稳定 8 天旧史确认抛弃）+空目录 tpms-external+tpms-scrub2-replace.txt 全删；push-tpms.cmd（推送小工具）保留。**D:\GITHUB 终态 3.1G**（tpms 2.4G+编号小游戏）。
 
@@ -66,7 +66,8 @@
 > - **T2 双路径挂起**（0e21687）：node 化 50 分钟无产出+playwright 四轮主 frame 未就绪→人工会话登记
 > - **COMSOL batch 挂起**（33ad807）：license 在位（compile 9.6s+batch 23.1s）但 API 断代 ClassCastException→留专项
 > - **k∞ 渐近外推**（a7e70e3）：三点 R²=0.9992 → **K∞=0.1342 mm²**；**诚实更正**：实测 K(N) 递减与 Gemini 串联阻力模型方向相反，k3"命中"=两点内插巧合；口径层级=0.9594（N=2 实用）/ K∞（渐近参考）
-- **T2 浏览器探针解锁 + CSV 谱系 + Daemon 事件溯源（11-16 续 IV）**：①定位 `t2_browser_probe.mjs` 挂起根因为服务路径误指不存在的 `../../tpms-platform`，切回 `docs/platform` 后一次全绿跑通，补齐 `docs/cfd-multifidelity-report.json` 四级包络；②抢救 `tpms_gyroid_k2_R20_p50/p70_LE_curve.csv` 入 `sim/csv_archive/`（共 37 条 CSV），批量生成 `index.json` 与 `README.md`（检出 16 条相同 `<10` 点空桩 `48751f6370f40383`、5 条 `ε≥0.40` ISO 全提取、p50 跨尺寸复现差 0.09%）；③`cae-daemon.mjs` 实装 `sim/out/jobs.jsonl` 追加写与 `GET /api/cae/history`、`/api/cae/status` 路由（Node 25 `--self-test` 顺带修复 `UV_HANDLE_CLOSING`）。
+- **T2 浏览器探针解锁 + CSV 谱系 + Daemon 事件溯源（11-16 续 IV）**：①定位 `t2_browser_probe.mjs` 挂起根因为服务路径误指不存在的 `../../tpms-platform`，切回 `docs/platform` 后一次全绿跑通，补齐 `docs/cfd-multifidelity-report.json` 四级包络；②抢救 `tpms_gyroid_k2_R20_p50/p70_LE_curve.csv` 入 `sim/csv_archive/`（共 37 条 CSV），批量生成 `index.json` 与 `README.md`（检出 17 条相同 `<10` 点空桩 `48751f6370f40383`——11-16 初记 16 条系计数错误、11-19 更正；5 条 `ε≥0.40` ISO 全提取、p50 跨尺寸复现差 0.09%）；③`cae-daemon.mjs` 实装 `sim/out/jobs.jsonl` 追加写与 `GET /api/cae/history`、`/api/cae/status` 路由（Node 25 `--self-test` 顺带修复 `UV_HANDLE_CLOSING`）。
+- **诚实勘误批（11-19）**：①「35/35 零失败」→ 有效 18/35，17 空桩入 `sim/csv_archive/README.md` 第三节与 `index.json`（`valid`/`emptyStubCount` 字段）；②`cfd-multifidelity-report.json` 中 Forchheimer 项原写「回代精确还原 T3」属循环论证且数值误填（UI 实际按 L=3 mm、μ=1.45 mPa·s 算得 ≈1.41e-4 mm²），改为 `forchheimer_selfConsistency: NOT_INDEPENDENT`；原 `lbm_K_m2` 实为 Forchheimer 面板预置参考值，已更名并注明；③「上下界包络定理」改为「排序符合预期、KUBC 为粗网格上界无预测价值」；④博客五仓库瘦身段补勘误注。
 >
 
 > ### 11-18：课题组资料包吸收 + nTop 实跑闭环 + MPh 路线打通（T4 COMSOL 复活）
