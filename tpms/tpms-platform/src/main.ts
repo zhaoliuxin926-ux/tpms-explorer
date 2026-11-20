@@ -3256,6 +3256,10 @@ function wireNLChat(): void {
   });
   fab?.addEventListener('click', () => { if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; });
   document.getElementById('nl-send')?.addEventListener('click', send);
+  // 批次三 §3：NL 抽屉 45↔85vh 展开切换（移动端 ≤980px；桌面按钮隐藏不影响浮动面板）
+  document.getElementById('nl-expand')?.addEventListener('click', () => {
+    document.getElementById('nl-panel')?.classList.toggle('nl-expanded');
+  });
   input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
   try { const saved = sessionStorage.getItem('tpms.nl.log'); if (saved && log) log.innerHTML = saved; } catch { /* 忽略 */ }
   document.querySelectorAll('.nl-chip').forEach((chip) => {
@@ -6602,8 +6606,12 @@ async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail
     if (bad(a7)) {
       const msg = `已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`;
       // 拦截三段式卡片（批次二 · Gemini §2 设计落地）：原因绯红→推荐琥珀→行动段；持久可行动（toast TTL 1.5s 对长拦截消息不可靠）
+      // 推荐文案程序化派生（自查题裁决）：周期上界从导出门升档常数派生（128 帽 ÷ 32 格/周期），
+      // 家族宣称带实测日期戳防静态过期——完整数据管线派生（k6_tolerance_table 入包）登记后续
+      const maxPeriods = Math.floor(128 / 32);
       const recs = [
-        '换族：Gyroid / Diamond 系全档已验证可产水密网格',
+        '换族：Gyroid / Diamond 系（2026-10-24 导出门矩阵实测可产域）',
+        `降周期至 ≤${maxPeriods}（=128 导出帽 ÷ 32 格/周期升档常数）后重试`,
         '经 CLI mesh --resolution 96+ 导出（绕开浏览器内存档上限）',
         ...(s.type === 'custom' ? ['自定义公式可降低频率'] : []),
       ];
