@@ -35,6 +35,7 @@ import { hashArray } from './utils/hash-array';
 import { geoCache, geoCacheSet, geoCacheTouch, cacheKey } from './geometry/geo-cache';
 import { initTheme } from './ui/theme';
 import { flashToast } from './ui/toast';
+import { showBlockCard } from './ui/blockCard';
 import { DISPLAY_SCALE, effectiveMmFactor, hdResolution, l2Resolution } from './core/units';
 import { auditMeshIndices } from './core/mesh-audit';
 import { parseNL, type NLIntent } from './core/nl-agent';
@@ -6559,7 +6560,30 @@ async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail
     }
     if (bad(a7)) {
       const msg = `已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`;
-      flashToast(msg);
+      // 拦截三段式卡片（批次二 · Gemini §2 设计落地）：原因绯红→推荐琥珀→行动段；持久可行动（toast TTL 1.5s 对长拦截消息不可靠）
+      const recs = [
+        '换族：Gyroid / Diamond 系全档已验证可产水密网格',
+        '经 CLI mesh --resolution 96+ 导出（绕开浏览器内存档上限）',
+        ...(s.type === 'custom' ? ['自定义公式可降低频率'] : []),
+      ];
+      const canStep = s.cellSize > 1;
+      showBlockCard({
+        title: '导出已拦截',
+        reason: '网格未通过水密审计——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产',
+        metrics: [['开放边', String(a7.openEdges)], ['非流形边', String(a7.nonManifoldEdges)], ['退化面', String(a7.degenTris)]],
+        recommendations: recs,
+        actions: [{
+          label: canStep ? `降低单元密度至 ${s.cellSize - 1} 并重试` : '已至最低单元密度——请换族',
+          disabled: !canStep,
+          run: () => {
+            const el = document.getElementById('cell-size') as HTMLInputElement | null;
+            if (!el || !canStep) return;
+            el.value = String(s.cellSize - 1);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            window.setTimeout(() => { void handleExport(fmt); }, 400);
+          },
+        }],
+      });
       return { ok: false, verifyFail: true, summary: msg };
     }
   }

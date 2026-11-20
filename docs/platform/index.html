@@ -531,6 +531,27 @@
     transition:all .25s var(--ease-out);z-index:10001;font-weight:500;letter-spacing:0.01em;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* ── 拦截三段式卡片（原因绯红/推荐琥珀/行动段）——导出门持久可行动反馈 ── */
+  #block-card{position:fixed;inset:0;z-index:10002;display:none;place-items:center;background:rgba(4,8,16,0.45);backdrop-filter:blur(2px)}
+  #block-card.show{display:grid}
+  #block-card .bc-box{width:min(480px,92vw);background:var(--panel-solid);border:1px solid var(--panel-border);border-radius:var(--radius-s);box-shadow:0 24px 64px rgba(0,0,0,0.4);padding:16px 18px 14px}
+  #block-card .bc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  #block-card .bc-title{font-size:.86rem;font-weight:700;color:var(--ink);letter-spacing:0.01em}
+  #block-card .bc-x{appearance:none;border:none;background:transparent;color:var(--ink-3);font-size:.9rem;cursor:pointer;padding:2px 6px;border-radius:6px}
+  #block-card .bc-x:hover{color:var(--ink);background:rgba(127,140,160,0.12)}
+  #block-card .bc-reason{font-size:.78rem;line-height:1.55;color:var(--ink);background:rgba(244,63,94,0.10);border-left:3px solid #f43f5e;border-radius:0 6px 6px 0;padding:8px 10px;margin-bottom:8px}
+  #block-card .bc-metrics{gap:6px;margin-bottom:8px}
+  #block-card .bc-metric{display:flex;justify-content:space-between;background:var(--panel-2);border-radius:6px;padding:5px 10px;font-size:.74rem}
+  #block-card .bc-mk{color:var(--ink-2)}
+  #block-card .bc-mv{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  #block-card .bc-recs{margin-bottom:10px;display:grid;gap:3px}
+  #block-card .bc-rec{font-size:.74rem;line-height:1.5;color:var(--ink-2);background:rgba(245,158,11,0.10);border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;padding:5px 10px}
+  #block-card .bc-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  #block-card .bc-btn{appearance:none;border:1px solid var(--panel-border);background:transparent;color:var(--ink-2);font-size:.76rem;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .18s var(--ease-out)}
+  #block-card .bc-btn:hover:not(:disabled){color:var(--ink);border-color:var(--ink-3)}
+  #block-card .bc-btn:disabled{opacity:0.45;cursor:not-allowed}
+  #block-card .bc-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  #block-card .bc-btn-primary:hover:not(:disabled){background:var(--accent-d);border-color:var(--accent-d);color:#fff}
   /* ── 快捷键提示徽章 ── */
   kbd.shortcut{
     display:inline-flex;align-items:center;justify-content:center;
@@ -877,7 +898,7 @@ window.addEventListener('error', function(e) {
   }
 }, true);
 </script>
-  <script type="module" crossorigin src="./assets/index-Cg6Wo10o.js"></script>
+  <script type="module" crossorigin src="./assets/index-BAUu_qPv.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
   <link rel="modulepreload" crossorigin href="./assets/gibson-ashby-CfdDFGgz.js">
   <link rel="modulepreload" crossorigin href="./assets/inverse-design-B5GZY3TP.js">
