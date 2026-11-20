@@ -84,7 +84,7 @@
 >
 > - **MPh 全链 12 轮错误消息驱动打通**（working/scratch/mph_t4_fluid.py + 两探针）：labeled 流体 STL 一步成域（domains=1/80 面，无需布尔差集）→6 Box+Union/Complement(entitydim=2)→BndLayer(2 层)+FreeTet(fine hmax0.3)→LaminarFlow 双点求解（v1 9.7s）→六数值特征（ΔP/Q/Ubar/WSS 切向应力式/V/A/壁面力平衡）。**API 断代坑 6 例**：JInt 二义重载/Union-Complement 默认域级/BndLayerProp 无 hfirst/Size 子操作首字母大写/数值特征须求解后建（dataset）+空选集=静默 0/spf 速度=标量 u,v,w 非 u.x/边界梯度须 mean(d())。产出 sim/out/comsol_t4/（mph+summary json）。
 > - **T4 vs T3 对拍（口径全同）**：ΔP(v1)=0.031031 Pa vs T3 修正 0.030907→**0.40% 吻合**；K_bc=0.11472 vs 0.11519 mm²→**0.40%**；Ubar=1.017mm/s✓；WSS max −6.8%✓；WSS mean 1.90 vs 4.96 mPa（2.6×，开放项）。
-> - **【重大发现·四腿证据待验】T3 rve1 链 ΔP ×1000 单位坑**：OF 链 "30.907/309.171 Pa" 疑为 mm 制运动压值误标 Pa（修正后 0.030907/0.309171）；K 1.1519e-4→**0.11519 mm²**，与标定律 0.143/KC 0.196/COMSOL 0.11472 全对齐；raw K 等效隙 0.037mm 物理不可能。已登记 bugs.md 机制实锤版（求解正确/报告层双层错：U ×100+漏乘 ρ×1e-6；K_true=0.11517 mm² 双口径与 COMSOL 0.4% 吻合），**未改权威数据（等拍板）**；β=272 m⁻¹ 与 WSS 量纲链连带待重推。开放：v2 重解 16.53× 异常（速度族恰 10×、压力族 16.5×，study.reset 不存在）；WSS mean 2.6× 缺口。
+> - **【重大发现·四腿证据待验】T3 rve1 链 ΔP ×1000 单位坑**：OF 链 "30.907/309.171 Pa" 疑为 mm 制运动压值误标 Pa（修正后 0.030907/0.309171）；K 1.1519e-4→**0.11519 mm²**，与标定律 0.143/KC 0.196/COMSOL 0.11472 全对齐；raw K 等效隙 0.037mm 物理不可能。已登记 bugs.md 机制实锤版（求解正确/报告层双层错：U ×100+漏乘 ρ×1e-6；K_true=0.11517 mm² 双口径与 COMSOL 0.4% 吻合），**未改权威数据（等拍板）**；β=272 m⁻¹ 与 WSS 量纲链连带待重推。**v2 定案（11-21 晚）**：std2 新鲜求解 15 位复现 + 三点二次律 3% 自洽 + OF13 真 10mm/s 独立判决 1.20% 吻合（of_rve1_U10）=**真 Forchheimer 惯性**，β≈500-570 m⁻¹，项目首个真惯性数据点；OF 原两点均深 Stokes（BC 0.01/0.1 vs 声称 1.0/10.0）；β√K=0.006 vs 泡沫文献 0.3 的 50× 差距=TPMS 专项开放。WSS mean/max 2.3-2.5× 缺口=**真差距**（OF raw 场解析排单位伪影；OF snappy BL 覆盖 56.6% vs COMSOL 全覆盖，待壁面分辨率敏感性批）。
 > - **11-18 段勘误补记**：简报 Card #24（du 后台跑 2）+I212（abaqus cae noGUI StubType）为 paper2/环境面非本仓。
 
 > ## 详细历史
