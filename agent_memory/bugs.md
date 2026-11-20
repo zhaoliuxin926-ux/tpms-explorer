@@ -44,6 +44,11 @@
 
 ## 二、开放风险（按日期）
 
+## 2026-11-21 T4 MPh 批两发现（T3 rve1 ΔP ×1000 单位坑待验 + COMSOL v2 重解异常）
+
+- **发现 1（重大·四腿证据待验）**：T3（rve1 真解批，openfoam_cfd_summary.json）"dp_Pa=30.907/309.171" 疑为 **mm 制运动压力值误标 Pa**——修正 ÷1000 后与 T4 COMSOL MPh 同口径实测 0.031031 Pa **0.40% 吻合**；K 由 1.1519e-4→**0.11519 mm²**，与标定律 0.442·ε^3.17@ε=0.70→0.143 mm²、重校 KC(Kozeny 13.5)→0.196 mm²、COMSOL K_bc=0.11472 mm² 四方对齐；raw K 等效隙 sqrt(12K)=0.037mm 对 p0.70 gyroid 物理不可能。**连带存疑**：β=272 m⁻¹、Forchheimer 回代口径（11-19 勘误的 NOT_INDEPENDENT 项）。**处置=登记待验，未改 multifidelity 权威数据（等拍板）**；复核路径=rve1 case p 场单位复核（log.foamRun_v1 压力量纲 + 提取脚本）或 WSL 重跑单点。注意 anchor 链 k_check 有"SI 残留修正"先例（同类坑修过一次，rve1 快跑批未吃到修复）。
+- **发现 2（COMSOL 侧）**：v2 参数置换重解 ΔP 异常——速度族（Q/WSS max/Ubar）恰 ×10 而 ΔP 16.5×/WSS mean 12×，可复现（非 flake），study.reset() 在 6.2 Java API 不存在；疑 segregated 重解压力场继承/容差交互。v1 锚点（K 主指标）不受影响。下批修法=独立 std2+dataset 重绑或 fresh model per point。
+
 ## 2026-11-14 真机 CAE 实跑批两发现（FVM 双向失真 + v13 surfaceFieldValue 语法断代）
 
 - **发现 1（FVM 兜底轨，未修=研究级）**：p3_openfoam_solve FVM Brinkman 兜底轨 K=0.0675 mm² vs 同 case WSL OF13 真解算器 K=1.15e-4 mm²（586×）。解析锚判别（working/scratch/fvm_capillary_test.py）：直管方通道 FVM ΔP 高估 31×（24³ 体素近壁 Brinkman 阻尼 μ/(h·d_eff)，d_eff≤1.5h 把 6 格宽流道堵死）；gyroid RVE ΔP 低估 413×（孔道内部零形状阻力 → 迂曲拖曳缺失）。**双向失真=体素近似求解器结构性缺陷，K/β/WSS 数值不可信，定级"链路贯通冒烟档"**——多保真矩阵 T3 层以 WSL OF13 为唯一物理权威源；修复属研究级批次（孔道内部形状阻力项重设计），非单点单位 bug。

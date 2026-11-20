@@ -80,6 +80,13 @@
 > - **OF 边界层能力盘点核实（11-18 咨询批）**：仓内三处在案实跑——anchor-1 定案带棱柱（K +0.319% vs .nolayer 对照 +0.579%，层贡献≈0.26pp、主责=表面加密，8f960a5）、tpms_cell 单胞通透池 K=0.0811 即带层定案（anchor 配方移植一次成功）、生产 p1_bl_mesh.py 模板出厂 addLayers true（3b951cb；lmax<0.2 层质量反噬告警 aae367a）；生产 K 案（WSL feaBoneReanalysis 树）addLayers false 实锤。**勘误上轮试点案名**：K_1.5_AE 在 WSL 两树未复现（*1.5* find 全量仅 BE_fine/equalp_E/C），在案三水平族改 K_1.25_AE（trial1/trial2+meshfine/fine）；live 树 fea_bone_reanalysis_20260922 为空，生产案唯一副本在 _bak 树（单副本风险，论文项目面）。封版不动裁定维持；对 T4 COMSOL BL 主轨不冲突（OF 层=线内精度手段，COMSOL=独立求解器交叉验证）。
 > - **仓根规整批（11-18，用户三项拍板后执行）**：课题组学习资料.zip（179MB，已吸收 study_pack）删除；原型/harness-驾驶舱.html git mv → tpms/prototypes/（根目录唯一中文顶层目录消除；harness.html 设计源注释两处同步=改源+重建+重灌 docs/platform，parity OK+docs_consistency 349 PASS 零漂移验证）；明确不动清单=sim/cfd 定案现场（tpms_cell 148M+anchor1 41M，删=证据降级）/docs 根散 .md（docs_consistency 扫描面）/specimens 1.3G（上机必需）。**CI 终态（169cd2a）=三平台 50 门全绿**（run 44136302985：win 41m/ubuntu 41m39s/macos 首跑步骤全成功却被 cancelled=GH 侧瞬态，`--failed` 重跑 fresh runner 绿=瞬态定案，与 11-07 ubuntu flake 同判别流程）；Pages 同批绿。推送注意：新环境裸 `git push` 因无 upstream 被拒且 tail 截 fatal 行易误读成功，`-u origin main` 一次设定。
 
+> ### 11-21：T4 COMSOL MPh 实跑批闭环 + T3 rve1 链 ×1000 单位坑发现
+>
+> - **MPh 全链 12 轮错误消息驱动打通**（working/scratch/mph_t4_fluid.py + 两探针）：labeled 流体 STL 一步成域（domains=1/80 面，无需布尔差集）→6 Box+Union/Complement(entitydim=2)→BndLayer(2 层)+FreeTet(fine hmax0.3)→LaminarFlow 双点求解（v1 9.7s）→六数值特征（ΔP/Q/Ubar/WSS 切向应力式/V/A/壁面力平衡）。**API 断代坑 6 例**：JInt 二义重载/Union-Complement 默认域级/BndLayerProp 无 hfirst/Size 子操作首字母大写/数值特征须求解后建（dataset）+空选集=静默 0/spf 速度=标量 u,v,w 非 u.x/边界梯度须 mean(d())。产出 sim/out/comsol_t4/（mph+summary json）。
+> - **T4 vs T3 对拍（口径全同）**：ΔP(v1)=0.031031 Pa vs T3 修正 0.030907→**0.40% 吻合**；K_bc=0.11472 vs 0.11519 mm²→**0.40%**；Ubar=1.017mm/s✓；WSS max −6.8%✓；WSS mean 1.90 vs 4.96 mPa（2.6×，开放项）。
+> - **【重大发现·四腿证据待验】T3 rve1 链 ΔP ×1000 单位坑**：OF 链 "30.907/309.171 Pa" 疑为 mm 制运动压值误标 Pa（修正后 0.030907/0.309171）；K 1.1519e-4→**0.11519 mm²**，与标定律 0.143/KC 0.196/COMSOL 0.11472 全对齐；raw K 等效隙 0.037mm 物理不可能。已登记 bugs.md，**未改权威数据（等拍板）**；β=272 m⁻¹ 连带存疑。开放：v2 重解 16.53× 异常（速度族恰 10×、压力族 16.5×，study.reset 不存在）；WSS mean 2.6× 缺口。
+> - **11-18 段勘误补记**：简报 Card #24（du 后台跑 2）+I212（abaqus cae noGUI StubType）为 paper2/环境面非本仓。
+
 > ## 详细历史
 >
 > - **2026-11-13 及更早**：`agent_memory/archive/progress_2026-11-early.md`（11-13 R48 曲线/11-12 anchor 终判/11-11 平台化咨询/11-07-08 Anchor 病灶与 sheet 管线/11-04~06 Gemini FEA 线）
