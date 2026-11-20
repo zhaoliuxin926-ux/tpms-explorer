@@ -46,7 +46,7 @@
 
 ## 2026-11-21 T4 MPh 批两发现（T3 rve1 ΔP ×1000 单位坑待验 + COMSOL v2 重解异常）
 
-- **发现 1（重大·四腿证据待验）**：T3（rve1 真解批，openfoam_cfd_summary.json）"dp_Pa=30.907/309.171" 疑为 **mm 制运动压力值误标 Pa**——修正 ÷1000 后与 T4 COMSOL MPh 同口径实测 0.031031 Pa **0.40% 吻合**；K 由 1.1519e-4→**0.11519 mm²**，与标定律 0.442·ε^3.17@ε=0.70→0.143 mm²、重校 KC(Kozeny 13.5)→0.196 mm²、COMSOL K_bc=0.11472 mm² 四方对齐；raw K 等效隙 sqrt(12K)=0.037mm 对 p0.70 gyroid 物理不可能。**连带存疑**：β=272 m⁻¹、Forchheimer 回代口径（11-19 勘误的 NOT_INDEPENDENT 项）。**处置=登记待验，未改 multifidelity 权威数据（等拍板）**；复核路径=rve1 case p 场单位复核（log.foamRun_v1 压力量纲 + 提取脚本）或 WSL 重跑单点。注意 anchor 链 k_check 有"SI 残留修正"先例（同类坑修过一次，rve1 快跑批未吃到修复）。
+- **发现 1（机制实锤·报告层双层错）**：T3 rve1 **求解本身正确**（case 0/U inlet=0.01 mm/s、ν=0.89 mm²/s 正确 mm 世界、raw ΔP_kin=0.30917 mm²/s² 与 K=0.11517 mm² 自洽 0.1%）——错在 summary/报告层：① U 口径 ×100（case 0.01 vs 声称 1.0 mm/s）② raw 运动压 ×100 标度后漏乘 ρ×1e-6（→"30.907 Pa"=真值×1000）。**K_true=0.11517 mm²（BC 口径）/0.0698（flux 口径）与 COMSOL 0.11472/0.06940 双口径 0.4% 吻合**；multifidelity T3 K_m2=1.1519e-10 → 真 1.1519e-7 m²（×1000 报告层错）。连带：WSS 量纲链未闭合（raw kinematic 分量 ±0.449→τ~0.5-0.7 mPa@0.01mm/s vs summary 4.956 mPa，待重推导）；β=272 m⁻¹ 待重推。**处置=登记待验，未改权威（等拍板）**；复核=修提取脚本换算重导出。anchor 链 k_check "SI 残留修正"先例=同类坑二犯。
 - **发现 2（COMSOL 侧）**：v2 参数置换重解 ΔP 异常——速度族（Q/WSS max/Ubar）恰 ×10 而 ΔP 16.5×/WSS mean 12×，可复现（非 flake），study.reset() 在 6.2 Java API 不存在；疑 segregated 重解压力场继承/容差交互。v1 锚点（K 主指标）不受影响。下批修法=独立 std2+dataset 重绑或 fresh model per point。
 
 ## 2026-11-14 真机 CAE 实跑批两发现（FVM 双向失真 + v13 surfaceFieldValue 语法断代）
