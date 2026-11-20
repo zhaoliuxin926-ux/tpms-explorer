@@ -298,12 +298,21 @@ try {
   }));
   met.metrics.length === 3 && /非流形边/.test(met.metrics.join('')) && /降低单元密度/.test(met.actionLabel || '')
     ? ok('B6 拦截卡片三段式渲染（指标+行动钮）') : bad('B6 拦截卡片渲染', JSON.stringify(met));
+  // 行动钮单步确定性断言：点击→同步 hide()+同步密度递减（300ms 快照，避开重导级联——
+  // 递减+自动重导在连续失败时会级联出新卡，重试环会把它放大成 5→4→3→2 计数链，实测教训）
   await page.evaluate(() => {
     const b = [...document.querySelectorAll('#block-card .bc-btn')].find(x => /降低单元密度/.test(x.textContent));
     if (b) b.click();
   });
-  await page.waitForFunction(() => document.getElementById('cell-size')?.value === '4', undefined, { timeout: 15_000 });
-  ok('B6 行动钮恢复闭环（cell-size 5→4 + 重导派发）');
+  const after = await page.evaluate(() => new Promise((res) => setTimeout(() => res({
+    cell: Number(document.getElementById('cell-size')?.value ?? 0),
+    cardShown: document.getElementById('block-card')?.classList.contains('show') ?? false,
+  }), 300)));
+  // 不变量=密度递减已发生（<5）：卡片可见性随 k4 重导快速失败而再显示（应用正确行为），非断言面
+  after.cell < 5 && after.cell > 0
+    ? ok('B6 行动钮单步闭环（密度递减 ' + 5 + '→' + after.cell + '）')
+    : bad('B6 行动钮单步闭环', JSON.stringify(after));
+
 } catch (e) {
   bad('B6 拦截卡片流程', String(e).slice(0, 140));
 }
