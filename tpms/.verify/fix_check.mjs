@@ -291,7 +291,7 @@ try {
   await page.waitForTimeout(1200);
   await domClick('#btn-stl');
   // 卡片出现（含 128 帽升档重试构建；本地实测 ~6s，CI swiftshader 预算放大——E2E 预算方法论）
-  await page.waitForFunction(() => document.getElementById('block-card')?.classList.contains('show'), { timeout: 240_000 });
+  await page.waitForSelector('#block-card.show', { timeout: 240_000 });   // waitForSelector: options 第二位（waitForFunction 第二位是 arg——曾把 240s 预算丢成页面参数）
   const met = await page.evaluate(() => ({
     metrics: [...document.querySelectorAll('#block-card .bc-metric')].map(m => m.textContent),
     actionLabel: (document.querySelector('#block-card .bc-btn-primary') || {}).textContent,
@@ -302,7 +302,7 @@ try {
     const b = [...document.querySelectorAll('#block-card .bc-btn')].find(x => /降低单元密度/.test(x.textContent));
     if (b) b.click();
   });
-  await page.waitForFunction(() => document.getElementById('cell-size')?.value === '4', { timeout: 15_000 });
+  await page.waitForFunction(() => document.getElementById('cell-size')?.value === '4', undefined, { timeout: 15_000 });
   ok('B6 行动钮恢复闭环（cell-size 5→4 + 重导派发）');
 } catch (e) {
   bad('B6 拦截卡片流程', String(e).slice(0, 140));
