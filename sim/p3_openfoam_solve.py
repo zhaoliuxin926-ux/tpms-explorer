@@ -521,6 +521,13 @@ def solve_dual_velocity_cfd(
         # Gemini 2026-11-15 Q4 硬要求：FVM 体素 Brinkman 轨双向失真定级冒烟档——
         # 硬编码护栏防上层 LLM Agent 误读为真实物理量（fidelity_warning 字段恒在）
         "fidelity_warning": "SMOKE_TEST_ONLY_DO_NOT_CITE" if solver_tier == "fvm_brinkman_rve" else None,
+        # 2026-11-21 治理修复（pitfall I214）：wss_v1/wss_v2 恒取自体素 FVM（mu*|u|/d_eff 代理），
+        # 即使 WSL OF13 成功也只换 dp 不换 WSS——出处门控补齐，防止上层把体素 WSS 当 REAL_SOLVED 引用
+        "wssProvenance": {
+            "sourceTier": "fvm_brinkman_rve_voxel_proxy",
+            "method": "mu*|u_cell|/d_eff (near-wall cell estimate, NOT wall traction)",
+            "fidelityWarning": "SMOKE_TEST_ONLY_DO_NOT_CITE",
+        },
         "wslAttempt": wsl_diag,
         "type": ftype,
         "structure": structure,
@@ -551,6 +558,7 @@ def solve_dual_velocity_cfd(
             "Fo": round(fo_v2, 5),
         },
         "wss_v1": {
+            "source": "voxel_fvm_proxy",
             "wssMean_mPa": r1["wssMean_mPa"],
             "wssP10_mPa": r1["wssP10_mPa"],
             "wssP50_mPa": r1["wssP50_mPa"],
@@ -560,6 +568,7 @@ def solve_dual_velocity_cfd(
             "wssHistogram": r1["wssHistogram"],
         },
         "wss_v2": {
+            "source": "voxel_fvm_proxy",
             "wssMean_mPa": r2["wssMean_mPa"],
             "wssP50_mPa": r2["wssP50_mPa"],
             "wssP90_mPa": r2["wssP90_mPa"],
