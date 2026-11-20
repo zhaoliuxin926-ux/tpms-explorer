@@ -2087,6 +2087,7 @@ function applyNLIntent(intent: NLIntent): void {
     syncUI(sNew);
     updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);
+    nlBuildStart();          // restore 路径同挂重建指示（与 patches 路径对称；缓存命中时 Done 为 no-op）
     scheduleHdUpgrade();
     nlAppend('助手：已恢复默认参数 ✓');
   } else if (Object.keys(patches).length > 0) {
