@@ -1979,6 +1979,44 @@ function nlAppend(text: string): void {
   try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ }
 }
 
+// ── NL 气泡内嵌重建指示（批次二 §1「重建进度条内嵌气泡」诚实版）──
+// 主管线无 progress 流（worker 单发请求）——elapsed 计时 + 完成原地替换耗时徽章，不造伪百分比
+let nlBuildTicker: ReturnType<typeof setInterval> | null = null;
+let nlBuildEl: HTMLElement | null = null;
+let nlBuildT0 = 0;
+function nlBuildStart(): void {
+  nlBuildStop();
+  const log = document.getElementById('nl-log');
+  if (!log) return;
+  const bar = document.createElement('div');
+  bar.className = 'nl-build';
+  bar.innerHTML = '<span class="nl-build-dot"></span><span class="nl-build-txt">重建中</span>';
+  log.appendChild(bar);
+  log.scrollTop = log.scrollHeight;
+  nlBuildEl = bar;
+  nlBuildT0 = performance.now();
+  nlBuildTicker = window.setInterval(() => {
+    const s = (performance.now() - nlBuildT0) / 1000;
+    const txt = bar.querySelector('.nl-build-txt') as HTMLElement | null;
+    if (txt) txt.textContent = '重建中 ' + s.toFixed(1) + 's';
+  }, 100);
+  try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ }
+}
+function nlBuildStop(): void {
+  if (nlBuildTicker) { clearInterval(nlBuildTicker); nlBuildTicker = null; }
+}
+function nlBuildDone(ok: boolean): void {
+  nlBuildStop();
+  if (!nlBuildEl) return;
+  const s = (performance.now() - nlBuildT0) / 1000;
+  nlBuildEl.classList.add(ok ? 'nl-build-ok' : 'nl-build-bad');
+  const txt = nlBuildEl.querySelector('.nl-build-txt') as HTMLElement | null;
+  if (txt) txt.textContent = ok ? '重建完成 · ' + s.toFixed(1) + 's' : '重建失败';
+  const log = document.getElementById('nl-log');
+  if (log) { try { sessionStorage.setItem(NL_LOG_KEY, log.innerHTML); } catch { /* 静默 */ } }
+  nlBuildEl = null;
+}
+
 /** 解析结果结构化 mini 卡（字段→值键值网格+置信度徽标，Gemini UI 裁决 §1） */
 function nlCard(items: Array<{ field: string; to: string | number }>, confidence: number): void {
   const log = document.getElementById('nl-log');
@@ -2013,6 +2051,7 @@ async function nlDoExport(fmt: 'stl' | '3mf', nameOverride?: string): Promise<vo
 
 /** 重建完成后若挂起 NL 导出则执行（缓存路径与 worker 路径都会调用） */
 function runPendingNLExport(): void {
+  nlBuildDone(true);
   notifyRebuildDone();  // Agent mesh 工具的 awaitNextRebuild 等待者（A3：导出水密门回流修复循环）
   if (!nlPendingExport) return;
   const { fmt, name } = nlPendingExport;
@@ -2057,6 +2096,7 @@ function applyNLIntent(intent: NLIntent): void {
     updateBadges(sNew.type, sNew.model, sNew.material, sNew.structureMode);
     scheduleRebuild(false);   // 关键：NL 改参必须触发重建（曾缺失 → 视图不更新、导出旧几何）
     nlRebuildPending = true;
+    nlBuildStart();
     scheduleHdUpgrade();      // 与滑块 change 路径同参：松手/应用后升级全高清
     nlAppend('助手：已应用');
     if (intent.log.length) nlCard(intent.log, intent.confidence);

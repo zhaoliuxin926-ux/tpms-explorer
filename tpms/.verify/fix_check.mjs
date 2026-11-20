@@ -276,11 +276,43 @@ cpOff ? ok('B5 caliper 关') : bad('B5 caliper 关', 'class 仍 on');
     : bad('B5 slice-svg 点击路径执行', `toast="${toastMsg}" dialog="${dialogMsg}" dl=${dl ? dl.suggestedFilename() : 'null'}`);
 }
 
+// ── B6 拦截三段式卡片（导出门硬拦截→行动恢复闭环；2026-11-21 批次二）──
+try {
+  await page.evaluate(() => {
+    const fam = [...document.querySelectorAll('button.opt, button')].find(b => b.textContent.trim().startsWith('Diamond'));
+    if (fam) fam.click();
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const cs = document.getElementById('cell-size');
+    cs.value = '5';
+    cs.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(1200);
+  await domClick('#btn-stl');
+  // 卡片出现（含 128 帽升档重试构建；本地实测 ~6s，CI swiftshader 预算放大——E2E 预算方法论）
+  await page.waitForFunction(() => document.getElementById('block-card')?.classList.contains('show'), { timeout: 240_000 });
+  const met = await page.evaluate(() => ({
+    metrics: [...document.querySelectorAll('#block-card .bc-metric')].map(m => m.textContent),
+    actionLabel: (document.querySelector('#block-card .bc-btn-primary') || {}).textContent,
+  }));
+  met.metrics.length === 3 && /非流形边/.test(met.metrics.join('')) && /降低单元密度/.test(met.actionLabel || '')
+    ? ok('B6 拦截卡片三段式渲染（指标+行动钮）') : bad('B6 拦截卡片渲染', JSON.stringify(met));
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#block-card .bc-btn')].find(x => /降低单元密度/.test(x.textContent));
+    if (b) b.click();
+  });
+  await page.waitForFunction(() => document.getElementById('cell-size')?.value === '4', { timeout: 15_000 });
+  ok('B6 行动钮恢复闭环（cell-size 5→4 + 重导派发）');
+} catch (e) {
+  bad('B6 拦截卡片流程', String(e).slice(0, 140));
+}
+
 // ── 汇总 ──
 if (errors.length) { bad('运行时错误', errors.slice(0, 5).join(' | ')); }
 else ok('全程 0 pageerror / 0 console.error');
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-  if (pass < 28) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 28（23 + measure 5，2026-09-22 P1-12）'); process.exit(1); }
+  if (pass < 30) { console.error('GUARD FAIL: 断言执行数 ' + pass + ' < 基线 30（28 + B6 卡片 2，2026-11-21）'); process.exit(1); }
 await browser.close();
 process.exit(fail > 0 ? 1 : 0);
