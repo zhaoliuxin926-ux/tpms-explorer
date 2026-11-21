@@ -209,3 +209,8 @@
 - expfit wPts 用首对采样间距估窗宽（experimental-fit.ts:163）：非均匀采样下失真——试验机分段采样场景登记
 - lidinoid 口径注记：+0.15 后 iso=0 两相 61.6/38.4 是官方几何真实特性（非自对偶）；此前"12pp 差"实为漏抄版 por(−0.15)=0.728 vs 官方 por(0)=0.616
 - neural-implicit-weights.ts 已对新教师重蒸馏（lidinoid RMSE 0.0311）；公式再变更须重跑 gen_neural_weights.mjs（本轮经验）
+
+## 2026-11-21 深夜 XIV：B6 门三修链（playwright API+级联+不变量收敛）+ diamond k4 快速失败矛盾登记
+
+- **三修链**：①waitForFunction 第二位是 arg 非 options（240s 预算被丢成页面参数，45s 默认接管）→ 改 waitForSelector；②测试重试环×应用递减重导=级联放大（5→4→3→2 计数链，诊断 {'cell':'2','card':true} 实锤）→ 单步确定性；③300ms 快照窗内卡片重显=k4 重导快速失败的正确应用行为 → 断言收敛至不变量（cell<5=行动开火实锤），本地 30 PASS。
+- **【登记待查】diamond k4 导出快速失败矛盾**：B6 级联轨迹显示 k4/k3/k2 连续拒产出卡，与 10-24 导出门矩阵'diamond k1-4 救回'矛盾；且 k4 重导失败快于升档构建应有时长（疑缓存命中/或显示档审计路径差异）。不阻塞门禁（不变量断言不依赖 k4 可产性）；复核路径=本地手动 diamond k4 导出复现+auditMeshIndices 数值对照 10-24 矩阵。
