@@ -341,6 +341,7 @@ def _try_wsl_openfoam_solve(
     v1_ms: float,
     v2_ms: float,
     timeout_sec: int = 240,
+    rho_si: float = 1000.0,
 ) -> dict[str, Any]:
     """
     Attempt real WSL OpenFOAM 13 solve on `case_dir`. If `snappyHexMesh` fails
@@ -388,7 +389,11 @@ def _try_wsl_openfoam_solve(
     results_v: dict[str, dict[str, Any]] = {}
     for key, vel in [("v1", v1_ms), ("v2", v2_ms)]:
         if orig_u:
-            u_mod = re.sub(r"value\s+uniform\s+\([^)]+\);", f"value           uniform ({vel:.6g} 0 0);", orig_u)
+            # mm-world BC 口径（2026-11-21 T3 ×1000 修正）：case 网格坐标=mm，OF 值域=mm 世界
+            # （ν=0.89 [mm²/s]、U [mm/s]、p [mm²/s²]）——声称 v_real[m/s] 写 BC=×1000（mm/s）。
+            # 历史 run 曾写 claimed 值原值（0.001→实际跑 0.001mm/s=声称/100，口径错①）。
+            vel_mm_s = vel * 1000.0
+            u_mod = re.sub(r"value\s+uniform\s+\([^)]+\);", f"value           uniform ({vel_mm_s:.6g} 0 0);", orig_u)
             u0_path.write_text(u_mod, encoding="utf-8")
         run_cmd = (
             "set -e; "
@@ -435,9 +440,11 @@ def _try_wsl_openfoam_solve(
             lines = [ln.strip() for ln in fp.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip() and not ln.startswith("#")]
             return float(lines[-1].split()[-1])
 
-        # OpenFOAM kinematic pressure p/rho -> multiply by rho=1000
+        # mm-world 单位链（2026-11-21 T3 ×1000 修正，定案依据 docs/cfd-wss-window-caliber.md 附带定案段）：
+        # p_OF = mm 制运动压 [mm²/s²] → SI: ×ρ×1e-6（=×1e-3 @ρ=1000）。历史 ×1000（"multiply by rho"
+        # 注释把 mm 世界的 ρ 缩放与 SI 换算混淆）= ×1e6 偏差源。
         dp_kin = abs(_last_val(p_in_vals[-1]) - _last_val(p_out_vals[-1]))
-        dp_pa = dp_kin * 1000.0
+        dp_pa = dp_kin * rho_si * 1e-6
         results_v[key] = {"v_ms": vel, "dp_Pa": dp_pa, "residuals": res_list}
 
     return {"ok": True, "v1": results_v["v1"], "v2": results_v["v2"], "L_m": L_mm * 1e-3}
@@ -489,7 +496,7 @@ def solve_dual_velocity_cfd(
     residuals = r2["residuals"]
 
     if prefer_wsl and case_dir is not None:
-        wsl_res = _try_wsl_openfoam_solve(case_dir, L_rve_mm, v1_ms, v2_ms)
+        wsl_res = _try_wsl_openfoam_solve(case_dir, L_rve_mm, v1_ms, v2_ms, rho_si=rho)
         wsl_diag = wsl_res
         if wsl_res.get("ok"):
             solver_tier = "openfoam13_wsl"

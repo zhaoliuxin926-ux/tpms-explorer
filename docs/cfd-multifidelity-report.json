@@ -20,7 +20,7 @@
    "E_eff_Es2000_MPa_nominal030": 136.29,
    "E_eff_TC4_110GPa": 7.496,
    "svRatio_mm1": 0.7725,
-   "K_kc_m2": 1.1495e-7,
+   "K_kc_m2": 1.1495e-07,
    "K_kc_mm2": 0.115
   },
   "T2_browser_hybrid": {
@@ -35,13 +35,13 @@
    "microFea_R20_KUBC_MPa": 310.03,
    "microFea_R20_TC4_GPa": 17.052,
    "zenerRatio": 1.1498,
-   "parityMatrix_T2_K_m2": 1.51e-7,
+   "parityMatrix_T2_K_m2": 1.51e-07,
    "parityMatrix_T2_K_note": "该值取自 harness 对标矩阵 T2 行，来源为 Forchheimer 面板按 R48/KC 参考渗透率自动预置的典型工况——属参考回填，不是浏览器 LBM/FD 独立求解结果",
    "fdDarcy_R20_kappaLU": 0.51524,
    "fdDarcy_R20_diffusiveTortuosity": 1.3586,
    "forchheimer_selfConsistency": {
     "inputs": "T3 WSL OpenFOAM13 实测双点压降（v1=1.0 mm/s, ΔP1=30.907 Pa; v2=10.0 mm/s, ΔP2=309.171 Pa）",
-    "uiComputed_K_int_mm2": 1.41e-4,
+    "uiComputed_K_int_mm2": 0.000141,
     "uiParameters": "L=3.0 mm（探针未传 specimen_size_mm，回退 periods×1mm）, μ=1.45 mPa·s（面板默认）——与 T3 RVE 口径 L=4.0 mm（k_cfd=1）、μ=0.89 mPa·s 不一致；UI 四位小数显示为 0.0001",
     "verdict": "NOT_INDEPENDENT——输入即 T3 数据，只验证面板公式与单位链，不构成 T2 对 T3 的独立渗透率验证"
    },
@@ -55,21 +55,48 @@
    "status": "REAL_SOLVED",
    "solverTier": "openfoam13_wsl",
    "mesh": "snappy 40914 cells / Mesh OK / skew 3.83<4 / BL 2层覆盖率56.6%",
-   "K_m2": 1.1519e-10,
-   "K_mm2": 0.00011519,
-   "beta_m1": 272.22,
-   "Fo_v2": 0.00035,
-   "dp1_Pa": 30.907,
-   "dp2_Pa": 309.171,
-   "wss_v1_mean_mPa": 4.9559,
-   "wssOsteogenicWindowPct": 34.76,
+   "unitChain": "mm-world: ν=0.89mm²/s, U_BC=0.01mm/s, Δp_kin[mm²/s²]×ρ×1e-6=Pa@BC；×100 速度重标至声称 1/10 mm/s（深 Stokes 线性，ΔP 比 10.0000 实测）",
+   "K_m2": 1.1515e-07,
+   "K_mm2": 0.11515,
+   "K_crossCheck_comsol": {
+    "K_mm2": 0.11472,
+    "deviation": "0.4%"
+   },
+   "beta_m1": null,
+   "betaNote": "两点均在深 Stokes（Re=0.045，ΔP 比 10.0000 线性）——Forchheimer 两点分离不适用（历史 β=272 为 ×1000 通量膨胀数值噪声）；真惯性 β≈500-583 m⁻¹ 见 T4 COMSOL 弧（fresh solver 三点二次律+OF@10mm/s 1.2% 判决）",
+   "Fo_v2": null,
+   "dp1_Pa": 0.030917,
+   "dp2_Pa": 0.309171,
+   "dp_BC_pa": 0.000309171,
+   "v_claimed_ms": [
+    0.001,
+    0.01
+   ],
+   "v_actualBC_mm_s": [
+    0.01,
+    0.1
+   ],
+   "wss_v1_of_face": {
+    "mean_mPa": 4.44,
+    "band": "4.44-4.57",
+    "provenance": "OF 面元口径（动量守恒闭合 103.6%+直管解析锚 0.999 双证，bugs.md 深夜 VII）",
+    "wssOsteogenicWindowPct": 29.4,
+    "status": "CITABLE"
+   },
+   "wss_v1_voxel_legacy": {
+    "mean_mPa": 4.9559,
+    "wssOsteogenicWindowPct": 34.76,
+    "provenance": "体素 FVM 代理（mu*|u|/d_eff，SMOKE_TEST_ONLY_DO_NOT_CITE——I214 治理修复 tier 门控在案）",
+    "status": "DO_NOT_CITE"
+   },
    "iterations": 147,
    "elapsedSec": 177.1,
    "crossCheck": {
     "r48Curve_mm2": 0.1484,
     "deviation": "-22.4%",
     "disclaimer": "粗网格 R20 STL+40k cells+BL 覆盖率 56.6%（非 11-12 定案的满配 snappy 参数）+y/z 侧壁有限试样口径——方向一致，量级可信"
-   }
+   },
+   "correctionLog": "2026-11-21 权威修正（定案 docs/cfd-wss-window-caliber.md 附带定案段）：K ×1000 报告层错修正+dp ×1000 修正+β 深 Stokes 不可分诚实置 null（历史 272=数值噪声）+WSS 换 OF 面元口径（4.44mPa/29.4%，体素值留档 DO_NOT_CITE）"
   },
   "T3_fvm_brinkman": {
    "status": "SMOKE_ONLY",
