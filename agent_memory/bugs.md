@@ -229,3 +229,4 @@
   - **M-2 BYO key opt-in localStorage（不修=已披露设计妥协）**：同 user-domain 共享 origin 暴露面属文件头自认红线（默认 sessionStorage/显式 opt-in/agent_bridge_audit Key 零泄漏钉在位）；改动=设计决策留拍板（候选：IndexedDB/CryptoKey 或清除入口）。
   - **L-1~L-5 登记**：cae-daemon 无 Origin 全放行+本机 DoS（本机攻击者=已代码执行）/CLI --out 三处仅 schema 门守/shell:true×3+缓存投毒（需本机写权限）/VTK 注释+bibtex 转义（白名单兜底当前不可达）/NL 日志 innerHTML 往返（内容受控但模式脆弱）。
 - **判别记录**：P4 首跑 26/26 全红=探针自身 bug 两连（targetPorosity 覆盖 iso→顶点在 isoUsed 非 0 面=O(1) 假签名；buildSurface 第二参=pool 非 R——mesh_audit 先例对拍修正）；strutoctet 3.2e-2 vs strut_exit_audit E1 bcc 1e-3 差异=焊接块设计内（畸变上界=非流形边自身长度）。
+- **续批（同日）**：①M-2 残余 UX 缺口=清除路径不可发现（功能存在：取消勾选记住+保存即 localStorage.removeItem）——设置保存 toast 补两级存储披露一句话（勾选记住=localStorage 持久/取消+保存=清除），不改存储设计；②自查题自决=探针元规则采 **阳性对照**（先证明能抓已知坏再谈检测）：P0a P3 检测器对 gyroid 开火（2.8）+P0b P4 检测器对嵌合体（gyroid 网格 vs schwarz 场）开火（3.0）——探针升 88/88 自校准；false-negative（静默漏报）才是 CI 回归探针的致命模式（本探针两次实败均为 false-positive=可见噪音，阳性对照正对致命面）。

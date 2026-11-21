@@ -3191,7 +3191,7 @@ function wireAgentCfgUi(): void {
     };
     saveAgentCfg(cfg);
     if (keyEl) setByoKey(keyEl.value.trim(), cfg.rememberKey);
-    nlAppend('助手：Agent 设置已保存（Key 仅存本浏览器，不进分享链接/导出件）');
+    nlAppend('助手：Agent 设置已保存（Key 仅存本浏览器，不进分享链接/导出件；勾选「记住」=localStorage 持久存于本站源，取消勾选再保存即清除持久副本）');
   });
 }
 
