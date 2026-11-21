@@ -245,4 +245,4 @@
 - **症状**：bfe2832 parity 门三平台红（CI 重建 index-Dp7sHd-L vs 仓库 ClHAMKbW，全 chunk 改名）。
 - **根因**：方向 A 单源架构 src 直引 `tpms/agent/schema-core.mjs` 进浏览器 bundle——改 schema-core（E5b 预算参数）= bundle 内容实变；"agent 侧改动不触 platform"假设错误，未重建同步 docs/platform 即推。**坑：单源文件=任何消费者面的构建触发器，改单源必须过全部消费面的构建同步**（本仓 11-11 A1 抽离时建立，今日首踩）。
 - **连带**：推送时未查在跑 run——concurrency cancel-in-progress 取消了 T3 判别 run（44925208856 cancelled）；两纪律疏漏同批登记。
-- **修复**：本地重建+docs/platform 同步+复推；T3 windows 瞬态判定由修复后绿 run 承担（同 src 面）。
+- **修复（✅ 507ba16 CI 三平台绿 44926841944）**：本地重建+docs/platform 同步+复推；同 run 同时闭环 T3 批 windows harness 瞬态判定（05251cd 首跑 page.goto 挂死=VM 局部瞬态，非回归——含全部相关 src 面的树三平台全绿）。
