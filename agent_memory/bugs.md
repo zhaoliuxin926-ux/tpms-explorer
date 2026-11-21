@@ -235,3 +235,8 @@
 - **卡 A qstar（✅ 豁免升级已逐字核验）**：Gemini 对照 PMC10439271 数据集原文——系数 1/−2/−√3/+1 与本仓实现零偏差（我方独立展开复算一致）；轴非对称=晶系本质（六方/菱方投影，xy 平面 120° 基矢致 cx−2cy+√3·sz 特征组合，z 唯一主轴），立方域循环置换不变量数学上不适用。tpms-functions.ts 注释+探针豁免注同步升级。**第一性原理几何探针的最后一个待验项闭环——几何层 26 族全部处于"逐字核验或数学必然不变量"覆盖下。**
 - **卡 B M-2（✅ 定案：维持现状方案）**：Gemini 裁定 WebCrypto non-extractable 根本不可行（同源脚本可 decrypt 或 hook fetch——与本仓预判一致）；现状方案=纯前端零后端约束下工程最优解；WebCrypto 加密=假阳性安全不推荐；唯一低成本加固=Custom Domain 独立 Origin（零代码建议，SECURITY.md 已补）。M-2 从"留拍板"结案。
 - **卡 C E5（设计方案入库待拍板）**：Gemini 双轨混合方案=物理水位硬熔断（RSS 80%/磁盘 2GB）+泄漏令牌桶（非对称衰减防死循环）+80% 软警告注入（与本仓 E2E warnSlow 80% 预警线方法论独立同构）；硬熔断留 95% 红线。立项与否仍等拍板，设计参考已定。
+
+## 2026-11-22 E5 联合算力预算终局收口（✅ 落地：会话级跨批累积+物理水位+80% 软警告）
+- **开放面重界定**：单批 Σperiods³≤4096 自 2026-11-08 在位（探针 17/17 常驻）——真开放面=**跨批累积**（llm-agent --max-rounds≤8 轮×每批 4096=32768 单位逃逸）+执行面物理资源无守。
+- **落地（Gemini 卡 C 双轨收窄版）**：①validateToolCalls 增 opts.budgetAlreadyUsed 累积参数（cap=8×4096=32768 红线，缺省零行为漂移）+budgetUsed 回传；②llm-agent 执行环重活前物理水位（os.freemem/total<15% 或 statfs 剩余<2GiB→fail-closed exit 5，探测失败 fail-open 披露）；③80% 软警告注入末条工具反馈（模型下一轮可见可自调——与 E2E warnSlow 80% 预警线同构）；④JSON 汇总增 budgetUsed/budgetCap。**泄漏桶按"未要求的可配置性"精简裁定不做**（CLI 会话短生命周期≤8 轮，回血机制无消费者）。
+- **门禁**：selftest 101→104（超限拒/边界恰达放行+budgetUsed 回传/缺省零漂移三钉）+docs 门 GUARD 钉 101→104+README/PROJECT_SUMMARY 连带；红队探针 17/17 零漂移；schema --fast 55/0。

@@ -73,7 +73,7 @@ function validateValue(toolName, key, spec, v, errors) {
  * 验证 LLM 返回的 toolCalls 是否只填了 schema 允许的槽位且数值在界内。
  * @returns {{ ok: true, calls: Array } | { ok: false, errors: string[] }}
  */
-export function validateToolCalls(toolCalls, schema) {
+export function validateToolCalls(toolCalls, schema, opts = {}) {
   const errors = [];
   // 注册面用 Map：普通对象会被 __proto__/constructor/hasOwnProperty 等原型链键
   // 穿透「不在注册面」truthy 检查（红队 D H-1 实证 ACCEPTED），Map.get 无此面
@@ -91,7 +91,10 @@ export function validateToolCalls(toolCalls, schema) {
   const outPaths = new Map();
   // E5 联合算力预算（2026-11-08 落地）：跨调用组合爆炸防护——Σ periods³ ≤ 4096
   // （=单调用 schema 上限 12³ 的 2.4 倍；64×periods5=8000 被拒、8×periods8=4096 恰达上限；阈值随性能数据可调）
+  // E5b 会话级跨批累积（2026-11-22 立项落地，Gemini 双轨收窄版）：llm-agent --max-rounds≤8
+  // 每批独立 4096 曾可逃逸 8×4096——调用方传 budgetAlreadyUsed 累积进同一红线（cap=轮上限×批上限）
   let heavyBudget = 0;
+  const alreadyUsed = Number.isFinite(opts.budgetAlreadyUsed) ? Math.max(0, opts.budgetAlreadyUsed) : 0;
   if (calls.length > 64) {
     errors.push(`toolCalls 数量 ${calls.length} 超上限 64（防批量 spawn DoS，红队 D L-3）`);
     return { ok: false, errors };
@@ -174,7 +177,8 @@ export function validateToolCalls(toolCalls, schema) {
   }
 
   if (heavyBudget > 4096) errors.push(`批次算力预算超限（Σ periods³=${heavyBudget} > 4096，E5 联合预算——合法顶格组合也会耗尽宿主资源）`);
-  return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned };
+  if (alreadyUsed + heavyBudget > 32768) errors.push(`会话算力预算超限（已用 ${alreadyUsed} + 本批 ${heavyBudget} > 32768 = 8 轮 × 4096 批上限，E5b 跨批累积——多轮合法批次叠加也会耗尽宿主资源）`);
+  return errors.length ? { ok: false, errors } : { ok: true, calls: cleaned, budgetUsed: heavyBudget };
 }
 
 // ── tools.schema.json → OpenAI/Ollama tools 格式 ─────────────────

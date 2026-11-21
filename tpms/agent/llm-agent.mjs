@@ -11,7 +11,8 @@
  * 退出码：0=成功 2=参数/LLM 输出被拒 3=CLI 构建/水密失败 4=tpms_design_verify 修复轮数耗尽（M3→M4 桥接透传）
  */
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, statfsSync } from 'node:fs';
+import os from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -240,6 +241,21 @@ async function main() {
   let verdict = null;
   let llmOut = null;
   let finalText = '';
+  // E5b 会话级算力预算（2026-11-22，Gemini 双轨收窄版：跨批累积红线+物理水位+80% 软警告）
+  const SESSION_BUDGET_CAP = 32768; // = maxRounds 上限 8 × 批上限 4096
+  let heavyTotal = 0;
+  // 物理水位（Gemini 卡 C 双轨 track1 收窄版）：可用内存 <15% 或 cwd 所在盘剩余 <2GiB
+  // 拒绝新的重活执行（fail-closed exit 5）——statfs Node≥18.15 在位，探测失败则放行（fail-open 披露）
+  const resourceGuard = () => {
+    try {
+      if (os.freemem() / Math.max(1, os.totalmem()) < 0.15) return '可用内存 <15%（os.freemem 水位）';
+    } catch { /* 内存探测失败=放行 */ }
+    try {
+      const st = statfsSync(process.cwd());
+      if (Number(st.bsize) * Number(st.bavail) < 2 * 1024 ** 3) return 'cwd 所在盘剩余空间 <2GiB';
+    } catch { /* statfs 不可用/失败=放行（老 Node fail-open） */ }
+    return null;
+  };
   for (let round = 1; round <= maxRounds; round++) {
     let out;
     try {
@@ -262,8 +278,8 @@ async function main() {
       break;
     }
 
-    // 铁律：schema 拦截器逐槽位校验（每轮重新过——T2）
-    verdict = validateToolCalls(out.toolCalls, schema);
+    // 铁律：schema 拦截器逐槽位校验（每轮重新过——T2；E5b：跨轮累积预算一起过）
+    verdict = validateToolCalls(out.toolCalls, schema, { budgetAlreadyUsed: heavyTotal });
     if (!verdict.ok) {
       console.error(`✗ LLM 产出被 schema 拦截器拒绝（第 ${round} 轮）:`);
       for (const e of verdict.errors) console.error(`  - ${e}`);
@@ -271,7 +287,17 @@ async function main() {
     }
 
     const roundExecuted = [];
+    heavyTotal += verdict.budgetUsed ?? 0;
     for (const call of verdict.calls) {
+      // E5b 物理水位：重活执行前检查（list 等轻工具豁免）
+      if (['tpms_mesh', 'tpms_scenario', 'tpms_pareto'].includes(call.name)) {
+        const guardReason = resourceGuard();
+        if (guardReason) {
+          console.error(`✗ 资源水位拦截 [r${round}] ${call.name}: ${guardReason}——请清理中间产物/释放内存后重试（exit 5）`);
+          results.push({ tool: call.name, args: call.arguments, exit: 5, result: `[RESOURCE GUARD] ${guardReason}`, round });
+          process.exitCode = 5; return;
+        }
+      }
       if (a.dryRun) {
         // dry-run 诊断走 stderr：--json 时 stdout 必须是纯 JSON（消费方契约）
         console.error(`[dry-run][r${round}] ${call.name} ${JSON.stringify(call.arguments)}`);
@@ -303,8 +329,16 @@ async function main() {
     // 结果回填历史（T2：tool_call_id 关联保留——OpenAI/Ollama 原生形态；Anthropic
     // provider 内做 tool_result 块映射）
     messages.push({ role: 'assistant', content: out.raw || '', tool_calls: out.toolCalls });
-    for (const { call, result } of roundExecuted) {
-      messages.push({ role: 'tool', tool_call_id: call.id ?? call.function?.id ?? `r${round}-${results.length}`, content: JSON.stringify(result ?? {}).slice(0, 4000) });
+    // E5b 80% 软警告（Gemini 卡 C：软降级优于硬拒绝）——注入末条工具反馈，模型下一轮可见可自调
+    //（降 periods/resolution 或清理产物），红线留给 32768 硬拒
+    let budgetNotice = null;
+    if (heavyTotal >= 0.8 * SESSION_BUDGET_CAP) {
+      budgetNotice = `[SYSTEM RESOURCE NOTICE] 会话算力预算已用 ${heavyTotal}/${SESSION_BUDGET_CAP}（${Math.round(100 * heavyTotal / SESSION_BUDGET_CAP)}%）——后续调用请优先降 periods/resolution 或减少重活批次`;
+      console.error(`⚠ ${budgetNotice}`);
+    }
+    for (const [ri, { call, result }] of roundExecuted.entries()) {
+      const tail = budgetNotice && ri === roundExecuted.length - 1 ? '\n' + budgetNotice : '';
+      messages.push({ role: 'tool', tool_call_id: call.id ?? call.function?.id ?? `r${round}-${results.length}`, content: JSON.stringify(result ?? {}).slice(0, 4000) + tail });
     }
     if (round === maxRounds && maxRounds > 1) {
       // 轮数耗尽：如实报告（不虚报"模型已完成"）——已执行结果保留在 results
@@ -313,7 +347,7 @@ async function main() {
   }
 
   if (a.json) {
-    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results, modelNote: (finalText || llmOut.raw || '').slice(0, 300) || undefined, rounds: maxRounds }, null, 2));
+    console.log(JSON.stringify({ ok: true, calls: verdict.calls, results, budgetUsed: heavyTotal, budgetCap: SESSION_BUDGET_CAP, modelNote: (finalText || llmOut.raw || '').slice(0, 300) || undefined, rounds: maxRounds }, null, 2));
   } else {
     console.log('✓ 全部工具执行成功');
     // 模型备注出口（2026-10-06 指代披露对抗：模型在 toolCalls 外的说明文本——如

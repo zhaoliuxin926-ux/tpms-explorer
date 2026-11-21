@@ -48,6 +48,20 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
   const v = validateToolCalls(mkCall('tpms_estimate', { type: 'gyroid', porosity: 0.65, material: 'tc4', json: true }), schema);
   ok('合法 estimate 通过', v.ok === true, JSON.stringify(v.errors));
 }
+// 2a-E5b. 会话级跨批累积预算（2026-11-22 E5 立项收口，Gemini 双轨收窄版）：
+// 单批 4096 在位（红队探针钉），跨批 8×4096=32768 红线+边界恰达放行+budgetUsed 回传
+{
+  const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 65, periods: 12, resolution: 48 }), schema, { budgetAlreadyUsed: 32768 - 1000 });
+  ok('E5b 跨批累积超限拒绝（31000+1728>32768）', v.ok === false && v.errors.some((e) => e.includes('会话算力预算超限')), JSON.stringify(v.errors));
+}
+{
+  const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 65, periods: 12, resolution: 48 }), schema, { budgetAlreadyUsed: 31000 });
+  ok('E5b 边界恰达放行（31000+1728=32728）+budgetUsed 回传', v.ok === true && v.budgetUsed === 1728, JSON.stringify(v.errors) + ' budgetUsed=' + v.budgetUsed);
+}
+{
+  const v = validateToolCalls(mkCall('tpms_mesh', { type: 'gyroid', porosity: 65, periods: 3, resolution: 64 }), schema);
+  ok('E5b 缺省 opts 零行为漂移（无累积参数=原语义）', v.ok === true && v.budgetUsed === 27, JSON.stringify(v.errors) + ' budgetUsed=' + v.budgetUsed);
+}
 // 2b. 合法：porosity=65（百分数，CLI 接受）
 {
   const v = validateToolCalls(mkCall('tpms_mesh', { type: 'diamond', porosity: 65, resolution: 64 }), schema);
@@ -506,5 +520,5 @@ const mkCall = (name, args) => [{ function: { name, arguments: JSON.stringify(ar
 }
 
 console.log(`\n== RESULT: ${pass} PASS / ${fail} FAIL ==`);
-if (pass < 101) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 101（96 + 推送前复核锚 5，2026-10-19）`); process.exit(1); }
+if (pass < 104) { console.error(`GUARD FAIL: 断言执行数 ${pass} < 基线 104（101 + E5b 会话级跨批累积预算 3，2026-11-22）`); process.exit(1); }
 process.exit(fail ? 1 : 0);

@@ -115,7 +115,7 @@ Python/MATLAB 重建脚本（与平台逐点对齐）· BibTeX/JSON sidecar。
 | tpms-driver.mjs | M4 闭环：propose→verify→有界修复菜单→确定性应用→重跑；不可达结构化宣告 |
 | cae-daemon.mjs | 本地 CAE 求解桥（`127.0.0.1:4830`，支持 preprocess-bl / openfoam-cfd / abaqus-fea / comsol-cfd / pipeline 五类 job） |
 | 验收 | 真实模型 43 条中英回归（**glm-5.3-flash 双轮 43/43×2（n=2，勿称确定性）**；历史 2026-10-01 37 条口径：5.3 与 5.3-flash 双档多轮 n=2 各 37/37）；Mock 闭环自检 6/6 + 真实 2/2 |
-| 自检（CI 纳管） | agent_selftest 61 + schema_check 113（GUARD 98） + llm_provider_selftest 101（GUARD 101） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 20 + agent_bridge_audit 53（CI 基线 52） + harness_ui_check 38 |
+| 自检（CI 纳管） | agent_selftest 61 + schema_check 113（GUARD 98） + llm_provider_selftest 104（GUARD 104） + strut_exit_audit 28（GUARD 24） + llm_driver_selftest 20 + agent_bridge_audit 53（CI 基线 52） + harness_ui_check 38 |
 
 铁律：LLM 只填 schema 界定槽位；一切数值由拦截器钳制或拒绝；执行与验收全部确定性代码。
 
