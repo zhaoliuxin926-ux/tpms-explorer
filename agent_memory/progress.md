@@ -42,7 +42,7 @@
 >
 > - **11-14~16（37 提交）**：孤儿批次接手归档（Phase 2-5 全链 3b951cb）+CI 三红三修+WSL OF13 真解打通+k2 修正 0.9594+T4 ABAQUS E_eff=138.29（−1.07%）+Gemini 四问+k∞=0.1342+仓库瘦身 32G→2.4G+T2 探针解锁+诚实勘误批（11-19：csv 18/35 有效+Forchheimer NOT_INDEPENDENT+KUBC 上界化）
 > - **11-18**：课题组资料包吸收（Abaqus 讲义=EXPL 理论前置）+nTop 实跑闭环（10,620 真棱柱）+MPh 路线打通（T4 复活）+OF 边界层三层格局盘点+仓根规整（zip 删+原型归位）
-> - **11-21**：**T4 COMSOL MPh 实跑批闭环**（K 双口径 0.4% 互证+T3 ×1000 坑机制实锤+真 Forchheimer β≈500-583+窗口 29.4% 终判+披露文档 docs/cfd-wss-window-caliber.md）+**平台 UX 打磨弧**（拦截三段式卡片+B6 门钉 30+NL 重建指示+NL 抽屉+派生文案+卡片行动钮竞态修复 awaitNextRebuild）+**UX 全站走查批 79bc59d**（16 处 aria-label 错贴修复+minWallMm/minThroatMm NaN 归一披露字符串——bugs.md 11-11 登记销账+walkthrough 实证导出反馈/NL 钳制/制造检查/Pareto 扫描全链反馈在位）+**Pareto hover 通俗解读批 079cf5a**（前沿点 hover 取舍语义行=三目标相对前沿分位派生+族分组行标签 nowrap；自查题自决=(b) 通俗解释优先）+**残余整理**（保守删除 ~30M 可再生件，双判决现场保留）
+> - **11-21**：**T4 COMSOL MPh 实跑批闭环**（K 双口径 0.4% 互证+T3 ×1000 坑机制实锤+真 Forchheimer β≈500-583+窗口 29.4% 终判+披露文档 docs/cfd-wss-window-caliber.md）+**平台 UX 打磨弧**（拦截三段式卡片+B6 门钉 30+NL 重建指示+NL 抽屉+派生文案+卡片行动钮竞态修复 awaitNextRebuild）+**Gemini 三卡裁定落地续批三**（qstar 逐字核验闭环=几何层 26 族全覆盖收口/M-2 定案维持现状+SECURITY 补 Custom Domain/E5 双轨方案入库待拍板）+**UX 全站走查批 79bc59d**（16 处 aria-label 错贴修复+minWallMm/minThroatMm NaN 归一披露字符串——bugs.md 11-11 登记销账+walkthrough 实证导出反馈/NL 钳制/制造检查/Pareto 扫描全链反馈在位）+**Pareto hover 通俗解读批 079cf5a**（前沿点 hover 取舍语义行=三目标相对前沿分位派生+族分组行标签 nowrap；自查题自决=(b) 通俗解释优先）+**残余整理**（保守删除 ~30M 可再生件，双判决现场保留）
 >
 > ## 详细历史
 >

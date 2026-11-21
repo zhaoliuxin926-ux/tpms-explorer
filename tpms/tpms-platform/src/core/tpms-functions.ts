@@ -291,6 +291,10 @@ const qstar: TpmsFunction = (mx, my, mz, w) => {
   const cy = Math.cos(my), sy = Math.sin(my);
   const cz = Math.cos(mz), sz = Math.sin(mz);
   const cxy = cx * cy + sx * sy;   // cos(X−Y) 和角展开
+  // 2026-11-21 Gemini 逐字核验（collab/gemini/2026-11-21-fp-audit-consult-reply.md 卡 A）：
+  // 与 PMC10439271 数据集原文系数 1/−2/−√3/+1 零偏差。轴非对称=晶系本质（六方/菱方投影，
+  // xy 平面 120° 基矢致 cx−2cy+√3·sz 特征组合，z 唯一主轴）——立方域循环置换不变量数学上不适用，
+  // fp 探针 P2 豁免有据（先例：lidinoid +0.15 官方几何特性同族豁免）。
   return w[0] * (
     (cx - 2 * cy) * cz - Math.sqrt(3) * sz * (cxy - cx) + cxy * cz
   );

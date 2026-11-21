@@ -230,3 +230,8 @@
   - **L-1~L-5 登记**：cae-daemon 无 Origin 全放行+本机 DoS（本机攻击者=已代码执行）/CLI --out 三处仅 schema 门守/shell:true×3+缓存投毒（需本机写权限）/VTK 注释+bibtex 转义（白名单兜底当前不可达）/NL 日志 innerHTML 往返（内容受控但模式脆弱）。
 - **判别记录**：P4 首跑 26/26 全红=探针自身 bug 两连（targetPorosity 覆盖 iso→顶点在 isoUsed 非 0 面=O(1) 假签名；buildSurface 第二参=pool 非 R——mesh_audit 先例对拍修正）；strutoctet 3.2e-2 vs strut_exit_audit E1 bcc 1e-3 差异=焊接块设计内（畸变上界=非流形边自身长度）。
 - **续批（同日）**：①M-2 残余 UX 缺口=清除路径不可发现（功能存在：取消勾选记住+保存即 localStorage.removeItem）——设置保存 toast 补两级存储披露一句话（勾选记住=localStorage 持久/取消+保存=清除），不改存储设计；②自查题自决=探针元规则采 **阳性对照**（先证明能抓已知坏再谈检测）：P0a P3 检测器对 gyroid 开火（2.8）+P0b P4 检测器对嵌合体（gyroid 网格 vs schwarz 场）开火（3.0）——探针升 88/88 自校准；false-negative（静默漏报）才是 CI 回归探针的致命模式（本探针两次实败均为 false-positive=可见噪音，阳性对照正对致命面）。
+
+## 2026-11-21 续批三：Gemini 三卡裁定落地（外裁回执归档 collab/gemini/2026-11-21-fp-audit-consult-reply.md）
+- **卡 A qstar（✅ 豁免升级已逐字核验）**：Gemini 对照 PMC10439271 数据集原文——系数 1/−2/−√3/+1 与本仓实现零偏差（我方独立展开复算一致）；轴非对称=晶系本质（六方/菱方投影，xy 平面 120° 基矢致 cx−2cy+√3·sz 特征组合，z 唯一主轴），立方域循环置换不变量数学上不适用。tpms-functions.ts 注释+探针豁免注同步升级。**第一性原理几何探针的最后一个待验项闭环——几何层 26 族全部处于"逐字核验或数学必然不变量"覆盖下。**
+- **卡 B M-2（✅ 定案：维持现状方案）**：Gemini 裁定 WebCrypto non-extractable 根本不可行（同源脚本可 decrypt 或 hook fetch——与本仓预判一致）；现状方案=纯前端零后端约束下工程最优解；WebCrypto 加密=假阳性安全不推荐；唯一低成本加固=Custom Domain 独立 Origin（零代码建议，SECURITY.md 已补）。M-2 从"留拍板"结案。
+- **卡 C E5（设计方案入库待拍板）**：Gemini 双轨混合方案=物理水位硬熔断（RSS 80%/磁盘 2GB）+泄漏令牌桶（非对称衰减防死循环）+80% 软警告注入（与本仓 E2E warnSlow 80% 预警线方法论独立同构）；硬熔断留 95% 红线。立项与否仍等拍板，设计参考已定。

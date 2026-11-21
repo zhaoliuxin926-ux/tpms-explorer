@@ -35,3 +35,7 @@
 - **静态服务器**（`tpms/.verify/static-server.mjs`，仅限本地门禁用，不作生产部署）
 
 浏览器单文件版为纯本地运行（无后端、无遥测）；API key 一律走环境变量，不入库。
+
+## BYO API key 存储口径（工程版，2026-11-21 外裁定案）
+
+工程版浏览器 BYO key：默认 `sessionStorage`（关标签页即销毁）+ 显式勾选「记住」才落 `localStorage` + 取消勾选再保存即清除；key 不进分享链接/设计文件/任何导出产物（结构级门禁在案）。经外部评审裁定（2026-11-21，见 `collab/gemini/2026-11-21-fp-audit-consult-reply.md` 卡 B）：WebCrypto 加密存储在同源脚本面前为假阳性安全，本方案为纯前端零后端约束下的工程最优解。**残余暴露面**：`username.github.io` 下多仓库共享同源——在意者可将本项目 Fork 后绑定独立自定义域名获得独立 Origin 隔离（低成本、零代码）。
