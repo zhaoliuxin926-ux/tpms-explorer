@@ -6629,7 +6629,12 @@ async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail
             if (!el || !canStep) return;
             el.value = String(s.cellSize - 1);
             el.dispatchEvent(new Event('input', { bubbles: true }));
-            window.setTimeout(() => { void handleExport(fmt); }, 400);
+            // 竞态修复（2026-11-21）：曾 400ms 盲等后重导——降密度重建未完成时审计跑在
+            // 旧网格上 → 假拒产级联（B6 实测 5→4→3→2）；awaitNextRebuild 等重建完成再导
+            void (async () => {
+              await awaitNextRebuild(90_000);
+              await handleExport(fmt);
+            })();
           },
         }],
       });
