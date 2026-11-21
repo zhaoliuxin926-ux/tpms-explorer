@@ -6626,8 +6626,9 @@ async function handleExportInner(fmt: string): Promise<{ ok: boolean; verifyFail
     if (bad(a7)) {
       const msg = `已阻止导出：网格未通过水密审计（开放边=${a7.openEdges} 非流形边=${a7.nonManifoldEdges} 退化面=${a7.degenTris}）——该设计在导出分辨率档（含 32 格/周期升档重试，≤128）网格表示不可靠；与 CLI 同口径拒产。可换族/降单元密度，或经 CLI mesh --resolution 96+ 导出；自定义公式可降低频率`;
       // 拦截三段式卡片（批次二 · Gemini §2 设计落地）：原因绯红→推荐琥珀→行动段；持久可行动（toast TTL 1.5s 对长拦截消息不可靠）
-      // 推荐文案程序化派生（自查题裁决）：周期上界从导出门升档常数派生（128 帽 ÷ 32 格/周期），
-      // 家族宣称带实测日期戳防静态过期——完整数据管线派生（k6_tolerance_table 入包）登记后续
+      // 推荐文案程序化派生（自查题裁决）：周期上界从导出门升档常数派生（128 帽 ÷ 32 格/周期）；
+      // 家族宣称带实测日期戳防静态过期。完全派生真前置=导出门矩阵 JSON 化（10-24 矩阵散记 bugs.md 无机器可读产物，
+      // 重测时顺手落 JSON 即可接线）；k6_tolerance_table 与 UI 周期域 1-5 不相交（滑块/NL 钳制/schema 均 ≤5）不入运行时——2026-11-21 重估定案
       const maxPeriods = Math.floor(128 / 32);
       const recs = [
         '换族：Gyroid / Diamond 系（2026-10-24 导出门矩阵实测可产域）',
