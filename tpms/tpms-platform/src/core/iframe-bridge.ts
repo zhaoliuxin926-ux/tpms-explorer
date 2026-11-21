@@ -99,12 +99,17 @@ export function serveBridge(handlers: {
           : null;
         if (!fn) { reply(false, `未知或未接入桥类型 ${d.type}`); return; }
         // 重活滑动窗 cap（执行面自守，保留 verify ? 512 : 基线锚）
+        // 批廿一对抗审查 M-1：periods 原值直接 pow 可产 NaN/负/∞ cost——NaN>预算恒 false 全放行
+        // 且污染 heavyLog 使窗口 Σ 恒 NaN（后续预算门全失效）。钳制到 schema 域 [1,12] 后取幂。
         const cost = d.type === 'verify' ? 512
           : d.type === 'scenario' ? 216
           : d.type === 'simulate' ? 256
           : d.type === 'export-cae' ? 128
           : d.type === 'overlay-stl' ? 32
-          : Math.pow(Number(args.periods ?? 3), 3);
+          : Math.pow((() => {
+            const k = Number(args.periods ?? 3);
+            return Number.isFinite(k) ? Math.min(12, Math.max(1, k)) : 3;
+          })(), 3);
         const now = Date.now();
         while (heavyLog.length && now - heavyLog[0].t > BRIDGE.CAP_WINDOW_MS) heavyLog.shift();
         const used = heavyLog.reduce((s, x) => s + x.c, 0);

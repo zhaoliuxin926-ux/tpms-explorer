@@ -288,6 +288,11 @@ function sanitizeDesignState(raw: unknown): AppStatePatch {
   clampN('slice', -100, 100, 100);
   clampN('endplateMm', 0, 3.0, 0);
   if (patch.specimenSizeMm != null) clampN('specimenSizeMm', 1, 200, 3);
+  // 数组域钳制（批廿一对抗审查 M-4：设计文件导入口径与 URL 面对齐——weights [0,2]、neural.z ±3，
+  // 恶意 JSON 的 1e308 数组在导入面即收口，不再流入求值管线产 NaN/∞ 场）
+  if (Array.isArray(patch.weights)) patch.weights = patch.weights.map((v) => Math.min(2, Math.max(0, v as number)));
+  const nzPatch = patch.neural as Record<string, unknown> | undefined;
+  if (nzPatch && Array.isArray(nzPatch.z)) nzPatch.z = (nzPatch.z as number[]).map((v) => Math.min(3, Math.max(-3, v)));
   return patch as AppStatePatch;
 }
 
@@ -2201,7 +2206,13 @@ function parseAgentHybridSpec(raw: string): AppState['hybrid'] | null {
 async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecResult> {
   const patches: Partial<AppState> = {};
   const notes: string[] = [];
-  if (typeof args.type === 'string') patches.type = args.type as AppState['type'];
+  // 批廿一对抗审查 M-3：执行体不再裸信任调用方枚举（URL/JSON 面有 VALID 白名单，桥面同口径）——
+  // 非法值回落默认+notes 披露，与 sanitizeDesignState dropIfBad 语义一致（防同源注入流入 innerHTML）
+  const pickEnum = (v: unknown, list: readonly string[], dflt: string, label: string, note: (s: string) => void): string => {
+    if (typeof v !== 'string' || !list.includes(v)) { if (v !== undefined) note(`${label} 非法值已回落默认 ${dflt}`); return dflt; }
+    return v;
+  };
+  if (args.type !== undefined) patches.type = pickEnum(args.type, VALID.type, 'gyroid', 'type', (s) => notes.push(s)) as AppState['type'];
   if (typeof args.porosity === 'number') {
     const { pct, clamped } = agentClampPorosity(args.porosity);
     patches.porosity = pct;
@@ -2212,8 +2223,8 @@ async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecRes
     patches.cellSize = k;
     if (k !== args.periods) notes.push(`周期数 ${args.periods} 已钳制到面板域 ${k}`);
   }
-  if (typeof args.material === 'string') patches.material = args.material as AppState['material'];
-  if (typeof args.mode === 'string') patches.structureMode = args.mode as AppState['structureMode'];
+  if (args.material !== undefined) patches.material = pickEnum(args.material, VALID.material, 'auto', 'material', (s) => notes.push(s)) as AppState['material'];
+  if (args.mode !== undefined) patches.structureMode = pickEnum(args.mode, VALID.structure, 'solid_network', 'mode', (s) => notes.push(s)) as AppState['structureMode'];
   if (typeof args.container === 'string') patches.containerShape = args.container as AppState['containerShape'];
   if (typeof args.specimen_size_mm === 'number' && Number.isFinite(args.specimen_size_mm)) {
     patches.specimenSizeMm = args.specimen_size_mm;
