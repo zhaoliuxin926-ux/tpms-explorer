@@ -240,3 +240,9 @@
 - **开放面重界定**：单批 Σperiods³≤4096 自 2026-11-08 在位（探针 17/17 常驻）——真开放面=**跨批累积**（llm-agent --max-rounds≤8 轮×每批 4096=32768 单位逃逸）+执行面物理资源无守。
 - **落地（Gemini 卡 C 双轨收窄版）**：①validateToolCalls 增 opts.budgetAlreadyUsed 累积参数（cap=8×4096=32768 红线，缺省零行为漂移）+budgetUsed 回传；②llm-agent 执行环重活前物理水位（os.freemem/total<15% 或 statfs 剩余<2GiB→fail-closed exit 5，探测失败 fail-open 披露）；③80% 软警告注入末条工具反馈（模型下一轮可见可自调——与 E2E warnSlow 80% 预警线同构）；④JSON 汇总增 budgetUsed/budgetCap。**泄漏桶按"未要求的可配置性"精简裁定不做**（CLI 会话短生命周期≤8 轮，回血机制无消费者）。
 - **门禁**：selftest 101→104（超限拒/边界恰达放行+budgetUsed 回传/缺省零漂移三钉）+docs 门 GUARD 钉 101→104+README/PROJECT_SUMMARY 连带；红队探针 17/17 零漂移；schema --fast 55/0。
+
+## 2026-11-22 E5 批首推 CI 三平台红（✅ 当批定案修复：单源盲区——schema-core 进浏览器 bundle）
+- **症状**：bfe2832 parity 门三平台红（CI 重建 index-Dp7sHd-L vs 仓库 ClHAMKbW，全 chunk 改名）。
+- **根因**：方向 A 单源架构 src 直引 `tpms/agent/schema-core.mjs` 进浏览器 bundle——改 schema-core（E5b 预算参数）= bundle 内容实变；"agent 侧改动不触 platform"假设错误，未重建同步 docs/platform 即推。**坑：单源文件=任何消费者面的构建触发器，改单源必须过全部消费面的构建同步**（本仓 11-11 A1 抽离时建立，今日首踩）。
+- **连带**：推送时未查在跑 run——concurrency cancel-in-progress 取消了 T3 判别 run（44925208856 cancelled）；两纪律疏漏同批登记。
+- **修复**：本地重建+docs/platform 同步+复推；T3 windows 瞬态判定由修复后绿 run 承担（同 src 面）。
