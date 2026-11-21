@@ -1066,6 +1066,19 @@ function bindParetoCard(): void {
       ctx2d.fillStyle = '#ffd166'; ctx2d.font = 'bold 10px system-ui';
       ctx2d.fillText(String(ti + 1), sx(p.E) + 8, sy(p.kappa) - 8);
     }
+    // hover 通俗解读同步（2026-11-21 打磨批：画布标签是技术读数，这里补"这个点意味着什么"——
+    // 取舍语义化只在本前沿内比较分位，不跨扫描域宣称）
+    const hoverNote = document.getElementById('pareto-hover');
+    if (hoverNote) {
+      if (hoverIdx < 0 || !front[hoverIdx]) { hoverNote.style.display = 'none'; }
+      else {
+        const p = front[hoverIdx];
+        const pct = (arr: number[], v: number) => (arr.length < 2 ? 50 : Math.round(100 * arr.filter((x) => x < v).length / (arr.length - 1)));
+        const Es = front.map((q) => q.E), Ks = front.map((q) => q.kappa), Ss = front.map((q) => q.sea);
+        hoverNote.style.display = '';
+        hoverNote.textContent = `取舍解读：承重刚性（E）强于前沿 ${pct(Es, p.E)}% · 养分通透（κ）强于 ${pct(Ks, p.kappa)}% · 细胞贴附面积（Sv）强于 ${pct(Ss, p.sea)}% —— 相对当前前沿的定位，点击写回主界面`;
+      }
+    }
   };
   btnGen.addEventListener('click', () => {
     const types = Object.keys(TPMS_FUNCTIONS) as never[];
@@ -1169,6 +1182,7 @@ function bindParetoCard(): void {
     if (bd < 400) { if (hoverIdx !== best) { hoverIdx = best; draw(); } }
     else if (hoverIdx !== -1) { hoverIdx = -1; draw(); }
   });
+  canvas.addEventListener('mouseleave', () => { if (hoverIdx !== -1) { hoverIdx = -1; draw(); } });
   canvas.addEventListener('click', () => {
     if (hoverIdx < 0 || !front[hoverIdx]) return;
     const p = front[hoverIdx];
