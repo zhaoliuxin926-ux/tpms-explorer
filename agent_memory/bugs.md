@@ -221,7 +221,7 @@
 - **定案**：VM 局部瞬态（runner 负载尖峰吃掉 5% 余量），非回归非 runner 换代；H4 预算 150s 维持不改（单例超时未成趋势，warnSlow 80% 预警线在位），若再现 2 例再重标定 150→240s。
 
 ## 2026-11-21 第一性原理对抗审查批（几何探针 86/86 零缺陷 + 安全面 3 修复 + 5 LOW 登记）
-- **几何层（第一性原理不变量探针，working/scratch/probe_fp_invariants.mjs，预注册判读表在先）**：P1 周期性 26/26（2π 数学必然级）、P2 循环置换 52/52（qstar 轴非对称=数据集原文结构豁免）、P3 反对称 3 族场级精确+配对体素 φ=0.50000（schwarz 等权数学必然命中）、P4 错面检测器 26/26（O(1) 嵌合体签名与投影残差 1e-6~6e-2 分离清晰）、P4b 收敛 3/3（fky 222×/frd 11.5×/strutoctet 2.1×=焊接畸变设计内）、P5 独立 STL 发散定理体积 vs porosityEstimate <1% 互证——**公式转录/嵌合体/提取器版本错位类缺陷不存在**。探针留 scratch 作注册资产（不进 CI：与 strut_exit_audit E1/E1b 错面检测部分重叠+验证面收益递减定案）。
+- **几何层（第一性原理不变量探针，tpms/.verify/probe_fp_invariants.mjs（2026-11-21 续批四收编入库，tracked 可跨机；预注册判读表在先））**：P1 周期性 26/26（2π 数学必然级）、P2 循环置换 52/52（qstar 轴非对称=数据集原文结构豁免）、P3 反对称 3 族场级精确+配对体素 φ=0.50000（schwarz 等权数学必然命中）、P4 错面检测器 26/26（O(1) 嵌合体签名与投影残差 1e-6~6e-2 分离清晰）、P4b 收敛 3/3（fky 222×/frd 11.5×/strutoctet 2.1×=焊接畸变设计内）、P5 独立 STL 发散定理体积 vs porosityEstimate <1% 互证——**公式转录/嵌合体/提取器版本错位类缺陷不存在**。探针已收编入库 tpms/.verify/probe_fp_invariants.mjs（tracked 可跨机，未纳管 run_ci_suite——与 strut_exit_audit E1/E1b 错面检测部分重叠+验证面收益递减定案；几何层改动后手跑）。
 - **安全面（Explore 静态对抗扫描：无 CRITICAL/HIGH，4 MEDIUM+5 LOW）**：
   - **M-1 桥预算 NaN/负 cost 击穿（✅ 已修）**：iframe-bridge.ts cost=periods³ 原值 pow——NaN>4096 恒 false 全放行+heavyLog 污染后续窗口 Σ 恒 NaN；修=钳制 schema 域 [1,12] 再取幂。
   - **M-3 桥执行体裸信任调用方枚举（✅ 已修）**：agentMeshExec type/material/mode 裸 cast 可流入 paramEl.innerHTML；修=pickEnum 白名单复核+notes 披露，与 sanitizeDesignState dropIfBad 同语义。
