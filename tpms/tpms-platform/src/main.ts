@@ -2311,6 +2311,12 @@ async function agentMeshExec(args: Record<string, unknown>): Promise<ToolExecRes
   };
 }
 
+// bugs.md 2026-11-11 登记：薄壁端 medial EDT 无局部极大点 → rep.minWallMm.medial=NaN → Number(NaN.toFixed(3)) 被 JSON.stringify 序列化为 null，
+// LLM/驾驶舱消费方读到 null 与「未测量」不可区分——按登记处置归一为披露字符串（harness 消费端 typeof 守卫兼容，见 harness-main.ts 显示位同步收窄）。
+const fmtMedialMm = (v: number) => Number.isFinite(v)
+  ? Number(v.toFixed(3))
+  : 'n/a（薄壁无中面采样点）';
+
 async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecResult> {
   // design_verify 与 mesh 同槽位：先应用设计参数（无 out），再从新状态直接体素审计
   const fastScreen = args.resolution !== undefined && Number(args.resolution) <= 36;
@@ -2348,7 +2354,7 @@ async function agentVerifyExec(args: Record<string, unknown>): Promise<ToolExecR
     verifyFail: verdict === 'fail',   // A3-M4：触发下一轮有界修复菜单注入
     summary: JSON.stringify({
       verdict, stage: 'manufacturing-audit',
-      minWallMm: Number(rep.minWallMm.medial.toFixed(3)), minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
+      minWallMm: fmtMedialMm(rep.minWallMm.medial), minThroatMm: fmtMedialMm(rep.minThroatMm.medial),
       closedDomains: rep.closedDomains, closedPoreFraction: Number((rep.closedPoreFraction * 100).toFixed(2)),
       mainPoreFraction: Number((rep.mainPoreFraction * 100).toFixed(1)),
       tortuosity: { tau: tort.tau.map(fmtTau), percolating: tort.percolating, gridN: tort.gridN },
@@ -2434,8 +2440,8 @@ async function agentScenarioExec(args: Record<string, unknown>): Promise<ToolExe
       R: Rmfg,
       solidElems: vox.solidCount,
       voxelPorosity: Number((1 - vox.solidCount / (Rmfg ** 3)).toFixed(4)),
-      minWallMm: Number(rep.minWallMm.medial.toFixed(3)),
-      minThroatMm: Number(rep.minThroatMm.medial.toFixed(3)),
+      minWallMm: fmtMedialMm(rep.minWallMm.medial),
+      minThroatMm: fmtMedialMm(rep.minThroatMm.medial),
       mainPoreFractionPct: Number((rep.mainPoreFraction * 100).toFixed(1)),
       warnings: rep.warnings,
     };

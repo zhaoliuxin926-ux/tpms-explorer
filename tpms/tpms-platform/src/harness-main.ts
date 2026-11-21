@@ -392,7 +392,7 @@ function renderSimTriangle(): void {
       title: '几何可制造（体素审计 + 水密门）',
       badge: lastVerifySummary ? String(lastVerifySummary.verdict) : '未验证',
       value: lastVerifySummary
-        ? `壁厚 ${lastVerifySummary.minWallMm ?? 'n/a'} mm · 连通 ${lastVerifySummary.mainPoreFraction ?? '?'}%`
+        ? `壁厚 ${typeof lastVerifySummary.minWallMm === 'number' ? `${lastVerifySummary.minWallMm} mm` : String(lastVerifySummary.minWallMm ?? 'n/a')} · 连通 ${lastVerifySummary.mainPoreFraction ?? '?'}%`
         : `容器 ${lastStageState.containerShape} · 拓扑 ${lastStageState.structureMode}`,
       sub: lastVerifySummary
         ? `孔喉 ${lastVerifySummary.minThroatMm ?? 'n/a'} mm · 封闭腔 ${lastVerifySummary.closedDomains ?? 0} 域（R${lastVerifySummary.R ?? '?'}）。`
@@ -473,8 +473,8 @@ function renderDiag(summary: string): void {
     const tauStr = tort?.tau ? tort.tau.map((v) => (v == null ? '∞' : v.toFixed(2))).join(' / ') : 'n/a';
     const cells: Array<[string, string, string?]> = [
       ['verdict', String(j.verdict), j.verdict === 'pass' ? 'ok' : 'bad'],
-      ['最小壁厚（medial）', j.minWallMm == null ? 'n/a' : `${j.minWallMm} mm`],
-      ['主域孔喉', j.minThroatMm == null ? 'n/a' : `${j.minThroatMm} mm`],
+      ['最小壁厚（medial）', typeof j.minWallMm === 'number' ? `${j.minWallMm} mm` : String(j.minWallMm ?? 'n/a')],
+      ['主域孔喉', typeof j.minThroatMm === 'number' ? `${j.minThroatMm} mm` : String(j.minThroatMm ?? 'n/a')],
       ['封闭孔腔', `${j.closedDomains} 域`],
       ['孔隙连通', `${j.mainPoreFraction}%`],
       ['三向迂曲度 τ(x/y/z)', tauStr],
@@ -1498,7 +1498,7 @@ async function runScenarioFlow(design: string, fromChat = false): Promise<void> 
       addFileCard(`${String(d.design)} (${deliverables[0]})`, watertight, 'M5 场景核验');
     }
     const line = r.ok
-      ? `场景 ${design} 完成：${String(d.label ?? '')} · 水密=${watertight ? '通过' : '拒绝'} · minWall=${voxel.minWallMm ?? 'n/a'}mm · 45°悬垂=${d.overhang45CriticalPct ?? 'n/a'}% · E*=${est.E_GPa ?? '?'} GPa。`
+      ? `场景 ${design} 完成：${String(d.label ?? '')} · 水密=${watertight ? '通过' : '拒绝'} · minWall=${typeof voxel.minWallMm === 'number' ? `${voxel.minWallMm}mm` : String(voxel.minWallMm ?? 'n/a')} · 45°悬垂=${d.overhang45CriticalPct ?? 'n/a'}% · E*=${est.E_GPa ?? '?'} GPa。`
       : `场景执行失败：${r.summary}`;
     if (status) status.textContent = line;
     if (entry && cardRes) {

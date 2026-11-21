@@ -1332,14 +1332,14 @@ window.addEventListener('error', function(e) {
             </div>
             <div class="lbl" style="margin-top:9px"><span>潜在码 z ∈ R⁸（拖动 = 拓扑流形插值）</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px">
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₀</span><span class="val" style="font-size:.62rem" id="neural-z-0-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-0" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₁</span><span class="val" style="font-size:.62rem" id="neural-z-1-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-1" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₂</span><span class="val" style="font-size:.62rem" id="neural-z-2-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-2" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₃</span><span class="val" style="font-size:.62rem" id="neural-z-3-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-3" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₄</span><span class="val" style="font-size:.62rem" id="neural-z-4-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-4" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₅</span><span class="val" style="font-size:.62rem" id="neural-z-5-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-5" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₆</span><span class="val" style="font-size:.62rem" id="neural-z-6-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-6" min="-3" max="3" value="3" step="0.1"></div>
-              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₇</span><span class="val" style="font-size:.62rem" id="neural-z-7-value">3.0</span></div><input aria-label="微观调制幅值 λ 0.25" type="range" id="neural-z-7" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₀</span><span class="val" style="font-size:.62rem" id="neural-z-0-value">3.0</span></div><input aria-label="隐空间维度 z₀" type="range" id="neural-z-0" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₁</span><span class="val" style="font-size:.62rem" id="neural-z-1-value">3.0</span></div><input aria-label="隐空间维度 z₁" type="range" id="neural-z-1" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₂</span><span class="val" style="font-size:.62rem" id="neural-z-2-value">3.0</span></div><input aria-label="隐空间维度 z₂" type="range" id="neural-z-2" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₃</span><span class="val" style="font-size:.62rem" id="neural-z-3-value">3.0</span></div><input aria-label="隐空间维度 z₃" type="range" id="neural-z-3" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₄</span><span class="val" style="font-size:.62rem" id="neural-z-4-value">3.0</span></div><input aria-label="隐空间维度 z₄" type="range" id="neural-z-4" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₅</span><span class="val" style="font-size:.62rem" id="neural-z-5-value">3.0</span></div><input aria-label="隐空间维度 z₅" type="range" id="neural-z-5" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₆</span><span class="val" style="font-size:.62rem" id="neural-z-6-value">3.0</span></div><input aria-label="隐空间维度 z₆" type="range" id="neural-z-6" min="-3" max="3" value="3" step="0.1"></div>
+              <div><div class="lbl" style="margin:0"><span style="font-size:.62rem">z₇</span><span class="val" style="font-size:.62rem" id="neural-z-7-value">3.0</span></div><input aria-label="隐空间维度 z₇" type="range" id="neural-z-7" min="-3" max="3" value="3" step="0.1"></div>
             </div>
           </div>
           <div class="field-note" id="neural-status"></div>
@@ -1365,8 +1365,8 @@ window.addEventListener('error', function(e) {
           <div class="field-note">万能试验机 CSV/TSV（两列：应变-应力，或位移(mm)-载荷(N)）→ ISO 13314 标定：准弹性模量 / Rp0.2 / 平台应力 / 密实化应变 / 比吸能，Toe 虚拟原点自动补偿，并与当前模型 Gibson-Ashby 预测实时对标。</div>
           <input type="file" id="expfit-file" accept=".csv,.txt,.tsv" style="width:100%;font-size:.68rem;padding:6px;border-radius:8px;background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.14)">
           <div class="opt-row two" style="gap:6px;margin-top:4px">
-            <label style="font-size:.7rem">L0 mm<input aria-label="微观调制幅值 λ 0.25" id="expfit-l0" type="number" value="12" min="1" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">A0 mm²<input aria-label="微观调制幅值 λ 0.25" id="expfit-area" type="number" value="100" min="1" step="1" style="width:100%"></label>
+            <label style="font-size:.7rem">L0 mm<input aria-label="试验反演标距 L0 mm" id="expfit-l0" type="number" value="12" min="1" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">A0 mm²<input aria-label="试验反演试样截面积 A0 mm²" id="expfit-area" type="number" value="100" min="1" step="1" style="width:100%"></label>
           </div>
           <label style="font-size:.7rem;display:flex;align-items:center;gap:6px;margin-top:4px"><input type="checkbox" id="expfit-df"> 输入为位移-载荷（勾选后按 L0/A0 换算）</label>
           <canvas id="expfit-curve" width="280" height="150" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
@@ -1434,8 +1434,8 @@ window.addEventListener('error', function(e) {
         <div class="field">
           <div class="field-note">高斯体热源瞬态热传导 + 固有应力法估算：Ti-6Al-4V， spot 40µm，层深 30µm。评估工艺窗口 / 残余应力 / 翘曲。</div>
           <div class="opt-row two" style="gap:6px">
-            <label style="font-size:.7rem">功率 W<input aria-label="微观调制幅值 λ 0.25" id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
-            <label style="font-size:.7rem">速度 m/s<input aria-label="微观调制幅值 λ 0.25" id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
+            <label style="font-size:.7rem">功率 W<input aria-label="LPBF 激光功率 W" id="lpbf-power" type="number" value="200" min="20" max="800" step="10" style="width:100%"></label>
+            <label style="font-size:.7rem">速度 m/s<input aria-label="LPBF 扫描速度 m/s" id="lpbf-speed" type="number" value="0.8" min="0.1" max="3" step="0.1" style="width:100%"></label>
           </div>
           <button class="opt" id="btn-lpbf" style="width:100%;justify-content:center;margin-top:4px">▶ 模拟熔池与残余应力</button>
           <div class="field-note" id="lpbf-result" style="display:none"></div>
@@ -1454,9 +1454,9 @@ window.addEventListener('error', function(e) {
           </select>
           <div class="lbl" style="margin-top:8px"><span>工作应力状态 σ₀（主应力，MPa）</span></div>
           <div class="opt-row" style="grid-template-columns:1fr 1fr 1fr;gap:6px">
-            <label style="font-size:.7rem">σ₁<input aria-label="微观调制幅值 λ 0.25" id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₂<input aria-label="微观调制幅值 λ 0.25" id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
-            <label style="font-size:.7rem">σ₃<input aria-label="微观调制幅值 λ 0.25" id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₁<input aria-label="工作主应力 σ₁ MPa" id="yield-s1" type="number" value="4" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₂<input aria-label="工作主应力 σ₂ MPa" id="yield-s2" type="number" value="1.5" step="0.5" style="width:100%"></label>
+            <label style="font-size:.7rem">σ₃<input aria-label="工作主应力 σ₃ MPa" id="yield-s3" type="number" value="0" step="0.5" style="width:100%"></label>
           </div>
           <button class="opt" id="btn-yield" style="width:100%;justify-content:center;margin-top:6px">▶ 渲染屈服面 + 安全系数</button>
           <canvas id="yield-canvas" width="280" height="220" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px;cursor:grab"></canvas>
@@ -1480,7 +1480,7 @@ window.addEventListener('error', function(e) {
           <div class="field-note">氧准稳态扩散-消耗 + 成骨细胞 Logistic 增殖（低氧门控）+ 骨矿化累积反应-扩散。运行后拖动时间轴播放云图（视口着色）。</div>
           <button class="opt" id="btn-tissue" style="width:100%;justify-content:center">▶ 运行 28 天长入模拟</button>
           <div class="lbl" style="margin-top:8px;display:none" id="tissue-day-row"><span>时间轴</span><span class="val" id="tissue-day-value">0 天</span></div>
-          <input aria-label="微观调制幅值 λ 0.25" type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
+          <input aria-label="组织长入时间轴天" type="range" id="tissue-day" min="0" max="14" value="0" step="1" style="display:none">
           <canvas id="tissue-canvas" width="280" height="80" style="display:none;width:100%;margin-top:6px;border:1px solid var(--panel-border);border-radius:6px"></canvas>
           <div class="field-note" id="tissue-result" style="display:none"></div>
         </div>
