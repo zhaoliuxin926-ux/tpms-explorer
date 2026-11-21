@@ -214,3 +214,8 @@
 
 - **三修链**：①waitForFunction 第二位是 arg 非 options（240s 预算被丢成页面参数，45s 默认接管）→ 改 waitForSelector；②测试重试环×应用递减重导=级联放大（5→4→3→2 计数链，诊断 {'cell':'2','card':true} 实锤）→ 单步确定性；③300ms 快照窗内卡片重显=k4 重导快速失败的正确应用行为 → 断言收敛至不变量（cell<5=行动开火实锤），本地 30 PASS。
 - **【已定案 2026-11-21 c0fae75】diamond k4 导出快速失败矛盾**：净室复现导出成功——与 10-24 导出门矩阵"diamond k1-4 救回"一致，矩阵无辜；B6 级联轨迹中的 k4 连续拒产=行动钮竞态（400ms 盲等审计跑在旧网格）的次生症状，awaitNextRebuild 修复后消失。不阻塞门禁。
+
+## 2026-11-21 CI windows H4 预算超时一例（✅ 已判别：VM 瞬态，深水风暴家族）
+- **现象**：run 44853705119（841e436）windows 单平台 harness_ui_check 红——H4 水平集拓扑优化 waitForFunction 157.6s > 150s 预算（超 5%），macos/ubuntu 同树绿；同 push 内容的 docs-only 头（9495770）重跑亦绿（Pages）。
+- **判别**：三查排除链（树差异=改动不触水平集路径/失败签名=waitForFunction 超时=预算不足族非功能断言/浏览器 lock 钉死）+ workflow_dispatch fresh run 44858718484（同树全新 VM）三平台全绿。
+- **定案**：VM 局部瞬态（runner 负载尖峰吃掉 5% 余量），非回归非 runner 换代；H4 预算 150s 维持不改（单例超时未成趋势，warnSlow 80% 预警线在位），若再现 2 例再重标定 150→240s。
