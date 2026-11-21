@@ -8,7 +8,7 @@
 >
 > | 线 | 终态 |
 > |---|---|
-> | **CFD 标定线** | 完全自持（三层交付+口径三层+机制证据链，详 11-15 摘要）；**11-21 增 T4 COMSOL 弧**：MPh 全链配方（working/scratch/mph_t4_fluid.py）、K 双口径双解 0.4% 互证（K=0.11517 mm²）、真 Forchheimer β≈500-583 m⁻¹（β√K=0.19 落 Ergun 带）、WSS 窗口终判 **29.4% 可引**（口径披露 docs/cfd-wss-window-caliber.md） |
+> | **CFD 标定线** | 完全自持（三层交付+口径三层+机制证据链，详 11-15 摘要）；**11-21 增 T4 COMSOL 弧**：MPh 全链配方（**已收编入库 sim/mph/mph_t4_fluid.py**——原 working/scratch 仅宿舍机可见，11-21 同步审计发现跨机引用悬空后收编+动量审计范式 sim/cfd/momentum_audit.py 同批入库）、K 双口径双解 0.4% 互证（K=0.11517 mm²）、真 Forchheimer β≈500-583 m⁻¹（β√K=0.19 落 Ergun 带）、WSS 窗口终判 **29.4% 可引**（口径披露 docs/cfd-wss-window-caliber.md） |
 > | **四级对标** | T1/T2/T3/T4 全量真数据齐（E_eff 包络与 T2 降阶披露详 archive/progress_2026-11-late.md）；**T3 rve1 报告层 ×1000 单位坑机制实锤（求解正确/报告层双层错），权威数据修正等拍板**；T4 流体侧真数据=COMSOL/OF 双解互证 |
 > | **平台线** | Phase 2-5 全链 50 门三平台绿；**11-21 UX 打磨弧**：拦截三段式卡片（blockCard.ts+行动钮竞态修复 awaitNextRebuild）+B6 行为断言钉 fix_check（守卫 30）+NL 气泡重建指示（elapsed 诚实版）+NL 抽屉 45↔85vh+推荐文案程序化派生；fix_check 30/harness 38 PASS |
 > | **架构沉淀** | agent-architecture.md + DeepSeek 调研归档 + 37 曲线谱系索引 + 流程铁律（本周期新增五条见下） |
