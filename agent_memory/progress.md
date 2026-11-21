@@ -19,7 +19,7 @@
 > 1. **T3 ×1000 权威数据修正**（等拍板）：multifidelity 报告 T3 行 K_m2/ΔP/β/WSS 修正+SI 面核对——定案依据 bugs.md 深夜 VII+docs/cfd-wss-window-caliber.md 附带定案段
 > 2. **EXPL 链塑性段实跑**（卡机时：小时~天级）→ Rp0.2 代理升档 → Gemini 触发点（理论前置=Abaqus 讲义第十讲，working/study_pack/）
 > 3. **S1 上机解冻**（卡用户）/ **LLM key 跨源实测**（卡用户）
-> 4. **k6_tolerance_table 入包**（推荐文案完全程序化派生前置）+批次三深度（NL 抽屉拖拽手势）——低优
+> 4. **k6_tolerance_table 入包**（推荐文案完全程序化派生前置）+批次三深度（NL 抽屉拖拽手势）+UX 走查遗留（已验证域免责声明文案密度可再精简）——低优
 > 5. ~~T4 COMSOL MPh 实跑批~~（**11-21 闭环**：K 双口径 0.4% 互证+真惯性数据点+窗口终判）~~仓根规整~~（11-18+11-21 两批完成）~~批次二/三 UX~~（全清）~~diamond k4 矛盾~~（竞态定案修复）
 >
 > ### 铁律速查（本周期沉淀，合并版）
@@ -42,7 +42,7 @@
 >
 > - **11-14~16（37 提交）**：孤儿批次接手归档（Phase 2-5 全链 3b951cb）+CI 三红三修+WSL OF13 真解打通+k2 修正 0.9594+T4 ABAQUS E_eff=138.29（−1.07%）+Gemini 四问+k∞=0.1342+仓库瘦身 32G→2.4G+T2 探针解锁+诚实勘误批（11-19：csv 18/35 有效+Forchheimer NOT_INDEPENDENT+KUBC 上界化）
 > - **11-18**：课题组资料包吸收（Abaqus 讲义=EXPL 理论前置）+nTop 实跑闭环（10,620 真棱柱）+MPh 路线打通（T4 复活）+OF 边界层三层格局盘点+仓根规整（zip 删+原型归位）
-> - **11-21**：**T4 COMSOL MPh 实跑批闭环**（K 双口径 0.4% 互证+T3 ×1000 坑机制实锤+真 Forchheimer β≈500-583+窗口 29.4% 终判+披露文档 docs/cfd-wss-window-caliber.md）+**平台 UX 打磨弧**（拦截三段式卡片+B6 门钉 30+NL 重建指示+NL 抽屉+派生文案+卡片行动钮竞态修复 awaitNextRebuild）+**残余整理**（保守删除 ~30M 可再生件，双判决现场保留）
+> - **11-21**：**T4 COMSOL MPh 实跑批闭环**（K 双口径 0.4% 互证+T3 ×1000 坑机制实锤+真 Forchheimer β≈500-583+窗口 29.4% 终判+披露文档 docs/cfd-wss-window-caliber.md）+**平台 UX 打磨弧**（拦截三段式卡片+B6 门钉 30+NL 重建指示+NL 抽屉+派生文案+卡片行动钮竞态修复 awaitNextRebuild）+**UX 全站走查批 79bc59d**（16 处 aria-label 错贴修复+minWallMm/minThroatMm NaN 归一披露字符串——bugs.md 11-11 登记销账+walkthrough 实证导出反馈/NL 钳制/制造检查/Pareto 扫描全链反馈在位）+**残余整理**（保守删除 ~30M 可再生件，双判决现场保留）
 >
 > ## 详细历史
 >

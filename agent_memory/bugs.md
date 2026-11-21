@@ -75,11 +75,11 @@
 - **资产状态**：网格链（strip_caps→blockMesh→snappy→checkMesh）与八坑语法沉淀**有效**；仅 K 数值作废。复跑脚本产出的 Ubar 需死腔判读（查 xperiodic_on_* nFaces>0 才有效）。
 
 
-## 2026-11-11 浏览器 design_verify 的 minWallMm.medial=NaN 口径（小瑕，非阻塞）
+## 2026-11-11 浏览器 design_verify 的 minWallMm.medial=NaN 口径（✅ 已修复 2026-11-21：79bc59d）
 
 - **现象**：agent e2e 联调（gyroid p88 k3 R48）中 design_verify 结构化 JSON 输出 `minWallMm:null`——根因=薄壁端固相体素全为表面邻接、medial EDT 无局部极大点 → `rep.minWallMm.medial` 为 NaN，`Number(NaN.toFixed(3))` → `JSON.stringify(NaN)` 序列化为 null。
 - **影响**：verdict 判定不经此值（rep.warnings 驱动），行为正确；仅 LLM 消费方读到 null 可能困惑（与"未测量"不可区分）。
-- **处置**：低优先——后续把 NaN 归一为字符串 "n/a（薄壁无中面采样点）" 或在 summary 附注；制造检查 UI 卡（f2 格式化）显示 "—" 已免疫。
+- **处置（✅ 已落地 2026-11-21，79bc59d）**：NaN 归一为披露字符串 "n/a（薄壁无中面采样点）"（main.ts fmtMedialMm，design_verify summary + scenario payload 两处）；harness 三处显示位同步 typeof 收窄（壁厚/minWall 行 mm 后缀仅对 number 追加）；制造检查 UI 卡（f2 格式化）显示 "—" 已免疫，不受影响。
 
 
 ## 2026-11-08 引导改版覆盖缺口（✅ 已修复并实证）
